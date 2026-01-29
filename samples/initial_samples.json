@@ -1,0 +1,119 @@
+[
+  {
+    "message": "INTC - $48 CALLS 本周 $1.2",
+    "category": "开仓指令",
+    "notes": "标准开仓格式 - 股票代码 行权价 CALLS/PUTS 到期 价格",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "ticker": "INTC",
+      "strike": 48.0,
+      "option_type": "CALL",
+      "expiry": "本周",
+      "price": 1.2
+    },
+    "timestamp": "2026-01-28T10:00:00"
+  },
+  {
+    "message": "小仓位  止损 0.95",
+    "category": "止损指令",
+    "notes": "标准止损格式，包含仓位大小说明",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "instruction_type": "STOP_LOSS",
+      "price": 0.95,
+      "position_size": "小仓位"
+    },
+    "timestamp": "2026-01-28T10:01:00"
+  },
+  {
+    "message": "1.75出三分之一",
+    "category": "止盈指令",
+    "notes": "标准止盈格式 - 价格 + 出货比例",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "instruction_type": "TAKE_PROFIT",
+      "price": 1.75,
+      "portion": "1/3"
+    },
+    "timestamp": "2026-01-28T10:02:00"
+  },
+  {
+    "message": "止损提高到1.5",
+    "category": "调整指令",
+    "notes": "调整止损位 - 向上移动止损",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "instruction_type": "ADJUST",
+      "price": 1.5
+    },
+    "timestamp": "2026-01-28T10:03:00"
+  },
+  {
+    "message": "1.65附近出剩下三分之二",
+    "category": "止盈指令",
+    "notes": "带'附近'关键词的止盈指令",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "instruction_type": "TAKE_PROFIT",
+      "price": 1.65,
+      "portion": "2/3"
+    },
+    "timestamp": "2026-01-28T10:04:00"
+  },
+  {
+    "message": "AAPL $150 PUTS 1/31 $2.5",
+    "category": "开仓指令",
+    "notes": "PUTS 看跌期权，带具体日期",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "ticker": "AAPL",
+      "strike": 150.0,
+      "option_type": "PUT",
+      "expiry": "1/31",
+      "price": 2.5
+    },
+    "timestamp": "2026-01-28T10:05:00"
+  },
+  {
+    "message": "TSLA - 250 CALL $3.0 小仓位",
+    "category": "开仓指令",
+    "notes": "包含仓位大小的开仓指令",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "ticker": "TSLA",
+      "strike": 250.0,
+      "option_type": "CALL",
+      "price": 3.0,
+      "position_size": "小仓位"
+    },
+    "timestamp": "2026-01-28T10:06:00"
+  },
+  {
+    "message": "2.0 出一半",
+    "category": "止盈指令",
+    "notes": "中文描述比例 - 一半",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "instruction_type": "TAKE_PROFIT",
+      "price": 2.0,
+      "portion": "1/2"
+    },
+    "timestamp": "2026-01-28T10:07:00"
+  },
+  {
+    "message": "全部出",
+    "category": "止盈指令",
+    "notes": "全部平仓 - 需要改进正则以支持无价格的全部出",
+    "parsed_successfully": false,
+    "parsed_result": {},
+    "timestamp": "2026-01-28T10:08:00"
+  },
+  {
+    "message": "NVDA 800/810 call debit spread 本周 $3.5",
+    "category": "未识别",
+    "notes": "价差策略 - 需要新的正则模式",
+    "parsed_successfully": false,
+    "parsed_result": {},
+    "timestamp": "2026-01-28T10:09:00"
+  }
+]
