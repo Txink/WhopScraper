@@ -22,7 +22,10 @@ class Config:
     )
     
     # Whop 登录页面
-    LOGIN_URL: str = "https://whop.com/login/"
+    LOGIN_URL: str = os.getenv(
+        "LOGIN_URL",
+        "https://whop.com/login/"
+    )
     
     # 浏览器设置
     HEADLESS: bool = os.getenv("HEADLESS", "false").lower() == "true"
@@ -48,25 +51,60 @@ class Config:
 
 
 # 创建示例 .env 文件模板
-ENV_TEMPLATE = """# Whop 登录凭据
+ENV_TEMPLATE = """# ============================================================
+# Whop 配置
+# ============================================================
+
+# 登录凭据
 WHOP_EMAIL=your_email@example.com
 WHOP_PASSWORD=your_password
 
-# 目标页面 URL（可选，有默认值）
+# 页面 URL（可选，有默认值）
 # TARGET_URL=https://whop.com/joined/stock-and-option/-9vfxZgBNgXykNt/app/
+# LOGIN_URL=https://whop.com/login/
 
 # 浏览器设置
-HEADLESS=false
-SLOW_MO=0
+HEADLESS=false  # 是否无头模式运行
+SLOW_MO=0       # 浏览器操作延迟（毫秒），用于调试
 
 # 监控设置
-POLL_INTERVAL=2.0
+POLL_INTERVAL=2.0  # 轮询间隔（秒）
 
 # Cookie 持久化路径
 # STORAGE_STATE_PATH=storage_state.json
 
 # 输出设置
 # OUTPUT_FILE=output/signals.json
+
+# ============================================================
+# 长桥 OpenAPI 配置
+# ============================================================
+
+# 账户模式切换：paper（模拟账户）/ real（真实账户）
+LONGPORT_MODE=paper
+
+# 模拟账户配置（用于测试，不会真实交易）
+LONGPORT_PAPER_APP_KEY=your_paper_app_key
+LONGPORT_PAPER_APP_SECRET=your_paper_app_secret
+LONGPORT_PAPER_ACCESS_TOKEN=your_paper_access_token
+
+# 真实账户配置（实盘交易，请谨慎使用）
+LONGPORT_REAL_APP_KEY=your_real_app_key
+LONGPORT_REAL_APP_SECRET=your_real_app_secret
+LONGPORT_REAL_ACCESS_TOKEN=your_real_access_token
+
+# 通用配置
+LONGPORT_REGION=cn  # cn=中国大陆，hk=香港（推荐中国大陆用户使用 cn）
+LONGPORT_ENABLE_OVERNIGHT=false  # 是否开启夜盘行情
+
+# 风险控制配置
+LONGPORT_MAX_POSITION_RATIO=0.20  # 单个持仓不超过账户资金的 20%
+LONGPORT_MAX_DAILY_LOSS=0.05  # 单日最大亏损 5%
+LONGPORT_MIN_ORDER_AMOUNT=100  # 最小下单金额（美元）
+
+# 交易设置
+LONGPORT_AUTO_TRADE=false  # 是否启用自动交易（true=自动下单，false=仅监控）
+LONGPORT_DRY_RUN=true  # 是否启用模拟模式（true=不实际下单，仅打印日志）
 """
 
 

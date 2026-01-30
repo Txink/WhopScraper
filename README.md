@@ -1,14 +1,44 @@
-# 期权信号抓取器
+# 期权信号抓取器 + 自动交易系统 v2.1
 
-使用 Playwright 实时监控 Whop 页面，解析期权交易信号并转换为 JSON 格式的标准化指令。
+使用 Playwright 实时监控 Whop 页面，解析期权交易信号，并通过长桥证券 API 自动执行交易，包含完整的持仓管理和风险控制系统。
+
+> 📁 **项目结构清晰**：所有文档位于 `doc/` 目录，所有测试位于 `test/` 目录
+
+## 🎯 快速开始
+
+```bash
+# 1. 安装依赖
+pip3 install -r requirements.txt
+python3 -m playwright install chromium
+
+# 2. 配置环境变量
+cp .env.example .env
+# 编辑 .env 填入凭据
+
+# 3. 验证配置
+python3 check_config.py
+
+# 4. 运行测试
+PYTHONPATH=. python3 test/test_longport_integration.py
+
+# 5. 启动系统
+python3 main.py
+```
+
+📖 **详细指南**：[完整使用指南](./doc/USAGE_GUIDE.md) | [配置说明](./doc/CONFIGURATION.md) | [快速开始](./doc/QUICKSTART_LONGPORT.md) | [启动检查清单](./doc/CHECKLIST.md)
+
+📁 **项目资源**：[项目结构说明](./PROJECT_STRUCTURE.md) | [期权过期校验](./doc/OPTION_EXPIRY_CHECK.md) | [更新日志](./CHANGELOG.md)
 
 ## 功能特性
 
 - ✅ 自动登录 Whop 平台
 - ✅ 实时监控页面新消息
 - ✅ 智能解析期权交易指令
+- ✅ **期权过期时间校验**（自动拦截已过期期权）
 - ✅ 自动样本收集与管理
 - ✅ JSON 格式输出，方便对接券商 API
+- ✅ 长桥证券 API 集成（支持模拟/真实账户切换）
+- ✅ 风险控制和 Dry Run 模式
 
 ## 安装依赖
 
@@ -22,24 +52,84 @@ python3 -m playwright install chromium
 
 ## 配置
 
+> 💡 **统一配置管理**：所有配置项都在 `.env` 文件中设置，无需修改代码。
+
+### 配置步骤
+
 1. 复制配置模板：
 ```bash
 cp .env.example .env
 ```
 
-2. 编辑 `.env` 文件，填入你的凭据：
+2. 编辑 `.env` 文件，填入你的凭据。
+
+3. 验证配置：
+```bash
+python3 check_config.py
+```
+
+此工具会检查：
+- ✅ 配置文件是否存在
+- ✅ 必填项是否已设置
+- ✅ 配置类型是否正确
+- ✅ 风险参数是否合理
+- ✅ 交易模式组合提示
+
+### 配置分类
+
+#### Whop 平台配置
 ```env
+# 必填：登录凭据
 WHOP_EMAIL=your_email@example.com
 WHOP_PASSWORD=your_password
 
-# 可选配置
+# 可选：页面 URL
+# TARGET_URL=https://whop.com/joined/stock-and-option/-9vfxZgBNgXykNt/app/
+# LOGIN_URL=https://whop.com/login/
+
+# 可选：浏览器设置
 HEADLESS=false          # 是否无头模式运行
+SLOW_MO=0               # 浏览器操作延迟（毫秒）
+
+# 可选：监控设置
 POLL_INTERVAL=2.0       # 轮询间隔（秒）
 ```
 
+#### 长桥证券配置
+```env
+# 必填：账户模式
+LONGPORT_MODE=paper     # paper=模拟账户, real=真实账户
+
+# 必填：API 凭据（根据账户模式填写对应的配置）
+LONGPORT_PAPER_APP_KEY=your_paper_app_key
+LONGPORT_PAPER_APP_SECRET=your_paper_app_secret
+LONGPORT_PAPER_ACCESS_TOKEN=your_paper_access_token
+
+# 可选：风险控制
+LONGPORT_MAX_POSITION_RATIO=0.20  # 单仓位上限（20%）
+LONGPORT_MAX_DAILY_LOSS=0.05      # 单日止损（5%）
+LONGPORT_MIN_ORDER_AMOUNT=100     # 最小下单金额（$100）
+
+# 可选：交易模式
+LONGPORT_AUTO_TRADE=false   # 是否启用自动交易
+LONGPORT_DRY_RUN=true       # 是否启用模拟模式（不实际下单）
+```
+
+### 配置文件说明
+
+| 文件 | 说明 | 是否提交到 Git |
+|------|------|---------------|
+| `.env.example` | 配置模板，包含所有配置项及说明 | ✅ 是 |
+| `.env` | 实际配置，包含真实凭据 | ❌ 否（已在 .gitignore 中）|
+| `config.py` | 配置加载模块 | ✅ 是 |
+
+> ⚠️ **安全提示**：`.env` 文件包含敏感信息，已自动添加到 `.gitignore`，不会提交到版本控制系统。
+
 ## 使用方法
 
-### 启动监控
+### 启动系统
+
+### 完整模式（监控 + 自动交易）
 
 ```bash
 python3 main.py
@@ -47,9 +137,26 @@ python3 main.py
 
 程序会：
 1. 自动登录 Whop
-2. 导航到目标页面
-3. 开始实时监控新消息
-4. 自动解析并保存指令到 `output/signals.json`
+2. 初始化长桥交易接口
+3. 启动持仓管理和风险控制
+4. 开始实时监控新消息
+5. 自动解析并执行交易
+6. 自动管理止损止盈
+
+### 仅监控模式
+
+如果只想监控信号而不交易，设置：
+
+```bash
+# 在 .env 中
+LONGPORT_AUTO_TRADE=false
+```
+
+然后运行：
+
+```bash
+python3 main.py
+```
 
 ### 测试解析器
 
@@ -66,6 +173,8 @@ python3 main.py --test
 | `INTC - $48 CALLS 本周 $1.2` | 股票: INTC, 行权价: 48, 类型: CALL, 价格: 1.2 |
 | `AAPL $150 PUTS 1/31 $2.5` | 股票: AAPL, 行权价: 150, 类型: PUT, 到期: 1/31, 价格: 2.5 |
 | `TSLA - 250 CALL $3.0 小仓位` | 股票: TSLA, 行权价: 250, 类型: CALL, 价格: 3.0, 仓位: 小仓位 |
+
+**⚠️ 期权过期校验**：系统会自动检查期权到期日，如果期权已过期（到期日早于当前日期），将自动拦截并跳过该指令，不会执行下单操作。
 
 ### 2. 止损指令
 
@@ -171,7 +280,35 @@ python3 main.py --test
 
 ## 对接券商 API
 
-在 `main.py` 的 `_on_instruction` 方法中添加你的券商 API 调用逻辑：
+### 长桥证券集成（推荐）
+
+本项目已集成长桥（LongPort）OpenAPI，支持：
+- ✅ 模拟账户和真实账户自动切换
+- ✅ 期权自动下单
+- ✅ 风险控制和 Dry Run 模式
+- ✅ 完整的测试流程
+
+**查看完整接入指南**：[LONGPORT_INTEGRATION_GUIDE.md](./doc/LONGPORT_INTEGRATION_GUIDE.md)
+
+快速开始：
+
+```bash
+# 1. 配置环境变量（在 .env 中）
+LONGPORT_MODE=paper  # 使用模拟账户
+LONGPORT_PAPER_APP_KEY=your_key
+LONGPORT_PAPER_APP_SECRET=your_secret
+LONGPORT_PAPER_ACCESS_TOKEN=your_token
+
+# 2. 运行测试
+PYTHONPATH=. python3 test/test_longport_integration.py
+
+# 3. 启动自动交易
+python3 main.py
+```
+
+### 其他券商 API
+
+如果使用其他券商，在 `main.py` 的 `_on_instruction` 方法中添加你的 API 调用逻辑：
 
 ```python
 def _on_instruction(self, instruction: OptionInstruction):
@@ -189,6 +326,40 @@ def _on_instruction(self, instruction: OptionInstruction):
     # ...
 ```
 
+## 测试
+
+### 快速运行所有测试
+
+使用提供的脚本一键运行所有测试：
+
+```bash
+./run_all_tests.sh
+```
+
+### 单独运行测试
+
+```bash
+# 配置加载测试（验证 .env 配置）
+PYTHONPATH=. python3 test/test_config.py
+
+# 长桥 API 集成测试
+PYTHONPATH=. python3 test/test_longport_integration.py
+
+# 期权过期校验测试
+PYTHONPATH=. python3 test/test_option_expiry.py
+
+# 期权过期集成测试
+PYTHONPATH=. python3 test/test_expiry_integration.py
+
+# 持仓管理测试
+PYTHONPATH=. python3 test/test_position_management.py
+
+# 样本管理测试
+PYTHONPATH=. python3 test/test_samples.py
+```
+
+📝 更多测试信息，请参考 [test/README.md](./test/README.md)
+
 ## 项目结构
 
 ```
@@ -198,18 +369,59 @@ playwright/
 ├── requirements.txt       # Python 依赖
 ├── .env                   # 环境变量（需自行创建）
 ├── .env.example           # 环境变量模板
-├── scraper/
+├── CHANGELOG.md           # 更新日志
+├── README.md              # 项目说明
+├── check_config.py        # 配置检查工具
+├── run_all_tests.sh       # 测试运行脚本
+│
+├── doc/                   # 📁 文档目录
+│   ├── README.md          # 文档导航
+│   ├── USAGE_GUIDE.md     # 完整使用指南
+│   ├── CONFIGURATION.md   # 配置说明文档
+│   ├── SETUP_WIZARD.md    # 分步设置向导
+│   ├── QUICKSTART_LONGPORT.md  # 快速开始
+│   ├── LONGPORT_INTEGRATION_GUIDE.md  # 长桥 API 集成
+│   ├── CHECKLIST.md       # 启动检查清单
+│   ├── PROJECT_STATUS.md  # 项目状态报告
+│   └── OPTION_EXPIRY_CHECK.md  # 期权过期校验文档
+│
+├── test/                  # 🧪 测试目录
+│   ├── README.md          # 测试说明
+│   ├── test_longport_integration.py  # 长桥 API 测试
+│   ├── test_option_expiry.py         # 期权过期测试
+│   ├── test_expiry_integration.py    # 期权过期集成测试
+│   ├── test_position_management.py   # 持仓管理测试
+│   └── test_samples.py               # 样本管理测试
+│
+├── broker/                # 券商接口模块
+│   ├── __init__.py
+│   ├── config_loader.py   # 配置加载器
+│   ├── longport_broker.py # 长桥交易接口
+│   ├── position_manager.py  # 持仓管理
+│   └── risk_controller.py   # 风险控制
+│
+├── scraper/               # 页面抓取模块
 │   ├── browser.py         # Playwright 浏览器管理
 │   └── monitor.py         # 实时监控逻辑
-├── parser/
+│
+├── parser/                # 解析模块
 │   └── option_parser.py   # 期权指令正则解析器
-├── models/
+│
+├── models/                # 数据模型
 │   └── instruction.py     # 指令数据模型
-├── samples/
+│
+├── samples/               # 样本管理
 │   ├── sample_manager.py  # 样本管理器
 │   ├── samples.json       # 样本数据库
 │   └── initial_samples.json  # 初始样本示例
-└── output/
+│
+├── data/                  # 数据目录
+│   └── positions.json     # 持仓数据
+│
+├── logs/                  # 日志目录
+│   └── trading.log        # 交易日志
+│
+└── output/                # 输出目录
     └── signals.json       # 解析后的信号输出
 ```
 
@@ -218,6 +430,7 @@ playwright/
 1. **登录安全**：`.env` 文件包含敏感信息，已添加到 `.gitignore`，不会提交到版本控制
 2. **网络稳定**：确保网络连接稳定，程序会自动重连
 3. **样本隐私**：样本中可能包含交易信号，注意保护隐私
+4. **期权过期**：系统会自动拦截已过期的期权指令，确保不会交易失效合约
 
 ## 常见问题
 
@@ -237,6 +450,52 @@ playwright/
 - 查看未解析样本：`python3 -m samples.sample_manager list --unparsed`
 - 根据样本改进 `parser/option_parser.py` 中的正则表达式
 - 提交 Issue 反馈新的消息格式
+
+## 项目状态
+
+### 已完成功能 ✅
+
+- ✅ 信号监控和解析
+- ✅ 长桥证券 API 集成
+- ✅ 自动期权下单
+- ✅ 持仓管理系统
+- ✅ 自动止损止盈
+- ✅ 移动止损
+- ✅ 风险控制系统
+- ✅ 模拟/真实账户切换
+- ✅ Dry Run 模式
+- ✅ 完整测试套件
+- ✅ 详细文档
+
+查看：[项目状态详情](./doc/PROJECT_STATUS.md)
+
+### 📚 文档导航
+
+所有文档位于 `doc/` 目录：
+
+| 文档 | 说明 |
+|------|------|
+| [USAGE_GUIDE.md](./doc/USAGE_GUIDE.md) | 📖 完整使用指南 |
+| [CONFIGURATION.md](./doc/CONFIGURATION.md) | ⚙️ 配置说明文档 |
+| [SETUP_WIZARD.md](./doc/SETUP_WIZARD.md) | 🧙 分步设置向导 |
+| [QUICKSTART_LONGPORT.md](./doc/QUICKSTART_LONGPORT.md) | ⚡ 5分钟快速开始 |
+| [LONGPORT_INTEGRATION_GUIDE.md](./doc/LONGPORT_INTEGRATION_GUIDE.md) | 🔧 长桥 API 集成指南 |
+| [CHECKLIST.md](./doc/CHECKLIST.md) | ✅ 启动检查清单 |
+| [OPTION_EXPIRY_CHECK.md](./doc/OPTION_EXPIRY_CHECK.md) | ⏰ 期权过期校验说明 |
+| [PROJECT_STATUS.md](./doc/PROJECT_STATUS.md) | 📊 项目状态报告 |
+
+### 🧪 测试文件
+
+所有测试文件位于 `test/` 目录：
+
+| 测试文件 | 说明 |
+|---------|------|
+| [test_config.py](./test/test_config.py) | 配置加载验证测试 |
+| [test_longport_integration.py](./test/test_longport_integration.py) | 长桥 API 集成测试 |
+| [test_option_expiry.py](./test/test_option_expiry.py) | 期权过期时间校验测试 |
+| [test_expiry_integration.py](./test/test_expiry_integration.py) | 期权过期集成测试 |
+| [test_position_management.py](./test/test_position_management.py) | 持仓管理测试 |
+| [test_samples.py](./test/test_samples.py) | 样本管理测试 |
 
 ## 许可证
 
