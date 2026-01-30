@@ -6,6 +6,24 @@
 
 ## 🎯 快速开始
 
+### 方式 1: 简单抓取（推荐新手）
+
+```bash
+# 1. 安装依赖
+pip3 install -r requirements.txt
+python3 -m playwright install chromium
+
+# 2. 登录并保存 Cookie
+python3 whop_login.py
+
+# 3. 开始抓取消息
+python3 whop_scraper_simple.py --url "https://whop.com/your-page-url/"
+```
+
+📖 **详细指南**：[Whop 登录和抓取指南](./WHOP_LOGIN_GUIDE.md)
+
+### 方式 2: 完整系统（包含自动交易）
+
 ```bash
 # 1. 安装依赖
 pip3 install -r requirements.txt
@@ -25,13 +43,14 @@ PYTHONPATH=. python3 test/test_longport_integration.py
 python3 main.py
 ```
 
-📖 **详细指南**：[完整使用指南](./doc/USAGE_GUIDE.md) | [配置说明](./doc/CONFIGURATION.md) | [快速开始](./doc/QUICKSTART_LONGPORT.md) | [启动检查清单](./doc/CHECKLIST.md)
+📖 **详细指南**：[Whop 登录指南](./WHOP_LOGIN_GUIDE.md) | [快速参考](./QUICK_REFERENCE.md) | [完整使用指南](./doc/USAGE_GUIDE.md) | [配置说明](./doc/CONFIGURATION.md) | [快速开始](./doc/QUICKSTART_LONGPORT.md) | [启动检查清单](./doc/CHECKLIST.md)
 
 📁 **项目资源**：[项目结构说明](./PROJECT_STRUCTURE.md) | [期权过期校验](./doc/OPTION_EXPIRY_CHECK.md) | [更新日志](./CHANGELOG.md)
 
 ## 功能特性
 
 - ✅ 自动登录 Whop 平台
+- ✅ **Cookie 持久化**（登录一次，长期使用）
 - ✅ 实时监控页面新消息
 - ✅ 智能解析期权交易指令
 - ✅ **期权过期时间校验**（自动拦截已过期期权）
@@ -39,6 +58,75 @@ python3 main.py
 - ✅ JSON 格式输出，方便对接券商 API
 - ✅ 长桥证券 API 集成（支持模拟/真实账户切换）
 - ✅ 风险控制和 Dry Run 模式
+
+## 🔧 工具说明
+
+### 登录和 Cookie 管理工具
+
+项目提供了两个简单易用的工具，帮助您快速开始使用：
+
+#### 1. `whop_login.py` - 登录助手
+
+用于保存和测试 Whop 登录状态（Cookie）。
+
+```bash
+# 登录并保存 Cookie
+python3 whop_login.py
+
+# 测试 Cookie 是否有效
+python3 whop_login.py --test
+
+# 查看所有选项
+python3 whop_login.py --help
+```
+
+#### 2. `whop_scraper_simple.py` - 智能消息抓取器（支持去重）
+
+使用保存的 Cookie 自动登录并抓取页面消息，支持智能去重和噪音过滤。
+
+```bash
+# 基本抓取（监控 30 秒，自动去重）
+python3 whop_scraper_simple.py --url "https://whop.com/your-page-url/"
+
+# 监控更长时间（如 60 秒）
+python3 whop_scraper_simple.py --url "https://whop.com/your-page-url/" --duration 60
+
+# 使用无头模式（后台运行）
+python3 whop_scraper_simple.py --url "https://whop.com/your-page-url/" --headless
+
+# 过滤更多噪音（最小消息长度 15 字符）
+python3 whop_scraper_simple.py --url "URL" --min-length 15
+
+# 保存唯一消息到文件
+python3 whop_scraper_simple.py --url "URL" --output messages.json
+
+# 完整示例（所有功能）
+python3 whop_scraper_simple.py --url "URL" --duration 300 --headless --min-length 15 --output messages.json
+
+# 查看所有选项
+python3 whop_scraper_simple.py --help
+```
+
+**去重功能**：
+- ✅ 内容哈希去重（避免不同 ID 的相同内容）
+- ✅ 消息 ID 去重（防止重复处理）
+- ✅ 噪音过滤（过滤太短的消息）
+- ✅ 统计信息（显示去重效率）
+- ✅ 保存到文件（JSON 格式）
+
+📖 详细说明：[去重功能指南](./DEDUPLICATION_GUIDE.md)
+
+📖 **详细教程**：请参考 [Whop 登录和抓取指南](./WHOP_LOGIN_GUIDE.md)
+
+**使用场景**：
+- 🎯 **新手入门**：快速验证 Cookie 功能
+- 🧪 **功能测试**：测试 Whop 登录和消息提取
+- 🚀 **简单抓取**：只需要抓取消息，不需要自动交易
+- 📊 **数据收集**：收集消息样本用于后续分析
+
+**完整系统 vs 简单工具**：
+- 简单工具：快速上手，专注于消息抓取
+- 完整系统（`main.py`）：包含期权解析、风险控制、自动交易等完整功能
 
 ## 安装依赖
 
@@ -475,6 +563,7 @@ playwright/
 
 | 文档 | 说明 |
 |------|------|
+| [WHOP_LOGIN_GUIDE.md](./WHOP_LOGIN_GUIDE.md) | 🔑 Whop 登录和抓取指南（**推荐新手**） |
 | [USAGE_GUIDE.md](./doc/USAGE_GUIDE.md) | 📖 完整使用指南 |
 | [CONFIGURATION.md](./doc/CONFIGURATION.md) | ⚙️ 配置说明文档 |
 | [SETUP_WIZARD.md](./doc/SETUP_WIZARD.md) | 🧙 分步设置向导 |

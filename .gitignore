@@ -1,0 +1,74 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+ENV/
+env/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 环境变量和配置（包含敏感信息）
+.env
+*.env
+.env.*
+!.env.example
+
+# Playwright 登录状态（Cookie 文件）
+storage_state.json
+*_cookies.json
+*.cookies.json
+
+# 输出文件
+output/
+logs/
+*.log
+
+# 数据文件
+data/
+*.json
+!samples/*.json
+!.env.example
+!package.json
+!package-lock.json
+
+# 临时文件
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# Playwright
+playwright-state.json
+test-results/
+playwright-report/
+
+# 测试覆盖率
+.coverage
+htmlcov/
+.pytest_cache/

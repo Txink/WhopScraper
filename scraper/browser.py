@@ -97,10 +97,17 @@ class BrowserManager:
         
         try:
             print(f"正在访问登录页面: {login_url}")
-            await self._page.goto(login_url, wait_until='networkidle')
+            try:
+                await self._page.goto(
+                    login_url,
+                    wait_until='domcontentloaded',
+                    timeout=60000
+                )
+            except Exception as e:
+                print(f"⚠️  页面加载警告: {e}")
             
             # 等待页面加载
-            await asyncio.sleep(2)
+            await asyncio.sleep(3)
             
             # 查找并填写邮箱
             # Whop 登录页面可能使用不同的选择器，这里尝试多种可能
@@ -220,8 +227,16 @@ class BrowserManager:
         
         try:
             print(f"正在导航到: {url}")
-            await self._page.goto(url, wait_until='networkidle')
-            await asyncio.sleep(2)
+            try:
+                await self._page.goto(
+                    url,
+                    wait_until='domcontentloaded',
+                    timeout=60000
+                )
+            except Exception as e:
+                print(f"⚠️  页面加载警告: {e}")
+            
+            await asyncio.sleep(3)
             print(f"已到达页面: {self._page.url}")
             return True
         except Exception as e:
@@ -242,8 +257,16 @@ class BrowserManager:
             return False
         
         try:
-            await self._page.goto(target_url, wait_until='networkidle')
-            await asyncio.sleep(2)
+            try:
+                await self._page.goto(
+                    target_url,
+                    wait_until='domcontentloaded',
+                    timeout=60000
+                )
+            except Exception as e:
+                print(f"⚠️  页面加载警告: {e}")
+            
+            await asyncio.sleep(3)
             
             # 检查是否被重定向到登录页面
             current_url = self._page.url
