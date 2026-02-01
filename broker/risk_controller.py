@@ -68,7 +68,12 @@ class RiskController:
         """主循环"""
         while self._running:
             try:
-                self._check_and_execute()
+                # 先检查是否有持仓，避免不必要的API调用
+                positions = self.position_manager.get_all_positions()
+                if positions:
+                    self._check_and_execute()
+                else:
+                    logger.debug("当前无持仓，跳过风险检查")
             except Exception as e:
                 logger.error(f"风险检查错误: {e}")
             
@@ -94,26 +99,73 @@ class RiskController:
                 logger.error(f"处理警报失败: {alert['symbol']} - {e}")
     
     def _sync_positions(self):
-        """从券商同步持仓"""
+        """从券商同步持仓，更新实时价格"""
         try:
             broker_positions = self.broker.get_positions()
             
-            # 更新持仓价格（简化版，实际需要获取实时行情）
+            if not broker_positions:
+                logger.debug("当前无持仓")
+                return
+            
+            # 收集所有持仓的 symbol
+            symbols = [pos.get('symbol') for pos in broker_positions if pos.get('symbol')]
+            
+            if not symbols:
+                logger.debug("未找到有效的持仓代码")
+                return
+            
+            # 批量获取期权实时报价
+            quotes = self.broker.get_option_quote(symbols)
+            
+            if not quotes:
+                logger.debug(f"未能获取 {len(symbols)} 个期权的实时报价，使用成本价")
+                # 降级方案：使用成本价
+                price_updates = {}
+                for pos_data in broker_positions:
+                    symbol = pos_data.get('symbol')
+                    cost_price = pos_data.get('cost_price', 0)
+                    if symbol and cost_price > 0:
+                        price_updates[symbol] = cost_price
+                        logger.debug(f"{symbol}: ${cost_price:.2f} (成本价)")
+                
+                if price_updates:
+                    self.position_manager.update_prices(price_updates)
+                    logger.info(f"使用成本价更新 {len(price_updates)} 个持仓")
+                return
+            
+            # 构建报价字典 {symbol: last_done}
+            quote_map = {
+                q['symbol']: q['last_done'] 
+                for q in quotes 
+                if q.get('last_done', 0) > 0
+            }
+            
+            # 更新持仓价格
             price_updates = {}
             for pos_data in broker_positions:
-                symbol = pos_data['symbol']
-                # 这里应该调用行情 API 获取最新价格
-                # 暂时使用市值反推价格
-                if pos_data.get('quantity', 0) > 0:
-                    estimated_price = pos_data['market_value'] / (pos_data['quantity'] * 100)
-                    price_updates[symbol] = estimated_price
+                symbol = pos_data.get('symbol')
+                if not symbol:
+                    continue
+                
+                # 优先使用实时报价
+                if symbol in quote_map:
+                    current_price = quote_map[symbol]
+                    price_updates[symbol] = current_price
+                    logger.debug(f"{symbol}: ${current_price:.2f} (实时)")
+                else:
+                    # 降级使用成本价
+                    cost_price = pos_data.get('cost_price', 0)
+                    if cost_price > 0:
+                        price_updates[symbol] = cost_price
+                        logger.debug(f"{symbol}: ${cost_price:.2f} (成本价)")
             
+            # 批量更新价格
             if price_updates:
                 self.position_manager.update_prices(price_updates)
-                logger.debug(f"更新 {len(price_updates)} 个持仓价格")
+                logger.info(f"✅ 同步 {len(price_updates)} 个持仓的实时价格")
             
         except Exception as e:
-            logger.error(f"同步持仓失败: {e}")
+            logger.error(f"同步持仓失败: {e}", exc_info=True)
     
     def _handle_alert(self, alert: Dict):
         """
