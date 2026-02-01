@@ -15,6 +15,9 @@ from .order_formatter import (
     print_order_modify_table,
     print_order_cancel_table,
     print_orders_summary_table,
+    print_account_info_table,
+    print_positions_table,
+    print_today_orders_table,
     print_success_message,
     print_error_message,
     print_warning_message,
@@ -146,10 +149,17 @@ class LongPortBroker:
                 "price": float(price) if price else None,
                 "status": "submitted",
                 "submitted_at": datetime.now().isoformat(),
-                "mode": "paper" if self.is_paper else "real"
+                "mode": "paper" if self.is_paper else "real",
+                "trigger_price": trigger_price,
+                "trailing_percent": trailing_percent,
+                "trailing_amount": trailing_amount,
+                "remark": remark or f"Auto trade via OpenAPI - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
             }
             
-            logger.info(f"✅ 订单提交成功: {order_info}")
+            # 使用彩色表格输出
+            print_success_message("订单提交成功")
+            print_order_table(order_info, "订单详情")
+            
             return order_info
             
         except Exception as e:
@@ -177,6 +187,14 @@ class LongPortBroker:
             return {"order_id": order_id, "status": "mock_cancelled", "mode": "dry_run"}
         
         try:
+            # 先获取订单信息用于显示
+            orders = self.get_today_orders()
+            target_order = None
+            for order in orders:
+                if order.get('order_id') == order_id:
+                    target_order = order
+                    break
+            
             # 撤销订单（API不返回值或返回None）
             self.ctx.cancel_order(order_id)
             
@@ -187,11 +205,23 @@ class LongPortBroker:
                 "mode": "paper" if self.is_paper else "real"
             }
             
-            logger.info(f"✅ 订单已撤销: {order_id}")
+            # 如果找到原订单信息，添加到结果中
+            if target_order:
+                result.update({
+                    "symbol": target_order.get('symbol'),
+                    "side": target_order.get('side'),
+                    "quantity": target_order.get('quantity'),
+                    "price": target_order.get('price')
+                })
+            
+            # 使用彩色表格输出
+            print_success_message("订单撤销成功")
+            print_order_cancel_table(result, "撤销订单详情")
+            
             return result
             
         except Exception as e:
-            logger.error(f"❌ 订单撤销失败: {e}")
+            print_error_message(f"订单撤销失败: {e}")
             raise
     
     def replace_order(
@@ -236,6 +266,17 @@ class LongPortBroker:
             }
         
         try:
+            # 先获取原订单信息
+            orders = self.get_today_orders()
+            old_order = None
+            for order in orders:
+                if order.get('order_id') == order_id:
+                    old_order = order
+                    break
+            
+            if not old_order:
+                raise ValueError(f"未找到订单: {order_id}")
+            
             # 准备修改参数
             replace_params = {
                 "order_id": order_id,
@@ -257,6 +298,15 @@ class LongPortBroker:
             # 修改订单
             self.ctx.replace_order(**replace_params)
             
+            # 新值字典
+            new_values = {
+                "quantity": quantity,
+                "price": float(price) if price is not None else old_order.get('price'),
+                "trigger_price": trigger_price,
+                "trailing_percent": trailing_percent,
+                "trailing_amount": trailing_amount
+            }
+            
             result = {
                 "order_id": order_id,
                 "quantity": quantity,
@@ -266,11 +316,14 @@ class LongPortBroker:
                 "mode": "paper" if self.is_paper else "real"
             }
             
-            logger.info(f"✅ 订单修改成功: {result}")
+            # 使用彩色表格输出修改对比
+            print_success_message("订单修改成功")
+            print_order_modify_table(order_id, old_order, new_values, "订单修改详情")
+            
             return result
             
         except Exception as e:
-            logger.error(f"❌ 订单修改失败: {e}")
+            print_error_message(f"订单修改失败: {e}")
             raise
     
     def _mock_order_response(self, symbol: str, side: str, quantity: int, price: Optional[float]) -> Dict:
@@ -360,20 +413,6 @@ class LongPortBroker:
             logger.error(f"获取订单失败: {e}")
             return []
     
-    def cancel_order(self, order_id: str) -> bool:
-        """撤销订单"""
-        if self.dry_run:
-            logger.info(f"🧪 [DRY RUN] 模拟撤销订单: {order_id}")
-            return True
-        
-        try:
-            self.ctx.cancel_order(order_id)
-            logger.info(f"✅ 订单已撤销: {order_id}")
-            return True
-        except Exception as e:
-            logger.error(f"❌ 撤销订单失败: {e}")
-            return False
-    
     def get_positions(self) -> list:
         """获取持仓信息"""
         try:
@@ -409,6 +448,76 @@ class LongPortBroker:
         except Exception as e:
             logger.error(f"获取账户余额失败: {e}")
             return {}
+    
+    def show_account_info(self):
+        """
+        以表格形式展示账户信息
+        包含总资产、可用资金、冻结资金、持仓市值等
+        """
+        try:
+            # 获取账户余额
+            balance_info = self.get_account_balance()
+            
+            # 获取持仓信息（用于计算持仓市值）
+            positions = self.get_positions()
+            position_value = sum(
+                pos.get('quantity', 0) * pos.get('cost_price', 0) 
+                for pos in positions
+            )
+            
+            # 组合账户信息
+            account_info = {
+                **balance_info,
+                'position_value': position_value
+            }
+            
+            # 使用表格格式化输出
+            mode_display = "🧪 模拟账户" if self.is_paper else "💰 真实账户"
+            print_account_info_table(account_info, title=f"账户信息 ({mode_display})")
+            
+        except Exception as e:
+            logger.error(f"展示账户信息失败: {e}")
+            print_error_message(f"展示账户信息失败: {e}")
+    
+    def show_positions(self):
+        """
+        以表格形式展示持仓信息
+        包含期权名称、持仓数量、成本价、当前价、盈亏等
+        """
+        try:
+            positions = self.get_positions()
+            
+            if not positions:
+                print_warning_message("无持仓")
+                return
+            
+            # 使用表格格式化输出
+            mode_display = "🧪 模拟账户" if self.is_paper else "💰 真实账户"
+            print_positions_table(positions, title=f"持仓信息 ({mode_display})")
+            
+        except Exception as e:
+            logger.error(f"展示持仓信息失败: {e}")
+            print_error_message(f"展示持仓信息失败: {e}")
+    
+    def show_today_orders(self):
+        """
+        以表格形式展示当日订单
+        包含期权名称、方向、数量、价格、状态等
+        """
+        try:
+            orders = self.get_today_orders()
+            
+            if not orders:
+                print_warning_message("无当日订单")
+                return
+            
+            # 使用表格格式化输出
+            mode_display = "🧪 模拟账户" if self.is_paper else "💰 真实账户"
+            print_orders_summary_table(orders, title=f"当日订单 ({mode_display})")
+            
+        except Exception as e:
+            logger.error(f"展示当日订单失败: {e}")
+            print_error_message(f"展示当日订单失败: {e}")
     
     def get_option_expiry_dates(self, symbol: str) -> List[str]:
         """

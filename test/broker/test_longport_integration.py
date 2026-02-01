@@ -6,6 +6,12 @@
 import logging
 import sys
 from broker import load_longport_config, LongPortBroker, convert_to_longport_symbol, calculate_quantity
+from broker.order_formatter import (
+    print_account_info_table,
+    print_positions_table,
+    print_orders_summary_table,
+    print_success_message
+)
 
 # 配置日志
 logging.basicConfig(
@@ -38,10 +44,9 @@ def test_account_info(broker: LongPortBroker):
     
     try:
         balance = broker.get_account_balance()
-        logger.info(f"账户模式: {balance.get('mode', 'unknown')}")
-        logger.info(f"总资金: {balance.get('total_cash', 0):,.2f} {balance.get('currency', 'USD')}")
-        logger.info(f"可用资金: {balance.get('available_cash', 0):,.2f} {balance.get('currency', 'USD')}")
-        logger.info("✅ 账户信息获取成功")
+        # 使用表格化显示
+        print_account_info_table(balance, title="账户余额信息")
+        print_success_message("账户信息获取成功")
         return balance
     except Exception as e:
         logger.error(f"❌ 获取账户信息失败: {e}")
@@ -200,10 +205,13 @@ def test_get_orders(broker: LongPortBroker):
         orders = broker.get_today_orders()
         logger.info(f"当日订单数: {len(orders)}")
         
-        for order in orders[:5]:  # 只显示前5个
-            logger.info(f"  订单: {order['symbol']} {order['side']} {order['quantity']} @ {order['price']}")
+        # 使用表格化显示所有订单
+        if orders:
+            print_orders_summary_table(orders, title="当日订单")
+            print_success_message(f"获取订单测试完成 (共 {len(orders)} 个订单)")
+        else:
+            logger.info("今日暂无订单")
         
-        logger.info("✅ 获取订单测试完成")
         return orders
     except Exception as e:
         logger.error(f"❌ 获取订单失败: {e}")
@@ -220,10 +228,13 @@ def test_get_positions(broker: LongPortBroker):
         positions = broker.get_positions()
         logger.info(f"持仓数: {len(positions)}")
         
-        for pos in positions[:5]:  # 只显示前5个
-            logger.info(f"  持仓: {pos['symbol']} {pos['quantity']} @ {pos['cost_price']:.2f}")
+        # 使用表格化显示
+        if positions:
+            print_positions_table(positions, title="当前持仓")
+            print_success_message("获取持仓测试完成")
+        else:
+            logger.info("暂无持仓")
         
-        logger.info("✅ 获取持仓测试完成")
         return positions
     except Exception as e:
         logger.error(f"❌ 获取持仓失败: {e}")

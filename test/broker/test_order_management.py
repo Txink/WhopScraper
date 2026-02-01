@@ -7,6 +7,13 @@ import logging
 import sys
 import time
 from broker import load_longport_config, LongPortBroker
+from broker.order_formatter import (
+    print_order_table,
+    print_order_search_table,
+    print_orders_summary_table,
+    print_success_message,
+    print_warning_message
+)
 
 # 配置日志
 logging.basicConfig(
@@ -46,6 +53,7 @@ def test_order_with_stop_loss(broker: LongPortBroker):
         
         # 提交带止损的订单
         # 假设买入价格是 $5，设置止损在 $3（跌幅 40%）
+        # broker.submit_option_order() 会自动显示彩色表格
         order = broker.submit_option_order(
             symbol=symbol,
             side="BUY",
@@ -55,11 +63,6 @@ def test_order_with_stop_loss(broker: LongPortBroker):
             trigger_price=3.0,  # 触发价格（止损）
             remark="Test order with stop loss"
         )
-        
-        logger.info(f"✅ 订单提交成功:")
-        logger.info(f"  订单ID: {order['order_id']}")
-        logger.info(f"  买入价格: ${order['price']:.2f}")
-        logger.info(f"  止损触发价: $3.00")
         
         return order
         
@@ -92,6 +95,7 @@ def test_order_with_trailing_stop(broker: LongPortBroker):
         symbol = option_chain["call_symbols"][mid_idx]
         
         # 提交跟踪止损订单（跟踪5%）
+        # broker.submit_option_order() 会自动显示彩色表格
         order = broker.submit_option_order(
             symbol=symbol,
             side="BUY",
@@ -101,10 +105,6 @@ def test_order_with_trailing_stop(broker: LongPortBroker):
             trailing_percent=5.0,  # 跟踪止损 5%
             remark="Test order with trailing stop"
         )
-        
-        logger.info(f"✅ 跟踪止损订单提交成功:")
-        logger.info(f"  订单ID: {order['order_id']}")
-        logger.info(f"  跟踪止损: 5%")
         
         return order
         
@@ -120,17 +120,8 @@ def test_cancel_order(broker: LongPortBroker, order_id: str):
     print("="*60)
     
     try:
-        logger.info(f"撤销订单: {order_id}")
-        
+        # broker.cancel_order() 会自动显示彩色表格
         result = broker.cancel_order(order_id)
-        
-        if result and isinstance(result, dict):
-            logger.info(f"✅ 订单撤销成功:")
-            logger.info(f"  订单ID: {result.get('order_id', order_id)}")
-            logger.info(f"  状态: {result.get('status', 'cancelled')}")
-        else:
-            logger.info(f"✅ 订单已撤销: {order_id}")
-        
         return result
         
     except Exception as e:
@@ -145,21 +136,13 @@ def test_replace_order(broker: LongPortBroker, order_id: str):
     print("="*60)
     
     try:
-        logger.info(f"修改订单: {order_id}")
-        logger.info(f"  原价格: $5.00, 原数量: 1")
-        logger.info(f"  新价格: $4.50, 新数量: 2")
-        
+        # broker.replace_order() 会自动显示彩色对比表格
         result = broker.replace_order(
             order_id=order_id,
             quantity=2,
             price=4.50,
             remark="Modified order - price adjusted"
         )
-        
-        logger.info(f"✅ 订单修改成功:")
-        logger.info(f"  订单ID: {result['order_id']}")
-        logger.info(f"  新数量: {result['quantity']}")
-        logger.info(f"  新价格: ${result['price']:.2f}")
         
         return result
         
@@ -185,15 +168,15 @@ def test_get_order_detail(broker: LongPortBroker, order_id: str):
                 break
         
         if target_order:
-            logger.info(f"✅ 找到订单:")
-            logger.info(f"  订单ID: {target_order['order_id']}")
-            logger.info(f"  标的: {target_order['symbol']}")
-            logger.info(f"  方向: {target_order['side']}")
-            logger.info(f"  数量: {target_order['quantity']}")
-            logger.info(f"  价格: ${target_order['price']:.2f}")
-            logger.info(f"  状态: {target_order['status']}")
+            # 使用彩色表格展示订单详情（SEARCH 操作 - 蓝色）
+            print_success_message("找到订单")
+            
+            # 添加 mode 字段用于表格显示
+            target_order['mode'] = 'paper' if broker.is_paper else 'real'
+            
+            print_order_search_table(target_order, "订单查询")
         else:
-            logger.warning(f"⚠️  未找到订单: {order_id}")
+            print_warning_message(f"未找到订单: {order_id}")
         
         return target_order
         
