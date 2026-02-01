@@ -3,13 +3,23 @@
 支持模拟账户和真实账户，带风险控制和 dry_run 模式
 """
 from decimal import Decimal
-from typing import Dict, Optional
-from longport.openapi import TradeContext, Config, OrderSide, OrderType, TimeInForceType
+from typing import Dict, Optional, List
+from longport.openapi import TradeContext, QuoteContext, Config, OrderSide, OrderType, TimeInForceType
 import logging
 import os
 from datetime import datetime
 
 from .config_loader import LongPortConfigLoader
+from .order_formatter import (
+    print_order_table,
+    print_order_modify_table,
+    print_order_cancel_table,
+    print_orders_summary_table,
+    print_success_message,
+    print_error_message,
+    print_warning_message,
+    print_info_message
+)
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +41,7 @@ class LongPortBroker:
         self.config_loader = config_loader
         self.config = config or config_loader.get_config()
         self.ctx = TradeContext(self.config)
+        self.quote_ctx = QuoteContext(self.config)  # 行情接口
         self.positions: Dict[str, Dict] = {}  # 持仓跟踪
         self.daily_pnl = 0.0
         
@@ -54,10 +65,13 @@ class LongPortBroker:
         quantity: int,
         price: Optional[float] = None,
         order_type: str = "LIMIT",  # "LIMIT" 或 "MARKET"
-        remark: str = ""
+        remark: str = "",
+        trigger_price: Optional[float] = None,  # 触发价格（条件单）
+        trailing_percent: Optional[float] = None,  # 跟踪止损百分比
+        trailing_amount: Optional[float] = None  # 跟踪止损金额
     ) -> Dict:
         """
-        提交期权订单
+        提交期权订单（支持止盈止损）
         
         Args:
             symbol: 期权代码，如 "AAPL250131C00150000.US"
@@ -66,6 +80,9 @@ class LongPortBroker:
             price: 限价单价格（市价单传 None）
             order_type: 订单类型 LIMIT/MARKET
             remark: 订单备注
+            trigger_price: 触发价格（条件单，用于止盈止损）
+            trailing_percent: 跟踪止损百分比（如 5 表示 5%）
+            trailing_amount: 跟踪止损金额
         
         Returns:
             订单信息字典
@@ -99,16 +116,27 @@ class LongPortBroker:
                     raise ValueError("限价单必须提供价格")
                 submitted_price = Decimal(str(price))
             
+            # 准备订单参数
+            order_params = {
+                "side": order_side,
+                "symbol": symbol,
+                "order_type": o_type,
+                "submitted_price": submitted_price,
+                "submitted_quantity": quantity,
+                "time_in_force": TimeInForceType.Day,
+                "remark": remark or f"Auto trade via OpenAPI - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+            }
+            
+            # 添加止盈止损参数
+            if trigger_price:
+                order_params["trigger_price"] = Decimal(str(trigger_price))
+            if trailing_percent:
+                order_params["trailing_percent"] = Decimal(str(trailing_percent))
+            if trailing_amount:
+                order_params["trailing_amount"] = Decimal(str(trailing_amount))
+            
             # 提交订单
-            resp = self.ctx.submit_order(
-                side=order_side,
-                symbol=symbol,
-                order_type=o_type,
-                submitted_price=submitted_price,
-                submitted_quantity=quantity,
-                time_in_force=TimeInForceType.Day,
-                remark=remark or f"Auto trade via OpenAPI - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-            )
+            resp = self.ctx.submit_order(**order_params)
             
             order_info = {
                 "order_id": resp.order_id,
@@ -126,6 +154,123 @@ class LongPortBroker:
             
         except Exception as e:
             logger.error(f"❌ 订单提交失败: {e}")
+            raise
+    
+    def cancel_order(self, order_id: str) -> Dict:
+        """
+        撤销订单
+        
+        Args:
+            order_id: 订单ID
+        
+        Returns:
+            撤销结果字典
+        """
+        # 检查是否启用自动交易
+        if not self.auto_trade:
+            logger.warning("⚠️  自动交易未启用，跳过订单撤销")
+            return {"order_id": order_id, "status": "skipped", "reason": "auto_trade_disabled"}
+        
+        # Dry run 模式
+        if self.dry_run:
+            logger.info(f"🧪 [DRY RUN] 模拟撤销订单: {order_id}")
+            return {"order_id": order_id, "status": "mock_cancelled", "mode": "dry_run"}
+        
+        try:
+            # 撤销订单（API不返回值或返回None）
+            self.ctx.cancel_order(order_id)
+            
+            result = {
+                "order_id": order_id,
+                "status": "cancelled",
+                "cancelled_at": datetime.now().isoformat(),
+                "mode": "paper" if self.is_paper else "real"
+            }
+            
+            logger.info(f"✅ 订单已撤销: {order_id}")
+            return result
+            
+        except Exception as e:
+            logger.error(f"❌ 订单撤销失败: {e}")
+            raise
+    
+    def replace_order(
+        self,
+        order_id: str,
+        quantity: int,
+        price: Optional[float] = None,
+        trigger_price: Optional[float] = None,
+        trailing_percent: Optional[float] = None,
+        trailing_amount: Optional[float] = None,
+        remark: str = ""
+    ) -> Dict:
+        """
+        修改订单（替换订单）
+        
+        Args:
+            order_id: 要修改的订单ID
+            quantity: 新的数量
+            price: 新的价格（限价单）
+            trigger_price: 新的触发价格（条件单）
+            trailing_percent: 新的跟踪止损百分比
+            trailing_amount: 新的跟踪止损金额
+            remark: 订单备注
+        
+        Returns:
+            修改结果字典
+        """
+        # 检查是否启用自动交易
+        if not self.auto_trade:
+            logger.warning("⚠️  自动交易未启用，跳过订单修改")
+            return {"order_id": order_id, "status": "skipped", "reason": "auto_trade_disabled"}
+        
+        # Dry run 模式
+        if self.dry_run:
+            logger.info(f"🧪 [DRY RUN] 模拟修改订单: {order_id}")
+            return {
+                "order_id": order_id,
+                "quantity": quantity,
+                "price": price,
+                "status": "mock_replaced",
+                "mode": "dry_run"
+            }
+        
+        try:
+            # 准备修改参数
+            replace_params = {
+                "order_id": order_id,
+                "quantity": quantity
+            }
+            
+            # 添加可选参数
+            if price is not None:
+                replace_params["price"] = Decimal(str(price))
+            if trigger_price is not None:
+                replace_params["trigger_price"] = Decimal(str(trigger_price))
+            if trailing_percent is not None:
+                replace_params["trailing_percent"] = Decimal(str(trailing_percent))
+            if trailing_amount is not None:
+                replace_params["trailing_amount"] = Decimal(str(trailing_amount))
+            if remark:
+                replace_params["remark"] = remark
+            
+            # 修改订单
+            self.ctx.replace_order(**replace_params)
+            
+            result = {
+                "order_id": order_id,
+                "quantity": quantity,
+                "price": float(price) if price else None,
+                "status": "replaced",
+                "replaced_at": datetime.now().isoformat(),
+                "mode": "paper" if self.is_paper else "real"
+            }
+            
+            logger.info(f"✅ 订单修改成功: {result}")
+            return result
+            
+        except Exception as e:
+            logger.error(f"❌ 订单修改失败: {e}")
             raise
     
     def _mock_order_response(self, symbol: str, side: str, quantity: int, price: Optional[float]) -> Dict:
@@ -264,6 +409,128 @@ class LongPortBroker:
         except Exception as e:
             logger.error(f"获取账户余额失败: {e}")
             return {}
+    
+    def get_option_expiry_dates(self, symbol: str) -> List[str]:
+        """
+        获取期权到期日列表
+        
+        Args:
+            symbol: 标的代码，如 "AAPL.US"
+        
+        Returns:
+            到期日列表，格式为 YYMMDD 字符串，如 ["260207", "260214", "260221"]
+        """
+        try:
+            # 确保symbol带有市场后缀
+            if not symbol.endswith('.US'):
+                symbol = f"{symbol}.US"
+            
+            resp = self.quote_ctx.option_chain_expiry_date_list(symbol)
+            
+            # 转换 datetime.date 对象为 YYMMDD 字符串
+            expiry_dates = []
+            for date_obj in resp:
+                date_str = date_obj.strftime("%y%m%d")
+                expiry_dates.append(date_str)
+            
+            logger.info(f"获取 {symbol} 期权到期日: {len(expiry_dates)} 个")
+            return expiry_dates
+        except Exception as e:
+            logger.error(f"获取期权到期日失败: {e}")
+            return []
+    
+    def get_option_chain_info(self, symbol: str, expiry_date: str) -> Dict:
+        """
+        获取指定到期日的期权链信息（包含所有行权价）
+        
+        Args:
+            symbol: 标的代码，如 "AAPL.US"
+            expiry_date: 到期日，格式为 YYMMDD 字符串，如 "260207"
+        
+        Returns:
+            期权链信息字典，包含看涨和看跌期权的行权价和代码
+        """
+        try:
+            from datetime import datetime
+            
+            # 确保symbol带有市场后缀
+            if not symbol.endswith('.US'):
+                symbol = f"{symbol}.US"
+            
+            # 将 YYMMDD 字符串转换为 datetime.date 对象
+            date_obj = datetime.strptime(expiry_date, "%y%m%d").date()
+            
+            # 获取期权链
+            resp = self.quote_ctx.option_chain_info_by_date(symbol, date_obj)
+            
+            # 解析响应
+            option_chain = {
+                "symbol": symbol,
+                "expiry_date": expiry_date,
+                "strike_prices": [],
+                "call_symbols": [],
+                "put_symbols": []
+            }
+            
+            # 提取行权价和期权代码（注意：属性名是 price，不是 strike_price）
+            for strike_info in resp:
+                option_chain["strike_prices"].append(float(strike_info.price))
+                option_chain["call_symbols"].append(strike_info.call_symbol)
+                option_chain["put_symbols"].append(strike_info.put_symbol)
+            
+            logger.info(
+                f"获取 {symbol} {expiry_date} 期权链: "
+                f"{len(option_chain['strike_prices'])} 个行权价"
+            )
+            
+            return option_chain
+        except Exception as e:
+            logger.error(f"获取期权链信息失败: {e}")
+            return {}
+    
+    def get_option_quote(self, symbols: List[str]) -> List[Dict]:
+        """
+        获取期权实时报价
+        
+        Args:
+            symbols: 期权代码列表，如 ["AAPL260207C00250000.US"]
+        
+        Returns:
+            期权报价列表
+        """
+        try:
+            resp = self.quote_ctx.option_quote(symbols)
+            
+            quotes = []
+            for quote in resp:
+                # 构建基础报价信息
+                quote_data = {
+                    "symbol": quote.symbol,
+                    "last_done": float(quote.last_done) if quote.last_done else 0,
+                    "open": float(quote.open) if hasattr(quote, 'open') and quote.open else 0,
+                    "high": float(quote.high) if hasattr(quote, 'high') and quote.high else 0,
+                    "low": float(quote.low) if hasattr(quote, 'low') and quote.low else 0,
+                    "volume": int(quote.volume) if quote.volume else 0,
+                }
+                
+                # 获取期权扩展信息
+                if hasattr(quote, 'extend') and quote.extend:
+                    extend = quote.extend
+                    quote_data.update({
+                        "open_interest": int(extend.open_interest) if hasattr(extend, 'open_interest') and extend.open_interest else 0,
+                        "implied_volatility": float(extend.implied_volatility) if hasattr(extend, 'implied_volatility') and extend.implied_volatility else 0,
+                        "strike_price": float(extend.strike_price) if hasattr(extend, 'strike_price') and extend.strike_price else 0,
+                        "contract_type": str(extend.contract_type) if hasattr(extend, 'contract_type') else "",
+                        "direction": str(extend.direction) if hasattr(extend, 'direction') else "",
+                    })
+                
+                quotes.append(quote_data)
+            
+            logger.info(f"获取 {len(quotes)} 个期权报价")
+            return quotes
+        except Exception as e:
+            logger.error(f"获取期权报价失败: {e}")
+            return []
 
 
 def convert_to_longport_symbol(ticker: str, option_type: str, strike: float, expiry: str) -> str:

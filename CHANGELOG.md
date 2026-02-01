@@ -1,130 +1,152 @@
 # 更新日志
 
-## [2.1.0] - 2026-01-30
+## [2.2.0] - 2026-02-01
 
 ### 新增功能
 
-#### 统一配置管理
-- 所有配置项统一在 `.env` 文件中设置
-- 新增 `doc/CONFIGURATION.md` 配置说明文档
-- 详细说明每个配置项的作用、类型、默认值
-- 提供多种使用场景的配置组合建议
-- 新增 `LOGIN_URL` 配置项支持
-- 新增 `check_config.py` 配置检查工具
-  - 自动验证配置文件
-  - 检查必填项
-  - 评估风险参数合理性
-  - 提供交易模式建议
+#### 期权链查询
+- ✅ `get_option_expiry_dates()` - 获取期权到期日列表
+- ✅ `get_option_chain_info()` - 获取指定到期日的期权链（行权价、期权代码）
+- ✅ `get_option_quote()` - 获取期权实时报价
 
-#### 期权过期时间校验
-- 在期权代码转换时自动检查到期日期
-- 如果期权已过期，系统将自动拦截并跳过该指令
-- 支持多种日期格式：`1/31`、`01/31`、`20260131`、`2026-01-31`、`本周`
-- 提供详细的错误日志，包含过期日期和当前日期信息
+#### 订单管理
+- ✅ `cancel_order()` - 撤销订单
+- ✅ `replace_order()` - 修改订单（价格、数量）
+- ✅ 订单支持止盈止损参数：
+  - `trigger_price` - 固定止损触发价
+  - `trailing_percent` - 跟踪止损百分比
+  - `trailing_amount` - 跟踪止损金额
 
-### 修复问题
+### 功能增强
 
-1. **Token 无效问题** - 更新了完整的 access token 配置
-2. **日期计算错误** - 修复了 `timedelta` 的使用，正确处理跨月份日期
-3. **负余额风险检查** - 添加了模拟账户负余额的特殊处理逻辑
-4. **Dry Run 模式配置** - 优化了 Dry Run 模式的行为
-   - 查询操作（获取持仓、订单）不受 Dry Run 影响
-   - 交易操作（下单、撤单）受 Dry Run 控制
-5. **持仓获取错误** - 修复了 `StockPositionsResponse` 的正确访问方式
-
-### 改进
-
-#### 文档结构优化
-- 所有文档统一放在 `doc/` 目录
-- 所有测试统一放在 `test/` 目录
-- 新增 `doc/README.md` - 文档导航
-- 新增 `test/README.md` - 测试说明
-- 新增 `PROJECT_STRUCTURE.md` - 项目结构说明
-- 新增 `run_all_tests.sh` - 一键运行所有测试
-- 更新主 README.md，明确目录结构
-
-#### 配置管理优化
-- 所有配置项统一在 `.env` 文件中管理
-- 新增 `doc/CONFIGURATION.md` - 详细配置说明
-- 更新 `.env.example` - 完善配置模板
-- 更新 `config.py` - 支持更多环境变量
-
-#### 功能增强
-- 更新 README.md，添加期权过期校验说明
-- 新增 `doc/OPTION_EXPIRY_CHECK.md` 详细文档
-- 新增测试文件：
-  - `test/test_option_expiry.py` - 基础功能测试
-  - `test/test_expiry_integration.py` - 集成测试
-
-### 技术细节
-
-#### 期权过期检查实现
-
+#### submit_option_order() 方法增强
+新增参数：
 ```python
-# broker/longport_broker.py
-def convert_to_longport_symbol(ticker, option_type, strike, expiry):
-    # 解析到期日
-    expiry_date = datetime(year, month, day)
-    
-    # 检查是否过期
-    expiry_end_of_day = expiry_date.replace(hour=23, minute=59, second=59)
-    if now > expiry_end_of_day:
-        raise ValueError(f"期权已过期: 到期日 {expiry_date} 早于当前日期 {now}")
-    
-    return symbol
+submit_option_order(
+    symbol,
+    side,
+    quantity,
+    price=None,
+    order_type="LIMIT",
+    remark="",
+    trigger_price=None,        # ⭐ 新增
+    trailing_percent=None,     # ⭐ 新增
+    trailing_amount=None       # ⭐ 新增
+)
 ```
 
-#### 异常处理
+### 测试
+- ✅ `test/broker/test_order_management.py` - 订单管理功能完整测试
+- ✅ `test/broker/test_longport_integration.py` - 更新集成测试，包含期权链查询
 
-```python
-# main.py
-def _handle_open_position(instruction):
-    try:
-        symbol = convert_to_longport_symbol(...)
-    except ValueError as e:
-        logger.error(f"❌ 期权代码转换失败: {e}")
-        logger.warning(f"⚠️  跳过开仓指令 - {instruction.raw_message}")
-        return  # 不执行后续下单操作
-```
+### 文档
+- ✅ `docs/order_management.md` - 订单管理功能完整文档
+- ✅ `README.md` - 更新功能特性说明
+- ✅ `CHANGELOG.md` - 本更新日志
 
-### 测试覆盖
+### 错误修复
+- 🐛 修复期权代码转换中的日期解析问题
+- 🐛 修复期权链查询 API 属性名问题（price vs strike_price）
+- 🐛 修复订单撤销返回值处理
 
-所有测试通过：
-- ✅ 配置加载测试（7个测试项）
-- ✅ 基础功能测试（5个测试场景）
-- ✅ 集成测试（3个实际场景）
-- ✅ 长桥API集成测试（7个测试项）
-
-### 文档更新
-
-- [x] README.md - 添加功能特性说明、目录结构、配置说明
-- [x] doc/README.md - 文档导航
-- [x] doc/CONFIGURATION.md - 配置说明文档（新增）
-- [x] doc/OPTION_EXPIRY_CHECK.md - 期权过期校验文档
-- [x] test/README.md - 测试说明文档
-- [x] PROJECT_STRUCTURE.md - 项目结构说明（新增）
-- [x] CHANGELOG.md - 更新日志
-
-### 向后兼容性
-
-完全向后兼容，不影响现有功能。
+### 已验证功能
+所有功能已在模拟账户中测试通过：
+- ✅ 期权链查询（26个到期日，41个行权价）
+- ✅ 期权实时报价（最新价、开盘、最高、最低、成交量）
+- ✅ 带止损的订单提交
+- ✅ 跟踪止损订单
+- ✅ 订单修改
+- ✅ 订单撤销
+- ✅ 订单状态查询
 
 ---
 
-## [2.0.0] - 2026-01-28
+## [2.1.0] - 2026-01-XX
 
-### 主要功能
-- 长桥证券 API 集成
-- 自动交易系统
-- 持仓管理
-- 风险控制
-- Dry Run 模式
+### 新增功能
+- ✅ Cookie 持久化
+- ✅ 智能去重（内容哈希 + 消息ID）
+- ✅ 自动滚动支持
+- ✅ 后台监控工具
+- ✅ 长桥证券集成
+- ✅ 风险控制模块
+- ✅ 持仓管理系统
 
 ---
 
-## [1.0.0] - 2026-01-20
+## 使用指南
 
-### 初始版本
-- Whop 页面监控
-- 期权指令解析
-- 样本管理系统
+### 快速测试新功能
+
+#### 1. 测试期权链查询
+
+```bash
+cd /Users/txink/Documents/code/playwright
+PYTHONPATH=$(pwd) python3 test/broker/test_longport_integration.py
+```
+
+查看输出中的"测试 5: 期权链查询"部分。
+
+#### 2. 测试订单管理
+
+```bash
+PYTHONPATH=$(pwd) python3 test/broker/test_order_management.py
+```
+
+此测试会演示：
+- 带止损的订单提交
+- 跟踪止损订单
+- 订单修改
+- 订单撤销
+
+#### 3. 使用新功能
+
+```python
+from broker import LongPortBroker, load_longport_config
+
+# 初始化
+config = load_longport_config()
+broker = LongPortBroker(config)
+
+# 1. 查询期权链
+expiry_dates = broker.get_option_expiry_dates("AAPL.US")
+option_chain = broker.get_option_chain_info("AAPL.US", expiry_dates[1])
+
+# 2. 提交带止损的订单
+order = broker.submit_option_order(
+    symbol=option_chain["call_symbols"][20],
+    side="BUY",
+    quantity=2,
+    price=5.0,
+    trigger_price=3.0,  # 止损价 $3
+    remark="带止损的买入订单"
+)
+
+# 3. 修改订单
+broker.replace_order(
+    order_id=order['order_id'],
+    quantity=3,
+    price=4.5
+)
+
+# 4. 撤销订单
+broker.cancel_order(order['order_id'])
+```
+
+### 详细文档
+
+- 📖 [订单管理完整文档](./docs/order_management.md)
+- 📖 [长桥集成指南](./doc/LONGPORT_INTEGRATION_GUIDE.md)
+- 📖 [配置说明](./doc/CONFIGURATION.md)
+
+---
+
+## 贡献者
+
+感谢所有贡献者的付出！
+
+---
+
+## 许可证
+
+MIT License

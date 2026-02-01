@@ -110,6 +110,74 @@ PYTHONPATH=. python3 test/test_position_management.py
 PYTHONPATH=. python3 test/test_samples.py
 ```
 
+### 7. broker/test_longport_integration.py
+
+**长桥证券集成测试（增强版）**
+
+完整的长桥 API 功能测试，包括期权链查询：
+- ✅ 配置加载
+- ✅ 账户信息获取
+- ✅ 期权代码转换
+- ✅ 购买数量计算
+- ✅ **期权链查询**（新增）
+  - 获取期权到期日列表
+  - 获取行权价和期权代码
+  - 获取期权实时报价
+- ✅ Dry Run 模式下单
+- ✅ 获取当日订单
+- ✅ 获取持仓信息
+
+运行：
+```bash
+PYTHONPATH=. python3 test/broker/test_longport_integration.py
+```
+
+### 8. broker/test_order_management.py ⭐
+
+**订单管理功能测试（新功能）**
+
+测试完整的订单生命周期管理：
+- ✅ **带固定止损的订单**（trigger_price）
+- ✅ **跟踪止损订单**（trailing_percent）
+- ✅ **订单修改**（价格和数量）
+- ✅ **订单撤销**
+- ✅ **订单详情查询**
+
+运行：
+```bash
+PYTHONPATH=. python3 test/broker/test_order_management.py
+```
+
+输出示例：
+```
+✅ 订单提交成功:
+  订单ID: 1202576179308015616
+  买入价格: $5.00
+  止损触发价: $3.00
+
+✅ 订单修改成功:
+  订单ID: 1202576179308015616
+  新数量: 2
+  新价格: $4.50
+
+✅ 订单已撤销: 1202576179308015616
+```
+
+### 9. broker/test_position_management.py
+
+**持仓管理测试**
+
+测试持仓跟踪和管理功能：
+- ✅ 创建持仓
+- ✅ 更新持仓
+- ✅ 计算盈亏
+- ✅ 风险控制
+
+运行：
+```bash
+PYTHONPATH=. python3 test/broker/test_position_management.py
+```
+
 ## 运行所有测试
 
 创建一个简单的脚本运行所有测试：

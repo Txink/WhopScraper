@@ -47,12 +47,13 @@ python3 main.py
 
 📖 **详细指南**：[登录指南](./WHOP_LOGIN_GUIDE.md) | [后台监控](./BACKGROUND_MONITORING.md) | [去重功能](./DEDUPLICATION_GUIDE.md) | [自动滚动](./AUTO_SCROLL_GUIDE.md) | [故障排查](./TROUBLESHOOTING.md)
 
-📖 **完整系统**：[使用指南](./doc/USAGE_GUIDE.md) | [配置说明](./doc/CONFIGURATION.md) | [长桥集成](./doc/LONGPORT_INTEGRATION_GUIDE.md) | [启动清单](./doc/CHECKLIST.md)
+📖 **完整系统**：[使用指南](./doc/USAGE_GUIDE.md) | [配置说明](./doc/CONFIGURATION.md) | [长桥集成](./doc/LONGPORT_INTEGRATION_GUIDE.md) | [订单管理](./docs/order_management.md) | [启动清单](./doc/CHECKLIST.md)
 
 📁 **项目资源**：[项目结构说明](./PROJECT_STRUCTURE.md) | [期权过期校验](./doc/OPTION_EXPIRY_CHECK.md) | [更新日志](./CHANGELOG.md)
 
 ## 功能特性
 
+### 信号监控
 - ✅ 自动登录 Whop 平台
 - ✅ **Cookie 持久化**（登录一次，长期使用）
 - ✅ 实时监控页面新消息
@@ -60,8 +61,17 @@ python3 main.py
 - ✅ **期权过期时间校验**（自动拦截已过期期权）
 - ✅ 自动样本收集与管理
 - ✅ JSON 格式输出，方便对接券商 API
+
+### 交易执行
 - ✅ 长桥证券 API 集成（支持模拟/真实账户切换）
 - ✅ 风险控制和 Dry Run 模式
+- ✅ **期权链查询**（获取到期日、行权价、实时报价）
+- ✅ **订单管理**
+  - 订单撤销（cancel_order）
+  - 订单修改（replace_order）
+  - 止盈止损设置（trigger_price, trailing_percent）
+  - 跟踪止损（trailing_amount）
+- ✅ **完整的订单生命周期管理**
 
 ## 🔧 工具说明
 

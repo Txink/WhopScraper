@@ -84,15 +84,91 @@ def test_quantity_calculation(available_cash: float):
     logger.info("✅ 数量计算测试完成")
 
 
-def test_dry_run_order(broker: LongPortBroker):
-    """测试 Dry Run 模式下单"""
+def test_option_chain(broker: LongPortBroker):
+    """测试期权链查询"""
     print("\n" + "="*60)
-    print("测试 5: Dry Run 模式下单")
+    print("测试 5: 期权链查询")
     print("="*60)
     
     try:
-        # 测试期权代码
-        symbol = convert_to_longport_symbol("AAPL", "CALL", 150.0, "1/31")
+        symbol = "AAPL.US"
+        
+        # 1. 获取到期日列表
+        expiry_dates = broker.get_option_expiry_dates(symbol)
+        if not expiry_dates:
+            logger.error("❌ 无法获取期权到期日")
+            return None
+        
+        logger.info(f"找到 {len(expiry_dates)} 个到期日")
+        logger.info(f"近期到期日: {expiry_dates[:5]}")
+        
+        # 2. 获取未过期的到期日的期权链（跳过可能已过期的第一个）
+        # 今天是2月1日，使用索引1（第二个到期日）更安全
+        expiry_idx = min(1, len(expiry_dates) - 1)
+        nearest_expiry = expiry_dates[expiry_idx]
+        logger.info(f"\n查询 {nearest_expiry} 到期日的期权链...")
+        
+        option_chain = broker.get_option_chain_info(symbol, nearest_expiry)
+        if not option_chain or not option_chain.get("strike_prices"):
+            logger.error("❌ 无法获取期权链信息")
+            return None
+        
+        # 显示部分行权价
+        strikes = option_chain["strike_prices"]
+        logger.info(f"共有 {len(strikes)} 个行权价")
+        logger.info(f"行权价范围: ${min(strikes):.2f} - ${max(strikes):.2f}")
+        
+        # 找到中间的几个行权价作为示例
+        mid_idx = len(strikes) // 2
+        sample_strikes = strikes[max(0, mid_idx-2):min(len(strikes), mid_idx+3)]
+        logger.info(f"示例行权价: {[f'${s:.2f}' for s in sample_strikes]}")
+        
+        # 3. 获取部分期权报价
+        sample_calls = option_chain["call_symbols"][max(0, mid_idx-2):min(len(strikes), mid_idx+3)]
+        logger.info(f"\n查询 {len(sample_calls)} 个看涨期权报价...")
+        
+        quotes = broker.get_option_quote(sample_calls[:3])  # 只查询前3个
+        for quote in quotes:
+            logger.info(
+                f"  {quote['symbol']}: "
+                f"最新价 ${quote['last_done']:.2f}, "
+                f"开盘 ${quote['open']:.2f}, "
+                f"最高 ${quote['high']:.2f}, "
+                f"最低 ${quote['low']:.2f}, "
+                f"成交量 {quote['volume']}, "
+                f"未平仓 {quote.get('open_interest', 0)}"
+            )
+        
+        logger.info("✅ 期权链查询测试完成")
+        return {
+            "expiry_dates": expiry_dates,
+            "nearest_expiry": nearest_expiry,
+            "option_chain": option_chain
+        }
+    except Exception as e:
+        logger.error(f"❌ 期权链查询失败: {e}")
+        return None
+
+
+def test_dry_run_order(broker: LongPortBroker, option_chain_result: dict = None):
+    """测试 Dry Run 模式下单"""
+    print("\n" + "="*60)
+    print("测试 6: Dry Run 模式下单")
+    print("="*60)
+    
+    try:
+        # 如果有期权链查询结果，使用真实的期权代码
+        if option_chain_result and option_chain_result.get("option_chain"):
+            chain = option_chain_result["option_chain"]
+            # 使用中间的行权价和对应的call期权代码
+            mid_idx = len(chain["strike_prices"]) // 2
+            symbol = chain["call_symbols"][mid_idx]
+            strike = chain["strike_prices"][mid_idx]
+            logger.info(f"使用期权链中的真实期权: {symbol} (行权价 ${strike:.2f})")
+        else:
+            # 否则使用手动转换（可能不存在）
+            symbol = convert_to_longport_symbol("AAPL", "CALL", 250.0, "2026-02-07")
+            logger.info(f"使用手动生成的期权代码: {symbol}")
         
         # 提交测试订单（dry run 模式不会真实下单）
         order = broker.submit_option_order(
@@ -117,7 +193,7 @@ def test_dry_run_order(broker: LongPortBroker):
 def test_get_orders(broker: LongPortBroker):
     """测试获取订单"""
     print("\n" + "="*60)
-    print("测试 6: 获取当日订单")
+    print("测试 7: 获取当日订单")
     print("="*60)
     
     try:
@@ -137,7 +213,7 @@ def test_get_orders(broker: LongPortBroker):
 def test_get_positions(broker: LongPortBroker):
     """测试获取持仓"""
     print("\n" + "="*60)
-    print("测试 7: 获取持仓信息")
+    print("测试 8: 获取持仓信息")
     print("="*60)
     
     try:
@@ -187,13 +263,16 @@ def main():
     # 5. 测试数量计算
     test_quantity_calculation(available_cash)
     
-    # 6. 测试 Dry Run 下单
-    test_dry_run_order(broker)
+    # 6. 测试期权链查询（新增）
+    option_chain_result = test_option_chain(broker)
     
-    # 7. 测试获取订单
+    # 7. 测试 Dry Run 下单
+    test_dry_run_order(broker, option_chain_result)
+    
+    # 8. 测试获取订单
     test_get_orders(broker)
     
-    # 8. 测试获取持仓
+    # 9. 测试获取持仓
     test_get_positions(broker)
     
     # 测试总结
