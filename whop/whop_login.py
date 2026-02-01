@@ -4,6 +4,8 @@ Whop 登录助手脚本
 """
 import asyncio
 import sys
+import os
+from pathlib import Path
 from playwright.async_api import async_playwright
 
 
@@ -13,7 +15,7 @@ class WhopLoginHelper:
     def __init__(
         self,
         whop_url: str = "https://whop.com/login/",
-        storage_file: str = "storage_state.json"
+        storage_file: str = ".auth/whop_state.json"
     ):
         """
         初始化登录助手
@@ -85,6 +87,11 @@ class WhopLoginHelper:
             
             # 保存登录状态
             print("\n正在保存登录状态...")
+            
+            # 确保目录存在
+            storage_path = Path(self.storage_file)
+            storage_path.parent.mkdir(parents=True, exist_ok=True)
+            
             await context.storage_state(path=self.storage_file)
             
             print(f"✅ 登录状态已保存到: {self.storage_file}")
@@ -222,8 +229,8 @@ async def main():
     parser.add_argument(
         '--storage',
         type=str,
-        default='storage_state.json',
-        help='Cookie 存储文件路径（默认: storage_state.json）'
+        default='.auth/whop_state.json',
+        help='Cookie 存储文件路径（默认: .auth/whop_state.json）'
     )
     
     parser.add_argument(
