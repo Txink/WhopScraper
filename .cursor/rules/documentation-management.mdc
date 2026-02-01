@@ -1,0 +1,81 @@
+---
+description: 项目文档管理规范 - 避免生成过多总结文档
+alwaysApply: true
+---
+
+# 文档管理规范
+
+## 核心原则
+
+修改或添加功能时，遵循以下文档管理原则，避免生成冗余的总结文档：
+
+## 1. 功能文档管理
+
+### 如果功能文档不存在
+
+1. 在 `docs/` 或 `doc/` 目录下创建对应的功能文档
+2. 文档命名清晰，反映功能主题（例如：`order_management.md`, `risk_control.md`）
+3. 在根目录 `README.md` 中添加该文档的索引链接
+
+### 如果功能文档已存在
+
+1. 直接修改现有的功能文档内容
+2. 更新相关章节，保持文档的完整性和一致性
+3. 不要创建新的总结文档
+
+## 2. 变更记录
+
+所有功能修改、优化、修复的总结**统一记录在 `CHANGELOG.md`** 中：
+
+- 按照日期和版本组织
+- 简洁描述变更内容和影响
+- 不需要创建单独的总结文档（如 `FEATURE_SUMMARY.md`, `FINAL_SUMMARY.md` 等）
+
+## 3. 禁止生成的文档类型
+
+❌ 不要生成以下类型的文档：
+
+- `FEATURE_SUMMARY.md` - 功能总结
+- `FINAL_SUMMARY.md` - 最终总结
+- `*_UPDATE.md` - 更新说明（除非是重大版本升级）
+- `*_OPTIMIZATION.md` - 优化说明
+- `*_FIX.md` - 修复说明
+- 其他临时性总结文档
+
+## 4. 文档结构示例
+
+```
+docs/
+  ├── order_management.md      # 订单管理功能文档
+  ├── risk_control.md          # 风控功能文档
+  └── monitoring.md            # 监控功能文档
+
+CHANGELOG.md                   # 所有变更记录
+README.md                      # 项目主文档（包含文档索引）
+```
+
+## 5. 实施流程
+
+```
+修改功能
+  ↓
+功能文档是否存在？
+  ├─ 否 → 创建功能文档 + 更新 README.md 索引
+  └─ 是 → 直接修改功能文档
+  ↓
+在 CHANGELOG.md 中添加变更记录
+  ↓
+完成
+```
+
+## 6. README.md 文档索引格式
+
+在 README.md 中维护清晰的文档索引：
+
+```markdown
+## 文档索引
+
+- [订单管理](docs/order_management.md) - 订单格式化、提交和管理
+- [风险控制](docs/risk_control.md) - 持仓和风险管理
+- [监控功能](docs/monitoring.md) - 后台监控和自动化
+```
