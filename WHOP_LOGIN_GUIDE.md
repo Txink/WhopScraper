@@ -193,7 +193,7 @@ python3 whop_login.py --test
 
 ```bash
 # 抓取指定页面的消息
-python3 whop_scraper_simple.py --url "https://whop.com/joined/your-workspace/messages/"
+python3 whop_scraper_simple.py --url "https://whop.com/joined/stock-and-option/-gZyq1MzOZAWO98/app/"
 ```
 
 **预期输出**：

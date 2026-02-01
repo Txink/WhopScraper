@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 期权信号抓取器 - 主程序入口
-实时监控 Whop 页面，解析期权交易信号，自动执行交易
+实时监控 Whop 页面，解析期权和正股交易信号，自动执行交易
 """
 import asyncio
 import signal
@@ -12,6 +12,7 @@ from typing import Optional
 from config import Config, create_env_template
 from scraper.browser import BrowserManager
 from scraper.monitor import MessageMonitor
+from scraper.multi_monitor import MultiPageMonitor
 from models.instruction import OptionInstruction
 
 # 长桥交易模块
@@ -26,12 +27,13 @@ from broker import (
 from broker.risk_controller import RiskController, AutoTrailingStopLoss
 
 # 配置日志
+log_level = getattr(logging, Config.LOG_LEVEL.upper(), logging.INFO)
 logging.basicConfig(
-    level=logging.INFO,
+    level=log_level,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(sys.stdout),
-        logging.FileHandler('logs/trading.log', encoding='utf-8')
+        logging.FileHandler(f'{Config.LOG_DIR}/trading.log', encoding='utf-8')
     ]
 )
 logger = logging.getLogger(__name__)
@@ -40,9 +42,17 @@ logger = logging.getLogger(__name__)
 class SignalScraper:
     """期权信号抓取器 + 自动交易系统"""
     
-    def __init__(self):
+    def __init__(self, use_multi_page: bool = True):
+        """
+        初始化信号抓取器
+        
+        Args:
+            use_multi_page: 是否使用多页面监控（默认True）
+        """
         self.browser: Optional[BrowserManager] = None
         self.monitor: Optional[MessageMonitor] = None
+        self.multi_monitor: Optional[MultiPageMonitor] = None
+        self.use_multi_page = use_multi_page
         self._shutdown_event = asyncio.Event()
         
         # 交易组件
@@ -129,9 +139,17 @@ class SignalScraper:
         # 启动浏览器
         page = await self.browser.start()
         
-        # 检查是否需要登录
+        # 获取所有需要监控的页面配置
+        page_configs = Config.get_all_pages()
+        
+        if not page_configs:
+            print("错误: 没有配置任何监控页面")
+            return False
+        
+        # 检查登录状态（使用第一个页面）
+        first_url = page_configs[0][0]
         print("正在检查登录状态...")
-        if not await self.browser.is_logged_in(Config.TARGET_URL):
+        if not await self.browser.is_logged_in(first_url):
             print("需要登录...")
             success = await self.browser.login(
                 Config.WHOP_EMAIL,
@@ -143,38 +161,129 @@ class SignalScraper:
                 print("登录失败，请检查凭据是否正确")
                 return False
         
+        # 判断是使用多页面监控还是单页面监控
+        if self.use_multi_page and len(page_configs) > 1:
+            # 使用多页面监控
+            print(f"使用多页面监控模式（共 {len(page_configs)} 个页面）")
+            await self._setup_multi_page_monitor(page, page_configs)
+        else:
+            # 使用单页面监控（向后兼容）
+            print("使用单页面监控模式")
+            await self._setup_single_page_monitor(page, page_configs[0])
+        
+        return True
+    
+    async def _setup_single_page_monitor(self, page, page_config):
+        """
+        设置单页面监控（向后兼容模式）
+        
+        Args:
+            page: 浏览器页面对象
+            page_config: (url, page_type) 元组
+        """
+        url, page_type = page_config
+        
         # 导航到目标页面
-        if not await self.browser.navigate(Config.TARGET_URL):
-            print("无法导航到目标页面")
+        if not await self.browser.navigate(url):
+            print(f"无法导航到目标页面: {url}")
             return False
         
-        # 创建监控器
+        # 创建单页面监控器
         self.monitor = MessageMonitor(
             page=page,
             poll_interval=Config.POLL_INTERVAL,
-            output_file=Config.OUTPUT_FILE
+            output_file=Config.OUTPUT_FILE,
+            enable_sample_collection=Config.ENABLE_SAMPLE_COLLECTION,
+            display_mode=Config.DISPLAY_MODE
         )
         
         # 设置回调
         self.monitor.on_new_instruction(self._on_instruction)
         
-        return True
+        print(f"✅ 单页面监控器已设置: {page_type.upper()} - {url}")
+    
+    async def _setup_multi_page_monitor(self, page, page_configs):
+        """
+        设置多页面监控
+        
+        Args:
+            page: 浏览器页面对象
+            page_configs: [(url, page_type), ...] 列表
+        """
+        # 创建多页面监控器
+        self.multi_monitor = MultiPageMonitor(
+            poll_interval=Config.POLL_INTERVAL,
+            output_file=Config.OUTPUT_FILE,
+            enable_sample_collection=Config.ENABLE_SAMPLE_COLLECTION,
+            display_mode=Config.DISPLAY_MODE
+        )
+        
+        # 为每个页面创建浏览器上下文和页面
+        for url, page_type in page_configs:
+            # 对于第一个页面，使用已有的 page
+            if url == page_configs[0][0]:
+                current_page = page
+            else:
+                # 为其他页面创建新标签页
+                current_page = await self.browser.context.new_page()
+            
+            # 导航到页面
+            print(f"正在导航到 {page_type.upper()} 页面: {url}")
+            await current_page.goto(url, wait_until="domcontentloaded", timeout=30000)
+            
+            # 添加到多页面监控器
+            self.multi_monitor.add_page(
+                page=current_page,
+                page_type=page_type,
+                url=url,
+                enabled=True
+            )
+        
+        # 设置回调
+        self.multi_monitor.on_new_instruction(self._on_instruction_with_type)
+        
+        print(f"✅ 多页面监控器已设置，共 {len(page_configs)} 个页面")
     
     def _on_instruction(self, instruction: OptionInstruction):
         """
-        新指令回调 - 处理交易信号
+        新指令回调 - 处理交易信号（单页面模式）
         
         Args:
             instruction: 解析出的指令
         """
+        self._handle_instruction(instruction, "OPTION")
+    
+    def _on_instruction_with_type(self, instruction: OptionInstruction, page_type: str):
+        """
+        新指令回调 - 处理交易信号（多页面模式）
+        
+        Args:
+            instruction: 解析出的指令
+            page_type: 页面类型 ('option' 或 'stock')
+        """
+        self._handle_instruction(instruction, page_type.upper())
+    
+    def _handle_instruction(self, instruction: OptionInstruction, source: str):
+        """
+        处理交易指令
+        
+        Args:
+            instruction: 解析出的指令
+            source: 信号来源
+        """
         logger.info("\n" + "=" * 60)
-        logger.info(f"📨 [新信号] {instruction}")
+        logger.info(f"📨 [新信号-{source}] {instruction}")
         logger.info(f"JSON: {instruction.to_json()}")
         logger.info("=" * 60)
         
         # 如果没有初始化交易组件，只记录信号
         if not self.broker or not self.position_manager:
             logger.warning("交易组件未初始化，仅记录信号")
+            return
+        
+        # 检查是否是正股指令
+        if instruction.option_type == 'STOCK':
+            logger.info("正股交易信号，暂不支持自动交易")
             return
         
         try:
@@ -368,14 +477,19 @@ class SignalScraper:
         
         print("\n" + "=" * 60)
         print("期权信号抓取器已启动")
-        print(f"目标页面: {Config.TARGET_URL}")
         print(f"轮询间隔: {Config.POLL_INTERVAL} 秒")
+        print(f"展示模式: {Config.DISPLAY_MODE}")
         print(f"输出文件: {Config.OUTPUT_FILE}")
         print("按 Ctrl+C 停止")
         print("=" * 60 + "\n")
         
         try:
-            await self.monitor.start()
+            if self.multi_monitor:
+                await self.multi_monitor.start()
+            elif self.monitor:
+                await self.monitor.start()
+            else:
+                print("错误: 没有可用的监控器")
         except KeyboardInterrupt:
             print("\n收到停止信号...")
         finally:
@@ -400,6 +514,10 @@ class SignalScraper:
             logger.info("持仓已保存")
         
         # 停止监控
+        if self.multi_monitor:
+            self.multi_monitor.stop()
+            logger.info("多页面监控已停止")
+        
         if self.monitor:
             self.monitor.stop()
             logger.info("页面监控已停止")
@@ -416,12 +534,25 @@ async def main():
     """主函数"""
     print("""
 ╔══════════════════════════════════════════════════════════╗
-║           期权信号抓取器 + 自动交易系统 v2.0              ║
+║           期权信号抓取器 + 自动交易系统 v2.1              ║
 ║           Option Signal Scraper & Auto Trading           ║
 ╚══════════════════════════════════════════════════════════╝
     """)
     
-    scraper = SignalScraper()
+    # 检查是否有多个页面需要监控
+    import os
+    from dotenv import load_dotenv
+    load_dotenv()
+    
+    option_pages = os.getenv("WHOP_OPTION_PAGES", "")
+    stock_pages = os.getenv("WHOP_STOCK_PAGES", "")
+    enable_stock = os.getenv("ENABLE_STOCK_MONITOR", "false").lower() == "true"
+    
+    # 判断是否使用多页面监控
+    use_multi = (option_pages.count(',') > 0 or 
+                 (option_pages and stock_pages and enable_stock))
+    
+    scraper = SignalScraper(use_multi_page=use_multi)
     
     # 设置信号处理
     loop = asyncio.get_event_loop()

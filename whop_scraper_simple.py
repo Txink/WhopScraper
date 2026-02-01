@@ -17,7 +17,9 @@ class WhopScraper:
         storage_file: str = "storage_state.json",
         headless: bool = False,
         min_message_length: int = 3,
-        show_stats: bool = True
+        show_stats: bool = True,
+        auto_scroll: bool = False,
+        scroll_interval: int = 5
     ):
         """
         初始化抓取器
@@ -28,12 +30,16 @@ class WhopScraper:
             headless: 是否无头模式运行
             min_message_length: 最小消息长度（字符数），短于此长度的消息将被过滤
             show_stats: 是否显示去重统计信息
+            auto_scroll: 是否自动滚动页面（用于触发懒加载/无限滚动）
+            scroll_interval: 自动滚动间隔（秒），默认 5 秒
         """
         self.target_url = target_url
         self.storage_file = storage_file
         self.headless = headless
         self.min_message_length = min_message_length
         self.show_stats = show_stats
+        self.auto_scroll = auto_scroll
+        self.scroll_interval = scroll_interval
         
     async def scrape_messages(self, duration: int = 30, output_file: str = None):
         """
@@ -57,6 +63,10 @@ class WhopScraper:
         print(f"监控时长: {duration} 秒")
         print(f"最小消息长度: {self.min_message_length} 字符")
         print(f"去重模式: 开启（内容哈希 + ID 双重去重）")
+        if self.auto_scroll:
+            print(f"自动滚动: 开启（每 {self.scroll_interval} 秒滚动一次）")
+        else:
+            print(f"自动滚动: 关闭（依赖页面实时推送）")
         print("=" * 60)
         
         async with async_playwright() as p:
@@ -124,6 +134,7 @@ class WhopScraper:
             duplicate_count = 0           # 去重计数
             filtered_count = 0            # 过滤掉的短消息计数
             start_time = asyncio.get_event_loop().time()
+            last_scroll_time = start_time # 上次滚动时间
             
             while asyncio.get_event_loop().time() - start_time < duration:
                 messages = await self._extract_messages(page)
@@ -165,6 +176,13 @@ class WhopScraper:
                     print(f"内容:\n{msg_text}")
                     print("-" * 60)
                 
+                # 自动滚动（如果启用）
+                if self.auto_scroll:
+                    current_time = asyncio.get_event_loop().time()
+                    if current_time - last_scroll_time >= self.scroll_interval:
+                        await self._scroll_page(page)
+                        last_scroll_time = current_time
+                
                 # 等待一段时间再检查
                 await asyncio.sleep(2)
             
@@ -202,6 +220,29 @@ class WhopScraper:
             # 关闭浏览器
             await context.close()
             await browser.close()
+    
+    async def _scroll_page(self, page):
+        """
+        滚动页面以触发懒加载
+        
+        Args:
+            page: Playwright 页面对象
+        """
+        try:
+            # 方法 1: 滚动到页面底部
+            await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+            await asyncio.sleep(0.5)
+            
+            # 方法 2: 滚动回顶部（模拟查看历史消息）
+            await page.evaluate("window.scrollTo(0, 0)")
+            await asyncio.sleep(0.5)
+            
+            # 方法 3: 滚动到中间位置
+            await page.evaluate("window.scrollTo(0, document.body.scrollHeight / 2)")
+            
+        except Exception as e:
+            # 滚动失败不影响主流程
+            pass
     
     async def _extract_messages(self, page) -> list[dict]:
         """
@@ -388,17 +429,26 @@ async def main():
   保存唯一消息到文件:
     python3 whop_scraper_simple.py --url URL --output messages.json
 
+  启用自动滚动（适用于懒加载页面）:
+    python3 whop_scraper_simple.py --url URL --auto-scroll
+
+  自定义滚动间隔:
+    python3 whop_scraper_simple.py --url URL --auto-scroll --scroll-interval 10
+
   完整示例（所有功能）:
-    python3 whop_scraper_simple.py --url URL --duration 300 --headless --min-length 15 --output messages.json
+    python3 whop_scraper_simple.py --url URL --duration 300 --headless --min-length 15 --auto-scroll --output messages.json
 
 特性:
   - 智能去重：自动过滤重复消息（基于内容哈希）
   - 噪音过滤：过滤太短的消息（默认 < 10 字符）
   - 统计信息：显示去重效率和过滤统计
+  - 自动滚动：支持懒加载/无限滚动页面（可选）
 
 注意:
   - 运行前请先使用 whop_login.py 保存登录状态
   - 如果 cookie 过期，需要重新运行 whop_login.py
+  - 如果页面支持实时推送，无需启用自动滚动
+  - 如果页面使用懒加载，建议启用 --auto-scroll
         """
     )
     
@@ -448,6 +498,19 @@ async def main():
         help='保存唯一消息到 JSON 文件（例如: messages.json）'
     )
     
+    parser.add_argument(
+        '--auto-scroll',
+        action='store_true',
+        help='启用自动滚动（用于触发懒加载/无限滚动页面）'
+    )
+    
+    parser.add_argument(
+        '--scroll-interval',
+        type=int,
+        default=5,
+        help='自动滚动间隔（秒），默认 5 秒'
+    )
+    
     args = parser.parse_args()
     
     scraper = WhopScraper(
@@ -455,7 +518,9 @@ async def main():
         storage_file=args.storage,
         headless=args.headless,
         min_message_length=args.min_length,
-        show_stats=not args.no_stats
+        show_stats=not args.no_stats,
+        auto_scroll=args.auto_scroll,
+        scroll_interval=args.scroll_interval
     )
     
     await scraper.scrape_messages(

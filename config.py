@@ -3,6 +3,7 @@
 """
 import os
 from dotenv import load_dotenv
+from typing import List
 
 # 加载 .env 文件
 load_dotenv()
@@ -15,11 +16,30 @@ class Config:
     WHOP_EMAIL: str = os.getenv("WHOP_EMAIL", "")
     WHOP_PASSWORD: str = os.getenv("WHOP_PASSWORD", "")
     
-    # 目标页面 URL
-    TARGET_URL: str = os.getenv(
-        "TARGET_URL",
-        "https://whop.com/joined/stock-and-option/-9vfxZgBNgXykNt/app/"
-    )
+    # 多页面 URL 配置
+    WHOP_OPTION_PAGES: List[str] = [
+        url.strip() 
+        for url in os.getenv("WHOP_OPTION_PAGES", "").split(",") 
+        if url.strip()
+    ]
+    WHOP_STOCK_PAGES: List[str] = [
+        url.strip() 
+        for url in os.getenv("WHOP_STOCK_PAGES", "").split(",") 
+        if url.strip()
+    ]
+    
+    # 兼容旧配置：如果没有设置新的多页面配置，使用旧的 TARGET_URL
+    if not WHOP_OPTION_PAGES:
+        _target_url = os.getenv(
+            "TARGET_URL",
+            "https://whop.com/joined/stock-and-option/-9vfxZgBNgXykNt/app/"
+        )
+        if _target_url:
+            WHOP_OPTION_PAGES = [_target_url]
+    
+    # 页面类型启用控制
+    ENABLE_OPTION_MONITOR: bool = os.getenv("ENABLE_OPTION_MONITOR", "true").lower() == "true"
+    ENABLE_STOCK_MONITOR: bool = os.getenv("ENABLE_STOCK_MONITOR", "false").lower() == "true"
     
     # Whop 登录页面
     LOGIN_URL: str = os.getenv(
@@ -40,6 +60,26 @@ class Config:
     # 输出设置
     OUTPUT_FILE: str = os.getenv("OUTPUT_FILE", "output/signals.json")
     
+    # 消息展示模式
+    DISPLAY_MODE: str = os.getenv("DISPLAY_MODE", "both")  # raw, parsed, both
+    
+    # 日志配置
+    LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")  # DEBUG, INFO, WARNING, ERROR
+    
+    # 样本和数据集配置
+    ENABLE_SAMPLE_COLLECTION: bool = os.getenv("ENABLE_SAMPLE_COLLECTION", "true").lower() == "true"
+    SAMPLE_DATA_DIR: str = os.getenv("SAMPLE_DATA_DIR", "samples/data")
+    
+    # 存储路径配置
+    POSITION_FILE: str = os.getenv("POSITION_FILE", "data/positions.json")
+    LOG_DIR: str = os.getenv("LOG_DIR", "logs")
+    
+    # 保留 TARGET_URL 作为向后兼容属性
+    @property
+    def TARGET_URL(self) -> str:
+        """向后兼容：返回第一个期权页面URL"""
+        return self.WHOP_OPTION_PAGES[0] if self.WHOP_OPTION_PAGES else ""
+    
     @classmethod
     def validate(cls) -> bool:
         """验证必需的配置项"""
@@ -47,7 +87,43 @@ class Config:
             print("错误: 请设置 WHOP_EMAIL 和 WHOP_PASSWORD 环境变量")
             print("可以在 .env 文件中设置，或直接设置环境变量")
             return False
+        
+        # 验证至少启用了一种监控类型
+        if not cls.ENABLE_OPTION_MONITOR and not cls.ENABLE_STOCK_MONITOR:
+            print("警告: 未启用任何监控类型（期权和正股都未启用）")
+            print("请在 .env 中设置 ENABLE_OPTION_MONITOR=true 或 ENABLE_STOCK_MONITOR=true")
+            return False
+        
+        # 验证相应的页面URL已配置
+        if cls.ENABLE_OPTION_MONITOR and not cls.WHOP_OPTION_PAGES:
+            print("错误: 启用了期权监控但未配置 WHOP_OPTION_PAGES")
+            return False
+        
+        if cls.ENABLE_STOCK_MONITOR and not cls.WHOP_STOCK_PAGES:
+            print("错误: 启用了正股监控但未配置 WHOP_STOCK_PAGES")
+            return False
+        
+        # 验证展示模式
+        if cls.DISPLAY_MODE not in ['raw', 'parsed', 'both']:
+            print(f"警告: 无效的 DISPLAY_MODE '{cls.DISPLAY_MODE}'，使用默认值 'both'")
+            cls.DISPLAY_MODE = 'both'
+        
         return True
+    
+    @classmethod
+    def get_all_pages(cls) -> List[tuple]:
+        """
+        获取所有需要监控的页面配置
+        
+        Returns:
+            [(url, page_type), ...] 列表，page_type 为 'option' 或 'stock'
+        """
+        pages = []
+        if cls.ENABLE_OPTION_MONITOR:
+            pages.extend([(url, 'option') for url in cls.WHOP_OPTION_PAGES])
+        if cls.ENABLE_STOCK_MONITOR:
+            pages.extend([(url, 'stock') for url in cls.WHOP_STOCK_PAGES])
+        return pages
 
 
 # 创建示例 .env 文件模板

@@ -15,6 +15,39 @@ python3 whop_scraper_simple.py --url "你的 Whop 页面 URL"
 
 ## 📋 常用命令
 
+### 后台监控（一直运行）
+
+```bash
+# 🚀 方法 1: 一键启动（推荐，最简单）
+./start_background_monitor.sh
+# 交互式配置，支持多种运行模式
+
+# 📊 查看运行状态
+./check_status.sh
+
+# 🛑 停止监控
+./stop_monitor.sh
+
+# ============================================
+
+# 方法 2: 使用 screen（手动）
+screen -S whop
+python3 whop_scraper_simple.py --url "URL" --duration 999999999 --headless --min-length 15 --output messages.json
+# 按 Ctrl+A, 然后按 D 分离
+
+# 重新连接
+screen -r whop
+
+# 方法 3: 使用 nohup
+nohup python3 whop_scraper_simple.py --url "URL" --duration 86400 --headless --min-length 15 --output messages.json > scraper.log 2>&1 &
+# 查看日志: tail -f scraper.log
+
+# 方法 4: 自动重启
+nohup bash -c 'while true; do python3 whop_scraper_simple.py --url "URL" --duration 86400 --headless --min-length 15 --output messages.json; sleep 10; done' > scraper.log 2>&1 &
+```
+
+📖 **详细说明**：[后台监控完整指南](./BACKGROUND_MONITORING.md)
+
 ### 登录管理
 
 ```bash
@@ -49,8 +82,14 @@ python3 whop_scraper_simple.py --url "URL" --output messages.json
 # 简洁输出（不显示统计）
 python3 whop_scraper_simple.py --url "URL" --no-stats
 
+# 启用自动滚动（懒加载页面）
+python3 whop_scraper_simple.py --url "URL" --auto-scroll
+
+# 自定义滚动间隔
+python3 whop_scraper_simple.py --url "URL" --auto-scroll --scroll-interval 10
+
 # 完整示例
-python3 whop_scraper_simple.py --url "URL" --duration 300 --headless --min-length 15 --output messages.json
+python3 whop_scraper_simple.py --url "URL" --duration 300 --headless --auto-scroll --min-length 15 --output messages.json
 
 # 使用自定义 Cookie
 python3 whop_scraper_simple.py --url "URL" --storage "my_cookies.json"

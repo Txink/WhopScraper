@@ -22,7 +22,8 @@ def test_expired_option():
         print(f"✅ 测试通过: 正确检测到过期期权")
         print(f"   错误信息: {e}")
 
-
+  "https://whop.com/joined/stock-and-option/-gZyq1MzOZAWO98/app/" \
+  --duration 60ç
 def test_valid_future_option():
     """测试未来有效的期权"""
     print("\n" + "="*60)

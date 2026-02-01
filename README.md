@@ -43,7 +43,11 @@ PYTHONPATH=. python3 test/test_longport_integration.py
 python3 main.py
 ```
 
-📖 **详细指南**：[Whop 登录指南](./WHOP_LOGIN_GUIDE.md) | [快速参考](./QUICK_REFERENCE.md) | [完整使用指南](./doc/USAGE_GUIDE.md) | [配置说明](./doc/CONFIGURATION.md) | [快速开始](./doc/QUICKSTART_LONGPORT.md) | [启动检查清单](./doc/CHECKLIST.md)
+📖 **快速开始**：[新手上手指南](./GETTING_STARTED.md) ⭐ | [快速参考](./QUICK_REFERENCE.md)
+
+📖 **详细指南**：[登录指南](./WHOP_LOGIN_GUIDE.md) | [后台监控](./BACKGROUND_MONITORING.md) | [去重功能](./DEDUPLICATION_GUIDE.md) | [自动滚动](./AUTO_SCROLL_GUIDE.md) | [故障排查](./TROUBLESHOOTING.md)
+
+📖 **完整系统**：[使用指南](./doc/USAGE_GUIDE.md) | [配置说明](./doc/CONFIGURATION.md) | [长桥集成](./doc/LONGPORT_INTEGRATION_GUIDE.md) | [启动清单](./doc/CHECKLIST.md)
 
 📁 **项目资源**：[项目结构说明](./PROJECT_STRUCTURE.md) | [期权过期校验](./doc/OPTION_EXPIRY_CHECK.md) | [更新日志](./CHANGELOG.md)
 
@@ -60,6 +64,53 @@ python3 main.py
 - ✅ 风险控制和 Dry Run 模式
 
 ## 🔧 工具说明
+
+### 后台监控管理工具
+
+项目提供了完整的后台监控管理工具：
+
+#### 1. `start_background_monitor.sh` - 一键启动后台监控
+
+交互式启动脚本，支持多种运行模式。
+
+```bash
+# 一键启动（交互式配置）
+./start_background_monitor.sh
+
+# 或者快速启动（使用默认 URL）
+./start_background_monitor.sh "https://whop.com/your-page/"
+```
+
+提供三种运行模式：
+- **Screen 会话**（推荐）：可随时查看，支持重连
+- **nohup 后台**：简单临时使用
+- **无限循环**：自动重启，最稳定
+
+#### 2. `check_status.sh` - 查看运行状态
+
+```bash
+# 查看详细状态
+./check_status.sh
+```
+
+显示信息：
+- 进程状态和资源使用
+- Screen 会话
+- 最新日志
+- 今日统计
+- Cookie 状态
+
+#### 3. `stop_monitor.sh` - 停止监控
+
+```bash
+# 停止所有监控进程
+./stop_monitor.sh
+```
+
+支持：
+- PID 文件方式停止
+- 批量停止所有进程
+- 停止 Screen 会话
 
 ### 登录和 Cookie 管理工具
 
@@ -100,21 +151,27 @@ python3 whop_scraper_simple.py --url "URL" --min-length 15
 # 保存唯一消息到文件
 python3 whop_scraper_simple.py --url "URL" --output messages.json
 
+# 启用自动滚动（适用于懒加载页面）
+python3 whop_scraper_simple.py --url "URL" --auto-scroll
+
 # 完整示例（所有功能）
-python3 whop_scraper_simple.py --url "URL" --duration 300 --headless --min-length 15 --output messages.json
+python3 whop_scraper_simple.py --url "URL" --duration 300 --headless --auto-scroll --min-length 15 --output messages.json
 
 # 查看所有选项
 python3 whop_scraper_simple.py --help
 ```
 
-**去重功能**：
+**核心功能**：
 - ✅ 内容哈希去重（避免不同 ID 的相同内容）
 - ✅ 消息 ID 去重（防止重复处理）
 - ✅ 噪音过滤（过滤太短的消息）
 - ✅ 统计信息（显示去重效率）
 - ✅ 保存到文件（JSON 格式）
+- ✅ **自动滚动**（支持懒加载/无限滚动页面）
 
-📖 详细说明：[去重功能指南](./DEDUPLICATION_GUIDE.md)
+📖 详细说明：
+- [去重功能指南](./DEDUPLICATION_GUIDE.md)
+- [自动滚动指南](./AUTO_SCROLL_GUIDE.md)
 
 📖 **详细教程**：请参考 [Whop 登录和抓取指南](./WHOP_LOGIN_GUIDE.md)
 

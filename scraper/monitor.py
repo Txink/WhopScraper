@@ -20,7 +20,8 @@ class MessageMonitor:
         page: Page,
         poll_interval: float = 2.0,
         output_file: str = "output/signals.json",
-        enable_sample_collection: bool = True
+        enable_sample_collection: bool = True,
+        display_mode: str = "both"
     ):
         """
         初始化消息监控器
@@ -30,10 +31,17 @@ class MessageMonitor:
             poll_interval: 轮询间隔（秒）
             output_file: 输出文件路径
             enable_sample_collection: 是否启用样本收集
+            display_mode: 展示模式 ('raw', 'parsed', 'both')
         """
         self.page = page
         self.poll_interval = poll_interval
         self.store = InstructionStore(output_file)
+        self.display_mode = display_mode
+        
+        # 验证展示模式
+        if self.display_mode not in ['raw', 'parsed', 'both']:
+            print(f"⚠️  无效的展示模式 '{self.display_mode}'，使用默认值 'both'")
+            self.display_mode = 'both'
         
         # 样本管理器
         self.enable_sample_collection = enable_sample_collection
@@ -84,6 +92,30 @@ class MessageMonitor:
             "ADJUST": SampleCategory.ADJUST.value,
         }
         return type_map.get(instruction.instruction_type, SampleCategory.UNKNOWN.value)
+    
+    def _display_message(self, text: str, instruction: Optional[OptionInstruction] = None):
+        """
+        根据展示模式显示消息
+        
+        Args:
+            text: 原始消息文本
+            instruction: 解析后的指令（如果有）
+        """
+        if self.display_mode == "raw":
+            # 仅显示原始消息
+            print(f"[原始消息] {text}")
+        
+        elif self.display_mode == "parsed":
+            # 仅显示解析后的指令
+            if instruction:
+                print(f"[新指令] {instruction}")
+        
+        elif self.display_mode == "both":
+            # 两者都显示
+            print(f"[原始消息] {text}")
+            if instruction:
+                print(f"[新指令] {instruction}")
+                print(f"[JSON] {instruction.to_json()}")
     
     async def _extract_messages(self) -> list[dict]:
         """
@@ -230,10 +262,12 @@ class MessageMonitor:
                 instruction = OptionParser.parse(line, msg_id)
                 if instruction:
                     parsed_any = True
+                    # 显示消息（根据展示模式）
+                    self._display_message(line, instruction)
+                    
                     # 保存到存储
                     if self.store.add(instruction):
                         new_instructions.append(instruction)
-                        print(f"[新指令] {instruction}")
                         
                         # 触发新指令回调
                         if self._on_new_instruction:
@@ -250,11 +284,16 @@ class MessageMonitor:
                             )
             
             # 如果整条消息都没有被解析，添加为未解析样本
-            if not parsed_any and self.sample_manager and len(text) > 5:
-                self.sample_manager.add_unparsed_sample(
-                    message=text,
-                    notes="监控时未能解析"
-                )
+            if not parsed_any and len(text) > 5:
+                # 只在 raw 或 both 模式下显示未解析的原始消息
+                if self.display_mode in ["raw", "both"]:
+                    self._display_message(text, None)
+                
+                if self.sample_manager:
+                    self.sample_manager.add_unparsed_sample(
+                        message=text,
+                        notes="监控时未能解析"
+                    )
         
         return new_instructions
     
@@ -262,6 +301,7 @@ class MessageMonitor:
         """开始实时监控"""
         self._running = True
         print(f"开始监控，轮询间隔: {self.poll_interval} 秒")
+        print(f"展示模式: {self.display_mode}")
         print("按 Ctrl+C 停止监控")
         
         while self._running:
