@@ -7,6 +7,7 @@ import asyncio
 import signal
 import sys
 import logging
+import os
 from typing import Optional
 
 from config import Config, create_env_template
@@ -25,6 +26,9 @@ from broker import (
     calculate_quantity
 )
 from broker.risk_controller import RiskController, AutoTrailingStopLoss
+
+# 确保日志目录存在
+os.makedirs(Config.LOG_DIR, exist_ok=True)
 
 # 配置日志
 log_level = getattr(logging, Config.LOG_LEVEL.upper(), logging.INFO)
