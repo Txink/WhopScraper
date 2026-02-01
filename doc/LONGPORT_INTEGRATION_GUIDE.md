@@ -405,6 +405,139 @@ def convert_to_longport_symbol(ticker: str, option_type: str, strike: float, exp
     return symbol
 ```
 
+### 1.5 正股交易模块
+
+除了期权交易，`broker/longport_broker.py` 还提供完整的正股交易功能：
+
+**核心特性**：
+- ✅ 正股实时报价查询
+- ✅ 正股订单提交（限价单、市价单）
+- ✅ 自动市场后缀处理（.US、.HK）
+- ✅ 市价单智能风险检查
+- ✅ 支持止盈止损参数
+
+#### 1.5.1 获取正股报价
+
+```python
+# 获取单个股票报价
+quotes = broker.get_stock_quote(["AAPL.US"])
+quote = quotes[0]
+
+print(f"股票代码: {quote['symbol']}")
+print(f"最新价: ${quote['last_done']:.2f}")
+print(f"开盘价: ${quote['open']:.2f}")
+print(f"最高价: ${quote['high']:.2f}")
+print(f"最低价: ${quote['low']:.2f}")
+print(f"成交量: {quote['volume']:,}")
+print(f"成交额: ${quote['turnover']:,.0f}")
+
+# 获取多个股票报价
+symbols = ["AAPL.US", "TSLA.US", "NVDA.US"]
+quotes = broker.get_stock_quote(symbols)
+
+for quote in quotes:
+    prev_close = quote.get('prev_close', 0)
+    if prev_close > 0:
+        change_pct = ((quote['last_done'] - prev_close) / prev_close) * 100
+        print(f"{quote['symbol']}: ${quote['last_done']:.2f} ({change_pct:+.2f}%)")
+```
+
+#### 1.5.2 提交正股订单
+
+```python
+# 限价单 - 买入
+order = broker.submit_stock_order(
+    symbol="AAPL.US",
+    side="BUY",          # BUY 或 SELL
+    quantity=100,        # 股数
+    price=250.00,        # 限价
+    order_type="LIMIT",
+    remark="买入苹果股票"
+)
+
+# 限价单 - 卖出（会自动检查持仓）
+order = broker.submit_stock_order(
+    symbol="AAPL.US",
+    side="SELL",         # 卖出前会自动检查持仓数量
+    quantity=50,         # 如果持仓不足50股，订单会被拒绝
+    price=260.00,
+    order_type="LIMIT",
+    remark="卖出苹果股票"
+)
+
+# 市价单
+order = broker.submit_stock_order(
+    symbol="TSLA.US",
+    side="BUY",
+    quantity=50,
+    order_type="MARKET",  # 市价单会自动获取当前价格进行风险检查
+    remark="市价买入特斯拉"
+)
+
+# 带止盈止损的订单
+order = broker.submit_stock_order(
+    symbol="NVDA.US",
+    side="BUY",
+    quantity=20,
+    price=190.00,
+    trigger_price=200.00,        # 触发价格
+    trailing_percent=5.0,         # 跟踪止损 5%
+    remark="买入英伟达（带止损）"
+)
+```
+
+**⚠️ 重要提示：卖出订单的持仓检查**
+
+从 v2.5.2 开始，所有卖出订单（`side="SELL"`）会自动进行持仓检查：
+
+1. **无持仓检查**：如果没有该股票/期权的持仓，订单会被拒绝
+2. **数量检查**：如果卖出数量超过可用持仓，订单会被拒绝
+3. **错误提示**：会显示详细的错误信息，如"可用持仓仅 30 股"
+
+```python
+# 示例：卖出检查失败的情况
+try:
+    order = broker.submit_stock_order(
+        symbol="AAPL.US",
+        side="SELL",
+        quantity=1000,  # 假设只有 100 股
+        price=250.00,
+        order_type="LIMIT"
+    )
+except ValueError as e:
+    print(f"订单被拒绝: {e}")
+    # 输出: "持仓不足: 无法卖出 1000 股 AAPL.US"
+```
+
+#### 1.5.3 正股 vs 期权订单的区别
+
+| 项目 | 正股订单 | 期权订单 |
+|------|---------|---------|
+| 数量单位 | 股数 | 合约数 |
+| 订单金额 | 价格 × 数量 | 价格 × 数量 × 100 |
+| 函数名称 | `submit_stock_order()` | `submit_option_order()` |
+| 代码格式 | `AAPL.US` | `AAPL260131C00150000.US` |
+| 最小交易单位 | 1股 | 1张合约（100股） |
+
+#### 1.5.4 集成测试
+
+运行正股API集成测试：
+
+```bash
+# 测试正股交易API
+PYTHONPATH=. python3 test/broker/test_stock_integration.py
+```
+
+测试内容包括：
+- ✅ 配置加载
+- ✅ 账户信息查询
+- ✅ 多股票报价查询（AAPL, TSLA, NVDA, MSFT, GOOGL）
+- ✅ 单股票详细报价
+- ✅ 限价单提交（Dry Run）
+- ✅ 市价单提交（Dry Run）
+- ✅ 订单查询
+- ✅ 持仓查询
+
 ### 2. 集成到主程序
 
 编辑 `main.py`，添加长桥交易逻辑：

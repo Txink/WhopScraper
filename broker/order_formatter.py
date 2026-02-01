@@ -246,6 +246,69 @@ def print_order_table(order: Dict, title: str = "订单信息"):
     console.print(table)
 
 
+def print_order_failed_table(order: Dict, error_msg: str, title: str = "订单失败"):
+    """
+    以红色边框表格形式打印失败的订单
+    
+    Args:
+        order: 订单信息字典
+        error_msg: 错误信息
+        title: 表格标题
+    """
+    # 获取期权语义化名称
+    symbol = order.get('symbol', '-')
+    semantic_name = parse_option_symbol(symbol)
+    
+    # 创建表格，使用语义化名称作为标题，红色边框
+    table = Table(
+        title=f"[bold red]{semantic_name} - ❌ 订单失败[/bold red]", 
+        show_header=False, 
+        show_edge=True, 
+        padding=(0, 1), 
+        border_style="bold red",  # 红色边框
+        box=box.HEAVY
+    )
+    
+    # 添加两列
+    table.add_column(justify="left", style="cyan", width=12)
+    table.add_column(justify="left", style="white", width=40)
+    
+    # 期权名称（语义化）
+    table.add_row("期权", semantic_name)
+    
+    # 操作方向（彩色）
+    side_text = format_side(order.get('side', '-'))
+    table.add_row("操作方向", side_text)
+    
+    # 数量
+    quantity = order.get('quantity', 0)
+    table.add_row("数量", str(quantity))
+    
+    # 价格（仅单价）
+    price = order.get('price')
+    price_str = format_price(price)
+    table.add_row("价格", price_str)
+    
+    # 总价（蓝色显示）
+    total_value = format_total_value(price, quantity)
+    table.add_row("总价", total_value)
+    
+    # 失败原因（红色高亮）
+    table.add_row("失败原因", Text(error_msg, style="bold red"))
+    
+    # 账户模式
+    mode = order.get('mode', '-')
+    mode_display = "🧪 模拟账户" if mode == "paper" else "💰 真实账户"
+    table.add_row("账户模式", mode_display)
+    
+    # 备注
+    remark = order.get('remark')
+    if remark:
+        table.add_row("备注", remark)
+    
+    console.print(table)
+
+
 def print_order_search_table(order: Dict, title: str = "订单查询"):
     """
     以表格形式打印查询到的订单（纵向两列展示，无列标题）
@@ -455,10 +518,10 @@ def print_order_cancel_table(order: Dict, title: str = "订单撤销"):
     symbol = order.get('symbol', '-')
     semantic_name = parse_option_symbol(symbol)
     
-    # 创建表格，使用语义化名称作为标题，红色粗体边框（表示撤销操作）
+    # 创建表格，使用语义化名称作为标题，极浅灰色边框（表示撤销操作）
     table = Table(title=f"[bold cyan]{semantic_name}[/bold cyan]", 
                   show_header=False,
-                  border_style="bold red",
+                  border_style="dim white",  # 极浅灰色边框
                   box=box.HEAVY)
     
     # 两列：字段和值
@@ -735,12 +798,11 @@ def print_positions_table(positions: List[Dict], title: str = "持仓列表"):
     
     table = Table(title=f"{title} (共 {len(positions)} 个)", show_header=True, header_style="bold magenta", box=box.HEAVY)
     
-    table.add_column("期权", style="cyan", width=25)
-    table.add_column("数量", justify="right", width=8)
-    table.add_column("可用", justify="right", width=8)
-    table.add_column("成本价", justify="right", width=12)
-    table.add_column("市值", justify="right", width=12)
-    table.add_column("市场", justify="center", width=6)
+    table.add_column("代码/期权", style="cyan", width=30)
+    table.add_column("数量", justify="right", width=10)
+    table.add_column("成本价", justify="right", width=14)
+    table.add_column("市值", justify="right", width=16)
+    table.add_column("市场", justify="center", width=8)
     
     for pos in positions:
         # 解析期权名称
@@ -749,26 +811,85 @@ def print_positions_table(positions: List[Dict], title: str = "持仓列表"):
         
         # 数量
         quantity = pos.get('quantity', 0)
-        available_quantity = pos.get('available_quantity', 0)
         
         # 成本价
         cost_price = pos.get('cost_price', 0)
         cost_str = f"${cost_price:.2f}"
         
-        # 市值
-        market_value = quantity * cost_price * 100  # 期权合约乘数100
+        # 市值（根据是否为期权判断乘数）
+        # 如果symbol包含期权特征（如 C/P），则使用100乘数，否则为正股
+        if 'C' in symbol or 'P' in symbol:
+            market_value = quantity * cost_price * 100  # 期权合约乘数100
+        else:
+            market_value = quantity * cost_price  # 正股
         market_str = f"${market_value:,.2f}"
         
-        # 市场
+        # 市场（简化显示，去掉 "Market." 前缀）
         market = pos.get('market', '-')
+        market_display = str(market).replace('Market.', '') if market else '-'
         
         table.add_row(
             semantic_name,
             str(int(quantity)),
-            str(int(available_quantity)),
             cost_str,
             market_str,
-            market
+            market_display
+        )
+    
+    console.print(table)
+
+
+def print_stock_quotes_table(quotes: List[Dict], title: str = "股票报价"):
+    """
+    打印股票报价表格
+    
+    Args:
+        quotes: 股票报价列表
+        title: 表格标题
+    """
+    if not quotes:
+        print_warning_message("无报价数据")
+        return
+    
+    table = Table(title=f"{title} (共 {len(quotes)} 个)", show_header=True, header_style="bold magenta", box=box.HEAVY)
+    
+    table.add_column("代码", style="cyan", width=12)
+    table.add_column("最新价", justify="right", width=11)
+    table.add_column("涨跌幅", justify="right", width=13)
+    table.add_column("开盘", justify="right", width=11)
+    table.add_column("最高", justify="right", width=11)
+    table.add_column("最低", justify="right", width=11)
+    table.add_column("成交量", justify="right", width=13)
+    table.add_column("成交额(M)", justify="right", width=11)
+    
+    for quote in quotes:
+        symbol = quote.get('symbol', '-')
+        last_done = quote.get('last_done', 0)
+        prev_close = quote.get('prev_close', 0)
+        open_price = quote.get('open', 0)
+        high = quote.get('high', 0)
+        low = quote.get('low', 0)
+        volume = quote.get('volume', 0)
+        turnover = quote.get('turnover', 0)
+        
+        # 计算涨跌幅
+        change_pct = ((last_done - prev_close) / prev_close * 100) if prev_close > 0 else 0
+        change_style = "bold green" if change_pct >= 0 else "bold red"
+        change_icon = "🟢" if change_pct >= 0 else "🔴"
+        change_str = f"{change_icon} {change_pct:+.2f}%"
+        
+        # 成交额转换为百万显示
+        turnover_m = turnover / 1_000_000 if turnover else 0
+        
+        table.add_row(
+            symbol,
+            f"${last_done:.2f}",
+            Text(change_str, style=change_style),
+            f"${open_price:.2f}",
+            f"${high:.2f}",
+            f"${low:.2f}",
+            f"{volume:,}",
+            f"${turnover_m:,.1f}M"
         )
     
     console.print(table)

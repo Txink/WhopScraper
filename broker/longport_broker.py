@@ -21,7 +21,8 @@ from .order_formatter import (
     print_success_message,
     print_error_message,
     print_warning_message,
-    print_info_message
+    print_info_message,
+    print_order_failed_table
 )
 
 logger = logging.getLogger(__name__)
@@ -101,10 +102,16 @@ class LongPortBroker:
             return self._mock_order_response(symbol, side, quantity, price)
         
         try:
-            # 风险检查
-            order_amount = (price or 0) * quantity * 100  # 每张期权 100 股
-            if not self._check_risk_limits(order_amount):
-                raise ValueError("风险检查未通过，订单被拒绝")
+            # 卖出时检查持仓
+            if side.upper() == "SELL":
+                if not self._check_position_for_sell(symbol, quantity):
+                    raise ValueError(f"持仓不足: 无法卖出 {quantity} 张 {symbol}")
+            
+            # 风险检查（仅买入时检查）
+            if side.upper() == "BUY":
+                order_amount = (price or 0) * quantity * 100  # 每张期权 100 股
+                if not self._check_risk_limits(order_amount):
+                    raise ValueError("风险检查未通过，订单被拒绝")
             
             # 转换买卖方向
             order_side = OrderSide.Buy if side.upper() == "BUY" else OrderSide.Sell
@@ -162,6 +169,22 @@ class LongPortBroker:
             
             return order_info
             
+        except ValueError as e:
+            # 构造失败订单信息
+            failed_order = {
+                "symbol": symbol,
+                "side": side,
+                "quantity": quantity,
+                "price": float(price) if price else None,
+                "mode": "paper" if self.is_paper else "real",
+                "remark": remark or f"Auto trade via OpenAPI - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+            }
+            
+            # 使用红色边框表格展示失败订单
+            print_order_failed_table(failed_order, str(e))
+            
+            logger.error(f"❌ 订单提交失败: {e}")
+            raise
         except Exception as e:
             logger.error(f"❌ 订单提交失败: {e}")
             raise
@@ -390,6 +413,58 @@ class LongPortBroker:
             
         except Exception as e:
             logger.error(f"风险检查失败: {e}")
+            return False
+    
+    def _check_position_for_sell(self, symbol: str, quantity: int) -> bool:
+        """
+        检查持仓是否足够卖出
+        
+        Args:
+            symbol: 股票代码，如 "AAPL.US"
+            quantity: 要卖出的数量
+        
+        Returns:
+            bool: 是否有足够持仓
+        """
+        try:
+            # 获取持仓信息
+            positions = self.get_positions()
+            
+            # 查找目标股票的持仓
+            target_position = None
+            for pos in positions:
+                if pos['symbol'] == symbol:
+                    target_position = pos
+                    break
+            
+            # 没有持仓
+            if not target_position:
+                logger.warning(f"❌ 没有持仓: {symbol}")
+                print_warning_message(f"无法卖出 {symbol}: 没有持仓")
+                return False
+            
+            # 可用数量不足
+            available_quantity = target_position.get('available_quantity', 0)
+            if available_quantity < quantity:
+                logger.warning(
+                    f"❌ 持仓数量不足: {symbol} "
+                    f"可用 {available_quantity} < 卖出 {quantity}"
+                )
+                print_warning_message(
+                    f"无法卖出 {quantity} 股 {symbol}: "
+                    f"可用持仓仅 {available_quantity} 股"
+                )
+                return False
+            
+            # 持仓检查通过
+            logger.info(
+                f"✅ 持仓检查通过: {symbol} "
+                f"可用 {available_quantity} >= 卖出 {quantity}"
+            )
+            return True
+            
+        except Exception as e:
+            logger.error(f"持仓检查失败: {e}")
             return False
     
     def get_today_orders(self) -> list:
@@ -640,6 +715,199 @@ class LongPortBroker:
         except Exception as e:
             logger.error(f"获取期权报价失败: {e}")
             return []
+    
+    def get_stock_quote(self, symbols: List[str]) -> List[Dict]:
+        """
+        获取正股实时报价
+        
+        Args:
+            symbols: 股票代码列表，如 ["AAPL.US", "TSLA.US"]
+        
+        Returns:
+            股票报价列表
+        """
+        try:
+            # 确保所有symbol都带有市场后缀
+            symbols_with_market = []
+            for symbol in symbols:
+                if not symbol.endswith('.US') and not symbol.endswith('.HK'):
+                    symbol = f"{symbol}.US"
+                symbols_with_market.append(symbol)
+            
+            resp = self.quote_ctx.quote(symbols_with_market)
+            
+            quotes = []
+            for quote in resp:
+                quote_data = {
+                    "symbol": quote.symbol,
+                    "last_done": float(quote.last_done) if quote.last_done else 0,
+                    "prev_close": float(quote.prev_close) if quote.prev_close else 0,
+                    "open": float(quote.open) if quote.open else 0,
+                    "high": float(quote.high) if quote.high else 0,
+                    "low": float(quote.low) if quote.low else 0,
+                    "volume": int(quote.volume) if quote.volume else 0,
+                    "turnover": float(quote.turnover) if quote.turnover else 0,
+                    "timestamp": quote.timestamp if hasattr(quote, 'timestamp') else None,
+                }
+                quotes.append(quote_data)
+            
+            logger.info(f"获取 {len(quotes)} 个正股报价")
+            return quotes
+        except Exception as e:
+            logger.error(f"获取正股报价失败: {e}")
+            return []
+    
+    def submit_stock_order(
+        self,
+        symbol: str,
+        side: str,  # "BUY" 或 "SELL"
+        quantity: int,
+        price: Optional[float] = None,
+        order_type: str = "LIMIT",  # "LIMIT" 或 "MARKET"
+        remark: str = "",
+        trigger_price: Optional[float] = None,  # 触发价格（条件单）
+        trailing_percent: Optional[float] = None,  # 跟踪止损百分比
+        trailing_amount: Optional[float] = None  # 跟踪止损金额
+    ) -> Dict:
+        """
+        提交正股订单（支持止盈止损）
+        
+        Args:
+            symbol: 股票代码，如 "AAPL.US"
+            side: 买卖方向 BUY/SELL
+            quantity: 数量（股数）
+            price: 限价单价格（市价单传 None）
+            order_type: 订单类型 LIMIT/MARKET
+            remark: 订单备注
+            trigger_price: 触发价格（条件单，用于止盈止损）
+            trailing_percent: 跟踪止损百分比（如 5 表示 5%）
+            trailing_amount: 跟踪止损金额
+        
+        Returns:
+            订单信息字典
+        """
+        # 检查是否启用自动交易
+        if not self.auto_trade:
+            logger.warning("⚠️  自动交易未启用，跳过订单提交")
+            return self._mock_order_response(symbol, side, quantity, price)
+        
+        # Dry run 模式
+        if self.dry_run:
+            logger.info(f"🧪 [DRY RUN] 模拟下单: {symbol} {side} {quantity} @ {price}")
+            return self._mock_order_response(symbol, side, quantity, price)
+        
+        try:
+            # 确保symbol带有市场后缀
+            if not symbol.endswith('.US') and not symbol.endswith('.HK'):
+                symbol = f"{symbol}.US"
+            
+            # 卖出时检查持仓
+            if side.upper() == "SELL":
+                if not self._check_position_for_sell(symbol, quantity):
+                    raise ValueError(f"持仓不足: 无法卖出 {quantity} 股 {symbol}")
+            # 买入时进行风险检查
+            elif side.upper() == "BUY":
+                # 风险检查（市价单跳过风险检查或使用估算价格）
+                if order_type.upper() == "MARKET":
+                    # 市价单：尝试获取当前价格用于风险检查
+                    try:
+                        quotes = self.get_stock_quote([symbol])
+                        if quotes and len(quotes) > 0:
+                            estimated_price = quotes[0]['last_done']
+                            order_amount = estimated_price * quantity
+                            logger.info(f"市价单风险检查使用估算价格: ${estimated_price:.2f}")
+                        else:
+                            # 无法获取价格，跳过风险检查
+                            logger.warning("无法获取市价单估算价格，跳过风险检查")
+                            order_amount = 0
+                    except Exception as e:
+                        logger.warning(f"获取市价单估算价格失败: {e}，跳过风险检查")
+                        order_amount = 0
+                    
+                    # 如果成功获取到估算价格，则进行风险检查
+                    if order_amount > 0 and not self._check_risk_limits(order_amount):
+                        raise ValueError("风险检查未通过，订单被拒绝")
+                else:
+                    # 限价单：使用指定价格进行风险检查
+                    order_amount = (price or 0) * quantity
+                    if not self._check_risk_limits(order_amount):
+                        raise ValueError("风险检查未通过，订单被拒绝")
+            
+            # 转换买卖方向
+            order_side = OrderSide.Buy if side.upper() == "BUY" else OrderSide.Sell
+            
+            # 转换订单类型
+            if order_type.upper() == "MARKET":
+                o_type = OrderType.MO
+                submitted_price = None
+            else:
+                o_type = OrderType.LO
+                if price is None:
+                    raise ValueError("限价单必须提供价格")
+                submitted_price = Decimal(str(price))
+            
+            # 准备订单参数
+            order_params = {
+                "side": order_side,
+                "symbol": symbol,
+                "order_type": o_type,
+                "submitted_price": submitted_price,
+                "submitted_quantity": quantity,
+                "time_in_force": TimeInForceType.Day,
+                "remark": remark or f"Auto trade via OpenAPI - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+            }
+            
+            # 添加止盈止损参数
+            if trigger_price:
+                order_params["trigger_price"] = Decimal(str(trigger_price))
+            if trailing_percent:
+                order_params["trailing_percent"] = Decimal(str(trailing_percent))
+            if trailing_amount:
+                order_params["trailing_amount"] = Decimal(str(trailing_amount))
+            
+            # 提交订单
+            resp = self.ctx.submit_order(**order_params)
+            
+            order_info = {
+                "order_id": resp.order_id,
+                "symbol": symbol,
+                "side": side,
+                "quantity": quantity,
+                "price": float(price) if price else None,
+                "status": "submitted",
+                "submitted_at": datetime.now().isoformat(),
+                "mode": "paper" if self.is_paper else "real",
+                "trigger_price": trigger_price,
+                "trailing_percent": trailing_percent,
+                "trailing_amount": trailing_amount,
+                "remark": remark or f"Auto trade via OpenAPI - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+            }
+            
+            # 使用彩色表格输出
+            print_success_message("正股订单提交成功")
+            print_order_table(order_info, "订单详情")
+            
+            return order_info
+            
+        except ValueError as e:
+            # 构造失败订单信息
+            failed_order = {
+                "symbol": symbol,
+                "side": side,
+                "quantity": quantity,
+                "price": float(price) if price else None,
+                "mode": "paper" if self.is_paper else "real",
+                "remark": remark or f"Auto trade via OpenAPI - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+            }
+            
+            # 使用红色边框表格展示失败订单
+            print_order_failed_table(failed_order, str(e))
+            
+            logger.error(f"❌ 正股订单提交失败: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"❌ 正股订单提交失败: {e}")
+            raise
 
 
 def convert_to_longport_symbol(ticker: str, option_type: str, strike: float, expiry: str) -> str:
