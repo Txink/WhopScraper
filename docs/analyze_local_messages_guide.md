@@ -47,11 +47,13 @@ python3 analyze_local_messages.py debug/page_20260202_000748.html
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | `domID` | string | DOM中的data-message-id（✅ 稳定不变，可用于消息去重） |
-| `content` | string | 消息内容 |
+| `content` | string | **完整消息内容**（包含引用+主消息+关联消息） |
 | `timestamp` | string | 发送时间 |
-| `refer` | string\|null | 引用的消息 |
+| `refer` | string\|null | 引用的消息（快速访问） |
 | `position` | string | 消息位置 (single/first/middle/last) |
 | `history` | array | 同组历史消息列表 |
+
+**注意**：`content` 字段包含完整内容，适合用于消息分析和解析。
 
 ## 📈 输出内容
 

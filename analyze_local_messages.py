@@ -102,10 +102,9 @@ async def analyze_html_messages(html_file: str, export_json: bool = True):
             await page.set_content(html_content)
             print("✅ HTML内容已加载\n")
             
-            # 使用EnhancedMessageExtractor提取消息
+            # 使用EnhancedMessageExtractor提取消息（scraper层唯一输出格式）
             print("🔍 正在提取消息...")
             from scraper.message_extractor import EnhancedMessageExtractor
-            from scraper.message_grouper import MessageGrouper, format_as_table, format_as_detailed_table
             
             extractor = EnhancedMessageExtractor(page)
             raw_groups = await extractor.extract_message_groups()
@@ -132,27 +131,7 @@ async def analyze_html_messages(html_file: str, export_json: bool = True):
                     print(f"   消息数量: {len(raw_groups)}")
                     print()
             
-            # 转换为字典格式
-            messages = []
-            for group in raw_groups:
-                message_dict = {
-                    'id': group.group_id,
-                    'author': group.author,
-                    'timestamp': group.timestamp,
-                    'content': group.get_full_content(),
-                    'primary_message': group.primary_message,
-                    'related_messages': group.related_messages,
-                    'quoted_message': group.quoted_message,
-                    'quoted_context': group.quoted_context,
-                    'has_message_above': group.has_message_above,
-                    'has_message_below': group.has_message_below
-                }
-                messages.append(message_dict)
-            
-            # 使用消息分组器进行交易组聚合（流式处理）
-            print("🔄 正在按时间顺序流式处理消息...\n")
-            grouper = MessageGrouper()
-            trade_groups = grouper.group_messages(messages, stream_output=True)
+            # scraper层只负责提取消息，不做分组
             
             # 解析消息并转化为broker指令
             from parser.option_parser import OptionParser
@@ -165,17 +144,17 @@ async def analyze_html_messages(html_file: str, export_json: bool = True):
                 print("【指令解析 - 转化为Broker可用指令】")
                 print("="*140)
             
-            # 按时间排序所有消息（与流式处理保持一致）
+            # 按时间排序所有消息
             from datetime import datetime
-            def parse_ts(msg):
-                ts = msg.get('timestamp', '')
+            def parse_ts(group):
+                ts = group.timestamp
                 if not ts:
                     return datetime.max
                 try:
                     return datetime.strptime(ts, '%b %d, %Y %I:%M %p')
                 except:
                     return datetime.max
-            sorted_messages = sorted(messages, key=lambda x: (parse_ts(x), x.get('id', '')))
+            sorted_groups = sorted(raw_groups, key=lambda x: (parse_ts(x), x.group_id))
             
             # 统计解析结果
             total_messages = 0
@@ -186,10 +165,11 @@ async def analyze_html_messages(html_file: str, export_json: bool = True):
             parse_results = []
             
             # 逐条解析消息
-            for msg in sorted_messages:
-                content = msg.get('content', '').strip()
-                timestamp = msg.get('timestamp', '未知')
-                msg_id = msg.get('id', '')
+            for group in sorted_groups:
+                simple_dict = group.to_simple_dict()
+                msg_id = simple_dict['domID']
+                timestamp = simple_dict['timestamp']
+                content = simple_dict['content'].strip()
                 
                 # 过滤纯元数据消息
                 if not content or len(content) < 5:
@@ -242,9 +222,10 @@ async def analyze_html_messages(html_file: str, export_json: bool = True):
                     })
                 else:
                     parsed_failed += 1
-                    from scraper.message_grouper import MessageGrouper
-                    grouper = MessageGrouper()
-                    ticker = grouper._extract_symbol(content_clean) or "未识别"
+                    # 简单提取股票代码
+                    import re
+                    ticker_match = re.search(r'\b([A-Z]{1,5})\b', content_clean)
+                    ticker = ticker_match.group(1) if ticker_match else "未识别"
                     # 移除换行符并限制长度
                     content_display = content_clean.replace('\n', ' ').replace('\r', ' ')[:80]
                     if len(content_clean) > 80:
@@ -386,8 +367,6 @@ async def analyze_html_messages(html_file: str, export_json: bool = True):
                 console.print(stats_table)
                 print()
             
-            # 注意：消息已在group_messages中流式输出，无需再调用format_as_rich_panels
-            
             # 显示原始消息（前200条）- 使用新的简化格式
             print("\n" + "=" * 80)
             print("【原始消息详情】（前200条 - 新格式）")
@@ -436,7 +415,6 @@ async def analyze_html_messages(html_file: str, export_json: bool = True):
             print("📊 统计信息（基于新格式）")
             print("=" * 80)
             print(f"原始消息数: {len(raw_groups)}")
-            print(f"交易组数: {len(trade_groups)}")
             
             # 统计有作者的消息
             with_author = sum(1 for g in raw_groups if g.author)
@@ -492,7 +470,6 @@ async def analyze_html_messages(html_file: str, export_json: bool = True):
                 f.write("统计信息\n")
                 f.write("=" * 80 + "\n\n")
                 f.write(f"原始消息数: {len(raw_groups)}\n")
-                f.write(f"交易组数: {len(trade_groups)}\n")
                 f.write(f"有作者信息: {with_author} ({with_author/len(raw_groups)*100:.1f}%)\n")
                 f.write(f"有时间戳: {with_timestamp} ({with_timestamp/len(raw_groups)*100:.1f}%)\n")
                 f.write(f"有引用内容: {with_quote} ({with_quote/len(raw_groups)*100:.1f}%)\n\n")
@@ -520,16 +497,6 @@ async def analyze_html_messages(html_file: str, export_json: bool = True):
                     avg_history = history_stats['total_history_count'] / history_stats['with_history']
                     f.write(f"  平均历史条数: {avg_history:.1f}\n")
                 f.write("\n")
-                
-                f.write("=" * 80 + "\n")
-                f.write("详细表格视图\n")
-                f.write("=" * 80 + "\n\n")
-                f.write(format_as_detailed_table(trade_groups))
-                
-                f.write("\n\n" + "=" * 80 + "\n")
-                f.write("分组摘要视图\n")
-                f.write("=" * 80 + "\n\n")
-                f.write(format_as_table(trade_groups))
                 
                 f.write("\n\n" + "=" * 80 + "\n")
                 f.write("所有原始消息（新格式）\n")
@@ -562,16 +529,6 @@ async def analyze_html_messages(html_file: str, export_json: bool = True):
                     json_str = json.dumps(simple_data, ensure_ascii=False, indent=2)
                     for line in json_str.split('\n'):
                         f.write(f"  {line}\n")
-                    
-                    # 旧格式信息（用于对比）
-                    f.write(f"\n旧格式对比:\n")
-                    f.write(f"  作者: {group.author or '(未识别)'}\n")
-                    if group.related_messages:
-                        f.write(f"  关联消息数: {len(group.related_messages)}\n")
-                    full_content = group.get_full_content()
-                    f.write(f"  完整内容:\n")
-                    for line in full_content.split('\n'):
-                        f.write(f"    {line}\n")
                     
                     f.write("\n" + "-" * 80 + "\n")
             

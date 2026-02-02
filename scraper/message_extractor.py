@@ -89,43 +89,28 @@ class MessageGroup:
         
         return "\n".join(parts)
     
-    def to_dict(self) -> Dict:
-        """
-        转换为字典（完整版本，包含所有字段）
-        """
-        return {
-            'group_id': self.group_id,
-            'author': self.author,
-            'timestamp': self.timestamp,
-            'primary_message': self.primary_message,
-            'related_messages': self.related_messages,
-            'quoted_message': self.quoted_message,
-            'quoted_context': self.quoted_context,
-            'has_message_above': self.has_message_above,
-            'has_message_below': self.has_message_below,
-            'has_attachment': self.has_attachment,
-            'image_url': self.image_url,
-            'position': self.get_position(),
-            'full_content': self.get_full_content()
-        }
-    
     def to_simple_dict(self) -> Dict:
         """
-        转换为简化格式的字典
+        转换为简化格式的字典（scraper层唯一输出格式）
         
         格式：
         {
             'domID': 'post_xxx',
-            'content': '消息内容',
+            'content': '完整消息内容（包含引用+主消息+关联消息）',
             'timestamp': 'Jan 06, 2026 11:38 PM',
             'refer': '引用的消息内容（如果有）',
             'position': 'first',
             'history': ['第一条消息内容', '第二条消息内容']
         }
+        
+        注意：
+        - content 包含完整内容，用于消息分析和解析
+        - refer 是引用消息的副本，用于快速访问
+        - history 是同组历史消息，用于上下文理解
         """
         return {
             'domID': self.group_id,
-            'content': self.primary_message,
+            'content': self.get_full_content(),  # 使用完整内容
             'timestamp': self.timestamp,
             'refer': self.quoted_context if self.quoted_context else None,
             'position': self.get_position(),
@@ -644,7 +629,7 @@ class EnhancedMessageExtractor:
     
     async def extract_with_context(self) -> List[Dict]:
         """
-        提取消息并保留完整上下文
+        提取消息并保留完整上下文（兼容层，供 MessageMonitor 使用）
         
         Returns:
             消息列表，每条消息包含完整上下文
@@ -653,20 +638,20 @@ class EnhancedMessageExtractor:
         
         messages = []
         for group in groups:
-            # 生成唯一ID
+            # 使用统一的简化格式
+            simple_dict = group.to_simple_dict()
+            
+            # 生成唯一ID（用于去重）
             content_hash = hashlib.md5(
-                group.get_full_content().encode()
+                simple_dict['content'].encode()
             ).hexdigest()[:12]
             
+            # 为 MessageMonitor 构建兼容格式
             msg = {
-                'id': f"{group.group_id}-{content_hash}",
-                'text': group.get_full_content(),
-                'author': group.author,
-                'timestamp': group.timestamp,
-                'primary_message': group.primary_message,
-                'has_quote': bool(group.quoted_context),
-                'message_count': len(group.related_messages) + 1,
-                'group': group.to_dict()
+                'id': f"{simple_dict['domID']}-{content_hash}",
+                'text': simple_dict['content'],  # 完整内容
+                'timestamp': simple_dict['timestamp'],
+                'has_quote': bool(simple_dict['refer']),
             }
             
             messages.append(msg)

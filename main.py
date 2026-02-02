@@ -593,223 +593,6 @@ async def main():
         await scraper.cleanup()
 
 
-async def analyze_local_html():
-    """分析本地HTML文件（不需要启动浏览器）"""
-    print("\n" + "=" * 60)
-    print("本地HTML分析工具")
-    print("=" * 60 + "\n")
-    
-    import os
-    from glob import glob
-    
-    # 查找debug目录下的HTML文件
-    html_files = glob("debug/page_*.html")
-    
-    if not html_files:
-        print("❌ 未找到HTML文件")
-        print("\n💡 提示: 请先运行以下命令导出HTML:")
-        print("   python3 main.py --test export-dom\n")
-        return
-    
-    # 按修改时间排序，最新的在前
-    html_files.sort(key=lambda x: os.path.getmtime(x), reverse=True)
-    
-    print(f"📁 找到 {len(html_files)} 个HTML文件:\n")
-    for i, file in enumerate(html_files[:5], 1):
-        mtime = os.path.getmtime(file)
-        from datetime import datetime
-        time_str = datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M:%S")
-        size_mb = os.path.getsize(file) / 1024 / 1024
-        print(f"   {i}. {os.path.basename(file)}")
-        print(f"      时间: {time_str}, 大小: {size_mb:.2f} MB")
-    
-    if len(html_files) > 5:
-        print(f"\n   ... 还有 {len(html_files) - 5} 个文件")
-    
-    # 选择文件
-    print("\n请选择要分析的文件 (输入序号，默认=1，最新的文件): ", end='')
-    choice = input().strip()
-    
-    if not choice:
-        choice = "1"
-    
-    try:
-        index = int(choice) - 1
-        if index < 0 or index >= len(html_files):
-            print("❌ 无效的选择")
-            return
-    except ValueError:
-        print("❌ 无效的输入")
-        return
-    
-    html_file = html_files[index]
-    print(f"\n✅ 已选择: {html_file}\n")
-    
-    # 读取HTML文件
-    print("📖 正在读取HTML文件...")
-    with open(html_file, 'r', encoding='utf-8') as f:
-        html_content = f.read()
-    
-    print(f"✅ 已读取 {len(html_content)} 字符\n")
-    
-    # 使用playwright分析HTML
-    print("🔍 正在分析HTML结构...\n")
-    
-    from playwright.async_api import async_playwright
-    
-    async with async_playwright() as p:
-        # 启动浏览器
-        browser = await p.chromium.launch(headless=True)
-        page = await browser.new_page()
-        
-        # 加载HTML内容
-        await page.set_content(html_content)
-        
-        # 分析页面结构
-        js_analysis = """
-        () => {
-            const analysis = {
-                url: 'local-file',
-                all_elements_count: document.querySelectorAll('*').length,
-                potential_message_containers: [],
-                text_elements: []
-            };
-            
-            // 尝试多种可能的选择器
-            const selectors = [
-                '[data-message-id]',
-                '[class*="message"]',
-                '[class*="Message"]',
-                '[class*="post"]',
-                '[class*="Post"]',
-                '[role="article"]',
-                'article'
-            ];
-            
-            for (const selector of selectors) {
-                const elements = document.querySelectorAll(selector);
-                if (elements.length > 0) {
-                    const sample = elements[0];
-                    analysis.potential_message_containers.push({
-                        selector: selector,
-                        count: elements.length,
-                        sample_classes: sample.className,
-                        sample_id: sample.id,
-                        sample_text: sample.innerText.substring(0, 200),
-                        sample_html: sample.outerHTML.substring(0, 500)
-                    });
-                }
-            }
-            
-            // 查找包含特定关键字的元素
-            const keywords = ['GILD', 'NVDA', 'CALL', 'PUT', '止损', '出'];
-            const walker = document.createTreeWalker(
-                document.body,
-                NodeFilter.SHOW_TEXT,
-                null,
-                false
-            );
-            
-            let node;
-            const seenTexts = new Set();
-            while (node = walker.nextNode()) {
-                const text = node.textContent.trim();
-                if (text.length > 10 && !seenTexts.has(text)) {
-                    for (const keyword of keywords) {
-                        if (text.includes(keyword)) {
-                            let element = node.parentElement;
-                            let depth = 0;
-                            const path = [];
-                            
-                            while (element && depth < 5) {
-                                path.push({
-                                    tag: element.tagName,
-                                    class: element.className,
-                                    id: element.id
-                                });
-                                element = element.parentElement;
-                                depth++;
-                            }
-                            
-                            analysis.text_elements.push({
-                                text: text.substring(0, 100),
-                                keyword: keyword,
-                                path: path
-                            });
-                            seenTexts.add(text);
-                            break;
-                        }
-                    }
-                    
-                    if (analysis.text_elements.length >= 30) break;
-                }
-            }
-            
-            return analysis;
-        }
-        """
-        
-        analysis_data = await page.evaluate(js_analysis)
-        
-        # 生成分析报告
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        analysis_file = f"debug/local_analysis_{timestamp}.txt"
-        
-        with open(analysis_file, 'w', encoding='utf-8') as f:
-            f.write("=" * 60 + "\n")
-            f.write("本地HTML结构分析\n")
-            f.write("=" * 60 + "\n\n")
-            f.write(f"源文件: {html_file}\n")
-            f.write(f"总元素数: {analysis_data['all_elements_count']}\n\n")
-            
-            f.write("=" * 60 + "\n")
-            f.write("可能的消息容器选择器\n")
-            f.write("=" * 60 + "\n\n")
-            
-            for i, container in enumerate(analysis_data['potential_message_containers'], 1):
-                f.write(f"{i}. 选择器: {container['selector']}\n")
-                f.write(f"   数量: {container['count']}\n")
-                f.write(f"   类名: {container['sample_classes']}\n")
-                f.write(f"   ID: {container['sample_id']}\n")
-                f.write(f"\n   示例文本:\n   {container['sample_text']}\n")
-                f.write(f"\n   示例HTML:\n   {container['sample_html']}\n")
-                f.write("\n" + "-" * 60 + "\n\n")
-            
-            f.write("\n" + "=" * 60 + "\n")
-            f.write("包含交易关键字的元素\n")
-            f.write("=" * 60 + "\n\n")
-            
-            for i, elem in enumerate(analysis_data['text_elements'], 1):
-                f.write(f"{i}. 关键字: {elem['keyword']}\n")
-                f.write(f"   文本: {elem['text']}\n")
-                f.write(f"   路径:\n")
-                for j, node in enumerate(elem['path']):
-                    indent = "   " * (j + 2)
-                    f.write(f"{indent}<{node['tag']} class='{node['class']}' id='{node['id']}'>\n")
-                f.write("\n")
-        
-        # 关闭浏览器
-        await browser.close()
-        
-        print(f"✅ 分析完成\n")
-        print("=" * 60)
-        print("分析结果")
-        print("=" * 60)
-        print(f"\n📊 统计信息:")
-        print(f"   总元素数: {analysis_data['all_elements_count']}")
-        print(f"   找到 {len(analysis_data['potential_message_containers'])} 种可能的消息容器")
-        print(f"   找到 {len(analysis_data['text_elements'])} 个包含交易关键字的元素")
-        
-        print(f"\n📄 详细分析报告已保存到:")
-        print(f"   {analysis_file}")
-        
-        print("\n💡 下一步:")
-        print("   1. 查看分析报告了解页面结构")
-        print("   2. 根据报告调整 scraper/message_extractor.py 中的选择器")
-        print("   3. 运行 python3 main.py --test message-extractor 验证")
-        print("=" * 60 + "\n")
-
-
 async def export_page_dom():
     """导出页面DOM和截图供本地分析"""
     print("\n" + "=" * 60)
@@ -1075,148 +858,6 @@ async def export_page_dom():
         print("✅ 浏览器已关闭")
 
 
-async def test_message_extractor():
-    """测试增强的消息提取器"""
-    print("\n" + "=" * 60)
-    print("消息提取器测试")
-    print("=" * 60 + "\n")
-    
-    # 验证配置
-    if not Config.validate():
-        print("❌ 配置验证失败")
-        create_env_template()
-        return
-    
-    print("✅ 配置验证通过\n")
-    
-    # 创建浏览器管理器
-    browser = BrowserManager(
-        headless=Config.HEADLESS,
-        slow_mo=Config.SLOW_MO,
-        storage_state_path=Config.STORAGE_STATE_PATH
-    )
-    
-    try:
-        # 启动浏览器
-        print("🚀 正在启动浏览器...")
-        page = await browser.start()
-        print("✅ 浏览器已启动\n")
-        
-        # 获取所有需要监控的页面配置
-        page_configs = Config.get_all_pages()
-        
-        if not page_configs:
-            print("❌ 没有配置任何监控页面")
-            return
-        
-        # 检查登录状态
-        first_url = page_configs[0][0]
-        print("🔐 正在检查登录状态...")
-        if not await browser.is_logged_in(first_url):
-            print("⚠️  需要登录...")
-            success = await browser.login(
-                Config.WHOP_EMAIL,
-                Config.WHOP_PASSWORD,
-                Config.LOGIN_URL
-            )
-            
-            if not success:
-                print("❌ 登录失败，请检查凭据是否正确")
-                return
-            print("✅ 登录成功\n")
-        else:
-            print("✅ 已登录\n")
-        
-        # 测试抓取第一个页面的消息
-        test_url, test_type = page_configs[0]
-        print(f"📄 正在测试抓取页面: [{test_type.upper()}] {test_url}")
-        
-        # 导航到页面
-        if not await browser.navigate(test_url):
-            print(f"❌ 无法导航到页面: {test_url}")
-            return
-        
-        print("✅ 页面导航成功\n")
-        
-        # 使用增强的消息提取器
-        from scraper.message_extractor import EnhancedMessageExtractor
-        from scraper.message_grouper import MessageGrouper, format_as_table, format_as_detailed_table
-        
-        extractor = EnhancedMessageExtractor(page)
-        
-        print("🔍 正在提取消息...")
-        raw_groups = await extractor.extract_message_groups()
-        
-        print(f"\n✅ 成功提取 {len(raw_groups)} 条消息\n")
-        
-        if raw_groups:
-            # 将MessageGroup对象转换为字典格式
-            messages = []
-            for group in raw_groups:
-                message_dict = {
-                    'id': group.group_id,
-                    'author': group.author,
-                    'timestamp': group.timestamp,
-                    'content': group.get_full_content(),
-                    'primary_message': group.primary_message,
-                    'related_messages': group.related_messages,
-                    'quoted_message': group.quoted_message,
-                    'quoted_context': group.quoted_context
-                }
-                messages.append(message_dict)
-            
-            # 使用消息分组器进行交易组聚合
-            print("🔄 正在分析消息关联关系...")
-            grouper = MessageGrouper()
-            trade_groups = grouper.group_messages(messages)
-            
-            print(f"✅ 识别出 {len(trade_groups)} 个交易组\n")
-            
-            # 显示表格格式
-            print("\n" + "=" * 155)
-            print("【方式1】详细表格视图")
-            print("=" * 155)
-            print(format_as_detailed_table(trade_groups))
-            
-            print("\n" + "=" * 120)
-            print("【方式2】分组摘要视图")
-            print("=" * 120)
-            print(format_as_table(trade_groups))
-            
-            # 显示原始消息（前5条）
-            print("\n" + "=" * 60)
-            print("【原始消息示例】（前5条）")
-            print("=" * 60)
-            for i, group in enumerate(raw_groups[:5], 1):
-                print(f"\n{i}. 消息 ID: {group.group_id}")
-                print(f"   作者: {group.author or '(未识别)'}")
-                print(f"   时间: {group.timestamp or '(继承自上一条)'}")
-                print(f"   内容: {group.primary_message[:80] if group.primary_message else '(空)'}...")
-                if group.quoted_context:
-                    print(f"   引用: {group.quoted_context[:60]}...")
-                print("-" * 60)
-            
-            if len(raw_groups) > 5:
-                print(f"\n... 还有 {len(raw_groups) - 5} 条消息未显示")
-        else:
-            print("⚠️  未提取到任何消息")
-        
-        print("\n" + "=" * 60)
-        print("测试完成")
-        print("=" * 60)
-        
-    except Exception as e:
-        print(f"\n❌ 测试失败: {e}")
-        import traceback
-        traceback.print_exc()
-    
-    finally:
-        # 关闭浏览器
-        print("\n🧹 正在清理资源...")
-        await browser.close()
-        print("✅ 浏览器已关闭")
-
-
 async def test_whop_scraper():
     """测试 Whop 页面抓取功能"""
     print("\n" + "=" * 60)
@@ -1285,45 +926,77 @@ async def test_whop_scraper():
         
         print("✅ 页面导航成功\n")
         
-        # 创建监控器（不启动持续监控，只抓取一次）
-        import tempfile
-        temp_output = tempfile.mktemp(suffix='.json')
+        # 使用新的增强消息提取器（scraper层唯一输出格式）
+        from scraper.message_extractor import EnhancedMessageExtractor
+        from parser.option_parser import OptionParser
         
-        monitor = MessageMonitor(
-            page=page,
-            poll_interval=Config.POLL_INTERVAL,
-            output_file=temp_output,  # 使用临时文件
-            enable_sample_collection=False,
-            display_mode="raw"  # 只显示原始消息
-        )
+        extractor = EnhancedMessageExtractor(page)
         
-        print("🔍 正在抓取消息...")
-        instructions = await monitor.scan_once()
+        print("🔍 正在提取消息（使用新的DOM提取逻辑）...")
+        raw_groups = await extractor.extract_message_groups()
         
-        # 提取原始消息
-        messages_found = len(monitor._processed_ids)
+        print(f"\n✅ 成功提取 {len(raw_groups)} 条原始消息\n")
         
-        print(f"\n✅ 扫描完成")
-        print(f"   发现消息: {messages_found} 条")
-        print(f"   解析指令: {len(instructions)} 条\n")
-        
-        if instructions:
-            print("📨 解析出的交易指令:")
-            print("-" * 60)
-            for i, instruction in enumerate(instructions[:5], 1):
-                print(f"{i}. {instruction}")
-                print(f"   类型: {instruction.instruction_type}")
-                print(f"   原始消息: {instruction.raw_message[:80]}...")
-                print()
-        else:
-            print("ℹ️  未解析出任何交易指令")
+        if raw_groups:
+            # 解析为交易指令
+            print("📊 正在解析交易指令...")
+            instructions = []
+            for group in raw_groups:
+                simple_dict = group.to_simple_dict()
+                content = simple_dict.get('content', '').strip()
+                if content and len(content) > 5:
+                    instruction = OptionParser.parse(content)
+                    if instruction:
+                        instructions.append(instruction)
             
-        # 清理临时文件
-        import os
-        try:
-            os.remove(temp_output)
-        except:
-            pass
+            print(f"✅ 解析出 {len(instructions)} 条交易指令\n")
+            
+            # 显示原始消息（前10条）
+            print("=" * 80)
+            print("【原始消息示例】（前100条）")
+            print("=" * 80)
+            for i, group in enumerate(raw_groups[:100], 1):
+                simple_dict = group.to_simple_dict()
+                print(f"\n{i}. domID: {simple_dict['domID']}")
+                print(f"   时间: {simple_dict['timestamp']}")
+                print(f"   位置: {simple_dict['position']}")
+                print(f"   内容: {simple_dict['content'][:70]}...")
+                if simple_dict['refer']:
+                    print(f"   引用: {simple_dict['refer'][:60]}...")
+                if simple_dict['history']:
+                    print(f"   历史: {len(simple_dict['history'])} 条")
+                print("-" * 80)
+            
+            if len(raw_groups) > 100:
+                print(f"\n... 还有 {len(raw_groups) - 100} 条消息未显示")
+            
+            # 显示交易指令
+            if instructions:
+                print("\n" + "=" * 80)
+                print("【解析出的交易指令】（前5条）")
+                print("=" * 80)
+                for i, instruction in enumerate(instructions[:5], 1):
+                    print(f"\n{i}. {instruction}")
+                    print(f"   类型: {instruction.instruction_type}")
+                    print(f"   股票: {instruction.ticker}")
+                    print(f"   价格: ${instruction.price}")
+                    if instruction.instruction_type != "OPEN":
+                        print(f"   比例: {instruction.sell_ratio*100:.0f}%")
+                print()
+                
+                if len(instructions) > 5:
+                    print(f"... 还有 {len(instructions) - 5} 条指令未显示")
+            else:
+                print("\nℹ️  未解析出任何交易指令")
+            
+            # 显示交易组表格
+            if trade_groups:
+                print("\n" + "=" * 120)
+                print("【交易组摘要】")
+                print("=" * 120)
+                print(format_as_table(trade_groups))
+        else:
+            print("⚠️  未提取到任何消息")
         
         print("=" * 60)
         print("测试完成")
@@ -1339,37 +1012,6 @@ async def test_whop_scraper():
         print("\n🧹 正在清理资源...")
         await browser.close()
         print("✅ 浏览器已关闭")
-
-
-def test_parser():
-    """测试解析器"""
-    from parser.option_parser import OptionParser
-    
-    test_messages = [
-        "INTC - $48 CALLS 本周 $1.2",
-        "小仓位  止损 0.95",
-        "1.75出三分之一",
-        "止损提高到1.5",
-        "1.65附近出剩下三分之二",
-        "AAPL $150 PUTS 1/31 $2.5",
-        "TSLA - 250 CALL $3.0 小仓位",
-        "2.0 出一半",
-        "止损调整到 1.8",
-    ]
-    
-    print("\n" + "=" * 60)
-    print("期权指令解析测试")
-    print("=" * 60 + "\n")
-    
-    for msg in test_messages:
-        print(f"原始消息: {msg}")
-        instruction = OptionParser.parse(msg)
-        if instruction:
-            print(f"解析结果: {instruction}")
-            print(f"JSON: {instruction.to_json()}")
-        else:
-            print("解析结果: 未能识别")
-        print()
 
 
 async def test_broker():
@@ -1470,19 +1112,10 @@ def parse_arguments():
   # 正常运行（监控并执行交易）
   python3 main.py
   
-  # 测试解析器
-  python3 main.py --test parser
-  
   # 导出页面DOM和截图（用于调试选择器）
   python3 main.py --test export-dom
   
-  # 分析本地HTML文件（不需要启动浏览器）
-  python3 main.py --test analyze-html
-  
-  # 测试消息提取器（查看消息关联和引用）
-  python3 main.py --test message-extractor
-  
-  # 测试 Whop 页面抓取
+  # 测试 Whop 页面抓取（使用新的消息提取逻辑）
   python3 main.py --test whop-scraper
   
   # 测试交易接口
@@ -1490,13 +1123,16 @@ def parse_arguments():
   
   # 测试配置文件
   python3 main.py --test config
+  
+  # 分析本地HTML文件
+  python3 analyze_local_messages.py debug/page_xxx.html
         """
     )
     
     parser.add_argument(
         '--test',
         type=str,
-        choices=['parser', 'export-dom', 'analyze-html', 'message-extractor', 'whop-scraper', 'broker', 'config'],
+        choices=['export-dom', 'whop-scraper', 'broker', 'config'],
         help='运行测试模式，指定测试类型'
     )
     
@@ -1514,14 +1150,8 @@ if __name__ == "__main__":
     
     if args.test:
         # 测试模式
-        if args.test == 'parser':
-            test_parser()
-        elif args.test == 'export-dom':
+        if args.test == 'export-dom':
             asyncio.run(export_page_dom())
-        elif args.test == 'analyze-html':
-            asyncio.run(analyze_local_html())
-        elif args.test == 'message-extractor':
-            asyncio.run(test_message_extractor())
         elif args.test == 'whop-scraper':
             asyncio.run(test_whop_scraper())
         elif args.test == 'broker':
