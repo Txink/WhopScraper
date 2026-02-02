@@ -43,11 +43,13 @@ env/
 storage_state.json
 *_cookies.json
 *.cookies.json
+.auth/
 
 # 输出文件
 output/
 logs/
 *.log
+debug/
 
 # 数据文件
 data/

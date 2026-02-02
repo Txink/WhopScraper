@@ -52,7 +52,10 @@ class Config:
     SLOW_MO: int = int(os.getenv("SLOW_MO", "0"))  # 毫秒，用于调试
     
     # 监控设置
+    MONITOR_MODE: str = os.getenv("MONITOR_MODE", "event")  # 监控模式: event/poll
     POLL_INTERVAL: float = float(os.getenv("POLL_INTERVAL", "2.0"))  # 轮询间隔（秒）
+    CHECK_INTERVAL: float = float(os.getenv("CHECK_INTERVAL", "0.5"))  # 事件驱动模式检查间隔（秒）
+    STATUS_REPORT_INTERVAL: int = int(os.getenv("STATUS_REPORT_INTERVAL", "60"))  # 状态报告间隔（秒）
     
     # Cookie 持久化路径
     STORAGE_STATE_PATH: str = os.getenv("STORAGE_STATE_PATH", "storage_state.json")
@@ -62,6 +65,13 @@ class Config:
     
     # 消息展示模式
     DISPLAY_MODE: str = os.getenv("DISPLAY_MODE", "both")  # raw, parsed, both
+    
+    # 消息过滤配置
+    FILTER_AUTHORS: List[str] = [
+        author.strip() 
+        for author in os.getenv("FILTER_AUTHORS", "").split(",") 
+        if author.strip()
+    ]
     
     # 日志配置
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")  # DEBUG, INFO, WARNING, ERROR
@@ -151,6 +161,9 @@ POLL_INTERVAL=2.0  # 轮询间隔（秒）
 
 # 输出设置
 # OUTPUT_FILE=output/signals.json
+
+# 消息过滤设置
+# FILTER_AUTHORS=xiaozhaolucky  # 只处理指定作者的消息，多个作者用逗号分隔
 
 # ============================================================
 # 长桥 OpenAPI 配置

@@ -1,6 +1,12 @@
-# 期权信号抓取器 + 自动交易系统 v2.1
+# 期权信号抓取器 + 自动交易系统 v2.6.15
 
-使用 Playwright 实时监控 Whop 页面，解析期权交易信号，并通过长桥证券 API 自动执行交易，包含完整的持仓管理和风险控制系统。
+使用 Playwright 实时监控 Whop 页面，解析期权交易信号,并通过长桥证券 API 自动执行交易，包含完整的持仓管理和风险控制系统。
+
+> 🚀 **v2.6.15 新特性**: 
+> - **时间优先推断** - 优化symbol推断：时间上下文优先于引用内容，避免使用过时信息！
+> - **扩大上下文窗口** - 从前5条扩大到前10条，捕获更多时间相关性！
+> - **精准分组** - 修复NVDA消息被误分到GILD组，交易组减少3个错误分组！
+> - **核心文档** - 新增 [MESSAGE_PARSING_RULES.md](./doc/MESSAGE_PARSING_RULES.md) 详细说明解析规则！
 
 > 📁 **项目结构清晰**：所有文档位于 `doc/` 目录，所有测试位于 `test/` 目录
 
@@ -45,7 +51,7 @@ python3 main.py
 
 📖 **快速开始**：[新手上手指南](./GETTING_STARTED.md) ⭐ | [快速参考](./QUICK_REFERENCE.md)
 
-📖 **详细指南**：[登录指南](./WHOP_LOGIN_GUIDE.md) | [后台监控](./BACKGROUND_MONITORING.md) | [去重功能](./DEDUPLICATION_GUIDE.md) | [自动滚动](./AUTO_SCROLL_GUIDE.md) | [故障排查](./TROUBLESHOOTING.md)
+📖 **详细指南**：[登录指南](./WHOP_LOGIN_GUIDE.md) | [后台监控](./BACKGROUND_MONITORING.md) | [去重功能](./DEDUPLICATION_GUIDE.md) | [自动滚动](./AUTO_SCROLL_GUIDE.md) | [事件驱动监控](./doc/EVENT_DRIVEN_MONITOR.md) ⭐ | [消息分组关联](./doc/MESSAGE_GROUPING.md) | [本地HTML分析](./doc/LOCAL_HTML_ANALYSIS.md) 🆕 | [消息上下文识别](./doc/MESSAGE_CONTEXT.md) | [DOM导出调试](./doc/DEBUG_DOM.md) 🔧 | [选择器优化](./doc/SELECTOR_OPTIMIZATION.md) 🎯 | [故障排查](./TROUBLESHOOTING.md)
 
 📖 **完整系统**：[使用指南](./doc/USAGE_GUIDE.md) | [配置说明](./doc/CONFIGURATION.md) | [长桥集成](./doc/LONGPORT_INTEGRATION_GUIDE.md) | [订单管理](./docs/order_management.md) | [批量撤销订单](./README_CANCEL_ORDERS.md) | [启动清单](./doc/CHECKLIST.md)
 
@@ -56,7 +62,16 @@ python3 main.py
 ### 信号监控
 - ✅ 自动登录 Whop 平台
 - ✅ **Cookie 持久化**（登录一次，长期使用）
-- ✅ 实时监控页面新消息
+- ✅ **事件驱动监控** 🚀 (v2.6)
+  - 使用 MutationObserver 监听 DOM 变化
+  - 只在消息更新时处理，降低 80% CPU 占用
+  - 实时响应，消息出现立即处理
+  - 定时状态报告，监控系统健康度
+- ✅ **消息上下文识别** 🆕 (v2.6.2)
+  - 智能识别连续消息的关联关系
+  - 自动组合开仓+止损+止盈消息
+  - 识别引用/回复的消息内容
+  - 提供完整的交易决策上下文
 - ✅ 智能解析期权交易指令
 - ✅ **期权过期时间校验**（自动拦截已过期期权）
 - ✅ 自动样本收集与管理
@@ -656,6 +671,9 @@ playwright/
 | [SETUP_WIZARD.md](./doc/SETUP_WIZARD.md) | 🧙 分步设置向导 |
 | [QUICKSTART_LONGPORT.md](./doc/QUICKSTART_LONGPORT.md) | ⚡ 5分钟快速开始 |
 | [LONGPORT_INTEGRATION_GUIDE.md](./doc/LONGPORT_INTEGRATION_GUIDE.md) | 🔧 长桥 API 集成指南 |
+| [MESSAGE_PARSING_RULES.md](./doc/MESSAGE_PARSING_RULES.md) | 📝 消息解析规则（**核心逻辑**） |
+| [MESSAGE_CONTEXT.md](./doc/MESSAGE_CONTEXT.md) | 🔗 消息上下文传递机制 |
+| [MESSAGE_GROUPING.md](./doc/MESSAGE_GROUPING.md) | 📦 消息分组策略 |
 | [CHECKLIST.md](./doc/CHECKLIST.md) | ✅ 启动检查清单 |
 | [OPTION_EXPIRY_CHECK.md](./doc/OPTION_EXPIRY_CHECK.md) | ⏰ 期权过期校验说明 |
 | [PROJECT_STATUS.md](./doc/PROJECT_STATUS.md) | 📊 项目状态报告 |
