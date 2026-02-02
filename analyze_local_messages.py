@@ -98,6 +98,238 @@ async def analyze_html_messages(html_file: str):
             grouper = MessageGrouper()
             trade_groups = grouper.group_messages(messages, stream_output=True)
             
+            # 解析消息并转化为broker指令
+            from parser.option_parser import OptionParser
+            
+            # 检查是否显示解析输出（可通过环境变量控制）
+            show_parser_output = os.getenv('SHOW_PARSER_OUTPUT', 'true').lower() in ('true', '1', 'yes')
+            
+            if show_parser_output:
+                print("\n" + "="*140)
+                print("【指令解析 - 转化为Broker可用指令】")
+                print("="*140)
+            
+            # 按时间排序所有消息（与流式处理保持一致）
+            from datetime import datetime
+            def parse_ts(msg):
+                ts = msg.get('timestamp', '')
+                if not ts:
+                    return datetime.max
+                try:
+                    return datetime.strptime(ts, '%b %d, %Y %I:%M %p')
+                except:
+                    return datetime.max
+            sorted_messages = sorted(messages, key=lambda x: (parse_ts(x), x.get('id', '')))
+            
+            # 统计解析结果
+            total_messages = 0
+            parsed_success = 0
+            parsed_failed = 0
+            
+            # 收集解析结果用于表格展示
+            parse_results = []
+            
+            # 逐条解析消息
+            for msg in sorted_messages:
+                content = msg.get('content', '').strip()
+                timestamp = msg.get('timestamp', '未知')
+                msg_id = msg.get('id', '')
+                
+                # 过滤纯元数据消息
+                if not content or len(content) < 5:
+                    continue
+                
+                total_messages += 1
+                
+                # 清理消息内容：移除引用前缀、作者信息、时间戳等干扰信息
+                import re
+                content_clean = content
+                
+                # 1. 移除 [引用] 前缀
+                content_clean = re.sub(r'^\[引用\]\s*', '', content_clean)
+                
+                # 2. 移除开头的作者和时间信息（如 "xiaozhaolucky•Jan 22, 2026 10:41 PM"）
+                content_clean = re.sub(r'^[\w]+•[A-Z][a-z]{2,9}\s+\d{1,2},\s+\d{4}\s+\d{1,2}:\d{2}\s+[AP]M\s*', '', content_clean)
+                
+                # 3. 移除开头的 X 标记（引用标记）
+                content_clean = re.sub(r'^[XxＸｘ]+', '', content_clean)
+                
+                # 4. 再次清理作者信息（处理 "Xxiaozhaolucky•..." 的情况）
+                content_clean = re.sub(r'^[\w]+•[A-Z][a-z]{2,9}\s+\d{1,2},\s+\d{4}\s+\d{1,2}:\d{2}\s+[AP]M\s*', '', content_clean)
+                
+                # 5. 移除开头的时间标记（如 "•Wednesday 11:04 PM"）
+                content_clean = re.sub(r'^•?\s*[A-Z][a-z]+\s+\d{1,2}:\d{2}\s+[AP]M\s*', '', content_clean)
+                
+                # 6. 移除多余的空白字符
+                content_clean = content_clean.strip()
+                
+                # 如果清理后内容过短，跳过
+                if not content_clean or len(content_clean) < 5:
+                    continue
+                
+                # 尝试解析（使用清理后的内容，传入消息时间戳用于计算相对日期）
+                instruction = OptionParser.parse(content_clean, message_id=msg_id, message_timestamp=timestamp)
+                
+                # 收集结果
+                if instruction:
+                    parsed_success += 1
+                    ticker = instruction.ticker if instruction.ticker else "未识别"
+                    # 移除换行符并限制长度
+                    raw_msg = content_clean.replace('\n', ' ').replace('\r', ' ')[:80]
+                    parse_results.append({
+                        'timestamp': timestamp,
+                        'ticker': ticker,
+                        'status': '✅',
+                        'type': instruction.instruction_type,
+                        'instruction': instruction,  # 保存完整的instruction对象
+                        'raw_message': raw_msg
+                    })
+                else:
+                    parsed_failed += 1
+                    from scraper.message_grouper import MessageGrouper
+                    grouper = MessageGrouper()
+                    ticker = grouper._extract_symbol(content_clean) or "未识别"
+                    # 移除换行符并限制长度
+                    content_display = content_clean.replace('\n', ' ').replace('\r', ' ')[:80]
+                    if len(content_clean) > 80:
+                        content_display += "..."
+                    parse_results.append({
+                        'timestamp': timestamp,
+                        'ticker': ticker,
+                        'status': '❌',
+                        'type': 'FAILED',
+                        'instruction': None,
+                        'error': f"解析失败",
+                        'raw_message': content_display
+                    })
+            
+            # 表格展示
+            if show_parser_output and parse_results:
+                from rich.console import Console
+                from rich.table import Table
+                from rich import box
+                
+                console = Console()
+                print()
+                
+                # 为每个指令创建独立表格
+                for idx, result in enumerate(parse_results, 1):
+                    # 构建表格标题
+                    if result['status'] == '✅':
+                        title = f"#{idx} {result['type']} - {result['ticker']}"
+                        title_style = "bold green"
+                    else:
+                        title = f"#{idx} 解析失败 - {result['ticker']}"
+                        title_style = "bold red"
+                    
+                    # 创建表格
+                    table = Table(
+                        title=title,
+                        title_style=title_style,
+                        box=box.ROUNDED,
+                        show_header=True,
+                        header_style="bold cyan",
+                        width=80,
+                        padding=(0, 1)
+                    )
+                    
+                    # 添加列
+                    table.add_column("字段", style="cyan", width=18, no_wrap=True)
+                    table.add_column("值", style="white", width=56, no_wrap=False)
+                    
+                    # 添加基本信息
+                    table.add_row("时间", result['timestamp'])
+                    table.add_row("期权代码", result['ticker'])
+                    table.add_row("指令类型", result['type'])
+                    table.add_row("状态", result['status'])
+                    
+                    # 根据指令类型显示详细信息
+                    if result['status'] == '✅' and result['instruction']:
+                        inst = result['instruction']
+                        
+                        if result['type'] == 'BUY':
+                            # 买入指令
+                            if inst.option_type:
+                                table.add_row("期权类型", inst.option_type)
+                            if inst.strike:
+                                table.add_row("行权价", f"${inst.strike}")
+                            if inst.expiry:
+                                table.add_row("到期日", inst.expiry)
+                            if inst.price_range:
+                                table.add_row("价格区间", f"${inst.price_range[0]} - ${inst.price_range[1]}")
+                                table.add_row("价格(中间值)", f"${inst.price}")
+                            elif inst.price:
+                                table.add_row("价格", f"${inst.price}")
+                            if inst.position_size:
+                                table.add_row("仓位大小", inst.position_size)
+                        
+                        elif result['type'] == 'SELL':
+                            # 卖出指令
+                            if inst.price_range:
+                                table.add_row("价格区间", f"${inst.price_range[0]} - ${inst.price_range[1]}")
+                                table.add_row("价格(中间值)", f"${inst.price}")
+                            elif inst.price:
+                                table.add_row("价格", f"${inst.price}")
+                            if inst.sell_quantity:
+                                table.add_row("卖出数量", inst.sell_quantity)
+                        
+                        elif result['type'] == 'CLOSE':
+                            # 清仓指令
+                            if inst.price_range:
+                                table.add_row("价格区间", f"${inst.price_range[0]} - ${inst.price_range[1]}")
+                                table.add_row("价格(中间值)", f"${inst.price}")
+                            elif inst.price:
+                                table.add_row("价格", f"${inst.price}")
+                            table.add_row("数量", "全部")
+                        
+                        elif result['type'] == 'MODIFY':
+                            # 修改指令
+                            if inst.stop_loss_range:
+                                table.add_row("止损区间", f"${inst.stop_loss_range[0]} - ${inst.stop_loss_range[1]}")
+                                table.add_row("止损(中间值)", f"${inst.stop_loss_price}")
+                            elif inst.stop_loss_price:
+                                table.add_row("止损价格", f"${inst.stop_loss_price}")
+                            
+                            if inst.take_profit_range:
+                                table.add_row("止盈区间", f"${inst.take_profit_range[0]} - ${inst.take_profit_range[1]}")
+                                table.add_row("止盈(中间值)", f"${inst.take_profit_price}")
+                            elif inst.take_profit_price:
+                                table.add_row("止盈价格", f"${inst.take_profit_price}")
+                        
+                        # 显示原始消息
+                        if result['raw_message']:
+                            raw_msg = result['raw_message']
+                            if len(raw_msg) > 75:
+                                table.add_row("原始消息", raw_msg[:75] + "...")
+                            else:
+                                table.add_row("原始消息", raw_msg)
+                    else:
+                        # 失败的解析
+                        if 'error' in result:
+                            table.add_row("错误", result['error'])
+                        raw_msg = result['raw_message']
+                        if len(raw_msg) > 75:
+                            table.add_row("原始消息", raw_msg[:75] + "...")
+                        else:
+                            table.add_row("原始消息", raw_msg)
+                    
+                    # 渲染表格
+                    console.print(table)
+                    print()
+                
+                # 统计信息
+                stats_table = Table(
+                    title="📊 解析统计",
+                    title_style="bold yellow",
+                    box=box.DOUBLE,
+                    show_header=False,
+                    width=80
+                )
+                stats_table.add_column("", style="bold cyan")
+                stats_table.add_row(f"总消息数: {total_messages} | 成功: {parsed_success} | 失败: {parsed_failed} | 成功率: {parsed_success/total_messages*100:.1f}%")
+                console.print(stats_table)
+                print()
+            
             # 注意：消息已在group_messages中流式输出，无需再调用format_as_rich_panels
             
             # 显示原始消息（前10条）
