@@ -957,15 +957,13 @@ async def test_whop_scraper():
             print("=" * 80)
             for i, group in enumerate(raw_groups[:100], 1):
                 simple_dict = group.to_simple_dict()
-                print(f"\n{i}. domID: {simple_dict['domID']}")
-                print(f"   时间: {simple_dict['timestamp']}")
-                print(f"   位置: {simple_dict['position']}")
-                print(f"   内容: {simple_dict['content'][:70]}...")
-                if simple_dict['refer']:
-                    print(f"   引用: {simple_dict['refer'][:60]}...")
-                if simple_dict['history']:
-                    print(f"   历史: {len(simple_dict['history'])} 条")
-                print("-" * 80)
+                print(f"ID: {simple_dict['domID']}")
+                print(f"内容: {simple_dict['content']}")
+                print(f"时间: {simple_dict['timestamp']}")
+                print(f"引用: {simple_dict['refer']}")
+                print(f"位置: {simple_dict['position']}")
+                print(f"历史: {simple_dict['history']}")
+                print("-" * 40)
             
             if len(raw_groups) > 100:
                 print(f"\n... 还有 {len(raw_groups) - 100} 条消息未显示")
