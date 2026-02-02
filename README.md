@@ -1,4 +1,4 @@
-# 期权信号抓取器 + 自动交易系统 v2.6.15
+#: 期权信号抓取器 + 自动交易系统 v2.6.15
 
 使用 Playwright 实时监控 Whop 页面，解析期权交易信号,并通过长桥证券 API 自动执行交易，包含完整的持仓管理和风险控制系统。
 
@@ -52,6 +52,8 @@ python3 main.py
 📖 **快速开始**：[新手上手指南](./GETTING_STARTED.md) ⭐ | [快速参考](./QUICK_REFERENCE.md)
 
 📖 **详细指南**：[登录指南](./WHOP_LOGIN_GUIDE.md) | [后台监控](./BACKGROUND_MONITORING.md) | [去重功能](./DEDUPLICATION_GUIDE.md) | [自动滚动](./AUTO_SCROLL_GUIDE.md) | [事件驱动监控](./doc/EVENT_DRIVEN_MONITOR.md) ⭐ | [消息分组关联](./doc/MESSAGE_GROUPING.md) | [本地HTML分析](./doc/LOCAL_HTML_ANALYSIS.md) 🆕 | [消息上下文识别](./doc/MESSAGE_CONTEXT.md) | [DOM导出调试](./doc/DEBUG_DOM.md) 🔧 | [选择器优化](./doc/SELECTOR_OPTIMIZATION.md) 🎯 | [故障排查](./TROUBLESHOOTING.md)
+
+📖 **消息提取重构**：[DOM结构指南](./docs/dom_structure_guide.md) 🏗️ | [输出格式说明](./docs/message_output_format.md) 📋 | [JSON导出指南](./docs/json_export_guide.md) 📤 | [本地分析工具](./docs/analyze_local_messages_guide.md) 🔍 | [重构总结](./docs/message_extraction_refactoring.md) 🎯 | [DOM分析](./docs/dom_analysis_summary.md) 🔬
 
 📖 **完整系统**：[使用指南](./doc/USAGE_GUIDE.md) | [配置说明](./doc/CONFIGURATION.md) | [长桥集成](./doc/LONGPORT_INTEGRATION_GUIDE.md) | [订单管理](./docs/order_management.md) | [批量撤销订单](./README_CANCEL_ORDERS.md) | [启动清单](./doc/CHECKLIST.md)
 

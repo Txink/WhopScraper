@@ -7,12 +7,57 @@
 import asyncio
 import os
 import sys
+import json
 from glob import glob
 from datetime import datetime
 from playwright.async_api import async_playwright
 
 
-async def analyze_html_messages(html_file: str):
+def export_messages_to_json(raw_groups, html_file: str) -> str:
+    """
+    导出消息到JSON文件
+    
+    Args:
+        raw_groups: 消息组列表
+        html_file: 源HTML文件路径
+        
+    Returns:
+        导出的JSON文件路径
+    """
+    # 生成输出文件名
+    base_name = os.path.splitext(os.path.basename(html_file))[0]
+    output_dir = os.path.dirname(html_file) or 'debug'
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    json_file = os.path.join(output_dir, f"{base_name}_messages_{timestamp}.json")
+    
+    # 转换为简化格式
+    messages_data = []
+    for group in raw_groups:
+        simple_dict = group.to_simple_dict()
+        messages_data.append(simple_dict)
+    
+    # 构建完整的JSON数据结构
+    output_data = {
+        "metadata": {
+            "source_file": html_file,
+            "export_time": datetime.now().isoformat(),
+            "total_messages": len(messages_data),
+            "extractor_version": "3.9"
+        },
+        "messages": messages_data
+    }
+    
+    # 写入JSON文件
+    try:
+        with open(json_file, 'w', encoding='utf-8') as f:
+            json.dump(output_data, f, ensure_ascii=False, indent=2)
+        return json_file
+    except Exception as e:
+        print(f"❌ JSON导出失败: {e}")
+        return None
+
+
+async def analyze_html_messages(html_file: str, export_json: bool = True):
     """
     分析本地HTML文件中的消息
     
@@ -75,6 +120,17 @@ async def analyze_html_messages(html_file: str):
                 print("   3. 选择器需要更新")
                 await browser.close()
                 return
+            
+            # 导出JSON文件
+            if export_json:
+                print("📤 正在导出JSON文件...")
+                json_file = export_messages_to_json(raw_groups, html_file)
+                if json_file:
+                    file_size = os.path.getsize(json_file) / 1024
+                    print(f"✅ JSON文件已导出: {json_file}")
+                    print(f"   文件大小: {file_size:.2f} KB")
+                    print(f"   消息数量: {len(raw_groups)}")
+                    print()
             
             # 转换为字典格式
             messages = []
@@ -332,35 +388,52 @@ async def analyze_html_messages(html_file: str):
             
             # 注意：消息已在group_messages中流式输出，无需再调用format_as_rich_panels
             
-            # 显示原始消息（前10条）
+            # 显示原始消息（前200条）- 使用新的简化格式
             print("\n" + "=" * 80)
-            print("【原始消息详情】（前10条）")
+            print("【原始消息详情】（前200条 - 新格式）")
             print("=" * 80)
-            for i, group in enumerate(raw_groups[:10], 1):
-                print(f"\n{i}. 消息 ID: {group.group_id}")
-                print(f"   作者: {group.author or '(未识别)'}")
-                print(f"   时间: {group.timestamp or '(未识别)'}")
-                print(f"   DOM: has_above={group.has_message_above}, has_below={group.has_message_below}")
+            
+            import json
+            for i, group in enumerate(raw_groups[:200], 1):
+                # 使用新的简化格式
+                simple_data = group.to_simple_dict()
                 
-                if group.primary_message:
-                    print(f"   主消息: {group.primary_message[:80]}...")
+                print(f"\n{i}. 消息 #{i}")
+                print("   " + "-" * 76)
+                print(f"   domID:     {simple_data['domID']}")
+                print(f"   position:  {simple_data['position']}")
+                print(f"   timestamp: {simple_data['timestamp'] or '(未识别)'}")
+                print(f"   content:   {simple_data['content'][:70]}...")
                 
-                if group.related_messages:
-                    print(f"   关联消息数: {len(group.related_messages)}")
-                    for j, related in enumerate(group.related_messages[:2], 1):
-                        print(f"      {j}. {related[:60]}...")
+                if simple_data['refer']:
+                    print(f"   refer:     {simple_data['refer'][:70]}...")
                 
-                if group.quoted_context:
-                    print(f"   引用: {group.quoted_context[:60]}...")
+                if simple_data['history']:
+                    print(f"   history:   [{len(simple_data['history'])} 条历史消息]")
+                    for j, hist_msg in enumerate(simple_data['history'][:3], 1):
+                        print(f"     {j}. {hist_msg[:65]}...")
+                    if len(simple_data['history']) > 3:
+                        print(f"     ... 还有 {len(simple_data['history']) - 3} 条")
+                else:
+                    print(f"   history:   []")
+                
+                print("   " + "-" * 76)
+                
+                # JSON格式预览
+                if i <= 3:  # 只展示前3条的完整JSON
+                    print(f"\n   📋 JSON格式:")
+                    json_str = json.dumps(simple_data, ensure_ascii=False, indent=4)
+                    for line in json_str.split('\n'):
+                        print(f"   {line}")
                 
                 print("-" * 80)
             
-            if len(raw_groups) > 10:
-                print(f"\n... 还有 {len(raw_groups) - 10} 条消息未显示")
+            if len(raw_groups) > 200:
+                print(f"\n... 还有 {len(raw_groups) - 200} 条消息未显示")
             
-            # 统计信息
+            # 统计信息 - 增强版
             print("\n" + "=" * 80)
-            print("📊 统计信息")
+            print("📊 统计信息（基于新格式）")
             print("=" * 80)
             print(f"原始消息数: {len(raw_groups)}")
             print(f"交易组数: {len(trade_groups)}")
@@ -376,6 +449,29 @@ async def analyze_html_messages(html_file: str):
             # 统计有引用的消息
             with_quote = sum(1 for g in raw_groups if g.quoted_context)
             print(f"有引用内容: {with_quote} ({with_quote/len(raw_groups)*100:.1f}%)")
+            
+            # 统计消息位置分布
+            position_stats = {}
+            history_stats = {'with_history': 0, 'total_history_count': 0}
+            
+            for g in raw_groups:
+                simple = g.to_simple_dict()
+                pos = simple['position']
+                position_stats[pos] = position_stats.get(pos, 0) + 1
+                
+                if simple['history']:
+                    history_stats['with_history'] += 1
+                    history_stats['total_history_count'] += len(simple['history'])
+            
+            print(f"\n消息位置分布:")
+            for pos, count in sorted(position_stats.items()):
+                print(f"  {pos:8s}: {count:3d} ({count/len(raw_groups)*100:.1f}%)")
+            
+            print(f"\nhistory字段统计:")
+            print(f"  有历史消息: {history_stats['with_history']} ({history_stats['with_history']/len(raw_groups)*100:.1f}%)")
+            if history_stats['with_history'] > 0:
+                avg_history = history_stats['total_history_count'] / history_stats['with_history']
+                print(f"  平均历史条数: {avg_history:.1f}")
             
             print("=" * 80)
             
@@ -401,6 +497,30 @@ async def analyze_html_messages(html_file: str):
                 f.write(f"有时间戳: {with_timestamp} ({with_timestamp/len(raw_groups)*100:.1f}%)\n")
                 f.write(f"有引用内容: {with_quote} ({with_quote/len(raw_groups)*100:.1f}%)\n\n")
                 
+                # 添加新格式统计
+                position_stats = {}
+                history_stats = {'with_history': 0, 'total_history_count': 0}
+                
+                for g in raw_groups:
+                    simple = g.to_simple_dict()
+                    pos = simple['position']
+                    position_stats[pos] = position_stats.get(pos, 0) + 1
+                    
+                    if simple['history']:
+                        history_stats['with_history'] += 1
+                        history_stats['total_history_count'] += len(simple['history'])
+                
+                f.write("消息位置分布:\n")
+                for pos, count in sorted(position_stats.items()):
+                    f.write(f"  {pos:8s}: {count:3d} ({count/len(raw_groups)*100:.1f}%)\n")
+                
+                f.write(f"\nhistory字段统计:\n")
+                f.write(f"  有历史消息: {history_stats['with_history']} ({history_stats['with_history']/len(raw_groups)*100:.1f}%)\n")
+                if history_stats['with_history'] > 0:
+                    avg_history = history_stats['total_history_count'] / history_stats['with_history']
+                    f.write(f"  平均历史条数: {avg_history:.1f}\n")
+                f.write("\n")
+                
                 f.write("=" * 80 + "\n")
                 f.write("详细表格视图\n")
                 f.write("=" * 80 + "\n\n")
@@ -412,29 +532,46 @@ async def analyze_html_messages(html_file: str):
                 f.write(format_as_table(trade_groups))
                 
                 f.write("\n\n" + "=" * 80 + "\n")
-                f.write("所有原始消息\n")
+                f.write("所有原始消息（新格式）\n")
                 f.write("=" * 80 + "\n\n")
                 
+                import json
                 for i, group in enumerate(raw_groups, 1):
-                    f.write(f"\n{i}. 消息 ID: {group.group_id}\n")
-                    f.write(f"   作者: {group.author or '(未识别)'}\n")
-                    f.write(f"   时间: {group.timestamp or '(未识别)'}\n")
+                    # 使用新的简化格式
+                    simple_data = group.to_simple_dict()
                     
-                    if group.primary_message:
-                        f.write(f"   主消息: {group.primary_message}\n")
+                    f.write(f"\n{i}. 消息 #{i}\n")
+                    f.write("-" * 80 + "\n")
+                    f.write(f"domID:     {simple_data['domID']}\n")
+                    f.write(f"position:  {simple_data['position']}\n")
+                    f.write(f"timestamp: {simple_data['timestamp'] or '(未识别)'}\n")
+                    f.write(f"content:   {simple_data['content']}\n")
                     
+                    if simple_data['refer']:
+                        f.write(f"refer:     {simple_data['refer']}\n")
+                    
+                    if simple_data['history']:
+                        f.write(f"history:   [{len(simple_data['history'])} 条历史消息]\n")
+                        for j, hist_msg in enumerate(simple_data['history'], 1):
+                            f.write(f"  {j}. {hist_msg}\n")
+                    else:
+                        f.write(f"history:   []\n")
+                    
+                    # 完整JSON格式
+                    f.write(f"\nJSON格式:\n")
+                    json_str = json.dumps(simple_data, ensure_ascii=False, indent=2)
+                    for line in json_str.split('\n'):
+                        f.write(f"  {line}\n")
+                    
+                    # 旧格式信息（用于对比）
+                    f.write(f"\n旧格式对比:\n")
+                    f.write(f"  作者: {group.author or '(未识别)'}\n")
                     if group.related_messages:
-                        f.write(f"   关联消息:\n")
-                        for j, related in enumerate(group.related_messages, 1):
-                            f.write(f"      {j}. {related}\n")
-                    
-                    if group.quoted_context:
-                        f.write(f"   引用: {group.quoted_context}\n")
-                    
+                        f.write(f"  关联消息数: {len(group.related_messages)}\n")
                     full_content = group.get_full_content()
-                    f.write(f"\n   完整内容:\n")
+                    f.write(f"  完整内容:\n")
                     for line in full_content.split('\n'):
-                        f.write(f"      {line}\n")
+                        f.write(f"    {line}\n")
                     
                     f.write("\n" + "-" * 80 + "\n")
             
@@ -515,23 +652,35 @@ def main():
     print("本地HTML消息提取分析工具")
     print("=" * 80 + "\n")
     
+    # 解析命令行参数
+    export_json = True  # 默认导出JSON
+    html_file = None
+    
     # 检查命令行参数
     if len(sys.argv) > 1:
-        html_file = sys.argv[1]
-        if not os.path.exists(html_file):
+        for arg in sys.argv[1:]:
+            if arg == '--no-json':
+                export_json = False
+            elif not arg.startswith('--'):
+                html_file = arg
+        
+        if html_file and not os.path.exists(html_file):
             print(f"❌ 文件不存在: {html_file}")
             print("\n使用方法:")
-            print(f"   python3 {sys.argv[0]} [HTML文件路径]")
-            print(f"   python3 {sys.argv[0]}  # 交互式选择文件\n")
+            print(f"   python3 {sys.argv[0]} [HTML文件路径] [选项]")
+            print(f"   python3 {sys.argv[0]}  # 交互式选择文件")
+            print("\n选项:")
+            print("   --no-json    不导出JSON文件\n")
             return
-    else:
+    
+    if not html_file:
         # 交互式选择文件
         html_file = select_html_file()
         if not html_file:
             return
     
     # 分析文件
-    asyncio.run(analyze_html_messages(html_file))
+    asyncio.run(analyze_html_messages(html_file, export_json=export_json))
 
 
 if __name__ == "__main__":

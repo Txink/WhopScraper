@@ -22,19 +22,25 @@ class MessageGroup:
         quoted_message: str = "",
         quoted_context: str = "",
         has_message_above: bool = False,
-        has_message_below: bool = False
+        has_message_below: bool = False,
+        has_attachment: bool = False,
+        image_url: str = "",
+        history: List[str] = None
     ):
         """
         Args:
-            group_id: 消息组ID
+            group_id: 消息组ID (DOM: data-message-id)
             author: 作者
-            timestamp: 时间戳
+            timestamp: 时间戳 (从消息组第一条获取)
             primary_message: 主消息内容
             related_messages: 关联的后续消息列表
             quoted_message: 引用的消息标题/预览
-            quoted_context: 引用的完整上下文
+            quoted_context: 引用的完整上下文 (refer)
             has_message_above: 是否有上一条相关消息（DOM层级关系）
             has_message_below: 是否有下一条相关消息（DOM层级关系）
+            has_attachment: 是否包含附件（图片等）
+            image_url: 图片URL（如果有）
+            history: 同消息组的历史消息列表（按时间顺序，不包含当前消息）
         """
         self.group_id = group_id
         self.author = author
@@ -45,6 +51,25 @@ class MessageGroup:
         self.quoted_context = quoted_context
         self.has_message_above = has_message_above
         self.has_message_below = has_message_below
+        self.has_attachment = has_attachment
+        self.image_url = image_url
+        self.history = history or []
+    
+    def get_position(self) -> str:
+        """
+        获取消息在消息组中的位置
+        
+        Returns:
+            "single" | "first" | "middle" | "last"
+        """
+        if not self.has_message_above and not self.has_message_below:
+            return "single"
+        elif not self.has_message_above and self.has_message_below:
+            return "first"
+        elif self.has_message_above and self.has_message_below:
+            return "middle"
+        else:  # has_message_above and not has_message_below
+            return "last"
     
     def get_full_content(self) -> str:
         """获取完整内容（包含所有关联消息）"""
@@ -65,7 +90,9 @@ class MessageGroup:
         return "\n".join(parts)
     
     def to_dict(self) -> Dict:
-        """转换为字典"""
+        """
+        转换为字典（完整版本，包含所有字段）
+        """
         return {
             'group_id': self.group_id,
             'author': self.author,
@@ -76,7 +103,33 @@ class MessageGroup:
             'quoted_context': self.quoted_context,
             'has_message_above': self.has_message_above,
             'has_message_below': self.has_message_below,
+            'has_attachment': self.has_attachment,
+            'image_url': self.image_url,
+            'position': self.get_position(),
             'full_content': self.get_full_content()
+        }
+    
+    def to_simple_dict(self) -> Dict:
+        """
+        转换为简化格式的字典
+        
+        格式：
+        {
+            'domID': 'post_xxx',
+            'content': '消息内容',
+            'timestamp': 'Jan 06, 2026 11:38 PM',
+            'refer': '引用的消息内容（如果有）',
+            'position': 'first',
+            'history': ['第一条消息内容', '第二条消息内容']
+        }
+        """
+        return {
+            'domID': self.group_id,
+            'content': self.primary_message,
+            'timestamp': self.timestamp,
+            'refer': self.quoted_context if self.quoted_context else None,
+            'position': self.get_position(),
+            'history': self.history
         }
     
     def __repr__(self):
@@ -104,15 +157,123 @@ class EnhancedMessageExtractor:
         () => {
             const messageGroups = [];
             
-            // 查找所有消息容器
-            // 根据Whop页面实际结构调整选择器
+            // 基于真实DOM的选择器: <div class="group/message" data-message-id="...">
             const messageSelectors = [
-                '[data-message-id]',          // 最准确:有唯一ID
-                '.group\\/message',           // Whop使用的类名 (需要转义斜杠)
-                '[class*="group/message"]',   // 包含group/message的类名
-                '[class*="message"]',         // 备用:包含message
-                '[role="article"]'            // 备用:语义化标签
+                '.group\\/message[data-message-id]',  // 最精确: class和data属性都有
+                '[data-message-id]',                  // 次优: 有唯一ID
+                '.group\\/message',                   // Whop主要使用的类名
             ];
+            
+            // 辅助函数：提取指定消息元素的内容
+            const extractMessageContent = (msgEl) => {
+                const contentSelectors = [
+                    '.bg-gray-3[class*="rounded"]',
+                    '[class*="bg-gray-3"][class*="rounded"]',
+                    '.whitespace-pre-wrap',
+                    '[class*="whitespace-pre-wrap"]'
+                ];
+                
+                const contentElements = msgEl.querySelectorAll(contentSelectors.join(', '));
+                const texts = [];
+                
+                for (const el of contentElements) {
+                    if (el.closest('.peer\\\\/reply, [class*="peer/reply"]')) continue;
+                    if (el.closest('[class*="fui-Avatar"]') || el.closest('[class*="avatar"]')) continue;
+                    if (el.classList.contains('hidden') || window.getComputedStyle(el).display === 'none') continue;
+                    if (el.classList.contains('text-gray-11') && el.classList.contains('text-0')) continue;
+                    
+                    let text = el.innerText.trim();
+                    text = text.replace(/Tail$/g, '').trim();
+                    text = text.replace(/\s+/g, ' ');
+                    
+                    // 简单过滤（允许2个字符以上的内容，如"都出"）
+                    if (text && text.length >= 2 && !text.match(/^\d+阅读$/) && !text.match(/^已编辑$/)) {
+                        texts.push(text);
+                    }
+                }
+                
+                const uniqueTexts = [...new Set(texts)];
+                return uniqueTexts[0] || '';
+            };
+            
+            // 辅助函数：获取同消息组的历史消息和引用信息
+            const getGroupHistory = (currentMsgEl) => {
+                const history = [];
+                let groupQuotedContext = '';
+                let prevEl = currentMsgEl.previousElementSibling;
+                let count = 0;
+                let firstMsgEl = null;
+                
+                // 向上遍历，找到同组的所有前序消息
+                while (prevEl && count < 50) {  // 限制最多查找50条，防止死循环
+                    count++;
+                    
+                    // 跳过分隔符等非消息元素
+                    if (!prevEl.getAttribute || !prevEl.getAttribute('data-message-id')) {
+                        prevEl = prevEl.previousElementSibling;
+                        continue;
+                    }
+                    
+                    const hasAbove = prevEl.getAttribute('data-has-message-above');
+                    
+                    // 提取消息内容
+                    const content = extractMessageContent(prevEl);
+                    if (content) {
+                        history.unshift(content);  // 添加到数组前面，保持顺序
+                    }
+                    
+                    // 如果这条消息的 has_message_above 为 false，说明是消息组的第一条
+                    if (hasAbove === 'false') {
+                        firstMsgEl = prevEl;
+                        break;
+                    }
+                    
+                    prevEl = prevEl.previousElementSibling;
+                }
+                
+                // 如果找到了消息组的第一条消息，提取其引用信息
+                if (firstMsgEl) {
+                    const quoteEl = firstMsgEl.querySelector('.peer\\\\/reply, [class*="peer/reply"]');
+                    if (quoteEl) {
+                        let quoteText = '';
+                        
+                        // 找到所有符合条件的 span
+                        const quoteSpans = quoteEl.querySelectorAll('[class*="fui-Text"][class*="truncate"][class*="fui-r-size-1"]');
+                        
+                        if (quoteSpans.length > 0) {
+                            // 过滤掉包含 fui-r-weight-medium 的 span（作者名）
+                            const contentSpans = Array.from(quoteSpans).filter(span => 
+                                !span.className.includes('fui-r-weight-medium')
+                            );
+                            
+                            if (contentSpans.length > 0) {
+                                quoteText = contentSpans[0].textContent.trim();
+                            } else if (quoteSpans.length > 1) {
+                                quoteText = quoteSpans[quoteSpans.length - 1].textContent.trim();
+                            }
+                        }
+                        
+                        if (!quoteText) {
+                            quoteText = quoteEl.textContent.trim();
+                        }
+                        
+                        // 清理
+                        quoteText = quoteText.replace(/Tail$/g, '').trim();
+                        quoteText = quoteText.replace(/\s+/g, ' ');
+                        quoteText = quoteText.replace(/^X\s*/, '');
+                        quoteText = quoteText.replace(/^xiaozhaolucky\s*/i, '');
+                        
+                        if (quoteText.length > 5 && quoteText.length < 500) {
+                            groupQuotedContext = quoteText;
+                        }
+                    }
+                }
+                
+                return {
+                    history: history,
+                    quoted_context: groupQuotedContext
+                };
+            };
             
             let messageElements = [];
             for (const selector of messageSelectors) {
@@ -156,132 +317,60 @@ class EnhancedMessageExtractor:
                     group.has_message_below = msgEl.getAttribute('data-has-message-below') === 'true';
                     
                     // 提取作者信息
-                    // Whop页面中作者信息可能在多个位置
+                    // 基于真实DOM: <span role="button" class="truncate cursor-pointer hover:underline fui-HoverCardTrigger">
                     const authorSelectors = [
-                        '[class*="fui-Text"][class*="truncate"]',  // Whop使用的作者类名
-                        '[class*="author"]',
-                        '[class*="username"]',
-                        '[class*="user"]',
-                        '[data-author]',
-                        'span.fui-Text'  // 可能的作者标签
+                        'span[role="button"].truncate.fui-HoverCardTrigger',  // 真实DOM中的用户名
+                        'span[role="button"][class*="truncate"]',
+                        '[class*="fui-Text"][class*="truncate"]',
                     ];
                     
-                    // 尝试从选择器提取
+                    // 尝试从精确选择器提取
                     for (const selector of authorSelectors) {
                         const authorEl = msgEl.querySelector(selector);
                         if (authorEl) {
                             const text = authorEl.textContent.trim();
                             
-                            // 检查父元素是否是股票卡片
-                            const isInStockCard = authorEl.closest('[class*="stock"]') || 
-                                                authorEl.closest('[class*="card"]') ||
-                                                authorEl.closest('[class*="embed"]') ||
-                                                // 检查是否在包含股价信息的容器中
-                                                (authorEl.parentElement && 
-                                                 (authorEl.parentElement.textContent.includes('Updated') ||
-                                                  authorEl.parentElement.textContent.includes('NASDAQ') ||
-                                                  authorEl.parentElement.textContent.includes('NYSE')));
-                            
-                            // 过滤掉时间、日期、公司名称、结尾标记等无关文本
+                            // 简化过滤逻辑 - 基于MessageFilter规则
                             if (text && 
                                 text.length > 0 && 
-                                text.length < 50 &&  // 作者名不会太长
-                                text !== 'Tail' &&  // 排除结尾标记
+                                text.length < 50 &&
+                                text !== 'Tail' &&
                                 !text.includes('PM') && 
                                 !text.includes('AM') && 
-                                !text.includes('2026') &&
+                                !/\d/.test(text) &&  // 不包含数字
                                 !text.includes('•') &&
-                                !text.includes('$') &&  // 排除交易内容
-                                !text.includes('Inc.') &&  // 排除公司名
-                                !text.includes('Corp.') &&
-                                !text.includes('Ltd.') &&
-                                !text.includes('LLC') &&
-                                !text.includes('Enterprises') &&
-                                !/\d{1,2}月/.test(text) &&  // 排除中文日期
-                                !/\d+:\d+/.test(text) &&  // 排除时间格式
-                                !isInStockCard) {  // 排除股票卡片中的文本
+                                !text.includes('$')) {
                                 group.author = text;
                                 break;
                             }
                         }
                     }
                     
-                    // 如果还是没找到,尝试从文本节点中查找
-                    if (!group.author) {
-                        const textNodes = [];
-                        const walker = document.createTreeWalker(
-                            msgEl,
-                            NodeFilter.SHOW_TEXT,
-                            null,
-                            false
-                        );
-                        let node;
-                        while (node = walker.nextNode()) {
-                            const text = node.textContent.trim();
-                            
-                            // 检查节点是否在股票卡片中
-                            const parentEl = node.parentElement;
-                            const isInStockCard = parentEl && (
-                                parentEl.closest('[class*="stock"]') ||
-                                parentEl.closest('[class*="card"]') ||
-                                parentEl.closest('[class*="embed"]') ||
-                                (parentEl.textContent.includes('Updated') ||
-                                 parentEl.textContent.includes('NASDAQ') ||
-                                 parentEl.textContent.includes('NYSE'))
-                            );
-                            
-                            if (text && 
-                                text.length > 2 && 
-                                text.length < 30 &&
-                                text !== 'Tail' &&  // 排除结尾标记
-                                !text.includes('•') &&
-                                !text.includes('$') &&
-                                !text.includes('Inc.') &&
-                                !text.includes('Corp.') &&
-                                !text.includes('Enterprises') &&
-                                !isInStockCard &&
-                                !/\d/.test(text)) {  // 不包含数字
-                                textNodes.push(text);
-                                if (textNodes.length === 1) {
-                                    group.author = text;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                    
                     // 提取时间戳
-                    // Whop页面中时间戳格式: "Jan 22, 2026 10:41 PM"
-                    const timestampSelectors = [
-                        'time',                        // HTML5语义化标签(最优先)
-                        '[datetime]',                  // 带datetime属性的元素
-                        '[class*="timestamp"]',
-                        '[class*="time"]',
-                        '[class*="date"]'
-                    ];
-                    
-                    // 尝试从标准时间标签提取
-                    for (const selector of timestampSelectors) {
-                        const timeEl = msgEl.querySelector(selector);
-                        if (timeEl) {
-                            group.timestamp = timeEl.textContent.trim() || 
-                                            timeEl.getAttribute('datetime') || '';
-                            if (group.timestamp) {
+                    // 基于真实DOM: <span>•</span><span>Jan 23, 2026 12:51 AM</span>
+                    // 在包含"•"的父元素中查找时间戳
+                    const timestampContainer = msgEl.querySelector('.inline-flex.items-center.gap-1');
+                    if (timestampContainer) {
+                        // 查找包含时间格式的span
+                        const spans = timestampContainer.querySelectorAll('span');
+                        for (const span of spans) {
+                            const text = span.textContent.trim();
+                            // 匹配时间戳格式 "Jan 23, 2026 12:51 AM"
+                            if (/[A-Z][a-z]{2}\s+\d{1,2},\s+\d{4}\s+\d{1,2}:\d{2}\s+[AP]M/.test(text)) {
+                                group.timestamp = text;
                                 group.has_timestamp = true;
                                 break;
                             }
                         }
                     }
                     
-                    // 如果没找到,尝试用正则表达式匹配时间戳格式
+                    // 备用方案：从整个元素文本中匹配
                     if (!group.has_timestamp) {
                         const allText = msgEl.textContent;
-                        // 匹配 "Jan 22, 2026 10:41 PM" 或类似格式
                         const timePatterns = [
                             /[A-Z][a-z]{2}\s+\d{1,2},\s+\d{4}\s+\d{1,2}:\d{2}\s+[AP]M/,  // Jan 22, 2026 10:41 PM
                             /\d{1,2}月\d{1,2}日\s+\d{1,2}:\d{2}/,  // 中文格式
-                            /\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}/,  // 2026-01-22 10:41
-                            /\d{1,2}:\d{2}\s+[AP]M/  // 10:41 PM (简短格式)
+                            /\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}/,  // ISO格式
                         ];
                         
                         for (const pattern of timePatterns) {
@@ -295,41 +384,60 @@ class EnhancedMessageExtractor:
                     }
                     
                     // 检查是否有引用/回复
-                    // Whop可能使用 peer/reply 等类名
-                    const quoteSelectors = [
-                        '[class*="peer/reply"]',       // Whop引用样式
-                        '[class*="reply"]',
-                        '[class*="quote"]',
-                        '[class*="reference"]',
-                        '[class*="mention"]',
-                        '[class*="border-t"]'          // 引用可能有特殊边框
-                    ];
-                    
-                    for (const selector of quoteSelectors) {
-                        const quoteEl = msgEl.querySelector(selector);
-                        if (quoteEl) {
-                            let quoteText = quoteEl.textContent.trim();
-                            // 清理结尾标记
-                            quoteText = quoteText.replace(/Tail$/g, '').trim();
-                            // 只有文本长度合理时才认为是引用
-                            if (quoteText.length > 5 && quoteText.length < 500) {
-                                group.quoted_message = quoteText.substring(0, 200);
-                                group.quoted_context = quoteText;
-                                break;
+                    // DOM特征: 引用在 class*="peer/reply" 的 div 下
+                    //          引用文本在 class*="fui-Text truncate fui-r-size-1" 的 span 中（不包含 fui-r-weight-medium）
+                    const quoteEl = msgEl.querySelector('.peer\\\\/reply, [class*="peer/reply"]');
+                    if (quoteEl) {
+                        let quoteText = '';
+                        
+                        // 找到所有符合条件的 span：class 包含 "fui-Text truncate fui-r-size-1"
+                        const quoteSpans = quoteEl.querySelectorAll('[class*="fui-Text"][class*="truncate"][class*="fui-r-size-1"]');
+                        
+                        if (quoteSpans.length > 0) {
+                            // 过滤掉包含 fui-r-weight-medium 的 span（作者名）
+                            const contentSpans = Array.from(quoteSpans).filter(span => 
+                                !span.className.includes('fui-r-weight-medium')
+                            );
+                            
+                            if (contentSpans.length > 0) {
+                                // 取第一个不是作者名的 span 作为引用内容
+                                quoteText = contentSpans[0].textContent.trim();
+                            } else if (quoteSpans.length > 1) {
+                                // 如果没有找到，尝试取最后一个 span（通常作者名在前，内容在后）
+                                quoteText = quoteSpans[quoteSpans.length - 1].textContent.trim();
                             }
+                        }
+                        
+                        // 如果上述方法都失败，使用备用方案
+                        if (!quoteText) {
+                            quoteText = quoteEl.textContent.trim();
+                        }
+                        
+                        // 清理结尾标记和多余空格
+                        quoteText = quoteText.replace(/Tail$/g, '').trim();
+                        quoteText = quoteText.replace(/\s+/g, ' ');
+                        
+                        // 过滤掉头像fallback "X"
+                        quoteText = quoteText.replace(/^X\s*/, '');
+                        
+                        // 过滤掉作者名（如果文本以作者名开头）
+                        quoteText = quoteText.replace(/^xiaozhaolucky\s*/i, '');
+                        
+                        // 只有文本长度合理时才认为是引用
+                        if (quoteText.length > 5 && quoteText.length < 500) {
+                            group.quoted_message = quoteText.substring(0, 200);
+                            group.quoted_context = quoteText;
                         }
                     }
                     
                     // 提取消息内容
-                    // Whop页面使用特定的消息气泡样式
+                    // 基于真实DOM: <div class="bg-gray-3 rounded-[18px] px-3 py-1.5">
+                    //   <div class="text-[15px] whitespace-pre-wrap"><p>消息内容<br></p></div>
+                    // </div>
                     const contentSelectors = [
-                        '[class*="bg-gray-3"][class*="rounded"]',  // Whop消息气泡
+                        '.bg-gray-3[class*="rounded"]',            // 最精确：消息气泡
                         '[class*="whitespace-pre-wrap"]',          // 消息文本容器
-                        'p',                                        // 段落标签
-                        '[class*="prose"]',                        // 通用内容类
-                        '[class*="content"]',
-                        '[class*="body"]',
-                        '[class*="text"]'
+                        'p',                                        // 段落标签（在气泡内）
                     ];
                     
                     // 尝试找到所有的消息气泡/段落
@@ -342,11 +450,41 @@ class EnhancedMessageExtractor:
                         }
                     }
                     
+                    // 过滤元数据的辅助函数
+                    const shouldFilterText = (text) => {
+                        if (!text || text.length < 2) return true;
+                        
+                        // 固定排除文本
+                        const excludeTexts = ['•', 'Tail', 'X', 'Edited', 'Reply', '编辑', '回复', '删除'];
+                        if (excludeTexts.includes(text)) return true;
+                        
+                        // 元数据模式
+                        if (/^(由\s*)?\d+\s*阅读$/.test(text)) return true;  // 阅读量
+                        if (/^(已编辑|Edited)$/.test(text)) return true;
+                        if (/^•.*\d{1,2}:\d{2}\s+[AP]M$/.test(text)) return true;  // 时间戳行
+                        if (/^[•·]\s*[A-Z]/.test(text)) return true;  // 以 "•" 开头的元数据
+                        if (/^[A-Z][a-z]{2}\s+\d{1,2},\s+\d{4}/.test(text)) return true;  // 日期
+                        if (/^\d{1,2}:\d{2}\s+[AP]M$/.test(text)) return true;  // 时间
+                        
+                        // 纯时间戳消息
+                        const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+                        const hasWeekday = weekdays.some(day => text.includes(day));
+                        const hasTime = text.includes('PM') || text.includes('AM');
+                        if (hasWeekday && hasTime && text.length < 30) return true;
+                        
+                        return false;
+                    };
+                    
                     if (contentElements.length > 0) {
-                        // 提取所有段落的文本内容
+                        // 提取所有消息气泡的文本内容
                         const texts = [];
                         for (const el of contentElements) {
-                            // 跳过头像相关元素
+                            // 跳过引用区域（引用有自己的处理逻辑）
+                            if (el.closest('.peer\\\\/reply, [class*="peer/reply"]')) {
+                                continue;
+                            }
+                            
+                            // 跳过头像和隐藏元素
                             if (el.closest('[class*="fui-Avatar"]') || 
                                 el.closest('[class*="avatar"]') ||
                                 el.classList.contains('hidden') ||
@@ -354,79 +492,31 @@ class EnhancedMessageExtractor:
                                 continue;
                             }
                             
+                            // 跳过阅读量元素（真实DOM: <span class="text-gray-11 text-0 h-[15px]">）
+                            if (el.classList.contains('text-gray-11') && 
+                                el.classList.contains('text-0')) {
+                                continue;
+                            }
+                            
                             let text = el.innerText.trim();
-                            // 清理结尾标记
+                            // 清理结尾标记和多余空格
                             text = text.replace(/Tail$/g, '').trim();
-                            // 过滤掉元数据(作者、时间、符号等)
-                            if (text && 
-                                text.length > 1 && 
-                                text !== '•' &&
-                                text !== 'Tail' &&  // 排除Tail标记
-                                text !== 'X' &&     // 排除头像fallback
-                                text !== 'Edited' &&  // 排除编辑标记
-                                text !== 'Reply' &&   // 排除回复标记
-                                text !== '编辑' &&
-                                text !== '回复' &&
-                                text !== '删除' &&
+                            text = text.replace(/\s+/g, ' ');
+                            
+                            // 使用过滤函数
+                            if (!shouldFilterText(text) && 
                                 text !== group.author &&
-                                text !== group.timestamp &&
-                                !text.match(/^[A-Z][a-z]{2}\s+\d{1,2},\s+\d{4}/) &&  // 不是日期
-                                !text.match(/^\d{1,2}:\d{2}\s+[AP]M$/) &&  // 不是时间
-                                !text.match(/^•.*\d{1,2}:\d{2}\s+[AP]M$/) &&  // 不是 "•Wednesday 11:04 PM" 或类似格式
-                                !text.match(/^[•·]\s*[A-Z]/) &&  // 不是以 "•" 或 "·" 开头的元数据
-                                !text.match(/^由\s*\d+\s*阅读$/) &&  // 不是阅读量 "由 223阅读"
-                                !text.match(/^\d+\s*阅读$/) &&  // 不是阅读量 "223阅读"
-                                !text.match(/^已编辑$/)) {  // 不是编辑标记
+                                text !== group.timestamp) {
                                 texts.push(text);
                             }
                         }
                         
-                        // 去重(同一段文本可能被多个选择器匹配到)
+                        // 去重
                         const uniqueTexts = [...new Set(texts)];
                         
                         if (uniqueTexts.length > 0) {
                             group.primary_message = uniqueTexts[0];
                             group.related_messages = uniqueTexts.slice(1);
-                        }
-                    } else {
-                        // 备用方案:从整个消息元素提取
-                        // 先克隆元素，移除头像相关的子元素
-                        const clonedEl = msgEl.cloneNode(true);
-                        const avatarEls = clonedEl.querySelectorAll('[class*="fui-Avatar"], [class*="avatar"], .hidden');
-                        avatarEls.forEach(el => el.remove());
-                        
-                        const fullText = clonedEl.innerText.trim();
-                        const lines = fullText.split('\\n')
-                            .map(line => line.trim())
-                            .map(line => line.replace(/Tail$/g, '').trim())  // 清理结尾标记
-                            .filter(line => {
-                                // 过滤掉元数据行
-                                return line.length > 1 && 
-                                       line !== '•' &&
-                                       line !== 'Tail' &&  // 排除Tail标记
-                                       line !== 'X' &&     // 排除头像fallback
-                                       line !== 'Edited' &&
-                                       line !== 'Reply' &&
-                                       line !== '编辑' &&
-                                       line !== '回复' &&
-                                       line !== '删除' &&
-                                       line !== group.author &&
-                                       line !== group.timestamp &&
-                                       !line.match(/^[A-Z][a-z]{2}\s+\d{1,2},\s+\d{4}/) &&
-                                       !line.match(/^\d{1,2}:\d{2}\s+[AP]M$/) &&
-                                       !line.match(/^•.*\d{1,2}:\d{2}\s+[AP]M$/) &&  // 不是 "•Wednesday 11:04 PM" 或类似格式
-                                       !line.match(/^[•·]\s*[A-Z]/) &&  // 不是以 "•" 或 "·" 开头的元数据
-                                       !line.match(/^由\s*\d+\s*阅读$/) &&  // 不是阅读量
-                                       !line.match(/^\d+\s*阅读$/) &&  // 不是阅读量
-                                       !line.match(/^已编辑$/);  // 不是编辑标记
-                            });
-                        
-                        // 去重
-                        const uniqueLines = [...new Set(lines)];
-                        
-                        if (uniqueLines.length > 0) {
-                            group.primary_message = uniqueLines[0];
-                            group.related_messages = uniqueLines.slice(1);
                         }
                     }
                     
@@ -434,24 +524,57 @@ class EnhancedMessageExtractor:
                     const hasAttachment = msgEl.querySelector('[data-attachment-id]') || 
                                          msgEl.querySelector('img[src*="whop.com"]') ||
                                          msgEl.querySelector('[class*="attachment"]');
+                    group.has_attachment = !!hasAttachment;
                     
-                    // 检查是否只有阅读量信息
-                    const isOnlyReadCount = group.primary_message && 
-                                           group.primary_message.match(/^(由\s*)?\d+\s*阅读$/);
+                    // 提取图片URL（如果有）
+                    if (hasAttachment) {
+                        const imgEl = msgEl.querySelector('img[src*="whop.com"]');
+                        if (imgEl) {
+                            group.image_url = imgEl.getAttribute('src');
+                        }
+                    }
                     
-                    // 如果只有附件和阅读量，没有实质内容，则跳过
-                    const isImageOnlyMessage = hasAttachment && 
-                                              (isOnlyReadCount || !group.primary_message || group.primary_message.length < 10);
+                    // 使用统一的过滤逻辑判断是否应该跳过
+                    const shouldSkip = () => {
+                        // 1. 没有任何内容
+                        if (!group.primary_message && group.related_messages.length === 0) {
+                            return '无内容';
+                        }
+                        
+                        // 2. 纯图片消息（只有图片+阅读量，没有实质内容）
+                        if (hasAttachment) {
+                            const isOnlyReadCount = group.primary_message && 
+                                                   /^(由\s*)?\d+\s*阅读$/.test(group.primary_message);
+                            // 只有当真的没有内容，或者只有阅读量时才跳过
+                            const hasNoContent = !group.primary_message || group.primary_message.trim().length === 0;
+                            if (isOnlyReadCount || (hasNoContent && group.related_messages.length === 0)) {
+                                return '纯图片消息';
+                            }
+                        }
+                        
+                        // 3. 纯元数据消息（使用shouldFilterText检查）
+                        if (group.primary_message && shouldFilterText(group.primary_message)) {
+                            return '元数据消息';
+                        }
+                        
+                        return false;
+                    };
                     
-                    // 过滤纯元数据的消息组
-                    const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-                    const isPureMetadata = group.primary_message && 
-                                          group.primary_message.length < 30 &&
-                                          weekdays.some(day => group.primary_message.includes(day)) &&
-                                          (group.primary_message.includes('PM') || group.primary_message.includes('AM'));
+                    // 提取历史消息和消息组引用（仅当有上级消息时）
+                    if (group.has_message_above) {
+                        const groupInfo = getGroupHistory(msgEl);
+                        group.history = groupInfo.history;
+                        // 如果消息组有引用，非首条消息应该继承这个引用
+                        if (groupInfo.quoted_context && !group.quoted_context) {
+                            group.quoted_context = groupInfo.quoted_context;
+                            group.quoted_message = groupInfo.quoted_context.substring(0, 200);
+                        }
+                    } else {
+                        group.history = [];
+                    }
                     
-                    // 只添加有实际内容的消息组（排除纯元数据和纯图片消息）
-                    if (!isPureMetadata && !isImageOnlyMessage && (group.primary_message || group.related_messages.length > 0)) {
+                    // 只添加有实际内容的消息组
+                    if (!shouldSkip()) {
                         messageGroups.push(group);
                     }
                     
@@ -467,9 +590,10 @@ class EnhancedMessageExtractor:
         try:
             raw_groups = await self.page.evaluate(js_code)
             
-            # 转换为 MessageGroup 对象
+            # 转换为 MessageGroup 对象并处理时间戳继承
             message_groups = []
-            last_timestamp_group = None  # 记录最后一个有时间戳的消息组
+            last_timestamp_group = None  # 记录最后一个有时间戳的消息组（用于继承）
+            current_group_header = None  # 记录当前消息组的头部信息（用于DOM层级继承）
             
             for raw in raw_groups:
                 group = MessageGroup(
@@ -481,22 +605,32 @@ class EnhancedMessageExtractor:
                     quoted_message=raw['quoted_message'],
                     quoted_context=raw['quoted_context'],
                     has_message_above=raw.get('has_message_above', False),
-                    has_message_below=raw.get('has_message_below', False)
+                    has_message_below=raw.get('has_message_below', False),
+                    has_attachment=raw.get('has_attachment', False),
+                    image_url=raw.get('image_url', ''),
+                    history=raw.get('history', [])
                 )
                 
-                # 如果消息有上一条相关消息（has_message_above=true），继承上一条消息的作者和时间戳
-                if group.has_message_above and last_timestamp_group:
+                # 基于DOM层级关系的时间戳继承（优先级最高）
+                # has_message_above=true 表示与上一条消息在同一个消息组内
+                if group.has_message_above and current_group_header:
+                    # 继承消息组头部的信息
                     if not group.author:
-                        group.author = last_timestamp_group.author
+                        group.author = current_group_header.author
                     if not group.timestamp:
+                        group.timestamp = current_group_header.timestamp
+                else:
+                    # has_message_above=false 或 没有上一个组，表示新消息组开始
+                    # 如果当前消息有时间戳，它就是新的组头部
+                    if raw.get('has_timestamp') or group.timestamp:
+                        current_group_header = group
+                    # 如果新消息组没有时间戳，继承最近的有时间戳的消息（备用方案）
+                    elif last_timestamp_group:
                         group.timestamp = last_timestamp_group.timestamp
-                # 否则，如果消息没有时间戳，尝试继承上一个有时间戳的消息的信息
-                elif not group.timestamp and last_timestamp_group:
-                    group.timestamp = last_timestamp_group.timestamp
-                    if not group.author:
-                        group.author = last_timestamp_group.author
+                        if not group.author:
+                            group.author = last_timestamp_group.author
                 
-                # 更新最后一个有时间戳的消息组
+                # 更新最后一个有时间戳的消息组（用于跨组继承）
                 if raw.get('has_timestamp') or group.timestamp:
                     last_timestamp_group = group
                 

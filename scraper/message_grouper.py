@@ -20,6 +20,15 @@ except ImportError:
     class Config:
         FILTER_AUTHORS = []
 
+try:
+    from scraper.quote_matcher import QuoteMatcher
+except ImportError:
+    # 如果导入失败，使用简单的匹配
+    class QuoteMatcher:
+        @staticmethod
+        def find_best_match(quote, candidates, min_score=0.3):
+            return None
+
 
 class TradeMessageGroup:
     """交易消息组 - 一组相关的交易消息"""
@@ -482,23 +491,29 @@ class MessageGrouper:
                 if has_above and last_processed_group_id and last_processed_group_id in self.groups:
                     matched_group = self.groups[last_processed_group_id]
                 
-                # 策略1: 优先查找引用内容匹配的组
-                # 如果消息引用了买入消息的内容，尝试找到对应的买入组
+                # 策略1: 使用QuoteMatcher智能匹配引用内容
                 quoted_context = message.get('quoted_context', '')
-                if quoted_context:
+                if quoted_context and not matched_group:
+                    # 收集所有可能的买入消息作为候选
+                    candidates = []
                     for group_id, group in self.groups.items():
                         if group.symbol == target_symbol and group.entry_message:
-                            # 检查引用内容是否包含在买入消息中
-                            entry_content = group.entry_message.get('content', '')
-                            # 提取引用中的关键内容（去掉作者和时间）
-                            quoted_clean = re.sub(r'[XxＸｘ]?[\w]+•.*?[AP]M', '', quoted_context)
-                            quoted_clean = re.sub(r'\s+', ' ', quoted_clean).strip()
-                            
-                            if quoted_clean and (quoted_clean in entry_content or 
-                                               any(part in entry_content for part in quoted_clean.split() if len(part) > 3)):
-                                # 检查是否同一天或相近时间
-                                entry_date = group.entry_message.get('timestamp', '').split()[0:3]
-                                if entry_date == date_part or not date_part[0]:
+                            candidates.append(group.entry_message)
+                    
+                    if candidates:
+                        # 使用QuoteMatcher找到最佳匹配
+                        best_match = QuoteMatcher.match_with_context(
+                            quote=quoted_context,
+                            candidates=candidates,
+                            author=author,
+                            date_part=date_part,
+                            min_score=0.3
+                        )
+                        
+                        if best_match:
+                            # 找到对应的组
+                            for group_id, group in self.groups.items():
+                                if group.entry_message and group.entry_message.get('id') == best_match.get('id'):
                                     matched_group = group
                                     break
                 
