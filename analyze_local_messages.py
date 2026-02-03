@@ -13,6 +13,69 @@ from datetime import datetime
 from playwright.async_api import async_playwright
 
 
+def generate_option_symbol(ticker: str, option_type: str, strike: float, expiry: str, timestamp: str = None) -> str:
+    """
+    生成完整的期权代码
+    
+    Args:
+        ticker: 股票代码（如 "BA"）
+        option_type: 期权类型（"CALL" 或 "PUT"）
+        strike: 行权价（如 240.0）
+        expiry: 到期日（如 "2/13", "2月13"）
+        timestamp: 消息时间戳（如 "Jan 23, 2026 12:51 AM"），用于推断年份
+        
+    Returns:
+        完整期权代码（如 "BA260213C240000.US"）
+    """
+    from datetime import datetime
+    import re
+    
+    if not all([ticker, option_type, strike, expiry]):
+        return ticker or "未知"
+    
+    # 从timestamp提取年份
+    year = 26  # 默认2026年
+    if timestamp:
+        try:
+            # 尝试解析 "Jan 23, 2026 12:51 AM" 格式
+            ts_match = re.search(r', (\d{4})', timestamp)
+            if ts_match:
+                year = int(ts_match.group(1)) % 100  # 取后两位
+        except:
+            pass
+    
+    # 解析到期日
+    month = None
+    day = None
+    
+    # 尝试匹配 "2/13" 格式
+    match = re.match(r'(\d{1,2})/(\d{1,2})', expiry)
+    if match:
+        month = int(match.group(1))
+        day = int(match.group(2))
+    else:
+        # 尝试匹配 "2月13" 格式
+        match = re.match(r'(\d{1,2})月(\d{1,2})', expiry)
+        if match:
+            month = int(match.group(1))
+            day = int(match.group(2))
+    
+    if not month or not day:
+        return ticker
+    
+    # 格式化日期为 YYMMDD
+    date_str = f"{year:02d}{month:02d}{day:02d}"
+    
+    # 期权类型代码
+    option_code = 'C' if option_type == 'CALL' else 'P'
+    
+    # 行权价（乘以1000并格式化为8位）
+    strike_code = f"{int(strike * 1000):08d}"
+    
+    # 组合完整代码
+    return f"{ticker}{date_str}{option_code}{strike_code}.US"
+
+
 def export_messages_to_json(raw_groups, html_file: str) -> str:
     """
     导出消息到JSON文件
@@ -135,13 +198,14 @@ async def analyze_html_messages(html_file: str, export_json: bool = True):
             
             # 解析消息并转化为broker指令
             from parser.option_parser import OptionParser
+            from parser.message_context_resolver import MessageContextResolver
             
             # 检查是否显示解析输出（可通过环境变量控制）
             show_parser_output = os.getenv('SHOW_PARSER_OUTPUT', 'true').lower() in ('true', '1', 'yes')
             
             if show_parser_output:
                 print("\n" + "="*140)
-                print("【指令解析 - 转化为Broker可用指令】")
+                print("【指令解析 - 转化为Broker可用指令（含上下文补全）】")
                 print("="*140)
             
             # 按时间排序所有消息
@@ -156,20 +220,43 @@ async def analyze_html_messages(html_file: str, export_json: bool = True):
                     return datetime.max
             sorted_groups = sorted(raw_groups, key=lambda x: (parse_ts(x), x.group_id))
             
+            # 准备所有消息（简化格式）用于上下文解析
+            import re
+            all_messages_simple = []
+            for group in sorted_groups:
+                simple_dict = group.to_simple_dict()
+                content = simple_dict['content'].strip()
+                
+                # 清理消息内容
+                content_clean = content
+                content_clean = re.sub(r'^\[引用\]\s*', '', content_clean)
+                content_clean = re.sub(r'^[\w]+•[A-Z][a-z]{2,9}\s+\d{1,2},\s+\d{4}\s+\d{1,2}:\d{2}\s+[AP]M\s*', '', content_clean)
+                content_clean = re.sub(r'^[XxＸｘ]+', '', content_clean)
+                content_clean = re.sub(r'^[\w]+•[A-Z][a-z]{2,9}\s+\d{1,2},\s+\d{4}\s+\d{1,2}:\d{2}\s+[AP]M\s*', '', content_clean)
+                content_clean = re.sub(r'^•?\s*[A-Z][a-z]+\s+\d{1,2}:\d{2}\s+[AP]M\s*', '', content_clean)
+                content_clean = content_clean.strip()
+                
+                # 更新清理后的内容
+                simple_dict['content'] = content_clean
+                all_messages_simple.append(simple_dict)
+            
+            # 创建上下文解析器
+            resolver = MessageContextResolver(all_messages_simple)
+            
             # 统计解析结果
             total_messages = 0
             parsed_success = 0
             parsed_failed = 0
+            context_used_count = 0
             
             # 收集解析结果用于表格展示
             parse_results = []
             
             # 逐条解析消息
-            for group in sorted_groups:
-                simple_dict = group.to_simple_dict()
+            for simple_dict in all_messages_simple:
                 msg_id = simple_dict['domID']
                 timestamp = simple_dict['timestamp']
-                content = simple_dict['content'].strip()
+                content = simple_dict['content']
                 
                 # 过滤纯元数据消息
                 if not content or len(content) < 5:
@@ -177,68 +264,52 @@ async def analyze_html_messages(html_file: str, export_json: bool = True):
                 
                 total_messages += 1
                 
-                # 清理消息内容：移除引用前缀、作者信息、时间戳等干扰信息
-                import re
-                content_clean = content
+                # 使用上下文解析器（返回三元组：instruction, context_source, context_message）
+                result = resolver.resolve_instruction(simple_dict)
                 
-                # 1. 移除 [引用] 前缀
-                content_clean = re.sub(r'^\[引用\]\s*', '', content_clean)
+                if result:
+                    instruction, context_source, context_message = result
+                    
+                    if instruction:
+                        parsed_success += 1
+                        
+                        # 记录是否使用了上下文
+                        if context_source:
+                            context_used_count += 1
+                        
+                        ticker = instruction.ticker if instruction.ticker else "未识别"
+                        # 移除换行符并限制长度
+                        raw_msg = content.replace('\n', ' ').replace('\r', ' ')[:80]
+                        parse_results.append({
+                            'timestamp': timestamp,
+                            'ticker': ticker,
+                            'status': '✅',
+                            'type': instruction.instruction_type,
+                            'instruction': instruction,
+                            'raw_message': raw_msg,
+                            'context_source': context_source,
+                            'context_message': context_message
+                        })
+                        continue
                 
-                # 2. 移除开头的作者和时间信息（如 "xiaozhaolucky•Jan 22, 2026 10:41 PM"）
-                content_clean = re.sub(r'^[\w]+•[A-Z][a-z]{2,9}\s+\d{1,2},\s+\d{4}\s+\d{1,2}:\d{2}\s+[AP]M\s*', '', content_clean)
-                
-                # 3. 移除开头的 X 标记（引用标记）
-                content_clean = re.sub(r'^[XxＸｘ]+', '', content_clean)
-                
-                # 4. 再次清理作者信息（处理 "Xxiaozhaolucky•..." 的情况）
-                content_clean = re.sub(r'^[\w]+•[A-Z][a-z]{2,9}\s+\d{1,2},\s+\d{4}\s+\d{1,2}:\d{2}\s+[AP]M\s*', '', content_clean)
-                
-                # 5. 移除开头的时间标记（如 "•Wednesday 11:04 PM"）
-                content_clean = re.sub(r'^•?\s*[A-Z][a-z]+\s+\d{1,2}:\d{2}\s+[AP]M\s*', '', content_clean)
-                
-                # 6. 移除多余的空白字符
-                content_clean = content_clean.strip()
-                
-                # 如果清理后内容过短，跳过
-                if not content_clean or len(content_clean) < 5:
-                    continue
-                
-                # 尝试解析（使用清理后的内容，传入消息时间戳用于计算相对日期）
-                instruction = OptionParser.parse(content_clean, message_id=msg_id, message_timestamp=timestamp)
-                
-                # 收集结果
-                if instruction:
-                    parsed_success += 1
-                    ticker = instruction.ticker if instruction.ticker else "未识别"
-                    # 移除换行符并限制长度
-                    raw_msg = content_clean.replace('\n', ' ').replace('\r', ' ')[:80]
-                    parse_results.append({
-                        'timestamp': timestamp,
-                        'ticker': ticker,
-                        'status': '✅',
-                        'type': instruction.instruction_type,
-                        'instruction': instruction,  # 保存完整的instruction对象
-                        'raw_message': raw_msg
-                    })
-                else:
-                    parsed_failed += 1
-                    # 简单提取股票代码
-                    import re
-                    ticker_match = re.search(r'\b([A-Z]{1,5})\b', content_clean)
-                    ticker = ticker_match.group(1) if ticker_match else "未识别"
-                    # 移除换行符并限制长度
-                    content_display = content_clean.replace('\n', ' ').replace('\r', ' ')[:80]
-                    if len(content_clean) > 80:
-                        content_display += "..."
-                    parse_results.append({
-                        'timestamp': timestamp,
-                        'ticker': ticker,
-                        'status': '❌',
-                        'type': 'FAILED',
-                        'instruction': None,
-                        'error': f"解析失败",
-                        'raw_message': content_display
-                    })
+                # 解析失败
+                parsed_failed += 1
+                ticker_match = re.search(r'\b([A-Z]{1,5})\b', content)
+                ticker = ticker_match.group(1) if ticker_match else "未识别"
+                content_display = content.replace('\n', ' ').replace('\r', ' ')[:80]
+                if len(content) > 80:
+                    content_display += "..."
+                parse_results.append({
+                    'timestamp': timestamp,
+                    'ticker': ticker,
+                    'status': '❌',
+                    'type': 'FAILED',
+                    'instruction': None,
+                    'error': f"解析失败",
+                    'raw_message': content_display,
+                    'context_source': None,
+                    'context_message': None
+                })
             
             # 表格展示
             if show_parser_output and parse_results:
@@ -276,7 +347,24 @@ async def analyze_html_messages(html_file: str, export_json: bool = True):
                     
                     # 添加基本信息
                     table.add_row("时间", result['timestamp'])
-                    table.add_row("期权代码", result['ticker'])
+                    
+                    # 生成完整的期权代码
+                    if result['status'] == '✅' and result['instruction']:
+                        inst = result['instruction']
+                        option_symbol = generate_option_symbol(
+                            inst.ticker,
+                            inst.option_type,
+                            inst.strike,
+                            inst.expiry,
+                            result['timestamp']
+                        )
+                        table.add_row("期权代码", option_symbol)
+                        # 如果完整代码生成失败，显示股票代码
+                        if option_symbol == inst.ticker or option_symbol == "未知":
+                            table.add_row("股票代码", result['ticker'] or "未识别")
+                    else:
+                        table.add_row("股票代码", result['ticker'] or "未识别")
+                    
                     table.add_row("指令类型", result['type'])
                     table.add_row("状态", result['status'])
                     
@@ -333,6 +421,15 @@ async def analyze_html_messages(html_file: str, export_json: bool = True):
                             elif inst.take_profit_price:
                                 table.add_row("止盈价格", f"${inst.take_profit_price}")
                         
+                        # 显示上下文补全信息
+                        if result.get('context_source'):
+                            table.add_row("🔗 上下文来源", result['context_source'])
+                            if result.get('context_message'):
+                                ctx_msg = result['context_message'][:60]
+                                if len(result['context_message']) > 60:
+                                    ctx_msg += "..."
+                                table.add_row("🔗 上下文消息", ctx_msg)
+                        
                         # 显示原始消息
                         if result['raw_message']:
                             raw_msg = result['raw_message']
@@ -364,6 +461,8 @@ async def analyze_html_messages(html_file: str, export_json: bool = True):
                 )
                 stats_table.add_column("", style="bold cyan")
                 stats_table.add_row(f"总消息数: {total_messages} | 成功: {parsed_success} | 失败: {parsed_failed} | 成功率: {parsed_success/total_messages*100:.1f}%")
+                if context_used_count > 0:
+                    stats_table.add_row(f"🔗 使用上下文补全: {context_used_count} ({context_used_count/parsed_success*100:.1f}% 的成功解析)")
                 console.print(stats_table)
                 print()
             
