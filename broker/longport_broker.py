@@ -914,8 +914,8 @@ def convert_to_longport_symbol(ticker: str, option_type: str, strike: float, exp
     """
     将期权信息转换为长桥期权代码格式
     
-    格式：TICKER + YYMMDD + C/P + 价格(8位，小数点后3位)
-    示例：AAPL250131C00150000.US
+    格式：TICKER + YYMMDD + C/P + 价格(6位，即行权价×1000)
+    示例：AAPL250131C00150000.US 或 AAPL260206C110000.US
     
     Args:
         ticker: 股票代码，如 "AAPL"
@@ -977,8 +977,8 @@ def convert_to_longport_symbol(ticker: str, option_type: str, strike: float, exp
     # 期权类型
     opt_type = "C" if option_type.upper() == "CALL" else "P"
     
-    # 行权价格式化（8位数字，小数点后3位）
-    strike_str = f"{int(strike * 1000):08d}"
+    # 行权价格式化（6位数字，与长桥 API 返回格式一致）
+    strike_str = f"{int(strike * 1000):06d}"
     
     # 组合期权代码
     symbol = f"{ticker}{expiry_str}{opt_type}{strike_str}.US"
@@ -986,34 +986,22 @@ def convert_to_longport_symbol(ticker: str, option_type: str, strike: float, exp
     return symbol
 
 
-def calculate_quantity(price: float, available_cash: float, position_size: str = None) -> int:
+def calculate_quantity(price: float, available_cash: float) -> int:
     """
-    计算购买数量
-    
-    根据账户资金和仓位大小计算合约数量
+    根据 MAX_OPTION_TOTAL_PRICE 与可用资金计算合约数量。
     
     Args:
-        price: 期权价格
+        price: 期权单价（每股）
         available_cash: 可用资金
-        position_size: 仓位大小 "小仓位"/"中仓位"/"大仓位"
     
     Returns:
-        合约数量
+        合约数量（至少 1 张，且不超过总价上限与资金允许的数量）
     """
-    # 根据仓位大小计算投入资金比例
-    if position_size == "小仓位":
-        invest_ratio = 0.05  # 5%
-    elif position_size == "中仓位":
-        invest_ratio = 0.10  # 10%
-    elif position_size == "大仓位":
-        invest_ratio = 0.15  # 15%
-    else:
-        invest_ratio = 0.05  # 默认 5%
-    
-    invest_amount = available_cash * invest_ratio
-    
-    # 计算合约数量（每张期权100股）
-    quantity = int(invest_amount / (price * 100))
-    
-    # 至少买1张
+    import os
+    max_total = float(os.getenv('MAX_OPTION_TOTAL_PRICE', '10000'))
+    cap = min(max_total, available_cash)
+    single_contract = price * 100  # 每张 100 股
+    if single_contract <= 0:
+        return 1
+    quantity = int(cap / single_contract)
     return max(1, quantity)

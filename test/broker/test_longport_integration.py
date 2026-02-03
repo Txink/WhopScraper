@@ -75,17 +75,13 @@ def test_symbol_conversion():
 def test_quantity_calculation(available_cash: float):
     """测试数量计算"""
     print("\n" + "="*60)
-    print("测试 4: 购买数量计算")
+    print("测试 4: 购买数量计算（由 MAX_OPTION_TOTAL_PRICE 与可用资金控制）")
     print("="*60)
     
     price = 2.5
-    position_sizes = ["小仓位", "中仓位", "大仓位"]
-    
-    for size in position_sizes:
-        quantity = calculate_quantity(price, available_cash, size)
-        cost = quantity * price * 100
-        logger.info(f"{size}: {quantity} 张，成本 ${cost:,.2f}")
-    
+    quantity = calculate_quantity(price, available_cash)
+    cost = quantity * price * 100
+    logger.info(f"单价 ${price}, 数量: {quantity} 张，成本 ${cost:,.2f}")
     logger.info("✅ 数量计算测试完成")
 
 

@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## [2026-02-03 v3.20.1] 期权代码行权价格式与「本周」到期日修复
+
+### 修复
+- **期权代码格式**：长桥 API 实际返回的行权价部分为 **6 位**（如 `110000`、`345000`），本地生成误用 8 位导致 `security not found`。已统一改为 6 位：
+  - `broker/auto_trader.py`：`_generate_option_symbol` 行权价 `:08d` → `:06d`
+  - `broker/longport_broker.py`：`convert_to_longport_symbol` 同上
+  - `analyze_local_messages.py`：`generate_option_symbol` 同上
+- **「本周」「下周」到期日**：当消息里写「本周」而解析未拿到消息时间戳时，`expiry` 仍为「本周」，原先 `_generate_option_symbol` 只支持 `m/d`、`m月d日`，无法解析导致失败；若被上下文错误补全成「1/30」等，会因「月份已过用明年」被算成 2027 年。现已在 `_generate_option_symbol` 中直接支持「本周」「下周」「这周」「当周」「this week」「next week」，**以当前日期（`datetime.now()`）计算本周五/下周五**，保证到期日为当前年份（如 2026），不再误成 2027。
+- **价格偏差超限拒绝下单**：原先「价格偏差超过容忍度」只打警告，仍可确认下单。现改为**超容忍度即拒绝**，不再进入确认步骤、不提交订单；可通过 `PRICE_DEVIATION_TOLERANCE` 调高容忍度（默认 5%）。
+- **去掉仓位数量逻辑**：移除 `POSITION_SIZE_SMALL` / `POSITION_SIZE_MEDIUM` / `POSITION_SIZE_LARGE` 及「小/中/大仓位」对数量的控制；买入数量**仅由 `MAX_OPTION_TOTAL_PRICE` 与账户可用资金**决定（`broker/auto_trader.py`、`broker/longport_broker.calculate_quantity`、`main.py`）。解析层仍可解析「小仓位」等文案，但不再参与数量计算。
+- 文档与注释已同步为 6 位格式说明。
+
 ## [2026-02-03 v3.20] 完整自动化交易流程上线
 
 ### 🚀 核心功能

@@ -367,8 +367,8 @@ def convert_to_longport_symbol(ticker: str, option_type: str, strike: float, exp
     """
     将期权信息转换为长桥期权代码格式
     
-    格式：TICKER + YYMMDD + C/P + 价格(8位，小数点后3位)
-    示例：AAPL250131C00150000.US
+    格式：TICKER + YYMMDD + C/P + 价格(6位，即行权价×1000)
+    示例：AAPL250131C00150000.US 或 AAPL260206C110000.US
     
     Args:
         ticker: 股票代码，如 "AAPL"
@@ -396,8 +396,8 @@ def convert_to_longport_symbol(ticker: str, option_type: str, strike: float, exp
     # 期权类型
     opt_type = "C" if option_type.upper() == "CALL" else "P"
     
-    # 行权价格式化（8位数字，小数点后3位）
-    strike_str = f"{int(strike * 1000):08d}"
+    # 行权价格式化（6位数字，与长桥 API 返回格式一致）
+    strike_str = f"{int(strike * 1000):06d}"
     
     # 组合期权代码
     symbol = f"{ticker}{expiry_date}{opt_type}{strike_str}.US"
@@ -588,10 +588,11 @@ class OptionSignalMonitor:
                 expiry=instruction.expiry or "本周"
             )
             
-            # 计算购买数量
+            # 计算购买数量（由 MAX_OPTION_TOTAL_PRICE 与可用资金控制）
+            balance = self.broker.get_account_balance()
             quantity = self._calculate_quantity(
                 price=instruction.price,
-                position_size=instruction.position_size
+                available_cash=balance.get('available_cash', 10000)
             )
             
             logger.info(f"准备开仓: {symbol}, 数量: {quantity}, 价格: {instruction.price}")
@@ -616,32 +617,17 @@ class OptionSignalMonitor:
             logger.info(f"止盈: 价格 {instruction.price}, 比例 {instruction.sell_ratio}")
             # TODO: 实现止盈逻辑
     
-    def _calculate_quantity(self, price: float, position_size: str = None) -> int:
+    def _calculate_quantity(self, price: float, available_cash: float) -> int:
         """
-        计算购买数量
-        
-        根据账户资金和仓位大小计算合约数量
+        根据 MAX_OPTION_TOTAL_PRICE 与可用资金计算合约数量。
         """
-        # 获取账户余额
-        balance = self.broker.ctx.account_balance()
-        available_cash = float(balance[0].cash_infos[0].available_cash)
-        
-        # 根据仓位大小计算投入资金
-        if position_size == "小仓位":
-            invest_ratio = 0.05  # 5%
-        elif position_size == "中仓位":
-            invest_ratio = 0.10  # 10%
-        elif position_size == "大仓位":
-            invest_ratio = 0.15  # 15%
-        else:
-            invest_ratio = 0.05  # 默认 5%
-        
-        invest_amount = available_cash * invest_ratio
-        
-        # 计算合约数量（每张期权100股）
-        quantity = int(invest_amount / (price * 100))
-        
-        # 至少买1张
+        import os
+        max_total = float(os.getenv('MAX_OPTION_TOTAL_PRICE', '10000'))
+        cap = min(max_total, available_cash)
+        single_contract = price * 100
+        if single_contract <= 0:
+            return 1
+        quantity = int(cap / single_contract)
         return max(1, quantity)
 ```
 
@@ -737,12 +723,11 @@ class OptionSignalMonitor:
                 expiry=instruction.expiry or "本周"
             )
             
-            # 计算购买数量
+            # 计算购买数量（由 MAX_OPTION_TOTAL_PRICE 与可用资金控制）
             balance = self.broker.get_account_balance()
             quantity = calculate_quantity(
                 price=instruction.price,
-                available_cash=balance.get('available_cash', 10000),
-                position_size=instruction.position_size
+                available_cash=balance.get('available_cash', 10000)
             )
             
             logger.info(f"准备开仓: {symbol}, 数量: {quantity}, 价格: {instruction.price}")
@@ -982,11 +967,11 @@ class PositionTracker:
 
 ### Q1: 如何处理期权代码格式？
 
-长桥期权代码格式：`TICKER + YYMMDD + C/P + 行权价(8位)`
+长桥期权代码格式：`TICKER + YYMMDD + C/P + 行权价(6位，即行权价×1000)`
 
 示例：
-- `AAPL250131C00150000.US` = AAPL 2025年1月31日到期 行权价150的看涨期权
-- `TSLA250207P00250000.US` = TSLA 2025年2月7日到期 行权价250的看跌期权
+- `AAPL250131C150000.US` = AAPL 2025年1月31日到期 行权价150的看涨期权
+- `TSLA250207P250000.US` = TSLA 2025年2月7日到期 行权价250的看跌期权
 
 使用 `convert_to_longport_symbol()` 函数自动转换。
 

@@ -36,11 +36,6 @@ class AutoTrader:
         self.require_confirmation = os.getenv('REQUIRE_CONFIRMATION', 'false').lower() in ('true', '1', 'yes')
         self.price_deviation_tolerance = float(os.getenv('PRICE_DEVIATION_TOLERANCE', '5'))  # 价格偏差容忍度（百分比）
         
-        # 仓位大小配置（合约数量）
-        self.position_size_small = int(os.getenv('POSITION_SIZE_SMALL', '1'))
-        self.position_size_medium = int(os.getenv('POSITION_SIZE_MEDIUM', '2'))
-        self.position_size_large = int(os.getenv('POSITION_SIZE_LARGE', '5'))
-        
         logger.info(f"自动交易执行器初始化完成 - 单期权总价上限: ${self.max_option_total_price}, 确认模式: {self.require_confirmation}")
     
     def execute_instruction(self, instruction: OptionInstruction) -> Optional[Dict]:
@@ -84,42 +79,60 @@ class AutoTrader:
             期权代码，如 "AAPL260207C250000.US"，失败返回None
         """
         import re
-        from datetime import datetime
+        from datetime import datetime, timedelta
         
         ticker = instruction.ticker
         option_type = instruction.option_type
         strike = instruction.strike
-        expiry = instruction.expiry
+        expiry = (instruction.expiry or "").strip()
         
         if not all([ticker, option_type, strike, expiry]):
             print_error_message(f"期权信息不完整: ticker={ticker}, type={option_type}, strike={strike}, expiry={expiry}")
             return None
         
-        # 解析到期日
-        year = datetime.now().year % 100  # 默认当前年份
+        now = datetime.now()
+        year = now.year % 100
         month = None
         day = None
         
-        # 尝试匹配 "2/7" 格式
-        match = re.match(r'(\d{1,2})/(\d{1,2})', expiry)
-        if match:
-            month = int(match.group(1))
-            day = int(match.group(2))
+        # 先处理「本周」「下周」：用当前日期计算，保证年份为当前年
+        relative_lower = expiry.lower()
+        if relative_lower in ['本周', '这周', '当周', 'this week']:
+            # 本周五（0=周一, 4=周五）
+            days_until_friday = (4 - now.weekday()) % 7
+            if days_until_friday == 0:
+                days_until_friday = 7  # 今天已是周五则用下周五
+            target = now + timedelta(days=days_until_friday)
+            year = target.year % 100
+            month = target.month
+            day = target.day
+        elif relative_lower in ['下周', 'next week']:
+            days_until_friday = (4 - now.weekday()) % 7
+            target = now + timedelta(days=days_until_friday + 7)
+            year = target.year % 100
+            month = target.month
+            day = target.day
         else:
-            # 尝试匹配 "2月7日" 格式
-            match = re.match(r'(\d{1,2})月(\d{1,2})日?', expiry)
+            # 尝试匹配 "2/7" 格式
+            match = re.match(r'(\d{1,2})/(\d{1,2})', expiry)
             if match:
                 month = int(match.group(1))
                 day = int(match.group(2))
+            else:
+                # 尝试匹配 "2月7日" 格式
+                match = re.match(r'(\d{1,2})月(\d{1,2})日?', expiry)
+                if match:
+                    month = int(match.group(1))
+                    day = int(match.group(2))
+            
+            if month and day:
+                # 判断年份（仅对具体月/日：若月份已过则视为明年）
+                if month < now.month:
+                    year = (now.year + 1) % 100
         
         if not month or not day:
             print_error_message(f"无法解析到期日: {expiry}")
             return None
-        
-        # 判断年份（如果月份小于当前月份，则为明年）
-        current_month = datetime.now().month
-        if month < current_month:
-            year = (datetime.now().year + 1) % 100
         
         # 格式化日期为 YYMMDD
         date_str = f"{year:02d}{month:02d}{day:02d}"
@@ -127,8 +140,8 @@ class AutoTrader:
         # 期权类型代码
         option_code = 'C' if option_type.upper() == 'CALL' else 'P'
         
-        # 行权价（乘以1000并格式化为8位）
-        strike_code = f"{int(strike * 1000):08d}"
+        # 行权价（乘以1000并格式化为6位，与长桥 API 返回格式一致）
+        strike_code = f"{int(strike * 1000):06d}"
         
         # 组合完整代码
         return f"{ticker}{date_str}{option_code}{strike_code}.US"
@@ -175,28 +188,10 @@ class AutoTrader:
         max_total_price = min(self.max_option_total_price, available_cash)
         print_info_message(f"总价上限: ${max_total_price:.2f}")
         
-        # 计算买入数量（期权合约，每张100股）
+        # 计算买入数量：仅由总价上限控制（MAX_OPTION_TOTAL_PRICE 与可用余额的较小值）
         single_contract_price = price * 100
         max_quantity = int(max_total_price / single_contract_price)
-        
-        # 如果指令中指定了仓位大小，使用配置的数量
-        if instruction.position_size:
-            size_lower = instruction.position_size.lower()
-            if '小' in size_lower or 'small' in size_lower:
-                quantity = self.position_size_small
-            elif '中' in size_lower or 'medium' in size_lower:
-                quantity = self.position_size_medium
-            elif '大' in size_lower or 'large' in size_lower:
-                quantity = self.position_size_large
-            else:
-                quantity = 1  # 默认1张
-            
-            # 不能超过最大数量
-            quantity = min(quantity, max_quantity)
-            print_info_message(f"仓位大小: {instruction.position_size}, 数量: {quantity} 张")
-        else:
-            # 默认买入1张，不超过最大数量
-            quantity = min(1, max_quantity)
+        quantity = min(1, max_quantity)  # 默认 1 张，且不超过上限
         
         if quantity <= 0:
             print_error_message(f"计算的买入数量为0，单价: ${price}, 总价上限: ${max_total_price:.2f}")
@@ -205,7 +200,7 @@ class AutoTrader:
         total_price = quantity * single_contract_price
         print_info_message(f"买入数量: {quantity} 张, 总价: ${total_price:.2f}")
         
-        # 获取当前市场价格（用于对比）
+        # 获取当前市场价格（用于对比），偏差超容忍度时拒绝下单
         try:
             quotes = self.broker.get_option_quote([symbol])
             if quotes and len(quotes) > 0:
@@ -214,9 +209,10 @@ class AutoTrader:
                     deviation = abs(market_price - price) / price * 100
                     print_info_message(f"当前市场价: ${market_price:.2f}, 目标价: ${price:.2f}, 偏差: {deviation:.1f}%")
                     
-                    # 如果价格偏差过大，给出警告
                     if deviation > self.price_deviation_tolerance:
-                        print_warning_message(f"价格偏差超过容忍度 {self.price_deviation_tolerance}%")
+                        print_warning_message(f"价格偏差超过容忍度 {self.price_deviation_tolerance}%，拒绝下单")
+                        print_warning_message(f"请核对消息中的目标价或调高 PRICE_DEVIATION_TOLERANCE（当前 {self.price_deviation_tolerance}%）")
+                        return None
         except Exception as e:
             print_warning_message(f"无法获取市场报价: {e}")
         

@@ -23,6 +23,38 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def print_option_chain_format(option_chain: dict, expiry: str, underlying: str = "AAPL.US"):
+    """打印券商返回的期权代码格式，便于与本地生成格式对比"""
+    print("\n" + "-" * 60)
+    print("📋 券商返回的期权代码格式 (用于对比 auto_trade 本地生成格式)")
+    print("-" * 60)
+    print(f"  标的: {underlying}")
+    print(f"  到期日(原始): {expiry!r}  (type={type(expiry).__name__})")
+    strikes = option_chain.get("strike_prices") or []
+    call_syms = option_chain.get("call_symbols") or []
+    put_syms = option_chain.get("put_symbols") or []
+    n = len(strikes)
+    if n == 0:
+        print("  (无数据)")
+        print("-" * 60 + "\n")
+        return
+    # 前 3 个、中间 1 个、后 2 个样本
+    indices = list(range(min(3, n)))
+    if n > 5:
+        indices.append(n // 2)
+    indices.extend(range(max(0, n - 2), n))
+    indices = sorted(set(indices))
+    print(f"  行权价数量: {n}")
+    print("  样本 (行权价 -> Call 代码 -> Put 代码):")
+    for i in indices:
+        s = strikes[i] if i < len(strikes) else None
+        c = call_syms[i] if i < len(call_syms) else None
+        p = put_syms[i] if i < len(put_syms) else None
+        print(f"    ${s:.2f}  ->  {c!r}  /  {p!r}")
+    print("  格式说明: 以上为 API 返回的原始字符串，可直接用于 submit_option_order")
+    print("-" * 60 + "\n")
+
+
 def test_order_with_stop_loss(broker: LongPortBroker):
     """测试带止损的订单"""
     print("\n" + "="*60)
@@ -36,13 +68,22 @@ def test_order_with_stop_loss(broker: LongPortBroker):
             logger.error("无法获取期权到期日")
             return None
         
+        # 打印到期日列表格式（券商返回的原始格式）
+        print("\n📅 券商返回的到期日列表 (前 5 个):")
+        for i, ed in enumerate(expiry_dates[:5]):
+            print(f"   [{i}] {ed!r}  (type={type(ed).__name__})")
+        print()
+
         # 使用第二个到期日（避免过期）
-        expiry = expiry_dates[1]
+        expiry = expiry_dates[3]
         option_chain = broker.get_option_chain_info("AAPL.US", expiry)
         
         if not option_chain or not option_chain.get("strike_prices"):
             logger.error("无法获取期权链")
             return None
+        
+        # 显示券商返回的期权代码格式
+        print_option_chain_format(option_chain, expiry, "AAPL.US")
         
         # 使用中间的行权价
         mid_idx = len(option_chain["strike_prices"]) // 2
@@ -90,6 +131,9 @@ def test_order_with_trailing_stop(broker: LongPortBroker):
         if not option_chain or not option_chain.get("strike_prices"):
             logger.error("无法获取期权链")
             return None
+        
+        # 显示券商返回的期权代码格式
+        print_option_chain_format(option_chain, expiry, "AAPL.US")
         
         mid_idx = len(option_chain["strike_prices"]) // 2
         symbol = option_chain["call_symbols"][mid_idx]

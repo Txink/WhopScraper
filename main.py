@@ -404,11 +404,10 @@ class SignalScraper:
         balance = self.broker.get_account_balance()
         available_cash = balance.get('available_cash', 10000)
         
-        # 3. 计算购买数量
+        # 3. 计算购买数量（由 MAX_OPTION_TOTAL_PRICE 与可用资金控制）
         quantity = calculate_quantity(
             price=instruction.price,
-            available_cash=available_cash,
-            position_size=instruction.position_size
+            available_cash=available_cash
         )
         logger.info(f"计划购买: {quantity} 张 @ ${instruction.price}")
         

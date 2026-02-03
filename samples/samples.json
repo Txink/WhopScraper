@@ -1,0 +1,695 @@
+[
+  {
+    "message": "剩下看转弯往下时候都出 止损上移到2.25",
+    "category": "调整指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-03T22:18:35.934368",
+      "raw_message": "剩下看转弯往下时候都出 止损上移到2.25",
+      "instruction_type": "MODIFY",
+      "stop_loss_price": 2.25,
+      "message_id": "post_1CXNkpc1orwfecUMY9ewZr-866688dc7de7"
+    },
+    "timestamp": "2026-02-03T22:18:35.939120"
+  },
+  {
+    "message": "nvda剩下部分也2.45附近出",
+    "category": "未识别",
+    "notes": "监控时未能解析",
+    "parsed_successfully": false,
+    "parsed_result": {},
+    "timestamp": "2026-02-03T22:18:35.939363"
+  },
+  {
+    "message": "GOOG - $345 CALLS本周 $1.70",
+    "category": "开仓指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-03T22:18:35.939584",
+      "raw_message": "GOOG - $345 CALLS本周 $1.70",
+      "instruction_type": "BUY",
+      "ticker": "GOOG",
+      "option_type": "CALL",
+      "strike": 345.0,
+      "expiry": "本周",
+      "price": 1.7,
+      "message_id": "post_1CXY5kKqb2THwXbMkB1Uaf-66d7f832dea1"
+    },
+    "timestamp": "2026-02-03T22:18:35.941240"
+  },
+  {
+    "message": "小仓位 止损1.35",
+    "category": "调整指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-03T22:18:35.941628",
+      "raw_message": "小仓位 止损1.35",
+      "instruction_type": "MODIFY",
+      "stop_loss_price": 1.35,
+      "message_id": "post_1CXY5mh4afLoSRgibvrptL-c70d779849a9"
+    },
+    "timestamp": "2026-02-03T22:18:35.942667"
+  },
+  {
+    "message": "1.9出三分之一",
+    "category": "止盈指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-03T22:18:35.942816",
+      "raw_message": "1.9出三分之一",
+      "instruction_type": "SELL",
+      "price": 1.9,
+      "sell_quantity": "1/3",
+      "message_id": "post_1CXY5rh9QmDxsZHVuoXvk8-278a302e8f9b"
+    },
+    "timestamp": "2026-02-03T22:18:35.943941"
+  },
+  {
+    "message": "1.75出剩下的goog 走弱了",
+    "category": "止盈指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-03T22:18:35.944109",
+      "raw_message": "1.75出剩下的goog 走弱了",
+      "instruction_type": "CLOSE",
+      "ticker": "GOOG",
+      "price": 1.75,
+      "message_id": "post_1CXY64EXaf4g7mytxz7TcN-77da561b675a"
+    },
+    "timestamp": "2026-02-03T22:18:35.945295"
+  },
+  {
+    "message": "INTC - $48 CALLS 本周 $1.2",
+    "category": "开仓指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-03T22:18:35.945502",
+      "raw_message": "INTC - $48 CALLS 本周 $1.2",
+      "instruction_type": "BUY",
+      "ticker": "INTC",
+      "option_type": "CALL",
+      "strike": 48.0,
+      "expiry": "本周",
+      "price": 1.2,
+      "message_id": "post_1CXZwzwEzQaX4omexZCkDm-41906e05f49b"
+    },
+    "timestamp": "2026-02-03T22:18:35.946617"
+  },
+  {
+    "message": "小仓位 止损 0.95",
+    "category": "调整指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-03T22:18:35.946791",
+      "raw_message": "小仓位 止损 0.95",
+      "instruction_type": "MODIFY",
+      "stop_loss_price": 0.95,
+      "message_id": "post_1CXZx1kwrL3RDFGca2Sj1A-842c80dea48e"
+    },
+    "timestamp": "2026-02-03T22:18:35.947753"
+  },
+  {
+    "message": "1.75出三分之一",
+    "category": "止盈指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-03T22:18:35.947934",
+      "raw_message": "1.75出三分之一",
+      "instruction_type": "SELL",
+      "price": 1.75,
+      "sell_quantity": "1/3",
+      "message_id": "post_1CXZx74kcwpoi66xjV43t7-d59885d5cabb"
+    },
+    "timestamp": "2026-02-03T22:18:35.948849"
+  },
+  {
+    "message": "止损提高到1.5",
+    "category": "调整指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-03T22:18:35.949066",
+      "raw_message": "止损提高到1.5",
+      "instruction_type": "MODIFY",
+      "stop_loss_price": 1.5,
+      "message_id": "post_1CXZxAJeMTnysESE8npgfb-8cbf83f3de7f"
+    },
+    "timestamp": "2026-02-03T22:18:35.950891"
+  },
+  {
+    "message": "1.65附近出剩下三分之二",
+    "category": "止盈指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-03T22:18:35.951269",
+      "raw_message": "1.65附近出剩下三分之二",
+      "instruction_type": "SELL",
+      "price": 1.65,
+      "sell_quantity": "2/3",
+      "message_id": "post_1CXZxBUujdxZGbe7dZdvLj-7fac43ba9e65"
+    },
+    "timestamp": "2026-02-03T22:18:35.952503"
+  },
+  {
+    "message": "RKLB - $89 CALLS 本周 $2.5",
+    "category": "开仓指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-03T22:18:35.952806",
+      "raw_message": "RKLB - $89 CALLS 本周 $2.5",
+      "instruction_type": "BUY",
+      "ticker": "RKLB",
+      "option_type": "CALL",
+      "strike": 89.0,
+      "expiry": "本周",
+      "price": 2.5,
+      "message_id": "post_1CXZxoJPb9jfPNRWxp7jiq-af6913c7ee30"
+    },
+    "timestamp": "2026-02-03T22:18:35.953862"
+  },
+  {
+    "message": "小仓位 止损 2.15",
+    "category": "调整指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-03T22:18:35.954084",
+      "raw_message": "小仓位 止损 2.15",
+      "instruction_type": "MODIFY",
+      "stop_loss_price": 2.15,
+      "message_id": "post_1CXZxpM4pE9wqp4bKZdY5W-6b90253d00e0"
+    },
+    "timestamp": "2026-02-03T22:18:35.955257"
+  },
+  {
+    "message": "2.84出三分之一",
+    "category": "止盈指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-03T22:18:35.955468",
+      "raw_message": "2.84出三分之一",
+      "instruction_type": "SELL",
+      "price": 2.84,
+      "sell_quantity": "1/3",
+      "message_id": "post_1CXZxrgrpXQWKf1EKRfcK8-f83752682793"
+    },
+    "timestamp": "2026-02-03T22:18:35.956479"
+  },
+  {
+    "message": "2.72出剩下的",
+    "category": "止盈指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-03T22:18:35.956666",
+      "raw_message": "2.72出剩下的",
+      "instruction_type": "CLOSE",
+      "price": 2.72,
+      "message_id": "post_1CXZxyrETaDG1caKhUFJuS-b19f86f58fbd"
+    },
+    "timestamp": "2026-02-03T22:18:35.957682"
+  },
+  {
+    "message": "rklb之前没挂出的也可以目前挂出去",
+    "category": "未识别",
+    "notes": "监控时未能解析",
+    "parsed_successfully": false,
+    "parsed_result": {},
+    "timestamp": "2026-02-03T22:18:35.957985"
+  },
+  {
+    "message": "NDAQ - $100 CALLS 2/20 $2.30",
+    "category": "开仓指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-03T22:18:35.958253",
+      "raw_message": "NDAQ - $100 CALLS 2/20 $2.30",
+      "instruction_type": "BUY",
+      "ticker": "NDAQ",
+      "option_type": "CALL",
+      "strike": 100.0,
+      "expiry": "2/20",
+      "price": 2.3,
+      "message_id": "post_1CXbqkaU5uG8KwoiLkwL5h-8284d4a06e4b"
+    },
+    "timestamp": "2026-02-03T22:18:36.571251"
+  },
+  {
+    "message": "小仓位 止损2.05",
+    "category": "调整指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-03T22:18:36.571601",
+      "raw_message": "小仓位 止损2.05",
+      "instruction_type": "MODIFY",
+      "stop_loss_price": 2.05,
+      "message_id": "post_1CXbqmR1q5JFHLdoCXkzbv-782f088afdab"
+    },
+    "timestamp": "2026-02-03T22:18:36.572710"
+  },
+  {
+    "message": "COP - $105 CALLS这周 $1.3 彩票",
+    "category": "开仓指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-03T22:18:36.572945",
+      "raw_message": "COP - $105 CALLS这周 $1.3 彩票",
+      "instruction_type": "BUY",
+      "ticker": "COP",
+      "option_type": "CALL",
+      "strike": 105.0,
+      "expiry": "这周",
+      "price": 1.3,
+      "message_id": "post_1CXbqt9bUWKqQxW5vryVCv-ca1042943bb9"
+    },
+    "timestamp": "2026-02-03T22:18:36.573923"
+  },
+  {
+    "message": "1.7出 cop彩票全出",
+    "category": "止盈指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-03T22:18:36.574189",
+      "raw_message": "1.7出 cop彩票全出",
+      "instruction_type": "CLOSE",
+      "ticker": "COP",
+      "price": 1.7,
+      "message_id": "post_1CXbqvZxdZpP3ds9z7tPvW-c1704af8f560"
+    },
+    "timestamp": "2026-02-03T22:18:36.575228"
+  },
+  {
+    "message": "2.45出三分之一ndaq",
+    "category": "止盈指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-03T22:18:36.575735",
+      "raw_message": "2.45出三分之一ndaq",
+      "instruction_type": "SELL",
+      "ticker": "NDAQ",
+      "price": 2.45,
+      "sell_quantity": "1/3",
+      "message_id": "post_1CXbr48PuapiKNaEdUQ9Mi-afc4ede204d3"
+    },
+    "timestamp": "2026-02-03T22:18:36.577130"
+  },
+  {
+    "message": "2.72出三分之一 ndaq",
+    "category": "止盈指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-03T22:18:36.577468",
+      "raw_message": "2.72出三分之一 ndaq",
+      "instruction_type": "SELL",
+      "ticker": "NDAQ",
+      "price": 2.72,
+      "sell_quantity": "1/3",
+      "message_id": "post_1CXbrNAzvYVCTZPrHDA8Yn-b3f32fdae3a9"
+    },
+    "timestamp": "2026-02-03T22:18:36.578585"
+  },
+  {
+    "message": "2.4出剩下ndaq 波动大了",
+    "category": "止盈指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-03T22:18:36.579036",
+      "raw_message": "2.4出剩下ndaq 波动大了",
+      "instruction_type": "CLOSE",
+      "ticker": "NDAQ",
+      "price": 2.4,
+      "message_id": "post_1CXbrSEXg8YfxxQiH2nZzX-206015c544f7"
+    },
+    "timestamp": "2026-02-03T22:18:36.580091"
+  },
+  {
+    "message": "ndaq又跳到2.7的 也是刚才没出的都出",
+    "category": "止盈指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-03T22:18:36.580372",
+      "raw_message": "ndaq又跳到2.7的 也是刚才没出的都出",
+      "instruction_type": "CLOSE",
+      "ticker": "NDAQ",
+      "price": 2.7,
+      "message_id": "post_1CXbrgw6GfHKPgPR1MVVHW-e6f3fd503f5e"
+    },
+    "timestamp": "2026-02-03T22:18:36.581477"
+  },
+  {
+    "message": "慢速期权这周目前还没出 慢速到时候会标记下 快速的就不标记了",
+    "category": "未识别",
+    "notes": "监控时未能解析",
+    "parsed_successfully": false,
+    "parsed_result": {},
+    "timestamp": "2026-02-03T22:18:36.581925"
+  },
+  {
+    "message": "RIVN 16c 3/20 1.35",
+    "category": "开仓指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-03T22:18:36.582239",
+      "raw_message": "RIVN 16c 3/20 1.35",
+      "instruction_type": "BUY",
+      "ticker": "RIVN",
+      "option_type": "CALL",
+      "strike": 16.0,
+      "expiry": "3/20",
+      "price": 1.35,
+      "message_id": "post_1CXc8nmc5gNzbd221bLjas-46fc9c43c0c4"
+    },
+    "timestamp": "2026-02-03T22:18:37.068981"
+  },
+  {
+    "message": "慢速 小仓位 止损在0.94",
+    "category": "调整指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-03T22:18:37.070525",
+      "raw_message": "慢速 小仓位 止损在0.94",
+      "instruction_type": "MODIFY",
+      "stop_loss_price": 0.94,
+      "message_id": "post_1CXc8pnaGp8WAywfrr8Nuy-c5854d6224c8"
+    },
+    "timestamp": "2026-02-03T22:18:37.072393"
+  },
+  {
+    "message": "NUE - $190 CALLS EXPIRATION 2/20 $1.73 彩票",
+    "category": "开仓指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-03T22:18:37.072971",
+      "raw_message": "NUE - $190 CALLS EXPIRATION 2/20 $1.73 彩票",
+      "instruction_type": "BUY",
+      "ticker": "NUE",
+      "option_type": "CALL",
+      "strike": 190.0,
+      "expiry": "2/20",
+      "price": 1.73,
+      "message_id": "post_1CXc94gMCNjrXv4JvpTUzD-d4b336cf09ec"
+    },
+    "timestamp": "2026-02-03T22:18:37.492544"
+  },
+  {
+    "message": "彩票单 止损 1.5",
+    "category": "调整指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-03T22:18:37.493248",
+      "raw_message": "彩票单 止损 1.5",
+      "instruction_type": "MODIFY",
+      "stop_loss_price": 1.5,
+      "message_id": "post_1CXc95pXursa9L5q5tasq1-5de43ff42b7b"
+    },
+    "timestamp": "2026-02-03T22:18:37.495537"
+  },
+  {
+    "message": "1.87出三分之一nue",
+    "category": "止盈指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-03T22:18:37.496081",
+      "raw_message": "1.87出三分之一nue",
+      "instruction_type": "SELL",
+      "ticker": "NUE",
+      "price": 1.87,
+      "sell_quantity": "1/3",
+      "message_id": "post_1CXc9yq2vR4ajvpMFKfN7w-49a07406579e"
+    },
+    "timestamp": "2026-02-03T22:18:37.498339"
+  },
+  {
+    "message": "nue彩票剩下也是收盘前出目前横盘",
+    "category": "未识别",
+    "notes": "监控时未能解析",
+    "parsed_successfully": false,
+    "parsed_result": {},
+    "timestamp": "2026-02-03T22:18:37.498909"
+  },
+  {
+    "message": "1.95出剩下nue",
+    "category": "止盈指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-03T22:18:37.499374",
+      "raw_message": "1.95出剩下nue",
+      "instruction_type": "CLOSE",
+      "ticker": "NUE",
+      "price": 1.95,
+      "message_id": "post_1CXcEqM1LsVU9V6qKAtPkA-b38cb497de8e"
+    },
+    "timestamp": "2026-02-03T22:18:37.500986"
+  },
+  {
+    "message": "今天是星期五 仓位都是彩票仓位 因为各个交易平台有强平的所以 有检测就上半场都出",
+    "category": "未识别",
+    "notes": "监控时未能解析",
+    "parsed_successfully": false,
+    "parsed_result": {},
+    "timestamp": "2026-02-03T22:18:37.501454"
+  },
+  {
+    "message": "TSLA 440c 2/9 3.1",
+    "category": "开仓指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-03T22:18:37.502044",
+      "raw_message": "TSLA 440c 2/9 3.1",
+      "instruction_type": "BUY",
+      "ticker": "TSLA",
+      "option_type": "CALL",
+      "strike": 440.0,
+      "expiry": "2/9",
+      "price": 3.1,
+      "message_id": "post_1CXjRw4evzFxZ1Mg98rH15-da9f533da58e"
+    },
+    "timestamp": "2026-02-03T22:18:37.944553"
+  },
+  {
+    "message": "慢速 小仓位",
+    "category": "未识别",
+    "notes": "监控时未能解析",
+    "parsed_successfully": false,
+    "parsed_result": {},
+    "timestamp": "2026-02-03T22:18:37.946099"
+  },
+  {
+    "message": "止损在2.9",
+    "category": "调整指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-03T22:18:37.950151",
+      "raw_message": "止损在2.9",
+      "instruction_type": "MODIFY",
+      "stop_loss_price": 2.9,
+      "message_id": "post_1CXjRx8kHbRZgNmmzAFimV-2b8d48c1c069"
+    },
+    "timestamp": "2026-02-03T22:18:37.952161"
+  },
+  {
+    "message": "UPS 110c 2/20 彩票1.40",
+    "category": "开仓指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-03T22:18:37.952685",
+      "raw_message": "UPS 110c 2/20 彩票1.40",
+      "instruction_type": "BUY",
+      "ticker": "UPS",
+      "option_type": "CALL",
+      "strike": 110.0,
+      "expiry": "2/20",
+      "price": 1.4,
+      "message_id": "post_1CXjT6d9dzRkJAugpux95V-7d22d49e2e56"
+    },
+    "timestamp": "2026-02-03T22:18:38.355899"
+  },
+  {
+    "message": "止损1.05",
+    "category": "调整指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-03T22:18:38.356587",
+      "raw_message": "止损1.05",
+      "instruction_type": "MODIFY",
+      "stop_loss_price": 1.05,
+      "message_id": "post_1CXjT7Go86oEZne45B2o9U-f82d3aa9fe70"
+    },
+    "timestamp": "2026-02-03T22:18:38.358553"
+  },
+  {
+    "message": "1.60出三分之一ups",
+    "category": "止盈指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-03T22:18:38.359269",
+      "raw_message": "1.60出三分之一ups",
+      "instruction_type": "SELL",
+      "ticker": "UPS",
+      "price": 1.6,
+      "sell_quantity": "1/3",
+      "message_id": "post_1CXjTBAwXZSnTf9QWZ29FL-b1eda525bedb"
+    },
+    "timestamp": "2026-02-03T22:18:38.361218"
+  },
+  {
+    "message": "1.57出剩下的ups",
+    "category": "止盈指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-03T22:18:38.362056",
+      "raw_message": "1.57出剩下的ups",
+      "instruction_type": "CLOSE",
+      "ticker": "UPS",
+      "price": 1.57,
+      "message_id": "post_1CXjTh9SWAXwE4FB3BEjNo-4299055d1b18"
+    },
+    "timestamp": "2026-02-03T22:18:38.363836"
+  },
+  {
+    "message": "3.3出三分之一 tsla期权",
+    "category": "止盈指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-03T22:18:38.364593",
+      "raw_message": "3.3出三分之一 tsla期权",
+      "instruction_type": "SELL",
+      "ticker": "TSLA",
+      "price": 3.3,
+      "sell_quantity": "1/3",
+      "message_id": "post_1CXjVWe2hVRXTGjiYBBUei-d9f8171279c0"
+    },
+    "timestamp": "2026-02-03T22:18:38.366465"
+  },
+  {
+    "message": "3.4也减点 剩下拿一半",
+    "category": "未识别",
+    "notes": "监控时未能解析",
+    "parsed_successfully": false,
+    "parsed_result": {},
+    "timestamp": "2026-02-03T22:18:38.366976"
+  },
+  {
+    "message": "止损提高到3.2",
+    "category": "调整指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-03T22:18:38.367825",
+      "raw_message": "止损提高到3.2",
+      "instruction_type": "MODIFY",
+      "stop_loss_price": 3.2,
+      "message_id": "post_1CXjVibukLLLKXa38r5USn-5ea4c0560093"
+    },
+    "timestamp": "2026-02-03T22:18:38.369477"
+  },
+  {
+    "message": "BA - $240 CALLS EXPIRATION 2月13 $2.8",
+    "category": "开仓指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-03T22:18:38.369981",
+      "raw_message": "BA - $240 CALLS EXPIRATION 2月13 $2.8",
+      "instruction_type": "BUY",
+      "ticker": "BA",
+      "option_type": "CALL",
+      "strike": 240.0,
+      "expiry": "2月13",
+      "price": 2.8,
+      "message_id": "post_1CXjYG8qtgGgDKkFCsV9p8-4689172f4b7a"
+    },
+    "timestamp": "2026-02-03T22:18:38.837030"
+  },
+  {
+    "message": "小仓位 慢速 止损2.4",
+    "category": "调整指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-03T22:18:38.837862",
+      "raw_message": "小仓位 慢速 止损2.4",
+      "instruction_type": "MODIFY",
+      "stop_loss_price": 2.4,
+      "message_id": "post_1CXjYHeBY2qmViS5Cmh3TA-d84f788228c2"
+    },
+    "timestamp": "2026-02-03T22:18:38.840184"
+  },
+  {
+    "message": "3.1出三分之一ba",
+    "category": "止盈指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-03T22:18:38.841242",
+      "raw_message": "3.1出三分之一ba",
+      "instruction_type": "SELL",
+      "ticker": "BA",
+      "price": 3.1,
+      "sell_quantity": "1/3",
+      "message_id": "post_1CXjYTNh5zdtNhQRanz2BM-642076c23bb6"
+    },
+    "timestamp": "2026-02-03T22:18:38.843426"
+  },
+  {
+    "message": "2.5止损剩下的ba 横盘有磨损了",
+    "category": "调整指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-03T22:18:38.844078",
+      "raw_message": "2.5止损剩下的ba 横盘有磨损了",
+      "instruction_type": "MODIFY",
+      "ticker": "BA",
+      "stop_loss_price": 2.5,
+      "message_id": "post_1CXjazFhyAwRqT9K9iDQuZ-335b67adf42c"
+    },
+    "timestamp": "2026-02-03T22:18:38.846024"
+  },
+  {
+    "message": "[引用] 止损提高到3.2",
+    "category": "调整指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-03T22:18:38.846629",
+      "raw_message": "[引用] 止损提高到3.2",
+      "instruction_type": "MODIFY",
+      "stop_loss_price": 3.2,
+      "message_id": "post_1CXjdP2GZkMFcMEtoY6Me1-fc33cf9160c6"
+    },
+    "timestamp": "2026-02-03T22:18:38.848592"
+  }
+]
