@@ -23,7 +23,8 @@ from broker import (
     PositionManager,
     create_position_from_order,
     convert_to_longport_symbol,
-    calculate_quantity
+    calculate_quantity,
+    AutoTrader  # 新增：自动交易执行器
 )
 from broker.risk_controller import RiskController, AutoTrailingStopLoss
 
@@ -64,6 +65,7 @@ class SignalScraper:
         self.position_manager: Optional[PositionManager] = None
         self.risk_controller: Optional[RiskController] = None
         self.auto_trailing: Optional[AutoTrailingStopLoss] = None
+        self.auto_trader: Optional[AutoTrader] = None  # 新增：自动交易执行器
         
         # 初始化交易组件
         self._init_trading_components()
@@ -105,11 +107,16 @@ class SignalScraper:
             )
             logger.info("✅ 自动移动止损初始化成功")
             
+            # 6. 创建自动交易执行器（新增）
+            self.auto_trader = AutoTrader(broker=self.broker)
+            logger.info("✅ 自动交易执行器初始化成功")
+            
             # 启动风险控制（如果启用了自动交易）
             if self.broker.auto_trade:
                 self.risk_controller.start()
                 self.auto_trailing.start()
                 logger.info("🚀 风险控制系统已启动")
+                logger.info("🤖 自动交易执行器就绪")
             else:
                 logger.info("ℹ️  自动交易未启用，风险控制系统待命")
             
@@ -285,45 +292,92 @@ class SignalScraper:
     
     def _handle_instruction(self, instruction: OptionInstruction, source: str):
         """
-        处理交易指令
+        处理交易指令（使用新的AutoTrader）
         
         Args:
             instruction: 解析出的指令
             source: 信号来源
         """
-        logger.info("\n" + "=" * 60)
+        logger.info("\n" + "=" * 80)
         logger.info(f"📨 [新信号-{source}] {instruction}")
-        logger.info(f"JSON: {instruction.to_json()}")
-        logger.info("=" * 60)
+        logger.info(f"类型: {instruction.instruction_type}")
+        logger.info(f"股票: {instruction.ticker}")
+        if instruction.option_type:
+            logger.info(f"期权: {instruction.option_type} ${instruction.strike} {instruction.expiry}")
+        if instruction.price:
+            logger.info(f"价格: ${instruction.price}")
+        logger.info("=" * 80)
         
         # 如果没有初始化交易组件，只记录信号
-        if not self.broker or not self.position_manager:
-            logger.warning("交易组件未初始化，仅记录信号")
+        if not self.broker or not self.auto_trader:
+            logger.warning("⚠️  交易组件未初始化，仅记录信号")
             return
         
-        # 检查是否是正股指令
-        if instruction.option_type == 'STOCK':
-            logger.info("正股交易信号，暂不支持自动交易")
+        # 检查自动交易是否启用
+        if not self.broker.auto_trade:
+            logger.info("ℹ️  自动交易未启用，仅记录信号")
             return
         
         try:
-            # 根据指令类型执行不同操作
-            if instruction.instruction_type == "OPEN":
-                self._handle_open_position(instruction)
+            # 使用AutoTrader执行指令
+            logger.info(f"🤖 使用AutoTrader执行指令...")
+            result = self.auto_trader.execute_instruction(instruction)
             
-            elif instruction.instruction_type == "STOP_LOSS":
-                self._handle_stop_loss(instruction)
-            
-            elif instruction.instruction_type == "TAKE_PROFIT":
-                self._handle_take_profit(instruction)
-            
+            if result:
+                logger.info(f"✅ 指令执行成功")
+                logger.info(f"   订单ID: {result.get('order_id', 'N/A')}")
+                logger.info(f"   状态: {result.get('status', 'N/A')}")
+                
+                # 如果是买入订单，同步持仓管理器
+                if instruction.instruction_type == "BUY" and self.position_manager:
+                    self._sync_position_after_buy(instruction, result)
             else:
-                logger.warning(f"未知指令类型: {instruction.instruction_type}")
+                logger.warning(f"⚠️  指令执行跳过或失败")
         
         except Exception as e:
             logger.error(f"❌ 处理指令失败: {e}", exc_info=True)
     
-    def _handle_open_position(self, instruction: OptionInstruction):
+    def _sync_position_after_buy(self, instruction: OptionInstruction, order_result: dict):
+        """
+        买入后同步持仓管理器
+        
+        Args:
+            instruction: 买入指令
+            order_result: 订单结果
+        """
+        try:
+            if not self.position_manager:
+                return
+            
+            # 生成期权代码
+            symbol = self.auto_trader._generate_option_symbol(instruction)
+            if not symbol:
+                logger.warning("无法生成期权代码，跳过持仓同步")
+                return
+            
+            # 创建持仓记录
+            position = create_position_from_order(
+                symbol=symbol,
+                ticker=instruction.ticker,
+                option_type=instruction.option_type,
+                strike=instruction.strike,
+                expiry=instruction.expiry,
+                quantity=order_result.get('quantity', 0),
+                avg_cost=order_result.get('price', instruction.price),
+                order_id=order_result.get('order_id', '')
+            )
+            
+            self.position_manager.add_position(position)
+            logger.info(f"✅ 持仓已同步到管理器: {symbol}")
+            
+        except Exception as e:
+            logger.error(f"持仓同步失败: {e}")
+    
+    # ========================================
+    # 旧的处理方法（已由AutoTrader替代，保留供参考）
+    # ========================================
+    
+    def _handle_open_position_legacy(self, instruction: OptionInstruction):
         """
         处理开仓指令
         
@@ -388,9 +442,9 @@ class SignalScraper:
         # 6. 打印持仓摘要
         self.position_manager.print_summary()
     
-    def _handle_stop_loss(self, instruction: OptionInstruction):
+    def _handle_stop_loss_legacy(self, instruction: OptionInstruction):
         """
-        处理止损指令
+        处理止损指令（旧版，已由AutoTrader替代）
         
         Args:
             instruction: 止损指令
@@ -418,9 +472,9 @@ class SignalScraper:
         else:
             logger.warning("风险控制器未启用")
     
-    def _handle_take_profit(self, instruction: OptionInstruction):
+    def _handle_take_profit_legacy(self, instruction: OptionInstruction):
         """
-        处理止盈指令
+        处理止盈指令（旧版，已由AutoTrader替代）
         
         Args:
             instruction: 止盈指令

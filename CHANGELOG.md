@@ -1,5 +1,156 @@
 # CHANGELOG
 
+## [2026-02-03 v3.20] 完整自动化交易流程上线
+
+### 🚀 核心功能
+
+**完整自动化流程**：
+- ✅ 监听网页 → 提取消息 → 解析指令 → 自动下单 → 持仓管理
+- ✅ 集成AutoTrader到main.py主流程
+- ✅ 支持实时监听和本地HTML两种模式
+- ✅ 完整的端到端自动化交易方案
+
+**自动交易模块（AutoTrader）**：
+- ✅ 自动买入：根据账户余额和配置上限智能计算买入数量
+- ✅ 自动卖出：支持按比例卖出（相对初始买入量）
+- ✅ 自动清仓：一键清空持仓
+- ✅ 止盈止损：自动检测并执行止盈止损条件
+- ✅ 风险控制：总价上限、余额检查、持仓验证
+- ✅ 确认模式：可选的控制台确认机制
+- ✅ 批量执行：支持批量处理多条指令
+
+### 📋 交易规则
+
+**买入规则**：
+1. 获取账户余额，根据配置和余额的较小值决定总价上限
+2. 根据总价上限和单价计算买入数量
+3. 可配置是否需要控制台确认
+
+**卖出规则**：
+1. 先检查持仓，无持仓则跳过
+2. 卖出比例相对最开始买入的比例，查询历史买入订单确认总量
+3. 支持分数（1/3）、百分比（30%）、具体数量
+
+**清仓规则**：
+1. 检查持仓，无持仓则跳过
+2. 卖出全部可用持仓
+
+**修改规则（止盈止损）**：
+1. 先检查持仓
+2. 获取期权最新价格
+3. 如果满足止盈止损条件，立即市价清仓
+4. 否则修改未成交订单的止盈止损值
+
+### 🔧 新增文件
+
+**broker/auto_trader.py**
+- `AutoTrader` 类：自动交易执行器
+- `execute_instruction()`: 执行单条指令
+- `execute_batch_instructions()`: 批量执行指令
+- `_execute_buy()`: 执行买入
+- `_execute_sell()`: 执行卖出
+- `_execute_close()`: 执行清仓
+- `_execute_modify()`: 执行修改（止盈止损）
+- `_generate_option_symbol()`: 生成期权代码
+
+**auto_trade_from_messages.py**
+- 从HTML消息文件自动交易的完整脚本
+- 支持dry_run和真实交易模式
+- 提供详细的执行统计和结果报告
+
+**demo_auto_trading.py**
+- 自动交易演示脚本
+- 包含5个演示场景：买入、卖出、清仓、修改、批量执行
+
+**test/broker/test_auto_trader.py**
+- AutoTrader测试套件
+- 包含期权代码生成、各种指令类型测试
+
+**docs/auto_trading.md**
+- 自动交易完整文档
+- 包含交易规则、配置说明、使用示例、常见问题
+
+**docs/full_auto_trading_guide.md**
+- 完整自动化交易流程指南
+- 包含监听网页、本地HTML两种模式
+- 详细的配置、测试、故障排查说明
+
+### ⚙️ 新增配置
+
+**.env新增配置项**：
+```bash
+# 单个期权总价上限（美元）
+MAX_OPTION_TOTAL_PRICE=10000
+
+# 是否需要控制台确认
+REQUIRE_CONFIRMATION=false
+
+# 价格偏差容忍度（百分比）
+PRICE_DEVIATION_TOLERANCE=5
+
+# 仓位大小配置（合约数量）
+POSITION_SIZE_SMALL=1
+POSITION_SIZE_MEDIUM=2
+POSITION_SIZE_LARGE=5
+```
+
+### 🔄 修改文件
+
+**main.py**
+- 集成 `AutoTrader` 到主流程
+- 修改 `_handle_instruction()` 使用 `AutoTrader` 执行指令
+- 新增 `_sync_position_after_buy()` 同步持仓
+- 旧的处理方法改名为 `_legacy` 后缀（向后兼容）
+- 支持新的指令类型（BUY, SELL, CLOSE, MODIFY）
+
+**scraper/monitor.py**
+- 更新 `_determine_category()` 支持新旧指令类型
+- 兼容 BUY, SELL, CLOSE, MODIFY 和 OPEN, STOP_LOSS, TAKE_PROFIT
+
+### 📖 文档更新
+
+- ✅ 更新 `.env.example` 添加自动交易配置
+- ✅ 更新 `broker/__init__.py` 导出 `AutoTrader`
+- ✅ 更新 `README.md` 添加自动交易和完整流程文档链接
+- ✅ 创建 `docs/auto_trading.md` 完整功能文档
+- ✅ 创建 `docs/full_auto_trading_guide.md` 端到端流程指南
+- ✅ 更新 `CHANGELOG.md` 记录所有变更
+
+### 💡 使用示例
+
+```python
+from broker import LongPortBroker, load_longport_config, AutoTrader
+from models.instruction import OptionInstruction, InstructionType
+
+# 初始化
+config = load_longport_config()
+broker = LongPortBroker(config)
+trader = AutoTrader(broker)
+
+# 创建买入指令
+instruction = OptionInstruction(
+    instruction_type=InstructionType.BUY.value,
+    ticker="AAPL",
+    option_type="CALL",
+    strike=250.0,
+    expiry="2/7",
+    price=5.0,
+    position_size="小仓位"
+)
+
+# 执行指令
+result = trader.execute_instruction(instruction)
+```
+
+### 🎯 下一步
+
+1. 集成到 `analyze_local_messages.py`，实现端到端自动交易
+2. 添加更多风险控制策略
+3. 支持更复杂的交易策略（如网格交易、定投等）
+4. 添加交易日志和性能统计
+
+---
+
 ## [2026-02-03 v3.18] 支持反向止损格式（价格在前）
 
 ### 🎯 核心改进

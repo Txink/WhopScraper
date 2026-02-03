@@ -14,6 +14,7 @@ from .position_manager import (
     Position,
     create_position_from_order
 )
+from .auto_trader import AutoTrader
 
 __all__ = [
     'LongPortConfigLoader',
@@ -23,5 +24,6 @@ __all__ = [
     'calculate_quantity',
     'PositionManager',
     'Position',
-    'create_position_from_order'
+    'create_position_from_order',
+    'AutoTrader'
 ]

@@ -55,7 +55,7 @@ python3 main.py
 
 📖 **消息提取重构**：[DOM结构指南](./docs/dom_structure_guide.md) 🏗️ | [输出格式说明](./docs/message_output_format.md) 📋 | [JSON导出指南](./docs/json_export_guide.md) 📤 | [本地分析工具](./docs/analyze_local_messages_guide.md) 🔍 | [重构总结](./docs/message_extraction_refactoring.md) 🎯 | [DOM分析](./docs/dom_analysis_summary.md) 🔬
 
-📖 **完整系统**：[使用指南](./doc/USAGE_GUIDE.md) | [配置说明](./doc/CONFIGURATION.md) | [长桥集成](./doc/LONGPORT_INTEGRATION_GUIDE.md) | [订单管理](./docs/order_management.md) | [批量撤销订单](./README_CANCEL_ORDERS.md) | [启动清单](./doc/CHECKLIST.md)
+📖 **完整系统**：[使用指南](./doc/USAGE_GUIDE.md) | [配置说明](./doc/CONFIGURATION.md) | [长桥集成](./doc/LONGPORT_INTEGRATION_GUIDE.md) | [订单管理](./docs/order_management.md) | [自动交易](./docs/auto_trading.md) 🤖 | [完整自动化流程](./docs/full_auto_trading_guide.md) 🚀 | [批量撤销订单](./README_CANCEL_ORDERS.md) | [启动清单](./doc/CHECKLIST.md)
 
 📁 **项目资源**：[项目结构说明](./PROJECT_STRUCTURE.md) | [期权过期校验](./doc/OPTION_EXPIRY_CHECK.md) | [更新日志](./CHANGELOG.md)
 

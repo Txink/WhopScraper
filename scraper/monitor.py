@@ -86,7 +86,14 @@ class MessageMonitor:
         Returns:
             样本分类
         """
+        # 支持新旧两种指令类型
         type_map = {
+            # 新版指令类型
+            "BUY": SampleCategory.OPEN.value,
+            "SELL": SampleCategory.TAKE_PROFIT.value,
+            "CLOSE": SampleCategory.TAKE_PROFIT.value,
+            "MODIFY": SampleCategory.ADJUST.value,
+            # 旧版指令类型（向后兼容）
             "OPEN": SampleCategory.OPEN.value,
             "STOP_LOSS": SampleCategory.STOP_LOSS.value,
             "TAKE_PROFIT": SampleCategory.TAKE_PROFIT.value,
