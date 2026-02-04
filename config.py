@@ -112,6 +112,9 @@ class Config:
     # 消息展示模式
     DISPLAY_MODE: str = os.getenv("DISPLAY_MODE", "both")  # raw, parsed, both
     
+    # 是否跳过首次连接时的历史消息（仅处理连接后新产生的消息）
+    SKIP_INITIAL_MESSAGES: bool = os.getenv("SKIP_INITIAL_MESSAGES", "false").lower() in ("true", "1", "yes")
+    
     # 消息过滤配置
     FILTER_AUTHORS: List[str] = [
         author.strip() 
@@ -244,6 +247,9 @@ POLL_INTERVAL=2.0  # 轮询间隔（秒）
 
 # 输出设置
 # OUTPUT_FILE=output/signals.json
+
+# 监控消息：是否跳过首次连接时的历史消息（true=只处理连接后新消息，false=首次也处理当前页消息）
+# SKIP_INITIAL_MESSAGES=false
 
 # 消息过滤设置
 # FILTER_AUTHORS=xiaozhaolucky  # 只处理指定作者的消息，多个作者用逗号分隔

@@ -13,7 +13,6 @@ from typing import Optional, Tuple
 from config import Config
 from scraper.browser import BrowserManager
 from scraper.monitor import MessageMonitor
-from scraper.multi_monitor import MultiPageMonitor
 from models.instruction import OptionInstruction
 
 # 长桥交易模块
@@ -57,7 +56,6 @@ class SignalScraper:
         """
         self.browser: Optional[BrowserManager] = None
         self.monitor: Optional[MessageMonitor] = None
-        self.multi_monitor: Optional[MultiPageMonitor] = None
         self.selected_page = selected_page
         self.use_multi_page = use_multi_page
         self._shutdown_event = asyncio.Event()
@@ -115,8 +113,8 @@ class SignalScraper:
             
             # 启动风险控制（如果启用了自动交易）
             if self.broker.auto_trade:
-                self.risk_controller.start()
-                self.auto_trailing.start()
+                # self.risk_controller.start()
+                # self.auto_trailing.start()
                 logger.info("🚀 风险控制系统已启动")
                 logger.info("🤖 自动交易执行器就绪")
             else:
@@ -211,55 +209,14 @@ class SignalScraper:
             poll_interval=Config.POLL_INTERVAL,
             output_file=Config.OUTPUT_FILE,
             enable_sample_collection=Config.ENABLE_SAMPLE_COLLECTION,
-            display_mode=Config.DISPLAY_MODE
+            display_mode=Config.DISPLAY_MODE,
+            skip_initial_messages=Config.SKIP_INITIAL_MESSAGES
         )   
         
         # 设置回调
         self.monitor.on_new_instruction(self._on_instruction)
         
         print(f"✅ 单页面监控器已设置: {page_type.upper()} - {url}")
-    
-    async def _setup_multi_page_monitor(self, page, page_configs):
-        """
-        设置多页面监控
-        
-        Args:
-            page: 浏览器页面对象
-            page_configs: [(url, page_type, name), ...] 列表
-        """
-        # 创建多页面监控器
-        self.multi_monitor = MultiPageMonitor(
-            poll_interval=Config.POLL_INTERVAL,
-            output_file=Config.OUTPUT_FILE,
-            enable_sample_collection=Config.ENABLE_SAMPLE_COLLECTION,
-            display_mode=Config.DISPLAY_MODE
-        )
-        
-        # 为每个页面创建浏览器上下文和页面
-        for url, page_type, _ in page_configs:
-            # 对于第一个页面，使用已有的 page
-            if url == page_configs[0][0]:
-                current_page = page
-            else:
-                # 为其他页面创建新标签页
-                current_page = await self.browser.context.new_page()
-            
-            # 导航到页面
-            print(f"正在导航到 {page_type.upper()} 页面: {url}")
-            await current_page.goto(url, wait_until="domcontentloaded", timeout=30000)
-            
-            # 添加到多页面监控器
-            self.multi_monitor.add_page(
-                page=current_page,
-                page_type=page_type,
-                url=url,
-                enabled=True
-            )
-        
-        # 设置回调
-        self.multi_monitor.on_new_instruction(self._on_instruction_with_type)
-        
-        print(f"✅ 多页面监控器已设置，共 {len(page_configs)} 个页面")
     
     def _on_instruction(self, instruction: OptionInstruction):
         """
@@ -547,9 +504,7 @@ class SignalScraper:
         print("=" * 60 + "\n")
         
         try:
-            if self.multi_monitor:
-                await self.multi_monitor.start()
-            elif self.monitor:
+            if self.monitor:
                 await self.monitor.start()
             else:
                 print("错误: 没有可用的监控器")
@@ -575,11 +530,6 @@ class SignalScraper:
         if self.position_manager:
             self.position_manager.print_summary()
             logger.info("持仓已保存")
-        
-        # 停止监控
-        if self.multi_monitor:
-            self.multi_monitor.stop()
-            logger.info("多页面监控已停止")
         
         if self.monitor:
             self.monitor.stop()

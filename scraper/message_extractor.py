@@ -646,12 +646,18 @@ class EnhancedMessageExtractor:
                 simple_dict['content'].encode()
             ).hexdigest()[:12]
             
-            # 为 MessageMonitor 构建兼容格式
+            # 为 MessageMonitor 构建兼容格式（含完整 simple_dict 便于 Table 展示）
             msg = {
                 'id': f"{simple_dict['domID']}-{content_hash}",
                 'text': simple_dict['content'],  # 完整内容
                 'timestamp': simple_dict['timestamp'],
                 'has_quote': bool(simple_dict['refer']),
+                # 完整字段，供 monitor 按 domID/position/timestamp/content/history 格式展示
+                'domID': simple_dict['domID'],
+                'content': simple_dict['content'],
+                'refer': simple_dict['refer'],
+                'position': simple_dict['position'],
+                'history': simple_dict['history'],
             }
             
             messages.append(msg)
