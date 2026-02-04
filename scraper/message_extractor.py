@@ -96,7 +96,7 @@ class MessageGroup:
         格式：
         {
             'domID': 'post_xxx',
-            'content': '完整消息内容（包含引用+主消息+关联消息）',
+            'content': '主消息',
             'timestamp': 'Jan 06, 2026 11:38 PM',
             'refer': '引用的消息内容（如果有）',
             'position': 'first',
@@ -110,7 +110,7 @@ class MessageGroup:
         """
         return {
             'domID': self.group_id,
-            'content': self.get_full_content(),  # 使用完整内容
+            'content': self.primary_message,
             'timestamp': self.timestamp,
             'refer': self.quoted_context if self.quoted_context else None,
             'position': self.get_position(),

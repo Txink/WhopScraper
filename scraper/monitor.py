@@ -129,11 +129,12 @@ class MessageMonitor:
         # 添加一行显示当前时间
         now = datetime.datetime.now()
         table.add_row("current", now.strftime("%Y-%m-%d %H:%M:%S") + ".%03d" % (now.microsecond // 1000))
-        table.add_row("timestamp", str(msg.get("timestamp", "")))
+        table.add_row("time", str(msg.get("timestamp", "")))
         dom_id = msg.get("domID", msg.get("id", "").split("-")[0] if msg.get("id") else "")
         table.add_row("domID", dom_id)
         table.add_row("position", str(msg.get("position", "")))
         table.add_row("content", str(msg.get("content", msg.get("text", ""))))
+        table.add_row("refer", str(msg.get("refer", "")))
 
         history = msg.get("history") or []
         if isinstance(history, list):
@@ -145,28 +146,40 @@ class MessageMonitor:
         Console().print(table)
 
     def _display_message(self, text: str, instruction: Optional[OptionInstruction] = None):
-        """
-        根据展示模式显示消息
-        
-        Args:
-            text: 原始消息文本
-            instruction: 解析后的指令（如果有）
-        """
-        if self.display_mode == "raw":
-            # 仅显示原始消息（Table 已在 _display_message_table 中展示）
-            print(f"[原始消息] {text}")
-        
-        elif self.display_mode == "parsed":
-            # 仅显示解析后的指令
-            if instruction:
-                print(f"[新指令] {instruction}")
-        
-        elif self.display_mode == "both":
-            # 两者都显示（Table 已在 _display_message_table 中展示）
-            print(f"[原始消息] {text}")
-            if instruction:
-                print(f"[新指令] {instruction}")
-                print(f"[JSON] {instruction.to_json()}")
+        table = Table(
+            title="[bold blue]解析后消息[/bold blue]",
+            show_header=True,
+            header_style="bold cyan",
+            box=box.ROUNDED,
+            show_lines=True,
+            padding=(0, 1),
+            width=70,
+        )
+        table.add_column("字段", style="cyan", width=6, no_wrap=True)
+        table.add_column("值", style="white", no_wrap=False)
+
+        if instruction is None:
+            # 红色字体
+            table.add_row("状态", "[bold red]解析失败[/bold red]")
+            Console().print(table)
+            return
+
+        # 添加一行显示当前时间
+        now = datetime.datetime.now()
+        table.add_row("时间", instruction.timestamp)
+        table.add_row("期权", f"{instruction.ticker} {instruction.option_type} {instruction.strike} {instruction.expiry}")
+        table.add_row("类型", instruction.instruction_type)
+        if instruction.price_range:
+            table.add_row("价格", f"${instruction.price_range[0]}-${instruction.price_range[1]}")
+        else:
+            table.add_row("价格", str(instruction.price))
+        if instruction.sell_quantity:
+            table.add_row("卖出数量", instruction.sell_quantity)
+        if instruction.stop_loss_range:
+            table.add_row("止损", f"${instruction.stop_loss_range[0]}-${instruction.stop_loss_range[1]}")
+        if instruction.take_profit_range:
+            table.add_row("止盈", f"${instruction.take_profit_range[0]}-${instruction.take_profit_range[1]}")
+        Console().print(table)
     
     async def scan_once(self) -> list[OptionInstruction]:
         """
@@ -197,12 +210,14 @@ class MessageMonitor:
         for msg in messages:
             msg_id = msg['id']
             text = msg['text']
-            
+            time = msg['timestamp']
             # 跳过已处理的消息
             if msg_id in self._processed_ids:
                 continue
             
             self._processed_ids.add(msg_id)
+
+            print('=' * 80)
 
             # 使用 Table 按文档格式展示提取的消息（raw / both 模式）
             if self.display_mode in ["raw", "both"]:
@@ -212,7 +227,6 @@ class MessageMonitor:
             if self._on_new_message:
                 self._on_new_message(text)
             
-            print("=" * 80)
             # 尝试解析指令
             # 消息可能包含多行，逐行解析
             lines = text.split('\n')
@@ -223,7 +237,7 @@ class MessageMonitor:
                 if not line or len(line) < 3:
                     continue
                 
-                instruction = OptionParser.parse(line, msg_id)
+                instruction = OptionParser.parse(line, msg_id, time)
                 if instruction:
                     parsed_any = True
                     # 显示消息（根据展示模式）
@@ -249,9 +263,7 @@ class MessageMonitor:
             
             # 如果整条消息都没有被解析，添加为未解析样本
             if not parsed_any and len(text) > 5:
-                # 只在 raw 或 both 模式下显示未解析的原始消息
-                if self.display_mode in ["raw", "both"]:
-                    self._display_message(text, None)
+                self._display_message(text, None)
                 
                 if self.sample_manager:
                     self.sample_manager.add_unparsed_sample(
