@@ -37,6 +37,12 @@ class OptionInstruction:
     option_type: Optional[str] = None  # CALL 或 PUT
     strike: Optional[float] = None
     expiry: Optional[str] = None  # 如 "1/31", "2/20"
+
+    # 上下文
+    source: Optional[str] = None  # 上下文来源，如 history, refer, last_N
+    depend_message: Optional[str] = None  # 依赖的消息内容
+
+    origin: Optional[dict] = None  # 原始消息
     
     # 价格信息（支持单个价格或价格区间）
     price: Optional[float] = None  # 单个价格
@@ -129,6 +135,69 @@ class OptionInstruction:
             
         else:
             return f"[未识别] {self.raw_message[:50]}..."
+
+    @classmethod
+    def generate_option_symbol(cls, ticker: str, option_type: str, strike: float, expiry: str, timestamp: str = None) -> str:
+        """
+        生成完整的期权代码
+        
+        Args:
+            ticker: 股票代码（如 "BA"）
+            option_type: 期权类型（"CALL" 或 "PUT"）
+            strike: 行权价（如 240.0）
+            expiry: 到期日（如 "2/13", "2月13"）
+            timestamp: 消息时间戳（如 "Jan 23, 2026 12:51 AM"），用于推断年份
+            
+        Returns:
+            完整期权代码（如 "BA260213C240000.US"）
+        """
+        from datetime import datetime
+        import re
+        
+        if not all([ticker, option_type, strike, expiry]):
+            return ticker or "未知"
+        
+        # 从timestamp提取年份
+        year = 26  # 默认2026年
+        if timestamp:
+            try:
+                # 尝试解析 "Jan 23, 2026 12:51 AM" 格式
+                ts_match = re.search(r', (\d{4})', timestamp)
+                if ts_match:
+                    year = int(ts_match.group(1)) % 100  # 取后两位
+            except:
+                pass
+        
+        # 解析到期日
+        month = None
+        day = None
+        
+        # 尝试匹配 "2/13" 格式
+        match = re.match(r'(\d{1,2})/(\d{1,2})', expiry)
+        if match:
+            month = int(match.group(1))
+            day = int(match.group(2))
+        else:
+            # 尝试匹配 "2月13" 格式
+            match = re.match(r'(\d{1,2})月(\d{1,2})', expiry)
+            if match:
+                month = int(match.group(1))
+                day = int(match.group(2))
+        
+        if not month or not day:
+            return ticker
+        
+        # 格式化日期为 YYMMDD
+        date_str = f"{year:02d}{month:02d}{day:02d}"
+        
+        # 期权类型代码
+        option_code = 'C' if option_type == 'CALL' else 'P'
+        
+        # 行权价（乘以1000并格式化为6位，与长桥 API 返回格式一致）
+        strike_code = f"{int(strike * 1000):06d}"
+        
+        # 组合完整代码
+        return f"{ticker}{date_str}{option_code}{strike_code}.US"
 
 
 class InstructionStore:

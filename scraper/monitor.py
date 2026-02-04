@@ -11,6 +11,7 @@ from rich.console import Console
 from rich.table import Table
 from rich import box
 
+from parser.message_context_resolver import MessageContextResolver
 from parser.option_parser import OptionParser
 from models.instruction import OptionInstruction, InstructionStore
 from samples.sample_manager import SampleManager, SampleCategory
@@ -110,7 +111,7 @@ class MessageMonitor:
         }
         return type_map.get(instruction.instruction_type, SampleCategory.UNKNOWN.value)
     
-    def _display_message_table(self, msg: dict):
+    def _display_origin_table(self, msg: dict):
         """
         使用 Rich Table 按文档格式展示单条提取的消息。
         格式：domID, position, timestamp, content, history（与 analyze_local_messages_guide 一致）
@@ -119,10 +120,11 @@ class MessageMonitor:
             title="[bold blue]原始消息[/bold blue]",
             show_header=True,
             header_style="bold cyan",
-            box=box.ROUNDED,
-            show_lines=True,
-            padding=(0, 1),
-            width=70,
+            box=box.SIMPLE,
+            show_lines=False,
+            padding=(0, 0),
+            width=65,
+            expand=False,
         )
         table.add_column("字段", style="cyan", width=6, no_wrap=True)
         table.add_column("值", style="white", no_wrap=False)
@@ -145,18 +147,19 @@ class MessageMonitor:
 
         Console().print(table)
 
-    def _display_message(self, text: str, instruction: Optional[OptionInstruction] = None):
+    def _display_parsed_message(self, instruction: Optional[OptionInstruction] = None):
         table = Table(
             title="[bold blue]解析后消息[/bold blue]",
             show_header=True,
             header_style="bold cyan",
-            box=box.ROUNDED,
-            show_lines=True,
-            padding=(0, 1),
-            width=70,
+            box=box.SIMPLE,
+            show_lines=False,
+            padding=(0, 0),
+            width=65,
+            expand=False,
         )
-        table.add_column("字段", style="cyan", width=6, no_wrap=True)
-        table.add_column("值", style="white", no_wrap=False)
+        table.add_column("字段", style="cyan", width=14, no_wrap=True)
+        table.add_column("值", style="white", width=49, no_wrap=False)
 
         if instruction is None:
             # 红色字体
@@ -164,21 +167,69 @@ class MessageMonitor:
             Console().print(table)
             return
 
-        # 添加一行显示当前时间
-        now = datetime.datetime.now()
-        table.add_row("时间", instruction.timestamp)
-        table.add_row("期权", f"{instruction.ticker} {instruction.option_type} {instruction.strike} {instruction.expiry}")
-        table.add_row("类型", instruction.instruction_type)
-        if instruction.price_range:
-            table.add_row("价格", f"${instruction.price_range[0]}-${instruction.price_range[1]}")
-        else:
-            table.add_row("价格", str(instruction.price))
-        if instruction.sell_quantity:
-            table.add_row("卖出数量", instruction.sell_quantity)
-        if instruction.stop_loss_range:
-            table.add_row("止损", f"${instruction.stop_loss_range[0]}-${instruction.stop_loss_range[1]}")
-        if instruction.take_profit_range:
-            table.add_row("止盈", f"${instruction.take_profit_range[0]}-${instruction.take_profit_range[1]}")
+        inst = instruction
+
+        table.add_row("时间", inst.timestamp)
+        table.add_row("期权", OptionInstruction.generate_option_symbol(inst.ticker, inst.option_type, inst.strike, inst.expiry, inst.timestamp))
+        table.add_row("指令类型", inst.instruction_type)
+        if inst.instruction_type == 'BUY':
+            # 买入指令
+            if inst.option_type:
+                table.add_row("期权类型", inst.option_type)
+            if inst.strike:
+                table.add_row("行权价", f"${inst.strike}")
+            if inst.expiry:
+                table.add_row("到期日", inst.expiry)
+            if inst.price_range:
+                table.add_row("价格区间", f"${inst.price_range[0]} - ${inst.price_range[1]}")
+                table.add_row("价格(中间值)", f"${inst.price}")
+            elif inst.price:
+                table.add_row("价格", f"${inst.price}")
+            if inst.position_size:
+                table.add_row("仓位大小", inst.position_size)
+
+        elif inst.instruction_type == 'SELL':
+            # 卖出指令
+            if inst.price_range:
+                table.add_row("价格区间", f"${inst.price_range[0]} - ${inst.price_range[1]}")
+                table.add_row("价格(中间值)", f"${inst.price}")
+            elif inst.price:
+                table.add_row("价格", f"${inst.price}")
+            if inst.sell_quantity:
+                table.add_row("卖出数量", inst.sell_quantity)
+
+        elif inst.instruction_type == 'CLOSE':
+            # 清仓指令
+            if inst.price_range:
+                table.add_row("价格区间", f"${inst.price_range[0]} - ${inst.price_range[1]}")
+                table.add_row("价格(中间值)", f"${inst.price}")
+            elif inst.price:
+                table.add_row("价格", f"${inst.price}")
+            table.add_row("数量", "全部")
+
+        elif inst.instruction_type == 'MODIFY':
+            # 修改指令
+            if inst.stop_loss_range:
+                table.add_row("止损区间", f"${inst.stop_loss_range[0]} - ${inst.stop_loss_range[1]}")
+                table.add_row("止损(中间值)", f"${inst.stop_loss_price}")
+            elif inst.stop_loss_price:
+                table.add_row("止损价格", f"${inst.stop_loss_price}")
+
+            if inst.take_profit_range:
+                table.add_row("止盈区间", f"${inst.take_profit_range[0]} - ${inst.take_profit_range[1]}")
+                table.add_row("止盈(中间值)", f"${inst.take_profit_price}")
+            elif inst.take_profit_price:
+                table.add_row("止盈价格", f"${inst.take_profit_price}")
+
+        # 显示上下文补全信息
+        if inst.source:
+            table.add_row("上下文来源", inst.source)
+            if inst.depend_message:
+                ctx_msg = inst.depend_message[:60]
+                if len(inst.depend_message) > 60:
+                    ctx_msg += "..."
+                table.add_row("上下文消息", ctx_msg)
+
         Console().print(table)
     
     async def scan_once(self) -> list[OptionInstruction]:
@@ -187,13 +238,11 @@ class MessageMonitor:
         
         Returns:
             新解析出的指令列表
-        """
-        new_instructions = []
-        
+        """        
         # 统一使用 EnhancedMessageExtractor 提取并解析页面消息（含消息组、引用、上下文）
         extractor = EnhancedMessageExtractor(self.page)
         try:
-            messages = await extractor.extract_with_context()
+            messages = await extractor.extract_message_groups()
         except Exception as e:
             print(f"消息提取失败: {e}")
             messages = []
@@ -201,77 +250,65 @@ class MessageMonitor:
         # 若开启“跳过首次历史”：首次扫描仅将当前页消息 ID 登记为已处理，不展示、不解析、不回调
         if self.skip_initial_messages and not self._first_scan_done:
             for msg in messages:
-                self._processed_ids.add(msg["id"])
+                self._processed_ids.add(msg.group_id)
             self._first_scan_done = True
             if messages:
                 print(f"已跳过首次连接时的 {len(messages)} 条历史消息，仅处理此后新消息")
             return []
-        
+
+        import re
+        simples = []
         for msg in messages:
-            msg_id = msg['id']
-            text = msg['text']
-            time = msg['timestamp']
+            # msg 为 MessageGroup，转为字典供后续使用
+            msg_dict = msg.to_simple_dict()
+            msg_dict["id"] = msg.group_id
+            msg_id = msg_dict["id"]
+            text = msg.get_full_content()
+            time = msg_dict["timestamp"]
             # 跳过已处理的消息
             if msg_id in self._processed_ids:
                 continue
-            
+
             self._processed_ids.add(msg_id)
 
-            print('=' * 80)
-
-            # 使用 Table 按文档格式展示提取的消息（raw / both 模式）
-            if self.display_mode in ["raw", "both"]:
-                self._display_message_table(msg)
-            
             # 触发新消息回调
             if self._on_new_message:
                 self._on_new_message(text)
             
-            # 尝试解析指令
-            # 消息可能包含多行，逐行解析
-            lines = text.split('\n')
-            parsed_any = False
-            
-            for line in lines:
-                line = line.strip()
-                if not line or len(line) < 3:
-                    continue
+            dict = msg_dict
+            content = dict['content'].strip()
+            # 清理消息内容
+            content_clean = content
+            content_clean = re.sub(r'^\[引用\]\s*', '', content_clean)
+            content_clean = re.sub(r'^[\w]+•[A-Z][a-z]{2,9}\s+\d{1,2},\s+\d{4}\s+\d{1,2}:\d{2}\s+[AP]M\s*', '', content_clean)
+            content_clean = re.sub(r'^[XxＸｘ]+', '', content_clean)
+            content_clean = re.sub(r'^[\w]+•[A-Z][a-z]{2,9}\s+\d{1,2},\s+\d{4}\s+\d{1,2}:\d{2}\s+[AP]M\s*', '', content_clean)
+            content_clean = re.sub(r'^•?\s*[A-Z][a-z]+\s+\d{1,2}:\d{2}\s+[AP]M\s*', '', content_clean)
+            content_clean = content_clean.strip()
                 
-                instruction = OptionParser.parse(line, msg_id, time)
-                if instruction:
-                    parsed_any = True
-                    # 显示消息（根据展示模式）
-                    self._display_message(line, instruction)
-                    
-                    # 保存到存储
-                    if self.store.add(instruction):
-                        new_instructions.append(instruction)
-                        
-                        # 触发新指令回调
-                        if self._on_new_instruction:
-                            self._on_new_instruction(instruction)
-                        
-                        # 添加已解析样本
-                        if self.sample_manager:
-                            category = self._determine_category(instruction)
-                            self.sample_manager.add_parsed_sample(
-                                message=line,
-                                category=category,
-                                parsed_result=instruction.to_dict(),
-                                notes="自动收集"
-                            )
-            
-            # 如果整条消息都没有被解析，添加为未解析样本
-            if not parsed_any and len(text) > 5:
-                self._display_message(text, None)
-                
-                if self.sample_manager:
-                    self.sample_manager.add_unparsed_sample(
-                        message=text,
-                        notes="监控时未能解析"
-                    )
+            # 更新清理后的内容
+            dict['content'] = content_clean
+            simples.append(dict)
+
+        # 创建上下文解析器
+        resolver = MessageContextResolver(simples)
+        # 收集解析结果用于表格展示
+        parse_results = []
+        for simple in simples:
+            result = resolver.resolve_instruction(simple)
+            if result:
+                instruction, context_source, context_message = result
+                instruction.origin = simple
+                parse_results.append([simple, instruction])
+            else:
+                 parse_results.append([simple, None])
         
-        return new_instructions
+        for simple, instruction in parse_results:
+            print('=' * 80)
+            self._display_origin_table(simple)
+            self._display_parsed_message(instruction)
+
+        return [inst for _, inst in parse_results]
     
     async def start(self):
         """开始实时监控"""

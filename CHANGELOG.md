@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## [Unreleased]
+
+### 修复
+- **OPEN_PATTERN_1 到期日**：支持英文 "EXPIRATION NEXT WEEK" / "EXPIRATION THIS WEEK" 格式（如 `HON - $237.5 CALLS EXPIRATION NEXT WEEK $2.05`），此前仅支持中文「本周/下周」或 "EXPIRATION" + 具体日期，导致该类消息解析失败。
+- **卖出指令格式**：新增「ticker + 价格 + 都出/出剩下的」模式（`TAKE_PROFIT_PATTERN_10`），支持如 `unp 2.35都出剩下的`、`ndaq 2.4都出` 等表述，此前因无匹配模式导致解析失败。
+- **上下文查找范围**：`MessageContextResolver` 默认向前查找条数由 5 条改为 10 条（`CONTEXT_SEARCH_LIMIT` 默认 10），便于在「前 10 条」内找到 UNP 等买入消息以补全清仓指令。
+- **卖出指令格式**：新增「价格 + 都出/全出 + 可选 ticker」模式（`TAKE_PROFIT_PATTERN_5B`），支持如 `2.75都出 hon`、`2.3全出` 等表述。
+
 ## [2026-02-03 v3.20.1] 期权代码行权价格式与「本周」到期日修复
 
 ### 修复

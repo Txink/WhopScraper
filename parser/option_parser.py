@@ -67,10 +67,11 @@ class OptionParser:
     # 格式5: META 900call 2.1
     
     # 模式1: 标准格式 - 股票 行权价 CALL/PUT 到期 价格（支持价格范围）
+    # 到期支持：本周/下周/这周/当周/今天、EXPIRATION 具体日期、EXPIRATION NEXT WEEK/THIS WEEK
     OPEN_PATTERN_1 = re.compile(
         r'([A-Z]{2,5})\s*[-–]?\s*\$?(\d+(?:\.\d+)?)\s*'
         r'(CALLS?|PUTS?)\s*'
-        r'(?:(本周|下周|这周|当周|今天)|(?:EXPIRATION\s+)?(\d{1,2}/\d{1,2}|\d{1,2}月\d{1,2}日?|1月\d{1,2}|2月\d{1,2}))?\s*'
+        r'(?:(本周|下周|这周|当周|今天)|(?:EXPIRATION\s+)?(\d{1,2}/\d{1,2}|\d{1,2}月\d{1,2}日?|1月\d{1,2}|2月\d{1,2})|(?:EXPIRATION\s+)?(NEXT\s+WEEK|THIS\s+WEEK))?\s*'
         r'\$?(\d+(?:\.\d+)?(?:-\d+(?:\.\d+)?)?)',  # 支持价格范围 如 0.8-0.85 或 1.5-1.60
         re.IGNORECASE
     )
@@ -204,6 +205,12 @@ class OptionParser:
         re.IGNORECASE
     )
     
+    # 模式5b: 价格+都出/全出+可选ticker (如: 2.75都出 hon, 2.3全出)
+    TAKE_PROFIT_PATTERN_5B = re.compile(
+        r'(\d+(?:\.\d+)?)\s*(?:都|全)出\s*([A-Z]{2,5})?',
+        re.IGNORECASE
+    )
+    
     # 模式6: 价格+再出+比例 (如: 0.7再出剩下的一半)
     TAKE_PROFIT_PATTERN_6 = re.compile(
         r'(\d+(?:\.\d+)?)\s*(?:再|也)?(?:在)?\s*(?:剩下)?\s*(?:出|减)\s*(?:剩下|剩余)?\s*(一半|三分之一|三分之二)',
@@ -225,6 +232,12 @@ class OptionParser:
     # 模式9: ticker+跳到价格+都出 (如: ndaq又跳到2.7的 也是刚才没出的都出)
     TAKE_PROFIT_PATTERN_9 = re.compile(
         r'([A-Z]{2,5})\s*(?:又)?(?:跳到|到了?)\s*(\d+(?:\.\d+)?)(?:的)?\s*.*?(?:都|全)?出',
+        re.IGNORECASE
+    )
+    
+    # 模式10: ticker+价格+都出/出剩下的 (如: unp 2.35都出剩下的, ndaq 2.4都出)
+    TAKE_PROFIT_PATTERN_10 = re.compile(
+        r'([A-Z]{2,5})\s+(\d+(?:\.\d+)?)\s*(?:(?:都|全)?出(?:剩下|剩余)(?:的)?|(?:都|全)出)',
         re.IGNORECASE
     )
     
@@ -324,9 +337,9 @@ class OptionParser:
             strike = float(match.group(2))
             option_type = match.group(3).upper()
             option_type = 'CALL' if option_type.startswith('CALL') else 'PUT'
-            # group(4) 是相对日期（本周、下周等），group(5) 是具体日期
-            expiry_raw = match.group(4) if match.group(4) else match.group(5)
-            price_str = match.group(6)
+            # group(4) 相对日期中文，group(5) 具体日期，group(6) EXPIRATION NEXT/THIS WEEK
+            expiry_raw = match.group(4) or match.group(5) or match.group(6)
+            price_str = match.group(7)
             
             # 解析价格（支持价格区间）
             price, price_range = cls._parse_price_range(price_str)
@@ -724,6 +737,21 @@ class OptionParser:
                 message_id=message_id
             )
         
+        # 尝试模式5b: 价格+都出/全出+可选ticker（如: 2.75都出 hon, 2.3全出）
+        match = cls.TAKE_PROFIT_PATTERN_5B.search(message)
+        if match:
+            price_str = match.group(1)
+            ticker = match.group(2).upper() if match.group(2) else None
+            price, price_range = cls._parse_price_range(price_str)
+            return OptionInstruction(
+                raw_message=message,
+                instruction_type=InstructionType.CLOSE.value,
+                ticker=ticker,
+                price=price,
+                price_range=price_range,
+                message_id=message_id
+            )
+        
         # 尝试模式6: 价格+再出+比例（如: 0.7再出剩下的一半，2.45也在剩下减一半）
         match = cls.TAKE_PROFIT_PATTERN_6.search(message)
         if match:
@@ -802,6 +830,22 @@ class OptionParser:
                 price=price,
                 price_range=price_range,
                 sell_quantity=sell_quantity,
+                message_id=message_id
+            )
+        
+        # 尝试模式10: ticker+价格+都出/出剩下的（如: unp 2.35都出剩下的, ndaq 2.4都出）
+        match = cls.TAKE_PROFIT_PATTERN_10.search(message)
+        if match:
+            ticker = match.group(1).upper()
+            price_str = match.group(2)
+            price, price_range = cls._parse_price_range(price_str)
+            return OptionInstruction(
+                raw_message=message,
+                instruction_type=InstructionType.CLOSE.value,
+                ticker=ticker,
+                price=price,
+                price_range=price_range,
+                sell_quantity=None,
                 message_id=message_id
             )
         

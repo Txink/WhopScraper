@@ -26,7 +26,7 @@ class MessageContextResolver:
         # 创建消息索引，方便快速定位
         self.message_index = {msg['domID']: idx for idx, msg in enumerate(all_messages)}
         # 从环境变量读取上下文查找范围（默认5条）
-        self.context_search_limit = int(os.getenv('CONTEXT_SEARCH_LIMIT', '5'))
+        self.context_search_limit = int(os.getenv('CONTEXT_SEARCH_LIMIT', '10'))
         
     def resolve_instruction(self, message_dict: dict) -> Optional[Tuple[OptionInstruction, Optional[str], Optional[str]]]:
         """
@@ -44,7 +44,7 @@ class MessageContextResolver:
         content = message_dict.get('content', '').strip()
         timestamp = message_dict.get('timestamp')
         
-        if not content or len(content) < 5:
+        if not content or len(content) < 2:
             return None
         
         # 1. 使用基础解析器解析当前消息
@@ -73,7 +73,9 @@ class MessageContextResolver:
         
         # 4. 应用上下文补全
         completed_instruction = self._apply_context(instruction, context_info['context'])
-        
+        completed_instruction.source = context_info['source']
+        completed_instruction.depend_message = context_info['message']
+        completed_instruction.origin = message_dict
         return (completed_instruction, context_info['source'], context_info['message'])
     
     def _needs_completion(self, instruction: OptionInstruction) -> bool:
