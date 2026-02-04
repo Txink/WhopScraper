@@ -175,15 +175,9 @@ class SignalScraper:
                 print("登录失败，请检查凭据是否正确")
                 return False
         
-        # 判断是使用多页面监控还是单页面监控
-        if self.use_multi_page and len(page_configs) > 1:
-            # 使用多页面监控
-            print(f"使用多页面监控模式（共 {len(page_configs)} 个页面）")
-            await self._setup_multi_page_monitor(page, page_configs)
-        else:
-            # 使用单页面监控（向后兼容）
-            print("使用单页面监控模式")
-            await self._setup_single_page_monitor(page, page_configs[0])
+        # 使用单页面监控（向后兼容）
+        print("使用单页面监控模式")
+        await self._setup_single_page_monitor(page, page_configs[0])
         
         return True
     

@@ -4,6 +4,7 @@
 消息提取与解析统一由 EnhancedMessageExtractor 完成（含上下文、引用、消息组）。
 """
 import asyncio
+import datetime
 from typing import Callable, Optional, Set
 from playwright.async_api import Page
 from rich.console import Console
@@ -115,19 +116,23 @@ class MessageMonitor:
         格式：domID, position, timestamp, content, history（与 analyze_local_messages_guide 一致）
         """
         table = Table(
+            title="[bold blue]原始消息[/bold blue]",
             show_header=True,
             header_style="bold cyan",
             box=box.ROUNDED,
+            show_lines=True,
             padding=(0, 1),
-            width=80,
+            width=70,
         )
-        table.add_column("字段", style="cyan", width=12, no_wrap=True)
+        table.add_column("字段", style="cyan", width=6, no_wrap=True)
         table.add_column("值", style="white", no_wrap=False)
-
+        # 添加一行显示当前时间
+        now = datetime.datetime.now()
+        table.add_row("current", now.strftime("%Y-%m-%d %H:%M:%S") + ".%03d" % (now.microsecond // 1000))
+        table.add_row("timestamp", str(msg.get("timestamp", "")))
         dom_id = msg.get("domID", msg.get("id", "").split("-")[0] if msg.get("id") else "")
         table.add_row("domID", dom_id)
         table.add_row("position", str(msg.get("position", "")))
-        table.add_row("timestamp", str(msg.get("timestamp", "")))
         table.add_row("content", str(msg.get("content", msg.get("text", ""))))
 
         history = msg.get("history") or []
@@ -207,6 +212,7 @@ class MessageMonitor:
             if self._on_new_message:
                 self._on_new_message(text)
             
+            print("=" * 80)
             # 尝试解析指令
             # 消息可能包含多行，逐行解析
             lines = text.split('\n')
