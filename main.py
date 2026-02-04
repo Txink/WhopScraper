@@ -12,7 +12,7 @@ from typing import Optional, Tuple
 
 from config import Config
 from scraper.browser import BrowserManager
-from scraper.monitor import MessageMonitor, MutationObserverMonitor
+from scraper.monitor import MessageMonitor
 from scraper.multi_monitor import MultiPageMonitor
 from models.instruction import OptionInstruction
 
@@ -204,30 +204,15 @@ class SignalScraper:
             print(f"无法导航到目标页面: {url}")
             return False
         
-        # 根据配置选择监控模式
-        monitor_mode = Config.MONITOR_MODE.lower()
-        
-        if monitor_mode == 'event':
-            # 使用事件驱动监控器
-            print(f"使用事件驱动监控模式")
-            self.monitor = MutationObserverMonitor(
-                page=page,
-                output_file=Config.OUTPUT_FILE,
-                enable_sample_collection=Config.ENABLE_SAMPLE_COLLECTION,
-                display_mode=Config.DISPLAY_MODE,
-                check_interval=Config.CHECK_INTERVAL,
-                status_report_interval=Config.STATUS_REPORT_INTERVAL
-            )
-        else:
-            # 使用传统轮询监控器
-            print(f"使用轮询监控模式")
-            self.monitor = MessageMonitor(
-                page=page,
-                poll_interval=Config.POLL_INTERVAL,
-                output_file=Config.OUTPUT_FILE,
-                enable_sample_collection=Config.ENABLE_SAMPLE_COLLECTION,
-                display_mode=Config.DISPLAY_MODE
-            )
+        # 使用传统轮询监控器
+        print(f"使用轮询监控模式")
+        self.monitor = MessageMonitor(
+            page=page,
+            poll_interval=Config.POLL_INTERVAL,
+            output_file=Config.OUTPUT_FILE,
+            enable_sample_collection=Config.ENABLE_SAMPLE_COLLECTION,
+            display_mode=Config.DISPLAY_MODE
+        )   
         
         # 设置回调
         self.monitor.on_new_instruction(self._on_instruction)

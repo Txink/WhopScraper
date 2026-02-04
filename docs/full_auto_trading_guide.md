@@ -93,7 +93,7 @@ browser = BrowserManager(headless=True)
 await browser.login(email, password)
 
 # 3. 创建消息监控器
-monitor = MutationObserverMonitor(page)
+monitor = MessageMonitor(page)
 
 # 4. 设置新消息回调
 monitor.on_new_instruction(self._handle_instruction)
