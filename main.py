@@ -8,9 +8,9 @@ import signal
 import sys
 import logging
 import os
-from typing import Optional
+from typing import Optional, Tuple
 
-from config import Config, create_env_template
+from config import Config
 from scraper.browser import BrowserManager
 from scraper.monitor import MessageMonitor, MutationObserverMonitor
 from scraper.multi_monitor import MultiPageMonitor
@@ -47,16 +47,18 @@ logger = logging.getLogger(__name__)
 class SignalScraper:
     """期权信号抓取器 + 自动交易系统"""
     
-    def __init__(self, use_multi_page: bool = True):
+    def __init__(self, selected_page: Optional[Tuple[str, str, str]] = None, use_multi_page: bool = False):
         """
         初始化信号抓取器
         
         Args:
-            use_multi_page: 是否使用多页面监控（默认True）
+            selected_page: 本次要监控的单个页面 (url, type, name)，type 为 'option' 或 'stock'。若指定则仅监控该页。
+            use_multi_page: 是否使用多页面监控（当未指定 selected_page 且配置了多页时使用）
         """
         self.browser: Optional[BrowserManager] = None
         self.monitor: Optional[MessageMonitor] = None
         self.multi_monitor: Optional[MultiPageMonitor] = None
+        self.selected_page = selected_page
         self.use_multi_page = use_multi_page
         self._shutdown_event = asyncio.Event()
         
@@ -150,8 +152,11 @@ class SignalScraper:
         # 启动浏览器
         page = await self.browser.start()
         
-        # 获取所有需要监控的页面配置
-        page_configs = Config.get_all_pages()
+        # 确定本次监控的页面：若指定了 selected_page 则仅监控该页，否则从配置取（可能多页）
+        if self.selected_page:
+            page_configs = [self.selected_page]
+        else:
+            page_configs = Config.get_all_pages()
         
         if not page_configs:
             print("错误: 没有配置任何监控页面")
@@ -190,9 +195,9 @@ class SignalScraper:
         
         Args:
             page: 浏览器页面对象
-            page_config: (url, page_type) 元组
+            page_config: (url, page_type, name) 元组
         """
-        url, page_type = page_config
+        url, page_type = page_config[0], page_config[1]
         
         # 导航到目标页面
         if not await self.browser.navigate(url):
@@ -235,7 +240,7 @@ class SignalScraper:
         
         Args:
             page: 浏览器页面对象
-            page_configs: [(url, page_type), ...] 列表
+            page_configs: [(url, page_type, name), ...] 列表
         """
         # 创建多页面监控器
         self.multi_monitor = MultiPageMonitor(
@@ -246,7 +251,7 @@ class SignalScraper:
         )
         
         # 为每个页面创建浏览器上下文和页面
-        for url, page_type in page_configs:
+        for url, page_type, _ in page_configs:
             # 对于第一个页面，使用已有的 page
             if url == page_configs[0][0]:
                 current_page = page
@@ -612,20 +617,10 @@ async def main():
 ╚══════════════════════════════════════════════════════════╝
     """)
     
-    # 检查是否有多个页面需要监控
-    import os
-    from dotenv import load_dotenv
-    load_dotenv()
-    
-    option_pages = os.getenv("WHOP_OPTION_PAGES", "")
-    stock_pages = os.getenv("WHOP_STOCK_PAGES", "")
-    enable_stock = os.getenv("ENABLE_STOCK_MONITOR", "false").lower() == "true"
-    
-    # 判断是否使用多页面监控
-    use_multi = (option_pages.count(',') > 0 or 
-                 (option_pages and stock_pages and enable_stock))
-    
-    scraper = SignalScraper(use_multi_page=use_multi)
+    selected = Config.load()
+    if selected is None:
+        return
+    scraper = SignalScraper(selected_page=selected)
     
     # 设置信号处理
     loop = asyncio.get_event_loop()
@@ -703,7 +698,7 @@ async def export_page_dom():
             print("✅ 已登录\n")
         
         # 导航到页面
-        test_url, test_type = page_configs[0]
+        test_url, test_type, _ = page_configs[0]
         print(f"📄 正在访问页面: [{test_type.upper()}] {test_url}")
         
         if not await browser.navigate(test_url):
@@ -946,8 +941,9 @@ async def test_whop_scraper():
             return
         
         print(f"📋 发现 {len(page_configs)} 个监控页面:")
-        for i, (url, page_type) in enumerate(page_configs, 1):
-            print(f"   {i}. [{page_type.upper()}] {url}")
+        for i, (url, page_type, name) in enumerate(page_configs, 1):
+            desc = f"{name} - " if name else ""
+            print(f"   {i}. [{page_type.upper()}] {desc}{url}")
         print()
         
         # 检查登录状态
@@ -969,7 +965,7 @@ async def test_whop_scraper():
             print("✅ 已登录\n")
         
         # 测试抓取第一个页面的消息
-        test_url, test_type = page_configs[0]
+        test_url, test_type, _ = page_configs[0]
         print(f"📄 正在测试抓取页面: [{test_type.upper()}] {test_url}")
         
         # 导航到页面
@@ -1140,8 +1136,9 @@ def test_config():
         # 显示监控页面
         page_configs = Config.get_all_pages()
         print(f"\n📄 监控页面 ({len(page_configs)} 个):")
-        for i, (url, page_type) in enumerate(page_configs, 1):
-            print(f"   {i}. [{page_type.upper()}] {url[:50]}...")
+        for i, (url, page_type, name) in enumerate(page_configs, 1):
+            desc = f"{name} - " if name else ""
+            print(f"   {i}. [{page_type.upper()}] {desc}{url[:50]}...")
         
     else:
         print("❌ 配置验证失败，请检查配置项")
