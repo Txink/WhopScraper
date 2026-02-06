@@ -396,8 +396,9 @@ def convert_to_longport_symbol(ticker: str, option_type: str, strike: float, exp
     # 期权类型
     opt_type = "C" if option_type.upper() == "CALL" else "P"
     
-    # 行权价格式化（6位数字，与长桥 API 返回格式一致）
-    strike_str = f"{int(strike * 1000):06d}"
+    # 行权价格式化（5位数字，与长桥 API 返回格式一致）
+    # 例如：60.0 → 60000, 17.5 → 17500
+    strike_str = f"{int(strike * 1000):05d}"
     
     # 组合期权代码
     symbol = f"{ticker}{expiry_date}{opt_type}{strike_str}.US"

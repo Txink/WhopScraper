@@ -10,17 +10,19 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.940610",
+      "timestamp": "2026-02-06T22:40:04.572298",
       "raw_message": "合约：QQQ 11/20 614c 入场价：1.1 备注：小仓位",
       "instruction_type": "BUY",
       "ticker": "QQQ",
       "option_type": "CALL",
       "strike": 614.0,
+      "expiry": "251120",
+      "symbol": "QQQ251120C614000.US",
       "price": 1.1,
       "position_size": "小仓位",
       "message_id": "post_1CVKJfF7MABGx5q1Kuihgc"
     },
-    "status": "⚠️",
+    "status": "✅",
     "context_source": null,
     "context_message": null
   },
@@ -88,12 +90,14 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.940678",
+      "timestamp": "2026-02-06T22:40:04.574614",
       "raw_message": "1.6也出三分之一",
       "instruction_type": "SELL",
       "ticker": "QQQ",
       "option_type": "CALL",
       "strike": 614.0,
+      "expiry": "251120",
+      "symbol": "QQQ251120C614000.US",
       "source": "history",
       "depend_message": "合约：QQQ 11/20 614c 入场价：1.1 备注：小仓位",
       "price": 1.6,
@@ -121,18 +125,20 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.940759",
+      "timestamp": "2026-02-06T22:40:04.574744",
       "raw_message": "1.5附近把剩下都出了",
       "instruction_type": "CLOSE",
       "ticker": "QQQ",
       "option_type": "CALL",
       "strike": 614.0,
+      "expiry": "251120",
+      "symbol": "QQQ251120C614000.US",
       "source": "history",
       "depend_message": "合约：QQQ 11/20 614c 入场价：1.1 备注：小仓位",
       "price": 1.5,
       "message_id": "post_1CVKJvhCTDueHuBDJaUGo4"
     },
-    "status": "⚠️",
+    "status": "✅",
     "context_source": "history",
     "context_message": "合约：QQQ 11/20 614c 入场价：1.1 备注：小仓位"
   },
@@ -147,17 +153,19 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.940841",
+      "timestamp": "2026-02-06T22:40:04.574865",
       "raw_message": "合约：QQQ 11/20 609P 入场价：1.5 备注：小仓位",
       "instruction_type": "BUY",
       "ticker": "QQQ",
       "option_type": "PUT",
       "strike": 609.0,
+      "expiry": "251120",
+      "symbol": "QQQ251120P609000.US",
       "price": 1.5,
       "position_size": "小仓位",
       "message_id": "post_1CVKMV9s9gscB84LiGCCiH"
     },
-    "status": "⚠️",
+    "status": "✅",
     "context_source": null,
     "context_message": null
   },
@@ -174,12 +182,14 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.940864",
+      "timestamp": "2026-02-06T22:40:04.574912",
       "raw_message": "1.6出三分之一",
       "instruction_type": "SELL",
       "ticker": "QQQ",
       "option_type": "PUT",
       "strike": 609.0,
+      "expiry": "251120",
+      "symbol": "QQQ251120P609000.US",
       "source": "history",
       "depend_message": "合约：QQQ 11/20 609P 入场价：1.5 备注：小仓位",
       "price": 1.6,
@@ -204,18 +214,20 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.940908",
+      "timestamp": "2026-02-06T22:40:04.574976",
       "raw_message": "1.6出剩下的",
       "instruction_type": "CLOSE",
       "ticker": "QQQ",
       "option_type": "PUT",
       "strike": 609.0,
+      "expiry": "251120",
+      "symbol": "QQQ251120P609000.US",
       "source": "history",
       "depend_message": "合约：QQQ 11/20 609P 入场价：1.5 备注：小仓位",
       "price": 1.6,
       "message_id": "post_1CVKMdyaGMaDfqeqpAKiVq"
     },
-    "status": "⚠️",
+    "status": "✅",
     "context_source": "history",
     "context_message": "合约：QQQ 11/20 609P 入场价：1.5 备注：小仓位"
   },
@@ -247,16 +259,18 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.940966",
+      "timestamp": "2026-02-06T22:40:04.575100",
       "raw_message": "合约： $QQQ 11/20 610C 入场： 0.75",
       "instruction_type": "BUY",
       "ticker": "QQQ",
       "option_type": "CALL",
       "strike": 610.0,
+      "expiry": "251120",
+      "symbol": "QQQ251120C610000.US",
       "price": 0.75,
       "message_id": "post_1CVKTQjCAeuWWNRVTKqciV"
     },
-    "status": "⚠️",
+    "status": "✅",
     "context_source": null,
     "context_message": null
   },
@@ -302,18 +316,20 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.941000",
+      "timestamp": "2026-02-06T22:40:04.575173",
       "raw_message": "0.61出剩余的",
       "instruction_type": "CLOSE",
       "ticker": "QQQ",
       "option_type": "CALL",
       "strike": 610.0,
+      "expiry": "251120",
+      "symbol": "QQQ251120C610000.US",
       "source": "前10条",
       "depend_message": "合约： $QQQ 11/20 610C 入场： 0.75",
       "price": 0.61,
       "message_id": "post_1CVKTt9sEnYUraTXBAhjc5"
     },
-    "status": "⚠️",
+    "status": "✅",
     "context_source": "前10条",
     "context_message": "合约： $QQQ 11/20 610C 入场： 0.75"
   },
@@ -343,17 +359,19 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.941065",
+      "timestamp": "2026-02-06T22:40:04.575267",
       "raw_message": "合约：QQQ 11/21 595C 入场价：1.25 小仓位",
       "instruction_type": "BUY",
       "ticker": "QQQ",
       "option_type": "CALL",
       "strike": 595.0,
+      "expiry": "251121",
+      "symbol": "QQQ251121C595000.US",
       "price": 1.25,
       "position_size": "小仓位",
       "message_id": "post_1CVMCQ9KZ14TG3yUqkUSLe"
     },
-    "status": "⚠️",
+    "status": "✅",
     "context_source": null,
     "context_message": null
   },
@@ -370,12 +388,14 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.941088",
+      "timestamp": "2026-02-06T22:40:04.575313",
       "raw_message": "1.6减三分之一",
       "instruction_type": "SELL",
       "ticker": "QQQ",
       "option_type": "CALL",
       "strike": 595.0,
+      "expiry": "251121",
+      "symbol": "QQQ251121C595000.US",
       "source": "history",
       "depend_message": "合约：QQQ 11/21 595C 入场价：1.25 小仓位",
       "price": 1.6,
@@ -400,12 +420,14 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.941132",
+      "timestamp": "2026-02-06T22:40:04.575382",
       "raw_message": "1.45出三分之一",
       "instruction_type": "SELL",
       "ticker": "QQQ",
       "option_type": "CALL",
       "strike": 595.0,
+      "expiry": "251121",
+      "symbol": "QQQ251121C595000.US",
       "source": "history",
       "depend_message": "合约：QQQ 11/21 595C 入场价：1.25 小仓位",
       "price": 1.45,
@@ -444,17 +466,19 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.941196",
+      "timestamp": "2026-02-06T22:40:04.575476",
       "raw_message": "合约：QQQ 11/25 600P 入场价：1.1 备注：小仓位",
       "instruction_type": "BUY",
       "ticker": "QQQ",
       "option_type": "PUT",
       "strike": 600.0,
+      "expiry": "251125",
+      "symbol": "QQQ251125P600000.US",
       "price": 1.1,
       "position_size": "小仓位",
       "message_id": "post_1CVUn36wbCvjzFfcneFhhd"
     },
-    "status": "⚠️",
+    "status": "✅",
     "context_source": null,
     "context_message": null
   },
@@ -471,12 +495,14 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.941226",
+      "timestamp": "2026-02-06T22:40:04.575516",
       "raw_message": "1.25减三分之一",
       "instruction_type": "SELL",
       "ticker": "QQQ",
       "option_type": "PUT",
       "strike": 600.0,
+      "expiry": "251125",
+      "symbol": "QQQ251125P600000.US",
       "source": "history",
       "depend_message": "合约：QQQ 11/25 600P 入场价：1.1 备注：小仓位",
       "price": 1.25,
@@ -544,16 +570,18 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.941317",
+      "timestamp": "2026-02-06T22:40:04.575612",
       "raw_message": "合约：QQQ 11/26 614C 入场价：1.12",
       "instruction_type": "BUY",
       "ticker": "QQQ",
       "option_type": "CALL",
       "strike": 614.0,
+      "expiry": "251126",
+      "symbol": "QQQ251126C614000.US",
       "price": 1.12,
       "message_id": "post_1CVWfQpWAuQMoP6AptSv5S"
     },
-    "status": "⚠️",
+    "status": "✅",
     "context_source": null,
     "context_message": null
   },
@@ -586,12 +614,14 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.941343",
+      "timestamp": "2026-02-06T22:40:04.575656",
       "raw_message": "1.35减三分之一",
       "instruction_type": "SELL",
       "ticker": "QQQ",
       "option_type": "CALL",
       "strike": 614.0,
+      "expiry": "251126",
+      "symbol": "QQQ251126C614000.US",
       "source": "history",
       "depend_message": "合约：QQQ 11/26 614C 入场价：1.12",
       "price": 1.35,
@@ -617,12 +647,14 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.941388",
+      "timestamp": "2026-02-06T22:40:04.575716",
       "raw_message": "1。63减三分之一",
       "instruction_type": "SELL",
       "ticker": "QQQ",
       "option_type": "CALL",
       "strike": 614.0,
+      "expiry": "251126",
+      "symbol": "QQQ251126C614000.US",
       "source": "history",
       "depend_message": "合约：QQQ 11/26 614C 入场价：1.12",
       "price": 63.0,
@@ -649,18 +681,20 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.941439",
+      "timestamp": "2026-02-06T22:40:04.575785",
       "raw_message": "1,5都出剩下的",
       "instruction_type": "CLOSE",
       "ticker": "QQQ",
       "option_type": "CALL",
       "strike": 614.0,
+      "expiry": "251126",
+      "symbol": "QQQ251126C614000.US",
       "source": "history",
       "depend_message": "合约：QQQ 11/26 614C 入场价：1.12",
       "price": 5.0,
       "message_id": "post_1CVWfYboVNhAp2HEdV9ExM"
     },
-    "status": "⚠️",
+    "status": "✅",
     "context_source": "history",
     "context_message": "合约：QQQ 11/26 614C 入场价：1.12"
   },
@@ -694,16 +728,18 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.941504",
+      "timestamp": "2026-02-06T22:40:04.575865",
       "raw_message": "合约：QQQ 12/02 623C 入场价：1.1",
       "instruction_type": "BUY",
       "ticker": "QQQ",
       "option_type": "CALL",
       "strike": 623.0,
+      "expiry": "251202",
+      "symbol": "QQQ251202C623000.US",
       "price": 1.1,
       "message_id": "post_1CVi31KgQeJz7tyvX6a5QZ"
     },
-    "status": "⚠️",
+    "status": "✅",
     "context_source": null,
     "context_message": null
   },
@@ -749,16 +785,18 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.941545",
+      "timestamp": "2026-02-06T22:40:04.575920",
       "raw_message": "合约：QQQ 12/04 626C 入场价：0.4",
       "instruction_type": "BUY",
       "ticker": "QQQ",
       "option_type": "CALL",
       "strike": 626.0,
+      "expiry": "251204",
+      "symbol": "QQQ251204C626000.US",
       "price": 0.4,
       "message_id": "post_1CVmpArVUYcPZvC3hAtx6t"
     },
-    "status": "⚠️",
+    "status": "✅",
     "context_source": null,
     "context_message": null
   },
@@ -775,12 +813,14 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.941567",
+      "timestamp": "2026-02-06T22:40:04.575958",
       "raw_message": "0.55出三分之一",
       "instruction_type": "SELL",
       "ticker": "QQQ",
       "option_type": "CALL",
       "strike": 626.0,
+      "expiry": "251204",
+      "symbol": "QQQ251204C626000.US",
       "source": "history",
       "depend_message": "合约：QQQ 12/04 626C 入场价：0.4",
       "price": 0.55,
@@ -805,12 +845,14 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.941608",
+      "timestamp": "2026-02-06T22:40:04.576014",
       "raw_message": "0.65出三分之一",
       "instruction_type": "SELL",
       "ticker": "QQQ",
       "option_type": "CALL",
       "strike": 626.0,
+      "expiry": "251204",
+      "symbol": "QQQ251204C626000.US",
       "source": "history",
       "depend_message": "合约：QQQ 12/04 626C 入场价：0.4",
       "price": 0.65,
@@ -836,18 +878,20 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.941655",
+      "timestamp": "2026-02-06T22:40:04.576075",
       "raw_message": "0.55剩下全出",
       "instruction_type": "CLOSE",
       "ticker": "QQQ",
       "option_type": "CALL",
       "strike": 626.0,
+      "expiry": "251204",
+      "symbol": "QQQ251204C626000.US",
       "source": "history",
       "depend_message": "合约：QQQ 12/04 626C 入场价：0.4",
       "price": 0.55,
       "message_id": "post_1CVmpKbfddhqZzFTuwSUuT"
     },
-    "status": "⚠️",
+    "status": "✅",
     "context_source": "history",
     "context_message": "合约：QQQ 12/04 626C 入场价：0.4"
   },
@@ -862,16 +906,18 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.941711",
+      "timestamp": "2026-02-06T22:40:04.576144",
       "raw_message": "合约：QQQ 12/17 610p 入场：1.2",
       "instruction_type": "BUY",
       "ticker": "QQQ",
       "option_type": "PUT",
       "strike": 610.0,
+      "expiry": "251217",
+      "symbol": "QQQ251217P610000.US",
       "price": 1.2,
       "message_id": "post_1CWCRrXsnASPVdrN3yB6X3"
     },
-    "status": "⚠️",
+    "status": "✅",
     "context_source": null,
     "context_message": null
   },
@@ -942,8 +988,21 @@
       "position": "first",
       "history": []
     },
-    "parsed": null,
-    "status": "❌"
+    "parsed": {
+      "timestamp": "2026-02-06T22:40:04.576254",
+      "raw_message": "合约： $QQQ 12月17日 608看涨期权 入场： 0.7",
+      "instruction_type": "BUY",
+      "ticker": "QQQ",
+      "option_type": "CALL",
+      "strike": 608.0,
+      "expiry": "251217",
+      "symbol": "QQQ251217C608000.US",
+      "price": 0.7,
+      "message_id": "post_1CWCYRq6M3NJoM8BTjFEFc"
+    },
+    "status": "✅",
+    "context_source": null,
+    "context_message": null
   },
   {
     "origin": {
@@ -958,20 +1017,22 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.941799",
+      "timestamp": "2026-02-06T22:40:04.576336",
       "raw_message": "小仓位止损设置在0.6",
       "instruction_type": "MODIFY",
       "ticker": "QQQ",
-      "option_type": "PUT",
-      "strike": 610.0,
-      "source": "前10条",
-      "depend_message": "合约：QQQ 12/17 610p 入场：1.2",
+      "option_type": "CALL",
+      "strike": 608.0,
+      "expiry": "251217",
+      "symbol": "QQQ251217C608000.US",
+      "source": "history",
+      "depend_message": "合约： $QQQ 12月17日 608看涨期权 入场： 0.7",
       "stop_loss_price": 0.6,
       "message_id": "post_1CWCYSVQtvXSZJpjdEKdov"
     },
-    "status": "⚠️",
-    "context_source": "前10条",
-    "context_message": "合约：QQQ 12/17 610p 入场：1.2"
+    "status": "✅",
+    "context_source": "history",
+    "context_message": "合约： $QQQ 12月17日 608看涨期权 入场： 0.7"
   },
   {
     "origin": {
@@ -987,20 +1048,22 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.941935",
+      "timestamp": "2026-02-06T22:40:04.576413",
       "raw_message": "0.85出三之一",
       "instruction_type": "CLOSE",
       "ticker": "QQQ",
-      "option_type": "PUT",
-      "strike": 610.0,
-      "source": "前10条",
-      "depend_message": "合约：QQQ 12/17 610p 入场：1.2",
+      "option_type": "CALL",
+      "strike": 608.0,
+      "expiry": "251217",
+      "symbol": "QQQ251217C608000.US",
+      "source": "history",
+      "depend_message": "合约： $QQQ 12月17日 608看涨期权 入场： 0.7",
       "price": 0.85,
       "message_id": "post_1CWCYV2fQe88NbWQqMzPUN"
     },
-    "status": "⚠️",
-    "context_source": "前10条",
-    "context_message": "合约：QQQ 12/17 610p 入场：1.2"
+    "status": "✅",
+    "context_source": "history",
+    "context_message": "合约： $QQQ 12月17日 608看涨期权 入场： 0.7"
   },
   {
     "origin": {
@@ -1017,20 +1080,22 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.942077",
+      "timestamp": "2026-02-06T22:40:04.576501",
       "raw_message": "0.9出三之一",
       "instruction_type": "CLOSE",
       "ticker": "QQQ",
-      "option_type": "PUT",
-      "strike": 610.0,
-      "source": "前10条",
-      "depend_message": "合约：QQQ 12/17 610p 入场：1.2",
+      "option_type": "CALL",
+      "strike": 608.0,
+      "expiry": "251217",
+      "symbol": "QQQ251217C608000.US",
+      "source": "history",
+      "depend_message": "合约： $QQQ 12月17日 608看涨期权 入场： 0.7",
       "price": 0.9,
       "message_id": "post_1CWCYZ9JiAxWNSuBRNGHWA"
     },
-    "status": "⚠️",
-    "context_source": "前10条",
-    "context_message": "合约：QQQ 12/17 610p 入场：1.2"
+    "status": "✅",
+    "context_source": "history",
+    "context_message": "合约： $QQQ 12月17日 608看涨期权 入场： 0.7"
   },
   {
     "origin": {
@@ -1043,20 +1108,22 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.942229",
+      "timestamp": "2026-02-06T22:40:04.576590",
       "raw_message": "0.9剩下都出",
       "instruction_type": "CLOSE",
       "ticker": "QQQ",
-      "option_type": "PUT",
-      "strike": 610.0,
+      "option_type": "CALL",
+      "strike": 608.0,
+      "expiry": "251217",
+      "symbol": "QQQ251217C608000.US",
       "source": "前10条",
-      "depend_message": "合约：QQQ 12/17 610p 入场：1.2",
+      "depend_message": "合约： $QQQ 12月17日 608看涨期权 入场： 0.7",
       "price": 0.9,
       "message_id": "post_1CWCYotNFaYxXeT3nVkF34"
     },
-    "status": "⚠️",
+    "status": "✅",
     "context_source": "前10条",
-    "context_message": "合约：QQQ 12/17 610p 入场：1.2"
+    "context_message": "合约： $QQQ 12月17日 608看涨期权 入场： 0.7"
   },
   {
     "origin": {
@@ -1069,16 +1136,18 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.942366",
+      "timestamp": "2026-02-06T22:40:04.576685",
       "raw_message": "合约：QQQ 12/18 605P 入场价：1",
       "instruction_type": "BUY",
       "ticker": "QQQ",
       "option_type": "PUT",
       "strike": 605.0,
+      "expiry": "251218",
+      "symbol": "QQQ251218P605000.US",
       "price": 1.0,
       "message_id": "post_1CWEKnUXCXwQcYoqitejzP"
     },
-    "status": "⚠️",
+    "status": "✅",
     "context_source": null,
     "context_message": null
   },
@@ -1111,12 +1180,14 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.942402",
+      "timestamp": "2026-02-06T22:40:04.576731",
       "raw_message": "1.42出一半",
       "instruction_type": "SELL",
       "ticker": "QQQ",
       "option_type": "PUT",
       "strike": 605.0,
+      "expiry": "251218",
+      "symbol": "QQQ251218P605000.US",
       "source": "history",
       "depend_message": "合约：QQQ 12/18 605P 入场价：1",
       "price": 1.42,
@@ -1142,12 +1213,14 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.942449",
+      "timestamp": "2026-02-06T22:40:04.576854",
       "raw_message": "1.52出剩下一半",
       "instruction_type": "SELL",
       "ticker": "QQQ",
       "option_type": "PUT",
       "strike": 605.0,
+      "expiry": "251218",
+      "symbol": "QQQ251218P605000.US",
       "source": "history",
       "depend_message": "合约：QQQ 12/18 605P 入场价：1",
       "price": 1.52,
@@ -1169,16 +1242,18 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.942501",
+      "timestamp": "2026-02-06T22:40:04.576934",
       "raw_message": "合约：QQQ 12/22 623C 入场价：0.6",
       "instruction_type": "BUY",
       "ticker": "QQQ",
       "option_type": "CALL",
       "strike": 623.0,
+      "expiry": "251222",
+      "symbol": "QQQ251222C623000.US",
       "price": 0.6,
       "message_id": "post_1CWMtUFszqTEEGAMXWFxfP"
     },
-    "status": "⚠️",
+    "status": "✅",
     "context_source": null,
     "context_message": null
   },
@@ -1195,12 +1270,14 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.942523",
+      "timestamp": "2026-02-06T22:40:04.576978",
       "raw_message": "0.85出三分之一",
       "instruction_type": "SELL",
       "ticker": "QQQ",
       "option_type": "CALL",
       "strike": 623.0,
+      "expiry": "251222",
+      "symbol": "QQQ251222C623000.US",
       "source": "history",
       "depend_message": "合约：QQQ 12/22 623C 入场价：0.6",
       "price": 0.85,
@@ -1225,18 +1302,20 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.942565",
+      "timestamp": "2026-02-06T22:40:04.577056",
       "raw_message": "0.6附近出剩下的",
       "instruction_type": "CLOSE",
       "ticker": "QQQ",
       "option_type": "CALL",
       "strike": 623.0,
+      "expiry": "251222",
+      "symbol": "QQQ251222C623000.US",
       "source": "history",
       "depend_message": "合约：QQQ 12/22 623C 入场价：0.6",
       "price": 0.6,
       "message_id": "post_1CWMtZEX9tvXUqc4PgAevx"
     },
-    "status": "⚠️",
+    "status": "✅",
     "context_source": "history",
     "context_message": "合约：QQQ 12/22 623C 入场价：0.6"
   },
@@ -1251,7 +1330,7 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.943646",
+      "timestamp": "2026-02-06T22:40:04.577175",
       "raw_message": "eose 1月9日13.5的call 0.45 可以小仓位 止损设置在-38%止损",
       "instruction_type": "BUY",
       "ticker": "EOSE",
@@ -1278,7 +1357,7 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.943786",
+      "timestamp": "2026-02-06T22:40:04.577232",
       "raw_message": "eose可以这波上去 0.51出个三分之一",
       "instruction_type": "SELL",
       "ticker": "EOSE",
@@ -1309,7 +1388,7 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.943859",
+      "timestamp": "2026-02-06T22:40:04.577322",
       "raw_message": "eose期权 可以这波上去 0.51出个三分之一 然后0.36在挂点接",
       "instruction_type": "SELL",
       "ticker": "EOSE",
@@ -1390,7 +1469,7 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.944005",
+      "timestamp": "2026-02-06T22:40:04.577529",
       "raw_message": "0.65出剩下eose期权 等机器在买入的通知",
       "instruction_type": "CLOSE",
       "ticker": "EOSE",
@@ -1446,7 +1525,7 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.944186",
+      "timestamp": "2026-02-06T22:40:04.577828",
       "raw_message": "没有通用设置就每个下好单子计算下 0.62*价格止损 1.2 1.4 1.6的价格止盈三次",
       "instruction_type": "MODIFY",
       "ticker": "EOSE",
@@ -1474,7 +1553,7 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.944406",
+      "timestamp": "2026-02-06T22:40:04.578156",
       "raw_message": "eose昨天没出的期权也是今天开盘 到0.65-0.7附近都出",
       "instruction_type": "CLOSE",
       "price": 0.7,
@@ -1495,7 +1574,7 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.944578",
+      "timestamp": "2026-02-06T22:40:04.578405",
       "raw_message": "$RIVN 1月9日 $20 call $.35-0.4 1/9/26 小仓位",
       "instruction_type": "BUY",
       "ticker": "RIVN",
@@ -1526,7 +1605,7 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.944606",
+      "timestamp": "2026-02-06T22:40:04.578447",
       "raw_message": "止损设置在0.17",
       "instruction_type": "MODIFY",
       "ticker": "RIVN",
@@ -1553,8 +1632,22 @@
       "position": "single",
       "history": []
     },
-    "parsed": null,
-    "status": "❌"
+    "parsed": {
+      "timestamp": "2026-02-06T22:40:04.578523",
+      "raw_message": "TSLA 460c 1/16 小仓位日内交易 4.10",
+      "instruction_type": "BUY",
+      "ticker": "TSLA",
+      "option_type": "CALL",
+      "strike": 460.0,
+      "expiry": "260116",
+      "symbol": "TSLA260116C460000.US",
+      "price": 4.1,
+      "position_size": "小仓位",
+      "message_id": "post_1CWrL4yHFqyq5sKHesYLLh"
+    },
+    "status": "✅",
+    "context_source": null,
+    "context_message": null
   },
   {
     "origin": {
@@ -1566,8 +1659,24 @@
       "position": "first",
       "history": []
     },
-    "parsed": null,
-    "status": "❌"
+    "parsed": {
+      "timestamp": "2026-02-06T22:40:04.578585",
+      "raw_message": "TSLA 在 4.40 减仓一半",
+      "instruction_type": "SELL",
+      "ticker": "TSLA",
+      "option_type": "CALL",
+      "strike": 460.0,
+      "expiry": "260116",
+      "symbol": "TSLA260116C460000.US",
+      "source": "前10条",
+      "depend_message": "TSLA 460c 1/16 小仓位日内交易 4.10",
+      "price": 4.4,
+      "sell_quantity": "1/2",
+      "message_id": "post_1CWrLNNFAQ8Vsg3dur8m24"
+    },
+    "status": "✅",
+    "context_source": "前10条",
+    "context_message": "TSLA 460c 1/16 小仓位日内交易 4.10"
   },
   {
     "origin": {
@@ -1582,22 +1691,22 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.944710",
+      "timestamp": "2026-02-06T22:40:04.578649",
       "raw_message": "剩下部分止损设置在4.0",
       "instruction_type": "MODIFY",
-      "ticker": "RIVN",
+      "ticker": "TSLA",
       "option_type": "CALL",
-      "strike": 20.0,
-      "expiry": "260109",
-      "symbol": "RIVN260109C020000.US",
+      "strike": 460.0,
+      "expiry": "260116",
+      "symbol": "TSLA260116C460000.US",
       "source": "前10条",
-      "depend_message": "$RIVN 1月9日 $20 call $.35-0.4 1/9/26 小仓位",
+      "depend_message": "TSLA 460c 1/16 小仓位日内交易 4.10",
       "stop_loss_price": 4.0,
       "message_id": "post_1CWrLQmsS5557Tn3ut6nSG"
     },
     "status": "✅",
     "context_source": "前10条",
-    "context_message": "$RIVN 1月9日 $20 call $.35-0.4 1/9/26 小仓位"
+    "context_message": "TSLA 460c 1/16 小仓位日内交易 4.10"
   },
   {
     "origin": {
@@ -1610,7 +1719,7 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.944853",
+      "timestamp": "2026-02-06T22:40:04.578770",
       "raw_message": "$RIVN 1月9日 $19.5 call $.3 1/9/26 把20的仓位的移动到19.5",
       "instruction_type": "BUY",
       "ticker": "RIVN",
@@ -1651,7 +1760,7 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.944894",
+      "timestamp": "2026-02-06T22:40:04.578824",
       "raw_message": "剩下仓位止损设置在4.4",
       "instruction_type": "MODIFY",
       "ticker": "RIVN",
@@ -1681,8 +1790,23 @@
         "剩下仓位止损设置在4.4"
       ]
     },
-    "parsed": null,
-    "status": "❌"
+    "parsed": {
+      "timestamp": "2026-02-06T22:40:04.579000",
+      "raw_message": "0.47 出rivn 19.5 call",
+      "instruction_type": "SELL",
+      "ticker": "RIVN",
+      "option_type": "CALL",
+      "strike": 19.5,
+      "expiry": "260109",
+      "symbol": "RIVN260109C019500.US",
+      "source": "前10条",
+      "depend_message": "$RIVN 1月9日 $19.5 call $.3 1/9/26 把20的仓位的移动到19.5",
+      "price": 0.47,
+      "message_id": "post_1CWrLuZo5AjAZGapx29vRA"
+    },
+    "status": "✅",
+    "context_source": "前10条",
+    "context_message": "$RIVN 1月9日 $19.5 call $.3 1/9/26 把20的仓位的移动到19.5"
   },
   {
     "origin": {
@@ -1699,7 +1823,7 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.945017",
+      "timestamp": "2026-02-06T22:40:04.579129",
       "raw_message": "0。28出一半rivn20call",
       "instruction_type": "SELL",
       "ticker": "RIVN",
@@ -1728,7 +1852,7 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.945181",
+      "timestamp": "2026-02-06T22:40:04.579299",
       "raw_message": "tsla剩下4分之一在跌破4.4都出了 等tsla 重新一轮的检测或者等新的",
       "instruction_type": "CLOSE",
       "ticker": "RIVN",
@@ -1755,8 +1879,23 @@
       "position": "single",
       "history": []
     },
-    "parsed": null,
-    "status": "❌"
+    "parsed": {
+      "timestamp": "2026-02-06T22:40:04.579455",
+      "raw_message": "0.4也减点 rivn 20call 在拿点博价内",
+      "instruction_type": "SELL",
+      "ticker": "RIVN",
+      "option_type": "CALL",
+      "strike": 20.0,
+      "expiry": "260109",
+      "symbol": "RIVN260109C020000.US",
+      "source": "前10条",
+      "depend_message": "$RIVN 1月9日 $19.5 call $.3 1/9/26 把20的仓位的移动到19.5",
+      "price": 0.4,
+      "message_id": "post_1CWrXK64TaUGARsoy9Phu4"
+    },
+    "status": "✅",
+    "context_source": "前10条",
+    "context_message": "$RIVN 1月9日 $19.5 call $.3 1/9/26 把20的仓位的移动到19.5"
   },
   {
     "origin": {
@@ -1769,7 +1908,7 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.945337",
+      "timestamp": "2026-02-06T22:40:04.579611",
       "raw_message": "0.39出 剩下的rivn今天应该到不了价内 明天再开新的",
       "instruction_type": "CLOSE",
       "ticker": "RIVN",
@@ -1797,15 +1936,19 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.945519",
+      "timestamp": "2026-02-06T22:40:04.579778",
       "raw_message": "iren 1月9日 47 call 1.1-1.2 小仓位",
       "instruction_type": "BUY",
       "ticker": "IREN",
-      "option_type": "CALL",
+      "option_type": "PUT",
       "strike": 47.0,
       "expiry": "260109",
-      "symbol": "IREN260109C047000.US",
-      "price": 1.1,
+      "symbol": "IREN260109P047000.US",
+      "price": 1.15,
+      "price_range": [
+        1.1,
+        1.2
+      ],
       "position_size": "小仓位",
       "message_id": "post_1CWtD2ig9B83wJJHEodjBz"
     },
@@ -1824,14 +1967,14 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.945568",
+      "timestamp": "2026-02-06T22:40:04.579813",
       "raw_message": "iren 1月9日 46.5 call 1.1 小仓位",
       "instruction_type": "BUY",
       "ticker": "IREN",
-      "option_type": "CALL",
+      "option_type": "PUT",
       "strike": 46.5,
       "expiry": "260109",
-      "symbol": "IREN260109C046500.US",
+      "symbol": "IREN260109P046500.US",
       "price": 1.1,
       "position_size": "小仓位",
       "message_id": "post_1CWtE6FQiWxrpBJhW7iCc8"
@@ -1853,14 +1996,14 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.945631",
+      "timestamp": "2026-02-06T22:40:04.579857",
       "raw_message": "47 call到1.1出",
       "instruction_type": "CLOSE",
       "ticker": "IREN",
-      "option_type": "CALL",
+      "option_type": "PUT",
       "strike": 46.5,
       "expiry": "260109",
-      "symbol": "IREN260109C046500.US",
+      "symbol": "IREN260109P046500.US",
       "source": "history",
       "depend_message": "iren 1月9日 46.5 call 1.1 小仓位",
       "price": 1.1,
@@ -1922,14 +2065,14 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.945807",
+      "timestamp": "2026-02-06T22:40:04.580001",
       "raw_message": "1.3出一半 46的call",
       "instruction_type": "SELL",
       "ticker": "IREN",
-      "option_type": "CALL",
+      "option_type": "PUT",
       "strike": 46.5,
       "expiry": "260109",
-      "symbol": "IREN260109C046500.US",
+      "symbol": "IREN260109P046500.US",
       "source": "前10条",
       "depend_message": "iren 1月9日 46.5 call 1.1 小仓位",
       "price": 1.3,
@@ -2006,8 +2149,27 @@
         "iren 快进入46价内了 可以剩下的1.6-1。7分批出"
       ]
     },
-    "parsed": null,
-    "status": "❌"
+    "parsed": {
+      "timestamp": "2026-02-06T22:40:04.580269",
+      "raw_message": "iren 46 call 快进入46价内了 可以剩下的1.6-1。7分批出",
+      "instruction_type": "CLOSE",
+      "ticker": "IREN",
+      "option_type": "CALL",
+      "strike": 46.0,
+      "expiry": "260109",
+      "symbol": "IREN260109C046000.US",
+      "source": "前10条",
+      "depend_message": "iren 1月9日 46.5 call 1.1 小仓位",
+      "price": 1.65,
+      "price_range": [
+        1.6,
+        1.7
+      ],
+      "message_id": "post_1CWtMh5YZacXY8jrBGdaLz"
+    },
+    "status": "✅",
+    "context_source": "前10条",
+    "context_message": "iren 1月9日 46.5 call 1.1 小仓位"
   },
   {
     "origin": {
@@ -2064,7 +2226,7 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.946077",
+      "timestamp": "2026-02-06T22:40:04.580587",
       "raw_message": "LYFT 19.5c 1/23 0.58-0.62 日内交易小仓位",
       "instruction_type": "BUY",
       "ticker": "LYFT",
@@ -2093,7 +2255,7 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.946116",
+      "timestamp": "2026-02-06T22:40:04.580626",
       "raw_message": "CMCSA 30c 2/20 0.83-0.85 小仓位日内交易",
       "instruction_type": "BUY",
       "ticker": "CMCSA",
@@ -2120,7 +2282,7 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.946146",
+      "timestamp": "2026-02-06T22:40:04.580665",
       "raw_message": "0.7出一半 lyft期权 进入价内",
       "instruction_type": "SELL",
       "ticker": "LYFT",
@@ -2151,7 +2313,7 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.946216",
+      "timestamp": "2026-02-06T22:40:04.580736",
       "raw_message": "0.7出剩下一半lyft",
       "instruction_type": "SELL",
       "ticker": "LYFT",
@@ -2180,7 +2342,7 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.946302",
+      "timestamp": "2026-02-06T22:40:04.580831",
       "raw_message": "0.92出三分之一cmcsa期权",
       "instruction_type": "SELL",
       "ticker": "CMCSA",
@@ -2209,7 +2371,7 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.946369",
+      "timestamp": "2026-02-06T22:40:04.580912",
       "raw_message": "0.93也出三分之一cmcsa期权",
       "instruction_type": "SELL",
       "ticker": "CMCSA",
@@ -2250,8 +2412,26 @@
       "position": "first",
       "history": []
     },
-    "parsed": null,
-    "status": "❌"
+    "parsed": {
+      "timestamp": "2026-02-06T22:40:04.581027",
+      "raw_message": "$XOM 1/16 $127 call 0.8-0.85 小仓位",
+      "instruction_type": "BUY",
+      "ticker": "XOM",
+      "option_type": "CALL",
+      "strike": 127.0,
+      "expiry": "260116",
+      "symbol": "XOM260116C127000.US",
+      "price": 0.825,
+      "price_range": [
+        0.8,
+        0.85
+      ],
+      "position_size": "小仓位",
+      "message_id": "post_1CX5ZZ8aEzHphkLQbenqcY"
+    },
+    "status": "✅",
+    "context_source": null,
+    "context_message": null
   },
   {
     "origin": {
@@ -2266,17 +2446,23 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.946493",
+      "timestamp": "2026-02-06T22:40:04.581066",
       "raw_message": "1.06出三分之一xom",
       "instruction_type": "SELL",
       "ticker": "XOM",
+      "option_type": "CALL",
+      "strike": 127.0,
+      "expiry": "260116",
+      "symbol": "XOM260116C127000.US",
+      "source": "history",
+      "depend_message": "$XOM 1/16 $127 call 0.8-0.85 小仓位",
       "price": 1.06,
       "sell_quantity": "1/3",
       "message_id": "post_1CX5ZfFEbrFMh59pgwMNTS"
     },
     "status": "✅",
-    "context_source": null,
-    "context_message": null
+    "context_source": "history",
+    "context_message": "$XOM 1/16 $127 call 0.8-0.85 小仓位"
   },
   {
     "origin": {
@@ -2289,17 +2475,23 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.946681",
+      "timestamp": "2026-02-06T22:40:04.581130",
       "raw_message": "1.0出三分之一xom",
       "instruction_type": "SELL",
       "ticker": "XOM",
+      "option_type": "CALL",
+      "strike": 127.0,
+      "expiry": "260116",
+      "symbol": "XOM260116C127000.US",
+      "source": "前10条",
+      "depend_message": "$XOM 1/16 $127 call 0.8-0.85 小仓位",
       "price": 1.0,
       "sell_quantity": "1/3",
       "message_id": "post_1CX5ZrnJnZSV1KtMfhzaGp"
     },
     "status": "✅",
-    "context_source": null,
-    "context_message": null
+    "context_source": "前10条",
+    "context_message": "$XOM 1/16 $127 call 0.8-0.85 小仓位"
   },
   {
     "origin": {
@@ -2312,16 +2504,22 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.946841",
+      "timestamp": "2026-02-06T22:40:04.581209",
       "raw_message": "0.92出剩下的xom等下找机会平移往下买",
       "instruction_type": "CLOSE",
       "ticker": "XOM",
+      "option_type": "CALL",
+      "strike": 127.0,
+      "expiry": "260116",
+      "symbol": "XOM260116C127000.US",
+      "source": "前10条",
+      "depend_message": "$XOM 1/16 $127 call 0.8-0.85 小仓位",
       "price": 0.92,
       "message_id": "post_1CX5aKrvWeMkkTN5vyYjWu"
     },
-    "status": "⚠️",
-    "context_source": null,
-    "context_message": null
+    "status": "✅",
+    "context_source": "前10条",
+    "context_message": "$XOM 1/16 $127 call 0.8-0.85 小仓位"
   },
   {
     "origin": {
@@ -2347,7 +2545,7 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.947033",
+      "timestamp": "2026-02-06T22:40:04.581302",
       "raw_message": "MSFT 480c 1/23 2.70 日内小仓位",
       "instruction_type": "BUY",
       "ticker": "MSFT",
@@ -2374,7 +2572,7 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.947062",
+      "timestamp": "2026-02-06T22:40:04.581340",
       "raw_message": "2.83出三分之一msft",
       "instruction_type": "SELL",
       "ticker": "MSFT",
@@ -2403,7 +2601,7 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.947120",
+      "timestamp": "2026-02-06T22:40:04.581402",
       "raw_message": "2.7出剩下的三分之二msft期权指数上涨没怎么跟随",
       "instruction_type": "CLOSE",
       "ticker": "MSFT",
@@ -2431,14 +2629,19 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.947178",
+      "timestamp": "2026-02-06T22:40:04.581471",
       "raw_message": "INTC - $52 CALLS 1月30 1.25 止损在1.00 小仓位",
-      "instruction_type": "MODIFY",
+      "instruction_type": "BUY",
       "ticker": "INTC",
-      "stop_loss_price": 1.0,
+      "option_type": "CALL",
+      "strike": 52.0,
+      "expiry": "260130",
+      "symbol": "INTC260130C052000.US",
+      "price": 1.25,
+      "position_size": "小仓位",
       "message_id": "post_1CXJoN1rEeMHxAcVTfbavU"
     },
-    "status": "⚠️",
+    "status": "✅",
     "context_source": null,
     "context_message": null
   },
@@ -2468,23 +2671,23 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.947323",
+      "timestamp": "2026-02-06T22:40:04.581511",
       "raw_message": "1.4出三分之一",
       "instruction_type": "SELL",
-      "ticker": "MSFT",
+      "ticker": "INTC",
       "option_type": "CALL",
-      "strike": 480.0,
-      "expiry": "260123",
-      "symbol": "MSFT260123C480000.US",
-      "source": "前10条",
-      "depend_message": "MSFT 480c 1/23 2.70 日内小仓位",
+      "strike": 52.0,
+      "expiry": "260130",
+      "symbol": "INTC260130C052000.US",
+      "source": "refer",
+      "depend_message": "INTC - $52 CALLS 1月30 1.25 止损在1.00 小仓位",
       "price": 1.4,
       "sell_quantity": "1/3",
       "message_id": "post_1CXJoW2WKYGs6oQui9a9Mu"
     },
     "status": "✅",
-    "context_source": "前10条",
-    "context_message": "MSFT 480c 1/23 2.70 日内小仓位"
+    "context_source": "refer",
+    "context_message": "INTC - $52 CALLS 1月30 1.25 止损在1.00 小仓位"
   },
   {
     "origin": {
@@ -2497,16 +2700,22 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.947415",
+      "timestamp": "2026-02-06T22:40:04.581575",
       "raw_message": "1.35出剩下的intc",
       "instruction_type": "CLOSE",
       "ticker": "INTC",
+      "option_type": "CALL",
+      "strike": 52.0,
+      "expiry": "260130",
+      "symbol": "INTC260130C052000.US",
+      "source": "前10条",
+      "depend_message": "INTC - $52 CALLS 1月30 1.25 止损在1.00 小仓位",
       "price": 1.35,
       "message_id": "post_1CXJogBJiZGbLPfuLPUiQE"
     },
-    "status": "⚠️",
-    "context_source": null,
-    "context_message": null
+    "status": "✅",
+    "context_source": "前10条",
+    "context_message": "INTC - $52 CALLS 1月30 1.25 止损在1.00 小仓位"
   },
   {
     "origin": {
@@ -2519,7 +2728,7 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.947522",
+      "timestamp": "2026-02-06T22:40:04.581643",
       "raw_message": "INTC - $53 CALLS 1月30日 $1.30 小仓位",
       "instruction_type": "BUY",
       "ticker": "INTC",
@@ -2546,7 +2755,7 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.947548",
+      "timestamp": "2026-02-06T22:40:04.581674",
       "raw_message": "止损设置1.05 日内",
       "instruction_type": "MODIFY",
       "ticker": "INTC",
@@ -2573,8 +2782,24 @@
       "position": "single",
       "history": []
     },
-    "parsed": null,
-    "status": "❌"
+    "parsed": {
+      "timestamp": "2026-02-06T22:40:04.581735",
+      "raw_message": "1.5止盈一半intc",
+      "instruction_type": "SELL",
+      "ticker": "INTC",
+      "option_type": "CALL",
+      "strike": 53.0,
+      "expiry": "260130",
+      "symbol": "INTC260130C053000.US",
+      "source": "前10条",
+      "depend_message": "INTC - $53 CALLS 1月30日 $1.30 小仓位",
+      "price": 1.5,
+      "sell_quantity": "1/2",
+      "message_id": "post_1CXJpnMgijkBeD1NJHta7M"
+    },
+    "status": "✅",
+    "context_source": "前10条",
+    "context_message": "INTC - $53 CALLS 1月30日 $1.30 小仓位"
   },
   {
     "origin": {
@@ -2587,7 +2812,7 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.947609",
+      "timestamp": "2026-02-06T22:40:04.581801",
       "raw_message": "1.54出剩下的intc",
       "instruction_type": "CLOSE",
       "ticker": "INTC",
@@ -2615,14 +2840,14 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.947675",
+      "timestamp": "2026-02-06T22:40:04.581885",
       "raw_message": "SPY - $680 CALLS 今天 $2.3",
       "instruction_type": "BUY",
       "ticker": "SPY",
       "option_type": "CALL",
       "strike": 680.0,
-      "expiry": "今天",
-      "symbol": "SPY",
+      "expiry": "260121",
+      "symbol": "SPY260121C680000.US",
       "price": 2.3,
       "message_id": "post_1CXLiBfNJn4x7zYUUmcPpM"
     },
@@ -2643,14 +2868,14 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.947740",
+      "timestamp": "2026-02-06T22:40:04.581923",
       "raw_message": "小仓位 止损在1.8",
       "instruction_type": "MODIFY",
       "ticker": "SPY",
       "option_type": "CALL",
       "strike": 680.0,
-      "expiry": "今天",
-      "symbol": "SPY",
+      "expiry": "260121",
+      "symbol": "SPY260121C680000.US",
       "source": "history",
       "depend_message": "SPY - $680 CALLS 今天 $2.3",
       "stop_loss_price": 1.8,
@@ -2674,14 +2899,14 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.947792",
+      "timestamp": "2026-02-06T22:40:04.581972",
       "raw_message": "2.6出一半",
       "instruction_type": "SELL",
       "ticker": "SPY",
       "option_type": "CALL",
       "strike": 680.0,
-      "expiry": "今天",
-      "symbol": "SPY",
+      "expiry": "260121",
+      "symbol": "SPY260121C680000.US",
       "source": "history",
       "depend_message": "SPY - $680 CALLS 今天 $2.3",
       "price": 2.6,
@@ -2707,14 +2932,14 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.947852",
+      "timestamp": "2026-02-06T22:40:04.582030",
       "raw_message": "2.75出剩下一半",
       "instruction_type": "SELL",
       "ticker": "SPY",
       "option_type": "CALL",
       "strike": 680.0,
-      "expiry": "今天",
-      "symbol": "SPY",
+      "expiry": "260121",
+      "symbol": "SPY260121C680000.US",
       "source": "history",
       "depend_message": "SPY - $680 CALLS 今天 $2.3",
       "price": 2.75,
@@ -2736,7 +2961,7 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.947928",
+      "timestamp": "2026-02-06T22:40:04.582105",
       "raw_message": "AMZN 250c 2/20 4.00 小仓位",
       "instruction_type": "BUY",
       "ticker": "AMZN",
@@ -2763,7 +2988,7 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.947954",
+      "timestamp": "2026-02-06T22:40:04.582139",
       "raw_message": "日内止损在3.7",
       "instruction_type": "MODIFY",
       "ticker": "AMZN",
@@ -2793,7 +3018,7 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.948018",
+      "timestamp": "2026-02-06T22:40:04.582205",
       "raw_message": "$IREN 1月23 $58 calls 1.10",
       "instruction_type": "BUY",
       "ticker": "IREN",
@@ -2819,7 +3044,7 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.948045",
+      "timestamp": "2026-02-06T22:40:04.582288",
       "raw_message": "小仓位日内 止损在0.75",
       "instruction_type": "MODIFY",
       "ticker": "IREN",
@@ -2849,7 +3074,7 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.948102",
+      "timestamp": "2026-02-06T22:40:04.582375",
       "raw_message": "1.25出三分之一 iren",
       "instruction_type": "SELL",
       "ticker": "IREN",
@@ -2878,7 +3103,7 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.948173",
+      "timestamp": "2026-02-06T22:40:04.582459",
       "raw_message": "iren 1.45出三分之一",
       "instruction_type": "SELL",
       "ticker": "IREN",
@@ -2925,7 +3150,7 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.948260",
+      "timestamp": "2026-02-06T22:40:04.582564",
       "raw_message": "1.43 iren 全出 止盈了",
       "instruction_type": "CLOSE",
       "ticker": "IREN",
@@ -2956,8 +3181,21 @@
         "1.43 iren 全出 止盈了"
       ]
     },
-    "parsed": null,
-    "status": "❌"
+    "parsed": {
+      "timestamp": "2026-02-06T22:40:04.582709",
+      "raw_message": "APLD - $40 CALLS下周的 $1.28",
+      "instruction_type": "BUY",
+      "ticker": "APLD",
+      "option_type": "CALL",
+      "strike": 40.0,
+      "expiry": "260130",
+      "symbol": "APLD260130C040000.US",
+      "price": 1.28,
+      "message_id": "post_1CXLjGZqMPsPVHLcyzF1DZ"
+    },
+    "status": "✅",
+    "context_source": null,
+    "context_message": null
   },
   {
     "origin": {
@@ -2985,23 +3223,23 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.948415",
+      "timestamp": "2026-02-06T22:40:04.582765",
       "raw_message": "1.42出三分之一",
       "instruction_type": "SELL",
-      "ticker": "IREN",
+      "ticker": "APLD",
       "option_type": "CALL",
-      "strike": 58.0,
-      "expiry": "260123",
-      "symbol": "IREN260123C058000.US",
-      "source": "前10条",
-      "depend_message": "$IREN 1月23 $58 calls 1.10",
+      "strike": 40.0,
+      "expiry": "260130",
+      "symbol": "APLD260130C040000.US",
+      "source": "refer",
+      "depend_message": "APLD - $40 CALLS下周的 $1.28",
       "price": 1.42,
       "sell_quantity": "1/3",
       "message_id": "post_1CXLjPeTEv4X6tXdo6Gwro"
     },
     "status": "✅",
-    "context_source": "前10条",
-    "context_message": "$IREN 1月23 $58 calls 1.10"
+    "context_source": "refer",
+    "context_message": "APLD - $40 CALLS下周的 $1.28"
   },
   {
     "origin": {
@@ -3017,17 +3255,23 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.948590",
+      "timestamp": "2026-02-06T22:40:04.582844",
       "raw_message": "1.52出三分之一 apld call",
       "instruction_type": "SELL",
       "ticker": "APLD",
+      "option_type": "CALL",
+      "strike": 40.0,
+      "expiry": "260130",
+      "symbol": "APLD260130C040000.US",
+      "source": "refer",
+      "depend_message": "APLD - $40 CALLS下周的 $1.28",
       "price": 1.52,
       "sell_quantity": "1/3",
       "message_id": "post_1CXLjWKaWfh31aGYJf56n6"
     },
     "status": "✅",
-    "context_source": null,
-    "context_message": null
+    "context_source": "refer",
+    "context_message": "APLD - $40 CALLS下周的 $1.28"
   },
   {
     "origin": {
@@ -3044,16 +3288,22 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.948768",
+      "timestamp": "2026-02-06T22:40:04.582941",
       "raw_message": "1.47出剩下的apld call",
       "instruction_type": "CLOSE",
       "ticker": "APLD",
+      "option_type": "CALL",
+      "strike": 40.0,
+      "expiry": "260130",
+      "symbol": "APLD260130C040000.US",
+      "source": "refer",
+      "depend_message": "APLD - $40 CALLS下周的 $1.28",
       "price": 1.47,
       "message_id": "post_1CXLjdk6qZcSm7QoLcUv88"
     },
-    "status": "⚠️",
-    "context_source": null,
-    "context_message": null
+    "status": "✅",
+    "context_source": "refer",
+    "context_message": "APLD - $40 CALLS下周的 $1.28"
   },
   {
     "origin": {
@@ -3065,8 +3315,21 @@
       "position": "single",
       "history": []
     },
-    "parsed": null,
-    "status": "❌"
+    "parsed": {
+      "timestamp": "2026-02-06T22:40:04.583112",
+      "raw_message": "AMD - $260 CALLS 下周的$4.45",
+      "instruction_type": "BUY",
+      "ticker": "AMD",
+      "option_type": "CALL",
+      "strike": 260.0,
+      "expiry": "260130",
+      "symbol": "AMD260130C260000.US",
+      "price": 4.45,
+      "message_id": "post_1CXLjsMxteVxwMfMPHEbwq"
+    },
+    "status": "✅",
+    "context_source": null,
+    "context_message": null
   },
   {
     "origin": {
@@ -3079,15 +3342,22 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.948978",
+      "timestamp": "2026-02-06T22:40:04.583165",
       "raw_message": "小仓位 日内 止损在3.85",
       "instruction_type": "MODIFY",
+      "ticker": "AMD",
+      "option_type": "CALL",
+      "strike": 260.0,
+      "expiry": "260130",
+      "symbol": "AMD260130C260000.US",
+      "source": "refer",
+      "depend_message": "AMD - $260 CALLS 下周的$4.45",
       "stop_loss_price": 3.85,
       "message_id": "post_1CXLjwqDKLx7QeBor1avvc"
     },
-    "status": "⚠️",
-    "context_source": null,
-    "context_message": null
+    "status": "✅",
+    "context_source": "refer",
+    "context_message": "AMD - $260 CALLS 下周的$4.45"
   },
   {
     "origin": {
@@ -3102,15 +3372,22 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.949148",
+      "timestamp": "2026-02-06T22:40:04.583231",
       "raw_message": "4.75全出",
       "instruction_type": "CLOSE",
+      "ticker": "AMD",
+      "option_type": "CALL",
+      "strike": 260.0,
+      "expiry": "260130",
+      "symbol": "AMD260130C260000.US",
+      "source": "refer",
+      "depend_message": "AMD - $260 CALLS 下周的$4.45",
       "price": 4.75,
       "message_id": "post_1CXLk38rA1sNPYRwBRmWSG"
     },
-    "status": "⚠️",
-    "context_source": null,
-    "context_message": null
+    "status": "✅",
+    "context_source": "refer",
+    "context_message": "AMD - $260 CALLS 下周的$4.45"
   },
   {
     "origin": {
@@ -3126,16 +3403,22 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.949397",
+      "timestamp": "2026-02-06T22:40:04.583300",
       "raw_message": "4.75 amd全出",
       "instruction_type": "CLOSE",
       "ticker": "AMD",
+      "option_type": "CALL",
+      "strike": 260.0,
+      "expiry": "260130",
+      "symbol": "AMD260130C260000.US",
+      "source": "refer",
+      "depend_message": "AMD - $260 CALLS 下周的$4.45",
       "price": 4.75,
       "message_id": "post_1CXLk3wgpuhdLv9Gbx3q9m"
     },
-    "status": "⚠️",
-    "context_source": null,
-    "context_message": null
+    "status": "✅",
+    "context_source": "refer",
+    "context_message": "AMD - $260 CALLS 下周的$4.45"
   },
   {
     "origin": {
@@ -3147,8 +3430,22 @@
       "position": "single",
       "history": []
     },
-    "parsed": null,
-    "status": "❌"
+    "parsed": {
+      "timestamp": "2026-02-06T22:40:04.583386",
+      "raw_message": "4.15-4.2出 amzn亚马逊call 有点慢",
+      "instruction_type": "SELL",
+      "ticker": "AMZN",
+      "option_type": "CALL",
+      "price": 4.175000000000001,
+      "price_range": [
+        4.15,
+        4.2
+      ],
+      "message_id": "post_1CXLmc9uhXxpxuD9Eca7Ai"
+    },
+    "status": "✅",
+    "context_source": null,
+    "context_message": null
   },
   {
     "origin": {
@@ -3161,14 +3458,14 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.949654",
+      "timestamp": "2026-02-06T22:40:04.583540",
       "raw_message": "GILD - $130 CALLS 这周 1.5-1.60",
       "instruction_type": "BUY",
       "ticker": "GILD",
       "option_type": "CALL",
       "strike": 130.0,
-      "expiry": "这周",
-      "symbol": "GILD",
+      "expiry": "260123",
+      "symbol": "GILD260123C130000.US",
       "price": 1.55,
       "price_range": [
         1.5,
@@ -3191,14 +3488,14 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.949696",
+      "timestamp": "2026-02-06T22:40:04.583579",
       "raw_message": "小仓位 止损 在 1.3",
       "instruction_type": "MODIFY",
       "ticker": "GILD",
       "option_type": "CALL",
       "strike": 130.0,
-      "expiry": "这周",
-      "symbol": "GILD",
+      "expiry": "260123",
+      "symbol": "GILD260123C130000.US",
       "source": "refer",
       "depend_message": "GILD - $130 CALLS 这周 1.5-1.60",
       "stop_loss_price": 1.3,
@@ -3221,14 +3518,14 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.949764",
+      "timestamp": "2026-02-06T22:40:04.583636",
       "raw_message": "1.9附近出三分之一",
       "instruction_type": "SELL",
       "ticker": "GILD",
       "option_type": "CALL",
       "strike": 130.0,
-      "expiry": "这周",
-      "symbol": "GILD",
+      "expiry": "260123",
+      "symbol": "GILD260123C130000.US",
       "source": "refer",
       "depend_message": "GILD - $130 CALLS 这周 1.5-1.60",
       "price": 1.9,
@@ -3253,14 +3550,14 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.949829",
+      "timestamp": "2026-02-06T22:40:04.583699",
       "raw_message": "2.23出三分之一",
       "instruction_type": "SELL",
       "ticker": "GILD",
       "option_type": "CALL",
       "strike": 130.0,
-      "expiry": "这周",
-      "symbol": "GILD",
+      "expiry": "260123",
+      "symbol": "GILD260123C130000.US",
       "source": "refer",
       "depend_message": "GILD - $130 CALLS 这周 1.5-1.60",
       "price": 2.23,
@@ -3286,14 +3583,14 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.949898",
+      "timestamp": "2026-02-06T22:40:04.583769",
       "raw_message": "2.3附近都出",
       "instruction_type": "CLOSE",
       "ticker": "GILD",
       "option_type": "CALL",
       "strike": 130.0,
-      "expiry": "这周",
-      "symbol": "GILD",
+      "expiry": "260123",
+      "symbol": "GILD260123C130000.US",
       "source": "refer",
       "depend_message": "GILD - $130 CALLS 这周 1.5-1.60",
       "price": 2.3,
@@ -3319,14 +3616,14 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.949985",
+      "timestamp": "2026-02-06T22:40:04.583852",
       "raw_message": "$EOSE call 本周 $18 0.5",
       "instruction_type": "BUY",
       "ticker": "EOSE",
       "option_type": "CALL",
       "strike": 18.0,
-      "expiry": "本周",
-      "symbol": "EOSE",
+      "expiry": "260123",
+      "symbol": "EOSE260123C018000.US",
       "price": 0.5,
       "message_id": "post_1CXNbUMakmSCcQD2NCbgn4"
     },
@@ -3345,14 +3642,14 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.950018",
+      "timestamp": "2026-02-06T22:40:04.583885",
       "raw_message": "小仓位 止损 0.35",
       "instruction_type": "MODIFY",
       "ticker": "EOSE",
       "option_type": "CALL",
       "strike": 18.0,
-      "expiry": "本周",
-      "symbol": "EOSE",
+      "expiry": "260123",
+      "symbol": "EOSE260123C018000.US",
       "source": "refer",
       "depend_message": "$EOSE call 本周 $18 0.5",
       "stop_loss_price": 0.35,
@@ -3375,14 +3672,14 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.950072",
+      "timestamp": "2026-02-06T22:40:04.583941",
       "raw_message": "0.75出三分之一",
       "instruction_type": "SELL",
       "ticker": "EOSE",
       "option_type": "CALL",
       "strike": 18.0,
-      "expiry": "本周",
-      "symbol": "EOSE",
+      "expiry": "260123",
+      "symbol": "EOSE260123C018000.US",
       "source": "refer",
       "depend_message": "$EOSE call 本周 $18 0.5",
       "price": 0.75,
@@ -3407,14 +3704,14 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.950129",
+      "timestamp": "2026-02-06T22:40:04.584008",
       "raw_message": "0.75附近出剩下的",
       "instruction_type": "CLOSE",
       "ticker": "EOSE",
       "option_type": "CALL",
       "strike": 18.0,
-      "expiry": "本周",
-      "symbol": "EOSE",
+      "expiry": "260123",
+      "symbol": "EOSE260123C018000.US",
       "source": "refer",
       "depend_message": "$EOSE call 本周 $18 0.5",
       "price": 0.75,
@@ -3435,14 +3732,14 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.950197",
+      "timestamp": "2026-02-06T22:40:04.584089",
       "raw_message": "gild价内溢价了 还有的也2.5-2.6都出",
       "instruction_type": "CLOSE",
       "ticker": "EOSE",
       "option_type": "CALL",
       "strike": 18.0,
-      "expiry": "本周",
-      "symbol": "EOSE",
+      "expiry": "260123",
+      "symbol": "EOSE260123C018000.US",
       "source": "前10条",
       "depend_message": "$EOSE call 本周 $18 0.5",
       "price": 2.6,
@@ -3463,7 +3760,7 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.950278",
+      "timestamp": "2026-02-06T22:40:04.584177",
       "raw_message": "NVDA 190c 1/30 2-2.1 小仓位",
       "instruction_type": "BUY",
       "ticker": "NVDA",
@@ -3490,7 +3787,7 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.950307",
+      "timestamp": "2026-02-06T22:40:04.584223",
       "raw_message": "止损在1.74",
       "instruction_type": "MODIFY",
       "ticker": "NVDA",
@@ -3518,7 +3815,7 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.950363",
+      "timestamp": "2026-02-06T22:40:04.584301",
       "raw_message": "NVDA 2.25 出三分之一",
       "instruction_type": "SELL",
       "ticker": "NVDA",
@@ -3547,7 +3844,7 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.950427",
+      "timestamp": "2026-02-06T22:40:04.584386",
       "raw_message": "NVDA 2.32 出三分之一",
       "instruction_type": "SELL",
       "ticker": "NVDA",
@@ -3578,7 +3875,7 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.950491",
+      "timestamp": "2026-02-06T22:40:04.584467",
       "raw_message": "止损设置上移到2.16",
       "instruction_type": "MODIFY",
       "ticker": "NVDA",
@@ -3606,7 +3903,7 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.950585",
+      "timestamp": "2026-02-06T22:40:04.584607",
       "raw_message": "2.45也在剩下减一半",
       "instruction_type": "SELL",
       "ticker": "NVDA",
@@ -3637,7 +3934,7 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.950665",
+      "timestamp": "2026-02-06T22:40:04.584713",
       "raw_message": "剩下看转弯往下时候都出 止损上移到2.25",
       "instruction_type": "MODIFY",
       "ticker": "NVDA",
@@ -3664,8 +3961,23 @@
       "position": "single",
       "history": []
     },
-    "parsed": null,
-    "status": "❌"
+    "parsed": {
+      "timestamp": "2026-02-06T22:40:04.584856",
+      "raw_message": "nvda剩下部分也2.45附近出",
+      "instruction_type": "CLOSE",
+      "ticker": "NVDA",
+      "option_type": "CALL",
+      "strike": 190.0,
+      "expiry": "260130",
+      "symbol": "NVDA260130C190000.US",
+      "source": "前10条",
+      "depend_message": "NVDA 190c 1/30 2-2.1 小仓位",
+      "price": 2.45,
+      "message_id": "post_1CXNmCYpbYheKjRX4MLWLE"
+    },
+    "status": "✅",
+    "context_source": "前10条",
+    "context_message": "NVDA 190c 1/30 2-2.1 小仓位"
   },
   {
     "origin": {
@@ -3678,14 +3990,14 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.950802",
+      "timestamp": "2026-02-06T22:40:04.584980",
       "raw_message": "GOOG - $345 CALLS本周 $1.70",
       "instruction_type": "BUY",
       "ticker": "GOOG",
       "option_type": "CALL",
       "strike": 345.0,
-      "expiry": "本周",
-      "symbol": "GOOG",
+      "expiry": "260130",
+      "symbol": "GOOG260130C345000.US",
       "price": 1.7,
       "message_id": "post_1CXY5kKqb2THwXbMkB1Uaf"
     },
@@ -3706,14 +4018,14 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.950828",
+      "timestamp": "2026-02-06T22:40:04.585019",
       "raw_message": "小仓位 止损1.35",
       "instruction_type": "MODIFY",
       "ticker": "GOOG",
       "option_type": "CALL",
       "strike": 345.0,
-      "expiry": "本周",
-      "symbol": "GOOG",
+      "expiry": "260130",
+      "symbol": "GOOG260130C345000.US",
       "source": "history",
       "depend_message": "GOOG - $345 CALLS本周 $1.70",
       "stop_loss_price": 1.35,
@@ -3737,14 +4049,14 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.950875",
+      "timestamp": "2026-02-06T22:40:04.585074",
       "raw_message": "1.9出三分之一",
       "instruction_type": "SELL",
       "ticker": "GOOG",
       "option_type": "CALL",
       "strike": 345.0,
-      "expiry": "本周",
-      "symbol": "GOOG",
+      "expiry": "260130",
+      "symbol": "GOOG260130C345000.US",
       "source": "history",
       "depend_message": "GOOG - $345 CALLS本周 $1.70",
       "price": 1.9,
@@ -3766,14 +4078,14 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.950931",
+      "timestamp": "2026-02-06T22:40:04.585143",
       "raw_message": "1.75出剩下的goog 走弱了",
       "instruction_type": "CLOSE",
       "ticker": "GOOG",
       "option_type": "CALL",
       "strike": 345.0,
-      "expiry": "本周",
-      "symbol": "GOOG",
+      "expiry": "260130",
+      "symbol": "GOOG260130C345000.US",
       "source": "前10条",
       "depend_message": "GOOG - $345 CALLS本周 $1.70",
       "price": 1.75,
@@ -3794,14 +4106,14 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.950992",
+      "timestamp": "2026-02-06T22:40:04.585210",
       "raw_message": "INTC - $48 CALLS 本周 $1.2",
       "instruction_type": "BUY",
       "ticker": "INTC",
       "option_type": "CALL",
       "strike": 48.0,
-      "expiry": "本周",
-      "symbol": "INTC",
+      "expiry": "260130",
+      "symbol": "INTC260130C048000.US",
       "price": 1.2,
       "message_id": "post_1CXZwzwEzQaX4omexZCkDm"
     },
@@ -3822,14 +4134,14 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.951016",
+      "timestamp": "2026-02-06T22:40:04.585241",
       "raw_message": "小仓位 止损 0.95",
       "instruction_type": "MODIFY",
       "ticker": "INTC",
       "option_type": "CALL",
       "strike": 48.0,
-      "expiry": "本周",
-      "symbol": "INTC",
+      "expiry": "260130",
+      "symbol": "INTC260130C048000.US",
       "source": "history",
       "depend_message": "INTC - $48 CALLS 本周 $1.2",
       "stop_loss_price": 0.95,
@@ -3853,14 +4165,14 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.951062",
+      "timestamp": "2026-02-06T22:40:04.585294",
       "raw_message": "1.75出三分之一",
       "instruction_type": "SELL",
       "ticker": "INTC",
       "option_type": "CALL",
       "strike": 48.0,
-      "expiry": "本周",
-      "symbol": "INTC",
+      "expiry": "260130",
+      "symbol": "INTC260130C048000.US",
       "source": "history",
       "depend_message": "INTC - $48 CALLS 本周 $1.2",
       "price": 1.75,
@@ -3886,14 +4198,14 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.951109",
+      "timestamp": "2026-02-06T22:40:04.585359",
       "raw_message": "止损提高到1.5",
       "instruction_type": "MODIFY",
       "ticker": "INTC",
       "option_type": "CALL",
       "strike": 48.0,
-      "expiry": "本周",
-      "symbol": "INTC",
+      "expiry": "260130",
+      "symbol": "INTC260130C048000.US",
       "source": "history",
       "depend_message": "INTC - $48 CALLS 本周 $1.2",
       "stop_loss_price": 1.5,
@@ -3919,14 +4231,14 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.951168",
+      "timestamp": "2026-02-06T22:40:04.585437",
       "raw_message": "1.65附近出剩下三分之二",
       "instruction_type": "SELL",
       "ticker": "INTC",
       "option_type": "CALL",
       "strike": 48.0,
-      "expiry": "本周",
-      "symbol": "INTC",
+      "expiry": "260130",
+      "symbol": "INTC260130C048000.US",
       "source": "history",
       "depend_message": "INTC - $48 CALLS 本周 $1.2",
       "price": 1.65,
@@ -3948,14 +4260,14 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.951234",
+      "timestamp": "2026-02-06T22:40:04.585510",
       "raw_message": "RKLB - $89 CALLS 本周 $2.5",
       "instruction_type": "BUY",
       "ticker": "RKLB",
       "option_type": "CALL",
       "strike": 89.0,
-      "expiry": "本周",
-      "symbol": "RKLB",
+      "expiry": "260130",
+      "symbol": "RKLB260130C089000.US",
       "price": 2.5,
       "message_id": "post_1CXZxoJPb9jfPNRWxp7jiq"
     },
@@ -3976,14 +4288,14 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.951258",
+      "timestamp": "2026-02-06T22:40:04.585542",
       "raw_message": "小仓位 止损 2.15",
       "instruction_type": "MODIFY",
       "ticker": "RKLB",
       "option_type": "CALL",
       "strike": 89.0,
-      "expiry": "本周",
-      "symbol": "RKLB",
+      "expiry": "260130",
+      "symbol": "RKLB260130C089000.US",
       "source": "history",
       "depend_message": "RKLB - $89 CALLS 本周 $2.5",
       "stop_loss_price": 2.15,
@@ -4007,14 +4319,14 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.951304",
+      "timestamp": "2026-02-06T22:40:04.585596",
       "raw_message": "2.84出三分之一",
       "instruction_type": "SELL",
       "ticker": "RKLB",
       "option_type": "CALL",
       "strike": 89.0,
-      "expiry": "本周",
-      "symbol": "RKLB",
+      "expiry": "260130",
+      "symbol": "RKLB260130C089000.US",
       "source": "history",
       "depend_message": "RKLB - $89 CALLS 本周 $2.5",
       "price": 2.84,
@@ -4040,14 +4352,14 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.951357",
+      "timestamp": "2026-02-06T22:40:04.585657",
       "raw_message": "2.72出剩下的",
       "instruction_type": "CLOSE",
       "ticker": "RKLB",
       "option_type": "CALL",
       "strike": 89.0,
-      "expiry": "本周",
-      "symbol": "RKLB",
+      "expiry": "260130",
+      "symbol": "RKLB260130C089000.US",
       "source": "history",
       "depend_message": "RKLB - $89 CALLS 本周 $2.5",
       "price": 2.72,
@@ -4081,7 +4393,7 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.951432",
+      "timestamp": "2026-02-06T22:40:04.585743",
       "raw_message": "NDAQ - $100 CALLS 2/20 $2.30",
       "instruction_type": "BUY",
       "ticker": "NDAQ",
@@ -4109,7 +4421,7 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.951465",
+      "timestamp": "2026-02-06T22:40:04.585775",
       "raw_message": "小仓位 止损2.05",
       "instruction_type": "MODIFY",
       "ticker": "NDAQ",
@@ -4140,14 +4452,14 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.951526",
+      "timestamp": "2026-02-06T22:40:04.585827",
       "raw_message": "COP - $105 CALLS这周 $1.3 彩票",
       "instruction_type": "BUY",
       "ticker": "COP",
       "option_type": "CALL",
       "strike": 105.0,
-      "expiry": "这周",
-      "symbol": "COP",
+      "expiry": "260130",
+      "symbol": "COP260130C105000.US",
       "price": 1.3,
       "message_id": "post_1CXbqt9bUWKqQxW5vryVCv"
     },
@@ -4170,14 +4482,14 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.951558",
+      "timestamp": "2026-02-06T22:40:04.585868",
       "raw_message": "1.7出 cop彩票全出",
       "instruction_type": "CLOSE",
       "ticker": "COP",
       "option_type": "CALL",
       "strike": 105.0,
-      "expiry": "这周",
-      "symbol": "COP",
+      "expiry": "260130",
+      "symbol": "COP260130C105000.US",
       "source": "history",
       "depend_message": "COP - $105 CALLS这周 $1.3 彩票",
       "price": 1.7,
@@ -4203,7 +4515,7 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.951608",
+      "timestamp": "2026-02-06T22:40:04.585924",
       "raw_message": "2.45出三分之一ndaq",
       "instruction_type": "SELL",
       "ticker": "NDAQ",
@@ -4232,7 +4544,7 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.951684",
+      "timestamp": "2026-02-06T22:40:04.586013",
       "raw_message": "2.72出三分之一 ndaq",
       "instruction_type": "SELL",
       "ticker": "NDAQ",
@@ -4263,7 +4575,7 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.951767",
+      "timestamp": "2026-02-06T22:40:04.586111",
       "raw_message": "2.4出剩下ndaq 波动大了",
       "instruction_type": "CLOSE",
       "ticker": "NDAQ",
@@ -4291,7 +4603,7 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.951870",
+      "timestamp": "2026-02-06T22:40:04.586232",
       "raw_message": "ndaq又跳到2.7的 也是刚才没出的都出",
       "instruction_type": "CLOSE",
       "ticker": "NDAQ",
@@ -4332,7 +4644,7 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.951984",
+      "timestamp": "2026-02-06T22:40:04.586370",
       "raw_message": "RIVN 16c 3/20 1.35",
       "instruction_type": "BUY",
       "ticker": "RIVN",
@@ -4360,7 +4672,7 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.952010",
+      "timestamp": "2026-02-06T22:40:04.586402",
       "raw_message": "慢速 小仓位 止损在0.94",
       "instruction_type": "MODIFY",
       "ticker": "RIVN",
@@ -4388,7 +4700,7 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.952067",
+      "timestamp": "2026-02-06T22:40:04.586458",
       "raw_message": "NUE - $190 CALLS EXPIRATION 2/20 $1.73 彩票",
       "instruction_type": "BUY",
       "ticker": "NUE",
@@ -4416,7 +4728,7 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.952091",
+      "timestamp": "2026-02-06T22:40:04.586491",
       "raw_message": "彩票单 止损 1.5",
       "instruction_type": "MODIFY",
       "ticker": "NUE",
@@ -4444,7 +4756,7 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.952141",
+      "timestamp": "2026-02-06T22:40:04.586553",
       "raw_message": "1.87出三分之一nue",
       "instruction_type": "SELL",
       "ticker": "NUE",
@@ -4486,7 +4798,7 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.952207",
+      "timestamp": "2026-02-06T22:40:04.586627",
       "raw_message": "1.95出剩下nue",
       "instruction_type": "CLOSE",
       "ticker": "NUE",
@@ -4527,7 +4839,7 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.952305",
+      "timestamp": "2026-02-06T22:40:04.586729",
       "raw_message": "TSLA 440c 2/9 3.1",
       "instruction_type": "BUY",
       "ticker": "TSLA",
@@ -4571,7 +4883,7 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.952339",
+      "timestamp": "2026-02-06T22:40:04.586765",
       "raw_message": "止损在2.9",
       "instruction_type": "MODIFY",
       "ticker": "TSLA",
@@ -4599,7 +4911,7 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.952406",
+      "timestamp": "2026-02-06T22:40:04.586827",
       "raw_message": "UPS 110c 2/20 彩票1.40",
       "instruction_type": "BUY",
       "ticker": "UPS",
@@ -4627,7 +4939,7 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.952485",
+      "timestamp": "2026-02-06T22:40:04.586859",
       "raw_message": "止损1.05",
       "instruction_type": "MODIFY",
       "ticker": "UPS",
@@ -4658,7 +4970,7 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.952594",
+      "timestamp": "2026-02-06T22:40:04.586923",
       "raw_message": "1.60出三分之一ups",
       "instruction_type": "SELL",
       "ticker": "UPS",
@@ -4687,7 +4999,7 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.952681",
+      "timestamp": "2026-02-06T22:40:04.586990",
       "raw_message": "1.57出剩下的ups",
       "instruction_type": "CLOSE",
       "ticker": "UPS",
@@ -4715,7 +5027,7 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.952799",
+      "timestamp": "2026-02-06T22:40:04.587063",
       "raw_message": "3.3出三分之一 tsla期权",
       "instruction_type": "SELL",
       "ticker": "TSLA",
@@ -4759,7 +5071,7 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.952919",
+      "timestamp": "2026-02-06T22:40:04.587176",
       "raw_message": "止损提高到3.2",
       "instruction_type": "MODIFY",
       "ticker": "UPS",
@@ -4787,7 +5099,7 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.953048",
+      "timestamp": "2026-02-06T22:40:04.587294",
       "raw_message": "BA - $240 CALLS EXPIRATION 2月13 $2.8",
       "instruction_type": "BUY",
       "ticker": "BA",
@@ -4815,7 +5127,7 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.953111",
+      "timestamp": "2026-02-06T22:40:04.587327",
       "raw_message": "小仓位 慢速 止损2.4",
       "instruction_type": "MODIFY",
       "ticker": "BA",
@@ -4843,7 +5155,7 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.953188",
+      "timestamp": "2026-02-06T22:40:04.587381",
       "raw_message": "3.1出三分之一ba",
       "instruction_type": "SELL",
       "ticker": "BA",
@@ -4872,7 +5184,7 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.953273",
+      "timestamp": "2026-02-06T22:40:04.587442",
       "raw_message": "2.5止损剩下的ba 横盘有磨损了",
       "instruction_type": "MODIFY",
       "ticker": "BA",
@@ -4912,8 +5224,21 @@
       "position": "first",
       "history": []
     },
-    "parsed": null,
-    "status": "❌"
+    "parsed": {
+      "timestamp": "2026-02-06T22:40:04.587548",
+      "raw_message": "MCD - 下周到期 $327.5 看涨期权 $2.75",
+      "instruction_type": "BUY",
+      "ticker": "MCD",
+      "option_type": "CALL",
+      "strike": 327.5,
+      "expiry": "260213",
+      "symbol": "MCD260213C327500.US",
+      "price": 2.75,
+      "message_id": "post_1CXmKkJ6JFQvFYqdfuW8FJ"
+    },
+    "status": "✅",
+    "context_source": null,
+    "context_message": null
   },
   {
     "origin": {
@@ -4928,22 +5253,22 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.953403",
+      "timestamp": "2026-02-06T22:40:04.587607",
       "raw_message": "小仓位 2月13 止损2.3",
       "instruction_type": "MODIFY",
-      "ticker": "BA",
+      "ticker": "MCD",
       "option_type": "CALL",
-      "strike": 240.0,
+      "strike": 327.5,
       "expiry": "260213",
-      "symbol": "BA260213C240000.US",
-      "source": "前10条",
-      "depend_message": "BA - $240 CALLS EXPIRATION 2月13 $2.8",
+      "symbol": "MCD260213C327500.US",
+      "source": "history",
+      "depend_message": "MCD - 下周到期 $327.5 看涨期权 $2.75",
       "stop_loss_price": 2.3,
       "message_id": "post_1CXmKm7t4NydFzBaT7TSuo"
     },
     "status": "✅",
-    "context_source": "前10条",
-    "context_message": "BA - $240 CALLS EXPIRATION 2月13 $2.8"
+    "context_source": "history",
+    "context_message": "MCD - 下周到期 $327.5 看涨期权 $2.75"
   },
   {
     "origin": {
@@ -4959,23 +5284,23 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.953599",
+      "timestamp": "2026-02-06T22:40:04.587692",
       "raw_message": "3.1出一半",
       "instruction_type": "SELL",
-      "ticker": "BA",
+      "ticker": "MCD",
       "option_type": "CALL",
-      "strike": 240.0,
+      "strike": 327.5,
       "expiry": "260213",
-      "symbol": "BA260213C240000.US",
-      "source": "前10条",
-      "depend_message": "BA - $240 CALLS EXPIRATION 2月13 $2.8",
+      "symbol": "MCD260213C327500.US",
+      "source": "history",
+      "depend_message": "MCD - 下周到期 $327.5 看涨期权 $2.75",
       "price": 3.1,
       "sell_quantity": "1/2",
       "message_id": "post_1CXmKs7exHPxe2TmNgne9H"
     },
     "status": "✅",
-    "context_source": "前10条",
-    "context_message": "BA - $240 CALLS EXPIRATION 2月13 $2.8"
+    "context_source": "history",
+    "context_message": "MCD - 下周到期 $327.5 看涨期权 $2.75"
   },
   {
     "origin": {
@@ -4988,23 +5313,23 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.953779",
+      "timestamp": "2026-02-06T22:40:04.587766",
       "raw_message": "3.3出剩下一半",
       "instruction_type": "SELL",
-      "ticker": "BA",
+      "ticker": "MCD",
       "option_type": "CALL",
-      "strike": 240.0,
+      "strike": 327.5,
       "expiry": "260213",
-      "symbol": "BA260213C240000.US",
+      "symbol": "MCD260213C327500.US",
       "source": "前10条",
-      "depend_message": "BA - $240 CALLS EXPIRATION 2月13 $2.8",
+      "depend_message": "MCD - 下周到期 $327.5 看涨期权 $2.75",
       "price": 3.3,
       "sell_quantity": "1/2",
       "message_id": "post_1CXmL48WRFAzRGHUuQwiWA"
     },
     "status": "✅",
     "context_source": "前10条",
-    "context_message": "BA - $240 CALLS EXPIRATION 2月13 $2.8"
+    "context_message": "MCD - 下周到期 $327.5 看涨期权 $2.75"
   },
   {
     "origin": {
@@ -5030,7 +5355,7 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.953931",
+      "timestamp": "2026-02-06T22:40:04.587850",
       "raw_message": "UNP - $250 CALLS EXPIRATION 2月13 $1.85",
       "instruction_type": "BUY",
       "ticker": "UNP",
@@ -5074,7 +5399,7 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.953971",
+      "timestamp": "2026-02-06T22:40:04.587903",
       "raw_message": "2.1出三分之一",
       "instruction_type": "SELL",
       "ticker": "UNP",
@@ -5107,7 +5432,7 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.954035",
+      "timestamp": "2026-02-06T22:40:04.587979",
       "raw_message": "2.2出三分之一",
       "instruction_type": "SELL",
       "ticker": "UNP",
@@ -5141,7 +5466,7 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.954116",
+      "timestamp": "2026-02-06T22:40:04.588055",
       "raw_message": "剩下止损提高到2.0",
       "instruction_type": "MODIFY",
       "ticker": "UNP",
@@ -5175,14 +5500,14 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.954217",
+      "timestamp": "2026-02-06T22:40:04.588146",
       "raw_message": "HON - $237.5 CALLS EXPIRATION NEXT WEEK $2.05",
       "instruction_type": "BUY",
       "ticker": "HON",
       "option_type": "CALL",
       "strike": 237.5,
-      "expiry": "NEXT WEEK",
-      "symbol": "HON",
+      "expiry": "260213",
+      "symbol": "HON260213C237500.US",
       "price": 2.05,
       "message_id": "post_1CXoCYrqYae3htFVBPmTi1"
     },
@@ -5208,14 +5533,14 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.954243",
+      "timestamp": "2026-02-06T22:40:04.588184",
       "raw_message": "小仓位 2月13 止损在1.7",
       "instruction_type": "MODIFY",
       "ticker": "HON",
       "option_type": "CALL",
       "strike": 237.5,
-      "expiry": "NEXT WEEK",
-      "symbol": "HON",
+      "expiry": "260213",
+      "symbol": "HON260213C237500.US",
       "source": "history",
       "depend_message": "HON - $237.5 CALLS EXPIRATION NEXT WEEK $2.05",
       "stop_loss_price": 1.7,
@@ -5244,14 +5569,14 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.954298",
+      "timestamp": "2026-02-06T22:40:04.588248",
       "raw_message": "2.35出三分之一",
       "instruction_type": "SELL",
       "ticker": "HON",
       "option_type": "CALL",
       "strike": 237.5,
-      "expiry": "NEXT WEEK",
-      "symbol": "HON",
+      "expiry": "260213",
+      "symbol": "HON260213C237500.US",
       "source": "history",
       "depend_message": "HON - $237.5 CALLS EXPIRATION NEXT WEEK $2.05",
       "price": 2.35,
@@ -5273,14 +5598,14 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.954362",
+      "timestamp": "2026-02-06T22:40:04.588339",
       "raw_message": "unp 2.35都出剩下的",
       "instruction_type": "CLOSE",
       "ticker": "HON",
       "option_type": "CALL",
       "strike": 237.5,
-      "expiry": "NEXT WEEK",
-      "symbol": "HON",
+      "expiry": "260213",
+      "symbol": "HON260213C237500.US",
       "source": "前10条",
       "depend_message": "HON - $237.5 CALLS EXPIRATION NEXT WEEK $2.05",
       "price": 2.35,
@@ -5303,14 +5628,14 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.954433",
+      "timestamp": "2026-02-06T22:40:04.588453",
       "raw_message": "2.53出三分之一",
       "instruction_type": "SELL",
       "ticker": "HON",
       "option_type": "CALL",
       "strike": 237.5,
-      "expiry": "NEXT WEEK",
-      "symbol": "HON",
+      "expiry": "260213",
+      "symbol": "HON260213C237500.US",
       "source": "前10条",
       "depend_message": "HON - $237.5 CALLS EXPIRATION NEXT WEEK $2.05",
       "price": 2.53,
@@ -5332,14 +5657,14 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.954532",
+      "timestamp": "2026-02-06T22:40:04.588603",
       "raw_message": "2.53出三分之一 hon 止损剩下提高到2.3",
       "instruction_type": "SELL",
       "ticker": "HON",
       "option_type": "CALL",
       "strike": 237.5,
-      "expiry": "NEXT WEEK",
-      "symbol": "HON",
+      "expiry": "260213",
+      "symbol": "HON260213C237500.US",
       "source": "前10条",
       "depend_message": "HON - $237.5 CALLS EXPIRATION NEXT WEEK $2.05",
       "price": 2.53,
@@ -5361,14 +5686,14 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.954611",
+      "timestamp": "2026-02-06T22:40:04.588719",
       "raw_message": "2.75都出 hon",
       "instruction_type": "CLOSE",
       "ticker": "HON",
       "option_type": "CALL",
       "strike": 237.5,
-      "expiry": "NEXT WEEK",
-      "symbol": "HON",
+      "expiry": "260213",
+      "symbol": "HON260213C237500.US",
       "source": "前10条",
       "depend_message": "HON - $237.5 CALLS EXPIRATION NEXT WEEK $2.05",
       "price": 2.75,
@@ -5389,14 +5714,14 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.954706",
+      "timestamp": "2026-02-06T22:40:04.588834",
       "raw_message": "INTC - $50 ITM CALLS EXPIRATION NEXT WEEK $2.40",
       "instruction_type": "BUY",
       "ticker": "INTC",
       "option_type": "CALL",
       "strike": 50.0,
-      "expiry": "NEXT WEEK",
-      "symbol": "INTC",
+      "expiry": "260213",
+      "symbol": "INTC260213C050000.US",
       "price": 2.4,
       "message_id": "post_1CXq71644yjQjat2q2BC27"
     },
@@ -5417,14 +5742,14 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.954732",
+      "timestamp": "2026-02-06T22:40:04.588875",
       "raw_message": "intc 下周的2月13 2.4-2.5 止损2.2",
       "instruction_type": "MODIFY",
       "ticker": "INTC",
       "option_type": "CALL",
       "strike": 50.0,
-      "expiry": "NEXT WEEK",
-      "symbol": "INTC",
+      "expiry": "260213",
+      "symbol": "INTC260213C050000.US",
       "source": "history",
       "depend_message": "INTC - $50 ITM CALLS EXPIRATION NEXT WEEK $2.40",
       "stop_loss_price": 2.2,
@@ -5448,14 +5773,14 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.954781",
+      "timestamp": "2026-02-06T22:40:04.588931",
       "raw_message": "2.79出三分之一",
       "instruction_type": "SELL",
       "ticker": "INTC",
       "option_type": "CALL",
       "strike": 50.0,
-      "expiry": "NEXT WEEK",
-      "symbol": "INTC",
+      "expiry": "260213",
+      "symbol": "INTC260213C050000.US",
       "source": "history",
       "depend_message": "INTC - $50 ITM CALLS EXPIRATION NEXT WEEK $2.40",
       "price": 2.79,
@@ -5477,14 +5802,14 @@
       "history": []
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.954847",
+      "timestamp": "2026-02-06T22:40:04.589002",
       "raw_message": "KR - $68 CALLS EXPIRATION NEXT WEEK .65 彩票",
       "instruction_type": "BUY",
       "ticker": "KR",
       "option_type": "CALL",
       "strike": 68.0,
-      "expiry": "NEXT WEEK",
-      "symbol": "KR",
+      "expiry": "260213",
+      "symbol": "KR260213C068000.US",
       "price": 0.65,
       "message_id": "post_1CXqBux99xdvVJa8j2FRhw"
     },
@@ -5505,14 +5830,14 @@
       ]
     },
     "parsed": {
-      "timestamp": "2026-02-06T21:55:49.954877",
+      "timestamp": "2026-02-06T22:40:04.589035",
       "raw_message": "下周彩票 2月13日 止损在0.5",
       "instruction_type": "MODIFY",
       "ticker": "KR",
       "option_type": "CALL",
       "strike": 68.0,
-      "expiry": "NEXT WEEK",
-      "symbol": "KR",
+      "expiry": "260213",
+      "symbol": "KR260213C068000.US",
       "source": "history",
       "depend_message": "KR - $68 CALLS EXPIRATION NEXT WEEK .65 彩票",
       "stop_loss_price": 0.5,

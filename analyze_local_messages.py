@@ -69,8 +69,9 @@ def generate_option_symbol(ticker: str, option_type: str, strike: float, expiry:
     # 期权类型代码
     option_code = 'C' if option_type == 'CALL' else 'P'
     
-    # 行权价（乘以1000并格式化为6位，与长桥 API 返回格式一致）
-    strike_code = f"{int(strike * 1000):06d}"
+    # 行权价（乘以1000并格式化为5位，与长桥 API 返回格式一致）
+    # 例如：60.0 → 60000, 17.5 → 17500
+    strike_code = f"{int(strike * 1000):05d}"
     
     # 组合完整代码
     return f"{ticker}{date_str}{option_code}{strike_code}.US"

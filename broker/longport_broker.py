@@ -939,8 +939,8 @@ def convert_to_longport_symbol(ticker: str, option_type: str, strike: float, exp
     """
     将期权信息转换为长桥期权代码格式
     
-    格式：TICKER + YYMMDD + C/P + 价格(6位，即行权价×1000)
-    示例：AAPL250131C00150000.US 或 AAPL260206C110000.US
+    格式：TICKER + YYMMDD + C/P + 价格(5位，即行权价×1000)
+    示例：AAPL250131C150000.US 或 AAPL260206C110000.US
     
     Args:
         ticker: 股票代码，如 "AAPL"
@@ -1014,8 +1014,9 @@ def convert_to_longport_symbol(ticker: str, option_type: str, strike: float, exp
     # 期权类型
     opt_type = "C" if option_type.upper() == "CALL" else "P"
     
-    # 行权价格式化（6位数字，与长桥 API 返回格式一致）
-    strike_str = f"{int(strike * 1000):06d}"
+    # 行权价格式化（5位数字，与长桥 API 返回格式一致）
+    # 例如：60.0 → 60000, 17.5 → 17500, 150.0 → 150000
+    strike_str = f"{int(strike * 1000):05d}"
     
     # 组合期权代码
     symbol = f"{ticker}{expiry_str}{opt_type}{strike_str}.US"

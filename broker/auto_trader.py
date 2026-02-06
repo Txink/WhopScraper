@@ -125,7 +125,10 @@ class AutoTrader:
                 else:
                     print_warning_message("市场价格无效，使用指令价格")
             else:
-                print_warning_message("无法获取市场报价，使用指令价格")
+                # 无法获取市场报价可能意味着 symbol 不存在
+                print_error_message(f"❌ 无法获取 {symbol} 的市场报价，该期权合约可能不存在")
+                print_warning_message(f"请检查 ticker 是否正确（如 GOLD 应为 GLD）或该合约是否在交易所上市")
+                return None
         except Exception as e:
             print_warning_message(f"获取市场报价失败: {e}，使用指令价格")
         

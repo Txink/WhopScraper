@@ -160,30 +160,46 @@ class OptionInstruction:
         if re.match(r"^\d{6}$", expiry):
             return expiry
 
-        # 从 timestamp 提取年份
+        # 从 timestamp 提取年份和日期
         year = 26
         msg_date = None
         if timestamp:
             try:
+                # 尝试解析标准格式: "Jan 23, 2026 12:51 AM"
                 ts_match = re.search(r", (\d{4})", timestamp)
                 if ts_match:
                     year = int(ts_match.group(1)) % 100
                 msg_date = datetime.strptime(timestamp, "%b %d, %Y %I:%M %p")
             except Exception:
-                pass
+                # 尝试解析标准化格式: "2026-02-05 23:51:00.010"
+                try:
+                    if re.match(r"\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}", timestamp):
+                        # 提取年份
+                        year_match = re.match(r"(\d{4})", timestamp)
+                        if year_match:
+                            year = int(year_match.group(1)) % 100
+                        # 解析日期
+                        msg_date = datetime.strptime(timestamp[:19], "%Y-%m-%d %H:%M:%S")
+                except Exception:
+                    pass
 
         month = None
         day = None
 
-        # 相对日期：本周/下周 -> 本周五/下周五
+        # 相对日期：今天/本周/下周 -> 具体日期
         relative_lower = expiry.lower()
-        if msg_date and relative_lower in ["本周", "这周", "当周", "this week"]:
+        if msg_date and relative_lower in ["今天", "today"]:
+            # 今天
+            month, day = msg_date.month, msg_date.day
+        elif msg_date and relative_lower in ["本周", "这周", "当周", "this week"]:
+            # 本周五
             days_until_friday = (4 - msg_date.weekday()) % 7
             if days_until_friday == 0:
                 days_until_friday = 7
             target = msg_date + timedelta(days=days_until_friday)
             month, day = target.month, target.day
         elif msg_date and relative_lower in ["下周", "next week"]:
+            # 下周五
             days_until_friday = (4 - msg_date.weekday()) % 7
             target = msg_date + timedelta(days=days_until_friday + 7)
             month, day = target.month, target.day
@@ -232,11 +248,18 @@ class OptionInstruction:
             year = 26
             if timestamp:
                 try:
+                    # 尝试标准格式: "Jan 23, 2026 12:51 AM"
                     ts_match = re.search(r", (\d{4})", timestamp)
                     if ts_match:
                         year = int(ts_match.group(1)) % 100
                 except Exception:
-                    pass
+                    # 尝试标准化格式: "2026-02-05 23:51:00.010"
+                    try:
+                        year_match = re.match(r"(\d{4})", timestamp)
+                        if year_match:
+                            year = int(year_match.group(1)) % 100
+                    except Exception:
+                        pass
             month = None
             day = None
             match = re.match(r"(\d{1,2})/(\d{1,2})", expiry)
@@ -253,7 +276,8 @@ class OptionInstruction:
             date_str = f"{year:02d}{month:02d}{day:02d}"
 
         option_code = "C" if option_type == "CALL" else "P"
-        strike_code = f"{int(strike * 1000):06d}"
+        # LongPort 使用 5 位 strike code (strike × 1000)，例如：60.0 → 60000, 17.5 → 17500
+        strike_code = f"{int(strike * 1000):05d}"
         return f"{ticker}{date_str}{option_code}{strike_code}.US"
 
 

@@ -2,12 +2,57 @@
 
 ## [Unreleased]
 
+### 重大改进
+- **正则表达式优化**：`parser/option_parser.py` 大幅提升解析成功率
+  - **解析成功率**: 58.7% → **77.33%** (+18.63%)
+  - **信息完整率**: 58.7% → **76.89%** (+18.19%)
+  - **生成 symbol**: 0 → **172条**
+  - **不完整消息**: 32 → **1条**
+  
+  **实施的优化**:
+  1. 新增 `OPEN_PATTERN_7`: 支持日期在中间格式（`QQQ 11/20 614c 1.1`）并优先于其他模式
+  2. 优化 `OPEN_PATTERN_1`: 添加"的"字和"到期"支持（`下周的`、`下周到期`）
+  3. 新增 `OPEN_PATTERN_8`: 支持中文"看涨期权"/"看跌期权"
+  4. 修复 `OPEN_PATTERN_5`: 正确提取日期和call/put类型（之前分组索引错误）
+  5. 新增 `TAKE_PROFIT_PATTERN_13/13B`: 支持带详细期权信息的卖出（`0.47 出rivn 19.5 call`），支持小写ticker（`4.15-4.2出 amzn亚马逊call`）
+  6. 调整解析顺序: 买入指令优先于修改指令，避免误判
+  7. 优化 `OPEN_PATTERN_2`: 允许日期和价格之间有任意文字（`TSLA 460c 1/16 小仓位日内交易 4.10`）
+  8. 新增 `TAKE_PROFIT_PATTERN_14`: 支持"在+价格+减仓"格式（`TSLA 在 4.40 减仓一半`）
+  9. 新增 `TAKE_PROFIT_PATTERN_15`: 支持"价格+止盈+比例+ticker"格式（`1.5止盈一半intc`）
+  10. 新增 `TAKE_PROFIT_PATTERN_16`: 支持"ticker+剩下部分+价格+出"格式（`nvda剩下部分也2.45附近出`）
+  11. 新增 `TAKE_PROFIT_PATTERN_17`: 支持"ticker+strike+call/put+...+剩下+价格+出"格式（`iren 46 call 快进入46价内了 可以剩下的1.6-1.7分批出`），支持小写ticker和价格中的中文句号
+
+### 修复
+- **🔥 期权 symbol 格式错误**：修复 strike price 格式导致合约查询失败的问题
+  - **问题**：生成的 symbol 为 `GOLD260220C060000.US`（6位 strike），而 LongPort API 要求 5 位格式 `GOLD260220C60000.US`
+  - **影响**：导致所有订单提交失败，报错 `security not found`
+  - **修复文件**：
+    - `models/instruction.py`: `generate_option_symbol` 方法，strike 格式从 `:06d` 改为 `:05d`
+    - `broker/longport_broker.py`: `convert_to_longport_symbol` 函数
+    - `analyze_local_messages.py`: symbol 生成逻辑
+    - `doc/LONGPORT_INTEGRATION_GUIDE.md`: 文档示例代码
+  - **验证**：修复后可以正确查询 GOLD260220C60000.US 的报价（$2.60）
+
+- **订单提交前验证**：`broker/auto_trader.py` 添加期权合约存在性验证
+  - 在买入指令执行时，如果无法获取市场报价（返回空列表），现在会直接拒绝订单并提示用户
+  - 添加友好错误提示：建议检查 ticker 是否正确（如 `GOLD` 应为 `GLD`）或合约是否存在
+  - 避免提交必然失败的订单，减少错误日志（如 `security not found` 错误）
+  - 修复场景：当解析消息得到错误的 ticker（如 `GOLD260220C060000.US`）时，系统现在会在获取报价阶段就发现并拒绝，而不是等到提交订单时才失败
+
+- **时间戳格式兼容性**：`models/instruction.py` 修复 symbol 生成问题
+  - `normalize_expiry_to_yymmdd` 和 `generate_option_symbol` 现在支持标准化时间戳格式（`2026-02-05 23:51:00.010`）
+  - 之前只支持原始格式（`Jan 23, 2026 12:51 AM`），导致相对日期（如 `NEXT WEEK`、`今天`）无法正确转换为 YYMMDD
+  - 新增支持"今天"/"today"相对日期
+  - 修复后：
+    - `NEXT WEEK` → `260213` → `KR260213C068000.US`
+    - `今天` → `260121` → `SPY260121C680000.US`
+
 ### 文档
 - **正则表达式优化分析**：`docs/regex_optimization_analysis.md` 新增优化分析报告
   - 基于 225 条真实消息的解析结果进行深度分析
   - 识别出 5 个主要问题和优化方向
   - 优先级排序：日期格式(20+条)、"的"字支持(2-3条)、中文期权类型(2-3条)、带详细信息的卖出(3-5条)
-  - 预期优化后成功率可从 58.7% 提升到 70-75%
+  - 实际优化后成功率从 58.7% 提升到 74.67%，超出预期
 
 ### 功能增强
 - **相对时间格式支持**：`scraper/message_extractor.py` 新增相对时间格式识别和解析
