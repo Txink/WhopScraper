@@ -168,9 +168,14 @@ class MessageMonitor:
             return
 
         inst = instruction
-
         table.add_row("时间", inst.timestamp)
-        table.add_row("期权", OptionInstruction.generate_option_symbol(inst.ticker, inst.option_type, inst.strike, inst.expiry, inst.timestamp))
+        table.add_row(
+            "期权",
+            inst.symbol
+            or OptionInstruction.generate_option_symbol(
+                inst.ticker, inst.option_type, inst.strike, inst.expiry, inst.timestamp
+            ),
+        )
         table.add_row("指令类型", inst.instruction_type)
         if inst.instruction_type == 'BUY':
             # 买入指令
@@ -307,6 +312,9 @@ class MessageMonitor:
             print('=' * 80)
             self._display_origin_table(simple)
             self._display_parsed_message(instruction)
+            # 触发新指令回调（只有成功解析时才调用）
+            if self._on_new_instruction and instruction:
+                self._on_new_instruction(instruction)
 
         return [inst for _, inst in parse_results]
     

@@ -33,10 +33,11 @@ class AutoTrader:
         
         # 从环境变量加载配置
         self.max_option_total_price = float(os.getenv('MAX_OPTION_TOTAL_PRICE', '10000'))  # 单个期权总价上限
+        self.max_option_quantity = int(os.getenv('MAX_OPTION_QUANTITY', '10'))  # 单次购买最大数量
         self.require_confirmation = os.getenv('REQUIRE_CONFIRMATION', 'false').lower() in ('true', '1', 'yes')
         self.price_deviation_tolerance = float(os.getenv('PRICE_DEVIATION_TOLERANCE', '5'))  # 价格偏差容忍度（百分比）
         
-        logger.info(f"自动交易执行器初始化完成 - 单期权总价上限: ${self.max_option_total_price}, 确认模式: {self.require_confirmation}")
+        logger.info(f"自动交易执行器初始化完成 - 单期权总价上限: ${self.max_option_total_price}, 最大数量: {self.max_option_quantity}张, 确认模式: {self.require_confirmation}")
     
     def execute_instruction(self, instruction: OptionInstruction) -> Optional[Dict]:
         """
@@ -68,84 +69,6 @@ class AutoTrader:
             logger.error(f"执行指令失败: {e}", exc_info=True)
             return None
     
-    def _generate_option_symbol(self, instruction: OptionInstruction) -> Optional[str]:
-        """
-        根据指令生成完整的期权代码
-        
-        Args:
-            instruction: 期权交易指令
-            
-        Returns:
-            期权代码，如 "AAPL260207C250000.US"，失败返回None
-        """
-        import re
-        from datetime import datetime, timedelta
-        
-        ticker = instruction.ticker
-        option_type = instruction.option_type
-        strike = instruction.strike
-        expiry = (instruction.expiry or "").strip()
-        
-        if not all([ticker, option_type, strike, expiry]):
-            print_error_message(f"期权信息不完整: ticker={ticker}, type={option_type}, strike={strike}, expiry={expiry}")
-            return None
-        
-        now = datetime.now()
-        year = now.year % 100
-        month = None
-        day = None
-        
-        # 先处理「本周」「下周」：用当前日期计算，保证年份为当前年
-        relative_lower = expiry.lower()
-        if relative_lower in ['本周', '这周', '当周', 'this week']:
-            # 本周五（0=周一, 4=周五）
-            days_until_friday = (4 - now.weekday()) % 7
-            if days_until_friday == 0:
-                days_until_friday = 7  # 今天已是周五则用下周五
-            target = now + timedelta(days=days_until_friday)
-            year = target.year % 100
-            month = target.month
-            day = target.day
-        elif relative_lower in ['下周', 'next week']:
-            days_until_friday = (4 - now.weekday()) % 7
-            target = now + timedelta(days=days_until_friday + 7)
-            year = target.year % 100
-            month = target.month
-            day = target.day
-        else:
-            # 尝试匹配 "2/7" 格式
-            match = re.match(r'(\d{1,2})/(\d{1,2})', expiry)
-            if match:
-                month = int(match.group(1))
-                day = int(match.group(2))
-            else:
-                # 尝试匹配 "2月7日" 格式
-                match = re.match(r'(\d{1,2})月(\d{1,2})日?', expiry)
-                if match:
-                    month = int(match.group(1))
-                    day = int(match.group(2))
-            
-            if month and day:
-                # 判断年份（仅对具体月/日：若月份已过则视为明年）
-                if month < now.month:
-                    year = (now.year + 1) % 100
-        
-        if not month or not day:
-            print_error_message(f"无法解析到期日: {expiry}")
-            return None
-        
-        # 格式化日期为 YYMMDD
-        date_str = f"{year:02d}{month:02d}{day:02d}"
-        
-        # 期权类型代码
-        option_code = 'C' if option_type.upper() == 'CALL' else 'P'
-        
-        # 行权价（乘以1000并格式化为6位，与长桥 API 返回格式一致）
-        strike_code = f"{int(strike * 1000):06d}"
-        
-        # 组合完整代码
-        return f"{ticker}{date_str}{option_code}{strike_code}.US"
-    
     def _execute_buy(self, instruction: OptionInstruction) -> Optional[Dict]:
         """
         执行买入指令
@@ -160,20 +83,51 @@ class AutoTrader:
         print_info_message("=" * 80)
         
         # 生成期权代码
-        symbol = self._generate_option_symbol(instruction)
+        symbol = instruction.symbol
         if not symbol:
             return None
         
-        # 确定买入价格
+        # 确定买入价格（指令价格）
         if instruction.price_range:
             # 使用价格区间的中间值
-            price = (instruction.price_range[0] + instruction.price_range[1]) / 2
-            print_info_message(f"价格区间: ${instruction.price_range[0]} - ${instruction.price_range[1]}, 使用中间值: ${price}")
+            instruction_price = (instruction.price_range[0] + instruction.price_range[1]) / 2
+            print_info_message(f"指令价格区间: ${instruction.price_range[0]} - ${instruction.price_range[1]}, 使用中间值: ${instruction_price}")
         elif instruction.price:
-            price = instruction.price
+            instruction_price = instruction.price
+            print_info_message(f"指令价格: ${instruction_price}")
         else:
             print_error_message("买入指令缺少价格信息")
             return None
+        
+        # 获取当前市场价格，决定最终买入价格
+        price = instruction_price  # 默认使用指令价格
+        try:
+            quotes = self.broker.get_option_quote([symbol])
+            if quotes and len(quotes) > 0:
+                market_price = quotes[0].get('last_done', 0)
+                if market_price > 0:
+                    deviation = abs(market_price - instruction_price) / instruction_price * 100
+                    print_info_message(f"当前市场价: ${market_price:.2f}, 指令价: ${instruction_price:.2f}, 偏差: {deviation:.1f}%")
+                    
+                    # 如果偏差超过容忍度，拒绝下单
+                    if deviation > self.price_deviation_tolerance:
+                        print_warning_message(f"价格偏差超过容忍度 {self.price_deviation_tolerance}%，拒绝下单")
+                        print_warning_message(f"请核对消息中的目标价或调高 PRICE_DEVIATION_TOLERANCE（当前 {self.price_deviation_tolerance}%）")
+                        return None
+                    
+                    # 如果市场价格更优（更低），使用市场价格
+                    if market_price < instruction_price:
+                        price = market_price
+                        print_info_message(f"✅ 使用更优的市场价格: ${price:.2f}")
+                    else:
+                        price = instruction_price
+                        print_info_message(f"✅ 使用指令价格: ${price:.2f}")
+                else:
+                    print_warning_message("市场价格无效，使用指令价格")
+            else:
+                print_warning_message("无法获取市场报价，使用指令价格")
+        except Exception as e:
+            print_warning_message(f"获取市场报价失败: {e}，使用指令价格")
         
         # 获取账户余额
         try:
@@ -188,33 +142,20 @@ class AutoTrader:
         max_total_price = min(self.max_option_total_price, available_cash)
         print_info_message(f"总价上限: ${max_total_price:.2f}")
         
-        # 计算买入数量：仅由总价上限控制（MAX_OPTION_TOTAL_PRICE 与可用余额的较小值）
+        # 计算买入数量：由总价上限和数量上限共同控制
         single_contract_price = price * 100
-        max_quantity = int(max_total_price / single_contract_price)
-        quantity = min(1, max_quantity)  # 默认 1 张，且不超过上限
+        max_quantity_by_price = int(max_total_price / single_contract_price)  # 根据总价计算的最大数量
+        max_quantity_by_limit = self.max_option_quantity  # 配置的数量上限
+        
+        # 取两者较小值，默认买入 1 张
+        quantity = min(1, max_quantity_by_price, max_quantity_by_limit)
         
         if quantity <= 0:
             print_error_message(f"计算的买入数量为0，单价: ${price}, 总价上限: ${max_total_price:.2f}")
             return None
         
         total_price = quantity * single_contract_price
-        print_info_message(f"买入数量: {quantity} 张, 总价: ${total_price:.2f}")
-        
-        # 获取当前市场价格（用于对比），偏差超容忍度时拒绝下单
-        try:
-            quotes = self.broker.get_option_quote([symbol])
-            if quotes and len(quotes) > 0:
-                market_price = quotes[0].get('last_done', 0)
-                if market_price > 0:
-                    deviation = abs(market_price - price) / price * 100
-                    print_info_message(f"当前市场价: ${market_price:.2f}, 目标价: ${price:.2f}, 偏差: {deviation:.1f}%")
-                    
-                    if deviation > self.price_deviation_tolerance:
-                        print_warning_message(f"价格偏差超过容忍度 {self.price_deviation_tolerance}%，拒绝下单")
-                        print_warning_message(f"请核对消息中的目标价或调高 PRICE_DEVIATION_TOLERANCE（当前 {self.price_deviation_tolerance}%）")
-                        return None
-        except Exception as e:
-            print_warning_message(f"无法获取市场报价: {e}")
+        print_info_message(f"买入数量: {quantity} 张 (总价限制: {max_quantity_by_price}张, 数量限制: {max_quantity_by_limit}张), 总价: ${total_price:.2f}")
         
         # 如果需要确认
         if self.require_confirmation:
@@ -269,7 +210,7 @@ class AutoTrader:
         print_info_message("=" * 80)
         
         # 生成期权代码
-        symbol = self._generate_option_symbol(instruction)
+        symbol = instruction.symbol
         if not symbol:
             return None
         
@@ -397,7 +338,7 @@ class AutoTrader:
         print_info_message("=" * 80)
         
         # 生成期权代码
-        symbol = self._generate_option_symbol(instruction)
+        symbol = instruction.symbol
         if not symbol:
             return None
         
@@ -479,7 +420,7 @@ class AutoTrader:
         print_info_message("=" * 80)
         
         # 生成期权代码
-        symbol = self._generate_option_symbol(instruction)
+        symbol = instruction.symbol
         if not symbol:
             return None
         

@@ -691,5 +691,253 @@
       "message_id": "post_1CXjdP2GZkMFcMEtoY6Me1-fc33cf9160c6"
     },
     "timestamp": "2026-02-03T22:18:38.848592"
+  },
+  {
+    "message": "BA 卖出一半",
+    "category": "未识别",
+    "notes": "监控时未能解析",
+    "parsed_successfully": false,
+    "parsed_result": {},
+    "timestamp": "2026-02-04T22:05:15.043100"
+  },
+  {
+    "message": "[引用] TSLA - $240 CALLS EXPIRATION 2月13 $2.8",
+    "category": "开仓指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-04T22:06:14.621885",
+      "raw_message": "[引用] TSLA - $240 CALLS EXPIRATION 2月13 $2.8",
+      "instruction_type": "BUY",
+      "ticker": "TSLA",
+      "option_type": "CALL",
+      "strike": 240.0,
+      "expiry": "2月13",
+      "price": 2.8,
+      "message_id": "post_1CXoA5zFZGsrcrV8bwbw5r-b1cb2d039e75"
+    },
+    "timestamp": "2026-02-04T22:06:15.047325"
+  },
+  {
+    "message": "tsla期权今天也是日内的 刚才没改3.2出的这轮到3.2附近也出掉",
+    "category": "未识别",
+    "notes": "监控时未能解析",
+    "parsed_successfully": false,
+    "parsed_result": {},
+    "timestamp": "2026-02-04T22:18:32.377847"
+  },
+  {
+    "message": "MCD - 下周到期 $327.5 看涨期权 $2.75",
+    "category": "未识别",
+    "notes": "监控时未能解析",
+    "parsed_successfully": false,
+    "parsed_result": {},
+    "timestamp": "2026-02-04T22:18:32.382258"
+  },
+  {
+    "message": "小仓位 2月13 止损2.3",
+    "category": "调整指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-04T22:18:32.385470",
+      "raw_message": "小仓位 2月13 止损2.3",
+      "instruction_type": "MODIFY",
+      "stop_loss_price": 2.3,
+      "message_id": "post_1CXmKm7t4NydFzBaT7TSuo-a5ddd0fd9e5a"
+    },
+    "timestamp": "2026-02-04T22:18:32.387346"
+  },
+  {
+    "message": "3.1出一半",
+    "category": "止盈指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-04T22:18:32.392807",
+      "raw_message": "3.1出一半",
+      "instruction_type": "SELL",
+      "price": 3.1,
+      "sell_quantity": "1/2",
+      "message_id": "post_1CXmKs7exHPxe2TmNgne9H-f9f257b17c8b"
+    },
+    "timestamp": "2026-02-04T22:18:32.395401"
+  },
+  {
+    "message": "3.3出剩下一半",
+    "category": "止盈指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-04T22:18:32.398991",
+      "raw_message": "3.3出剩下一半",
+      "instruction_type": "SELL",
+      "price": 3.3,
+      "sell_quantity": "1/2",
+      "message_id": "post_1CXmL48WRFAzRGHUuQwiWA-f7ffd6e8be81"
+    },
+    "timestamp": "2026-02-04T22:18:32.402687"
+  },
+  {
+    "message": "今天还是有点保守了",
+    "category": "未识别",
+    "notes": "监控时未能解析",
+    "parsed_successfully": false,
+    "parsed_result": {},
+    "timestamp": "2026-02-04T22:18:32.406071"
+  },
+  {
+    "message": "UNP - $250 CALLS EXPIRATION 2月13 $1.85",
+    "category": "开仓指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-04T22:37:55.999560",
+      "raw_message": "UNP - $250 CALLS EXPIRATION 2月13 $1.85",
+      "instruction_type": "BUY",
+      "ticker": "UNP",
+      "option_type": "CALL",
+      "strike": 250.0,
+      "expiry": "2月13",
+      "price": 1.85,
+      "message_id": "post_1CXoCJrHDLAuVKzghhFTLz-51bb14d98ead"
+    },
+    "timestamp": "2026-02-04T22:37:56.336357"
+  },
+  {
+    "message": "止损价1.65美元 小仓位",
+    "category": "未识别",
+    "notes": "监控时未能解析",
+    "parsed_successfully": false,
+    "parsed_result": {},
+    "timestamp": "2026-02-04T22:37:56.340594"
+  },
+  {
+    "message": "2.1出三分之一",
+    "category": "止盈指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-04T22:37:56.343744",
+      "raw_message": "2.1出三分之一",
+      "instruction_type": "SELL",
+      "price": 2.1,
+      "sell_quantity": "1/3",
+      "message_id": "post_1CXoCPAMr5AjntbHoEZcEh-3cdbfba926de"
+    },
+    "timestamp": "2026-02-04T22:37:56.347231"
+  },
+  {
+    "message": "2.2出三分之一",
+    "category": "止盈指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-04T22:37:56.350382",
+      "raw_message": "2.2出三分之一",
+      "instruction_type": "SELL",
+      "price": 2.2,
+      "sell_quantity": "1/3",
+      "message_id": "post_1CXoCSZYkqwcPeyqnttjFP-e1260f9f47cd"
+    },
+    "timestamp": "2026-02-04T22:37:56.368470"
+  },
+  {
+    "message": "剩下止损提高到2.0",
+    "category": "调整指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-04T22:38:03.405888",
+      "raw_message": "剩下止损提高到2.0",
+      "instruction_type": "MODIFY",
+      "stop_loss_price": 2.0,
+      "message_id": "post_1CXoCWmPzyAR3fB5mC2z4j-23a25a9dbfec"
+    },
+    "timestamp": "2026-02-04T22:38:03.513376"
+  },
+  {
+    "message": "HON - $237.5 CALLS EXPIRATION NEXT WEEK $2.05",
+    "category": "未识别",
+    "notes": "监控时未能解析",
+    "parsed_successfully": false,
+    "parsed_result": {},
+    "timestamp": "2026-02-04T22:38:31.892095"
+  },
+  {
+    "message": "小仓位 2月13 止损在1.7",
+    "category": "调整指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-04T22:38:47.498828",
+      "raw_message": "小仓位 2月13 止损在1.7",
+      "instruction_type": "MODIFY",
+      "stop_loss_price": 1.7,
+      "message_id": "post_1CXoCa1TWoork9TaZ1qokJ-354ee6decc6c"
+    },
+    "timestamp": "2026-02-04T22:38:47.524998"
+  },
+  {
+    "message": "2.35出三分之一",
+    "category": "止盈指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-04T22:39:28.137197",
+      "raw_message": "2.35出三分之一",
+      "instruction_type": "SELL",
+      "price": 2.35,
+      "sell_quantity": "1/3",
+      "message_id": "post_1CXoCcyNqrpzWvFQmJ1ibb-74fe8ad32df0"
+    },
+    "timestamp": "2026-02-04T22:39:28.152788"
+  },
+  {
+    "message": "unp 2.35都出剩下的",
+    "category": "未识别",
+    "notes": "监控时未能解析",
+    "parsed_successfully": false,
+    "parsed_result": {},
+    "timestamp": "2026-02-04T22:42:14.388547"
+  },
+  {
+    "message": "2.53出三分之一",
+    "category": "止盈指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-04T22:42:46.377089",
+      "raw_message": "2.53出三分之一",
+      "instruction_type": "SELL",
+      "price": 2.53,
+      "sell_quantity": "1/3",
+      "message_id": "post_1CXoCsUdwnW5Uh95Dvz1vN-274dceb6c408"
+    },
+    "timestamp": "2026-02-04T22:42:46.412953"
+  },
+  {
+    "message": "2.53出三分之一 hon 止损剩下提高到2.3",
+    "category": "止盈指令",
+    "notes": "自动收集",
+    "parsed_successfully": true,
+    "parsed_result": {
+      "timestamp": "2026-02-04T22:43:05.881493",
+      "raw_message": "2.53出三分之一 hon 止损剩下提高到2.3",
+      "instruction_type": "SELL",
+      "ticker": "HON",
+      "price": 2.53,
+      "sell_quantity": "1/3",
+      "message_id": "post_1CXoCu12P7wCLdJ2JeiQR8-182063eb31de"
+    },
+    "timestamp": "2026-02-04T22:43:06.174025"
+  },
+  {
+    "message": "2.75都出 hon",
+    "category": "未识别",
+    "notes": "监控时未能解析",
+    "parsed_successfully": false,
+    "parsed_result": {},
+    "timestamp": "2026-02-04T22:45:11.904286"
   }
 ]

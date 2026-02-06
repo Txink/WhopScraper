@@ -1,0 +1,61 @@
+{
+  "dataset_name": "正股卖出信号数据集",
+  "description": "包含各种正股卖出指令的样本数据",
+  "created_at": "2026-02-01",
+  "samples": [
+    {
+      "id": 1,
+      "message": "AAPL 卖出 $180",
+      "expected_result": {
+        "ticker": "AAPL",
+        "instruction_type": "TAKE_PROFIT",
+        "option_type": "STOCK",
+        "price": 180.0,
+        "portion": "全部"
+      }
+    },
+    {
+      "id": 2,
+      "message": "卖出 TSLA 在 $300",
+      "expected_result": {
+        "ticker": "TSLA",
+        "instruction_type": "TAKE_PROFIT",
+        "option_type": "STOCK",
+        "price": 300.0,
+        "portion": "全部"
+      }
+    },
+    {
+      "id": 3,
+      "message": "NVDA $950 出",
+      "expected_result": {
+        "ticker": "NVDA",
+        "instruction_type": "TAKE_PROFIT",
+        "option_type": "STOCK",
+        "price": 950.0,
+        "portion": "全部"
+      }
+    },
+    {
+      "id": 4,
+      "message": "AAPL 止损 $145",
+      "expected_result": {
+        "ticker": "AAPL",
+        "instruction_type": "STOP_LOSS",
+        "option_type": "STOCK",
+        "price": 145.0
+      }
+    },
+    {
+      "id": 5,
+      "message": "AAPL 止盈 $200 出一半",
+      "expected_result": {
+        "ticker": "AAPL",
+        "instruction_type": "TAKE_PROFIT",
+        "option_type": "STOCK",
+        "price": 200.0,
+        "portion": "1/2"
+      }
+    }
+  ]
+}

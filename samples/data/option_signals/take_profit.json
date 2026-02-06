@@ -1,0 +1,61 @@
+{
+  "dataset_name": "期权止盈信号数据集",
+  "description": "包含各种期权止盈/出货指令的样本数据",
+  "created_at": "2026-02-01",
+  "samples": [
+    {
+      "id": 1,
+      "message": "1.75出三分之一",
+      "expected_result": {
+        "instruction_type": "TAKE_PROFIT",
+        "price": 1.75,
+        "portion": "1/3"
+      }
+    },
+    {
+      "id": 2,
+      "message": "1.65附近出剩下三分之二",
+      "expected_result": {
+        "instruction_type": "TAKE_PROFIT",
+        "price": 1.65,
+        "portion": "2/3"
+      }
+    },
+    {
+      "id": 3,
+      "message": "2.0 出一半",
+      "expected_result": {
+        "instruction_type": "TAKE_PROFIT",
+        "price": 2.0,
+        "portion": "1/2"
+      }
+    },
+    {
+      "id": 4,
+      "message": "0.9剩下都出",
+      "expected_result": {
+        "instruction_type": "TAKE_PROFIT",
+        "price": 0.9,
+        "portion": "全部"
+      }
+    },
+    {
+      "id": 5,
+      "message": "0.61出剩余的",
+      "expected_result": {
+        "instruction_type": "TAKE_PROFIT",
+        "price": 0.61,
+        "portion": "全部"
+      }
+    },
+    {
+      "id": 6,
+      "message": "4.75 amd全出",
+      "expected_result": {
+        "instruction_type": "TAKE_PROFIT",
+        "price": 4.75,
+        "portion": "全部"
+      }
+    }
+  ]
+}

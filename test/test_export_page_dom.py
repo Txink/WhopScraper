@@ -1,17 +1,32 @@
 #!/usr/bin/env python3
 """
-导出页面 DOM 和截图，供本地分析 / 调试选择器。
+导出页面 DOM、截图、结构分析和消息数据，供本地分析和调试。
+
+功能：
+1. 导出完整 HTML 页面内容（debug/page_*.html）
+2. 截取全屏截图（debug/page_*.png）
+3. 分析页面结构（debug/analysis_*.txt）
+4. 提取并导出消息数据到 data/origin_message.json
+   - 包含完整的消息组、引用、历史记录
+   - 自动去重（按 domID）
+   - 按时间排序
+   - 增量更新（不覆盖已有消息）
+5. 显示详细的消息统计信息
+
 运行: python test/test_export_page_dom.py  或  python -m test.test_export_page_dom
 """
 import asyncio
+import json
 import os
 import sys
+from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from config import Config, create_env_template
+from config import Config
 from scraper.browser import BrowserManager
+from scraper.message_extractor import EnhancedMessageExtractor
 
 
 async def export_page_dom():
@@ -23,7 +38,6 @@ async def export_page_dom():
     # 验证配置
     if not Config.validate():
         print("❌ 配置验证失败")
-        create_env_template()
         return
 
     print("✅ 配置验证通过\n")
@@ -53,7 +67,7 @@ async def export_page_dom():
             return
 
         # 检查登录状态
-        first_url = page_configs[0][0]
+        first_url = page_configs[1][0]
         print("🔐 正在检查登录状态...")
         if not await browser.is_logged_in(first_url):
             print("⚠️  需要登录...")
@@ -71,7 +85,7 @@ async def export_page_dom():
             print("✅ 已登录\n")
 
         # 导航到页面
-        test_url, test_type, _ = page_configs[0]
+        test_url, test_type, _ = page_configs[1]
         print(f"📄 正在访问页面: [{test_type.upper()}] {test_url}")
 
         if not await browser.navigate(test_url):
@@ -100,7 +114,6 @@ async def export_page_dom():
         print("\n✅ 收到确认，开始导出...\n")
 
         # 生成时间戳
-        from datetime import datetime
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
         # 1. 导出完整HTML
@@ -251,6 +264,131 @@ async def export_page_dom():
 
         print(f"✅ 分析已保存\n")
 
+        # 4. 提取消息并导出为JSON
+        messages_file = "data/origin_message.json"
+        print(f"💬 正在提取消息...")
+        
+        # 使用 EnhancedMessageExtractor 提取消息
+        extractor = EnhancedMessageExtractor(page)
+        try:
+            message_groups = await extractor.extract_message_groups()
+            print(f"✅ 成功提取 {len(message_groups)} 条消息\n")
+            
+            # 转换为字典列表
+            new_messages = [msg.to_simple_dict() for msg in message_groups]
+            
+            # 按时间排序辅助函数
+            def parse_timestamp(ts_str: str) -> datetime:
+                """解析时间戳字符串（消息已经通过 normalize_timestamp 处理过）"""
+                try:
+                    # 尝试多种时间格式（优先匹配标准化后的格式）
+                    formats = [
+                        "%Y-%m-%d %H:%M:%S.%f",  # 2026-02-03 20:44:55.010 (标准化格式)
+                        "%Y-%m-%d %H:%M:%S",     # 2026-02-03 20:44:55
+                        "%b %d, %Y %I:%M %p",    # Jan 06, 2026 11:38 PM (未标准化的原始格式)
+                    ]
+                    for fmt in formats:
+                        try:
+                            return datetime.strptime(ts_str, fmt)
+                        except ValueError:
+                            continue
+                    
+                    # 如果标准格式都失败，尝试使用 EnhancedMessageExtractor 的标准化函数
+                    # 但这种情况理论上不应该发生，因为消息已经被标准化了
+                    normalized = EnhancedMessageExtractor.normalize_timestamp(ts_str, 0)
+                    if normalized != ts_str:
+                        # 标准化成功，尝试再次解析
+                        for fmt in formats:
+                            try:
+                                return datetime.strptime(normalized, fmt)
+                            except ValueError:
+                                continue
+                    
+                    # 如果都失败，返回一个默认值
+                    return datetime.min
+                except Exception:
+                    return datetime.min
+            
+            # 读取现有消息（如果存在）
+            existing_messages = []
+            existing_dom_ids = set()
+            
+            os.makedirs("data", exist_ok=True)
+            
+            if os.path.exists(messages_file):
+                print(f"📖 正在读取现有消息文件...")
+                try:
+                    with open(messages_file, 'r', encoding='utf-8') as f:
+                        existing_messages = json.load(f)
+                    existing_dom_ids = {msg.get('domID') for msg in existing_messages}
+                    print(f"✅ 读取到 {len(existing_messages)} 条现有消息\n")
+                except Exception as e:
+                    print(f"⚠️  读取现有消息失败: {e}")
+                    existing_messages = []
+            else:
+                print(f"ℹ️  首次创建消息文件\n")
+            
+            # 去重：过滤掉已存在的 domID
+            print(f"🔍 正在检查重复消息...")
+            added_count = 0
+            skipped_count = 0
+            
+            for msg in new_messages:
+                dom_id = msg.get('domID')
+                if dom_id not in existing_dom_ids:
+                    existing_messages.append(msg)
+                    existing_dom_ids.add(dom_id)
+                    added_count += 1
+                else:
+                    skipped_count += 1
+            
+            print(f"✅ 新增消息: {added_count} 条")
+            if skipped_count > 0:
+                print(f"⏭️  跳过重复: {skipped_count} 条")
+            print()
+            
+            # 按时间排序
+            print("📊 正在按时间排序...")
+            existing_messages.sort(key=lambda m: parse_timestamp(m.get('timestamp', '')))
+            print(f"✅ 排序完成\n")
+            
+            # 导出为JSON
+            print(f"💾 正在导出到: {messages_file}")
+            with open(messages_file, 'w', encoding='utf-8') as f:
+                json.dump(existing_messages, f, ensure_ascii=False, indent=2)
+            print(f"✅ 消息已保存 (总计 {len(existing_messages)} 条)\n")
+            
+            # 显示消息统计
+            print("📈 消息统计:")
+            print(f"   - 本次提取: {len(new_messages)}")
+            print(f"   - 新增消息: {added_count}")
+            print(f"   - 总消息数: {len(existing_messages)}")
+            
+            # 统计位置分布
+            positions = {}
+            for msg in existing_messages:
+                pos = msg.get('position', 'unknown')
+                positions[pos] = positions.get(pos, 0) + 1
+            
+            print(f"   - 位置分布:")
+            for pos, count in positions.items():
+                print(f"     • {pos}: {count}")
+            
+            # 统计引用消息数量
+            refer_count = sum(1 for msg in existing_messages if msg.get('refer'))
+            print(f"   - 包含引用: {refer_count}")
+            
+            # 统计包含历史记录的消息
+            history_count = sum(1 for msg in existing_messages if msg.get('history'))
+            print(f"   - 包含历史: {history_count}\n")
+            
+        except Exception as e:
+            print(f"❌ 消息提取失败: {e}")
+            import traceback
+            traceback.print_exc()
+            print()
+            messages_file = None
+
         print("\n" + "=" * 60)
         print("导出完成！")
         print("=" * 60)
@@ -258,11 +396,17 @@ async def export_page_dom():
         print(f"   1. HTML: {html_file}")
         print(f"   2. 截图: {screenshot_file}")
         print(f"   3. 分析: {analysis_file}")
+        if messages_file:
+            print(f"   4. 消息: {messages_file} (增量更新)")
         print(f"\n💡 下一步:")
         print(f"   1. 打开 {html_file} 查看页面结构")
         print(f"   2. 查看 {screenshot_file} 对照实际显示")
         print(f"   3. 阅读 {analysis_file} 了解可用的选择器")
-        print(f"   4. 根据分析结果调整 message_extractor.py 中的选择器")
+        if messages_file:
+            print(f"   4. 查看 {messages_file} 了解提取的消息内容")
+            print(f"   5. 根据分析结果调整 message_extractor.py 中的选择器")
+        else:
+            print(f"   4. 根据分析结果调整 message_extractor.py 中的选择器")
         print("=" * 60 + "\n")
 
     except Exception as e:

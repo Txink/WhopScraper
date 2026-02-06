@@ -52,8 +52,6 @@ logs/
 debug/
 
 # 数据文件
-data/
-*.json
 !samples/*.json
 !.env.example
 !package.json

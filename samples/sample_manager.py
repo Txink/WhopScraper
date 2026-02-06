@@ -127,7 +127,7 @@ class SampleManager:
         # 检查是否已存在相同消息
         for existing in self.samples:
             if existing.message == message:
-                print(f"样本已存在: {message[:50]}...")
+                # print(f"样本已存在: {message[:50]}...")
                 return existing
         
         sample = Sample(

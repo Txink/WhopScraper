@@ -1,0 +1,1280 @@
+{
+  "open": [
+    {
+      "date": "Oct 17, 2025 1:37 AM",
+      "raw_text": "xiaozhaolucky\n•\nOct 17, 2025 1:37 AM\n\nrklb 251017 本周的 71call 可以注意跳水时候0.6-0.7附近小仓位博71的反弹\n\n\n由 592阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.589969",
+        "raw_message": "xiaozhaolucky\n•\nOct 17, 2025 1:37 AM\n\nrklb 251017 本周的 71call 可以注意跳水时候0.6-0.7附近小仓位博71的反弹\n\n\n由 592阅读",
+        "instruction_type": "OPEN",
+        "ticker": "RKLB",
+        "option_type": "CALL",
+        "strike": 71.0,
+        "expiry": "本周",
+        "price": 0.6,
+        "position_size": "小仓位",
+        "message_id": "post_1CUBHNngUVajRJAccB61we"
+      }
+    },
+    {
+      "date": "Nov 10, 2025 10:47 PM",
+      "raw_text": "xiaozhaolucky\n•\nNov 10, 2025 10:47 PM\n\nMSFT 520c 11/21 @ 2.45-2.5 先建个底仓 也会后续横盘小磨损时候再加\n\n\n由 407阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.590144",
+        "raw_message": "xiaozhaolucky\n•\nNov 10, 2025 10:47 PM\n\nMSFT 520c 11/21 @ 2.45-2.5 先建个底仓 也会后续横盘小磨损时候再加\n\n\n由 407阅读",
+        "instruction_type": "OPEN",
+        "ticker": "MSFT",
+        "option_type": "CALL",
+        "strike": 520.0,
+        "price": 11.0,
+        "message_id": "post_1CUzPgywvRLeSHKfHCBZtS"
+      }
+    },
+    {
+      "date": "Nov 11, 2025 10:59 PM",
+      "raw_text": "xiaozhaolucky\n•\nNov 11, 2025 10:59 PM\n\nmeta 900call可以1.6附近补充点 然后后面反弹时候抛补仓的\n\n\n由 411阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.590378",
+        "raw_message": "xiaozhaolucky\n•\nNov 11, 2025 10:59 PM\n\nmeta 900call可以1.6附近补充点 然后后面反弹时候抛补仓的\n\n\n由 411阅读",
+        "instruction_type": "OPEN",
+        "ticker": "META",
+        "option_type": "CALL",
+        "strike": 900.0,
+        "price": 1.6,
+        "message_id": "post_1CV2JPLyfY7EpPcFdznVyz"
+      }
+    },
+    {
+      "date": "Nov 20, 2025 10:33 PM",
+      "raw_text": "xiaozhaolucky\n•\nNov 20, 2025 10:33 PM\n\n合约：QQQ 11/20 614c 入场价：1.1 备注：小仓位",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.590405",
+        "raw_message": "xiaozhaolucky\n•\nNov 20, 2025 10:33 PM\n\n合约：QQQ 11/20 614c 入场价：1.1 备注：小仓位",
+        "instruction_type": "OPEN",
+        "ticker": "QQQ",
+        "option_type": "CALL",
+        "strike": 614.0,
+        "price": 1.1,
+        "position_size": "小仓位",
+        "message_id": "post_1CVKJfF7MABGx5q1Kuihgc"
+      }
+    },
+    {
+      "date": "Nov 20, 2025 11:10 PM",
+      "raw_text": "xiaozhaolucky\n•\nNov 20, 2025 11:10 PM\n\n合约：QQQ 11/20 609P 入场价：1.5 备注：小仓位",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.590462",
+        "raw_message": "xiaozhaolucky\n•\nNov 20, 2025 11:10 PM\n\n合约：QQQ 11/20 609P 入场价：1.5 备注：小仓位",
+        "instruction_type": "OPEN",
+        "ticker": "QQQ",
+        "option_type": "PUT",
+        "strike": 609.0,
+        "price": 1.5,
+        "position_size": "小仓位",
+        "message_id": "post_1CVKMV9s9gscB84LiGCCiH"
+      }
+    },
+    {
+      "date": "Nov 21, 2025 12:27 AM",
+      "raw_text": "xiaozhaolucky\n•\nNov 21, 2025 12:27 AM\n\n合约： $QQQ 11/20 610C 入场： 0.75\n\n\nQQQ • NASDAQ\nInvesco QQQ Trust, Series 1\nUpdated\n23:01:17\n$625.65\n-3.82\n-0.61%",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.590505",
+        "raw_message": "xiaozhaolucky\n•\nNov 21, 2025 12:27 AM\n\n合约： $QQQ 11/20 610C 入场： 0.75\n\n\nQQQ • NASDAQ\nInvesco QQQ Trust, Series 1\nUpdated\n23:01:17\n$625.65\n-3.82\n-0.61%",
+        "instruction_type": "OPEN",
+        "ticker": "QQQ",
+        "option_type": "CALL",
+        "strike": 610.0,
+        "price": 0.75,
+        "message_id": "post_1CVKTQjCAeuWWNRVTKqciV"
+      }
+    },
+    {
+      "date": "Nov 21, 2025 10:32 PM",
+      "raw_text": "xiaozhaolucky\n•\nNov 21, 2025 10:32 PM\n\n合约：QQQ 11/21 595C 入场价：1.25   小仓位",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.590601",
+        "raw_message": "xiaozhaolucky\n•\nNov 21, 2025 10:32 PM\n\n合约：QQQ 11/21 595C 入场价：1.25   小仓位",
+        "instruction_type": "OPEN",
+        "ticker": "QQQ",
+        "option_type": "CALL",
+        "strike": 595.0,
+        "price": 1.25,
+        "position_size": "小仓位",
+        "message_id": "post_1CVMCQ9KZ14TG3yUqkUSLe"
+      }
+    },
+    {
+      "date": "Nov 25, 2025 10:37 PM",
+      "raw_text": "xiaozhaolucky\n•\nNov 25, 2025 10:37 PM\n\n合约：QQQ 11/25 600P 入场价：1.1 备注：小仓位",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.590639",
+        "raw_message": "xiaozhaolucky\n•\nNov 25, 2025 10:37 PM\n\n合约：QQQ 11/25 600P 入场价：1.1 备注：小仓位",
+        "instruction_type": "OPEN",
+        "ticker": "QQQ",
+        "option_type": "PUT",
+        "strike": 600.0,
+        "price": 1.1,
+        "position_size": "小仓位",
+        "message_id": "post_1CVUn36wbCvjzFfcneFhhd"
+      }
+    },
+    {
+      "date": "Nov 26, 2025 10:31 PM",
+      "raw_text": "xiaozhaolucky\n•\nNov 26, 2025 10:31 PM\n\n合约：QQQ 11/26 614C 入场价：1.12",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.590733",
+        "raw_message": "xiaozhaolucky\n•\nNov 26, 2025 10:31 PM\n\n合约：QQQ 11/26 614C 入场价：1.12",
+        "instruction_type": "OPEN",
+        "ticker": "QQQ",
+        "option_type": "CALL",
+        "strike": 614.0,
+        "price": 1.12,
+        "message_id": "post_1CVWfQpWAuQMoP6AptSv5S"
+      }
+    },
+    {
+      "date": "Dec 02, 2025 10:41 PM",
+      "raw_text": "xiaozhaolucky\n•\nDec 02, 2025 10:41 PM\n\n合约：QQQ 12/02 623C\n\n\n入场价：1.1",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.590764",
+        "raw_message": "xiaozhaolucky\n•\nDec 02, 2025 10:41 PM\n\n合约：QQQ 12/02 623C\n\n\n入场价：1.1",
+        "instruction_type": "OPEN",
+        "ticker": "QQQ",
+        "option_type": "CALL",
+        "strike": 623.0,
+        "price": 1.1,
+        "message_id": "post_1CVi31KgQeJz7tyvX6a5QZ"
+      }
+    },
+    {
+      "date": "Dec 04, 2025 10:35 PM",
+      "raw_text": "xiaozhaolucky\n•\nDec 04, 2025 10:35 PM\n\n合约：QQQ 12/04 626C 入场价：0.4",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.590806",
+        "raw_message": "xiaozhaolucky\n•\nDec 04, 2025 10:35 PM\n\n合约：QQQ 12/04 626C 入场价：0.4",
+        "instruction_type": "OPEN",
+        "ticker": "QQQ",
+        "option_type": "CALL",
+        "strike": 626.0,
+        "price": 0.4,
+        "message_id": "post_1CVmpArVUYcPZvC3hAtx6t"
+      }
+    },
+    {
+      "date": "Dec 17, 2025 10:37 PM",
+      "raw_text": "xiaozhaolucky\n•\nDec 17, 2025 10:37 PM\n\n合约：QQQ 12/17 610p 入场：1.2",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.590842",
+        "raw_message": "xiaozhaolucky\n•\nDec 17, 2025 10:37 PM\n\n合约：QQQ 12/17 610p 入场：1.2",
+        "instruction_type": "OPEN",
+        "ticker": "QQQ",
+        "option_type": "PUT",
+        "strike": 610.0,
+        "price": 1.2,
+        "message_id": "post_1CWCRrXsnASPVdrN3yB6X3"
+      }
+    },
+    {
+      "date": "Dec 18, 2025 10:39 PM",
+      "raw_text": "xiaozhaolucky\n•\nDec 18, 2025 10:39 PM\n\n合约：QQQ 12/18 605P 入场价：1",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.591087",
+        "raw_message": "xiaozhaolucky\n•\nDec 18, 2025 10:39 PM\n\n合约：QQQ 12/18 605P 入场价：1",
+        "instruction_type": "OPEN",
+        "ticker": "QQQ",
+        "option_type": "PUT",
+        "strike": 605.0,
+        "price": 1.0,
+        "message_id": "post_1CWEKnUXCXwQcYoqitejzP"
+      }
+    },
+    {
+      "date": "Dec 22, 2025 10:32 PM",
+      "raw_text": "xiaozhaolucky\n•\nDec 22, 2025 10:32 PM\n\n合约：QQQ 12/22 623C 入场价：0.6",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.591123",
+        "raw_message": "xiaozhaolucky\n•\nDec 22, 2025 10:32 PM\n\n合约：QQQ 12/22 623C 入场价：0.6",
+        "instruction_type": "OPEN",
+        "ticker": "QQQ",
+        "option_type": "CALL",
+        "strike": 623.0,
+        "price": 0.6,
+        "message_id": "post_1CWMtUFszqTEEGAMXWFxfP"
+      }
+    },
+    {
+      "date": "Jan 05, 2026 11:04 PM",
+      "raw_text": "xiaozhaolucky\n•\nJan 05, 2026 11:04 PM\n\neose  1月9日13.5的call 0.45 可以小仓位  止损设置在-38%止损\n\n\nEdited\n由 232阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.591170",
+        "raw_message": "xiaozhaolucky\n•\nJan 05, 2026 11:04 PM\n\neose  1月9日13.5的call 0.45 可以小仓位  止损设置在-38%止损\n\n\nEdited\n由 232阅读",
+        "instruction_type": "OPEN",
+        "ticker": "EOSE",
+        "option_type": "CALL",
+        "strike": 13.5,
+        "expiry": "1月9日",
+        "price": 0.45,
+        "position_size": "小仓位",
+        "message_id": "post_1CWpSHLzqHeHSGCdhAmiTp"
+      }
+    },
+    {
+      "date": "Jan 06, 2026 11:04 PM",
+      "raw_text": "xiaozhaolucky\n•\nJan 06, 2026 11:04 PM\n\nTSLA 460c 1/16 小仓位日内交易  4.10\n\n\n由 246阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.592044",
+        "raw_message": "xiaozhaolucky\n•\nJan 06, 2026 11:04 PM\n\nTSLA 460c 1/16 小仓位日内交易  4.10\n\n\n由 246阅读",
+        "instruction_type": "OPEN",
+        "ticker": "TSLA",
+        "option_type": "CALL",
+        "strike": 460.0,
+        "price": 1.0,
+        "position_size": "小仓位",
+        "message_id": "post_1CWrL4yHFqyq5sKHesYLLh"
+      }
+    },
+    {
+      "date": "Jan 07, 2026 10:53 PM",
+      "raw_text": "xiaozhaolucky\n•\nJan 07, 2026 10:53 PM\n\niren  1月9日  47 call 1.1-1.2  小仓位\n\n\n由 224阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.592432",
+        "raw_message": "xiaozhaolucky\n•\nJan 07, 2026 10:53 PM\n\niren  1月9日  47 call 1.1-1.2  小仓位\n\n\n由 224阅读",
+        "instruction_type": "OPEN",
+        "ticker": "IREN",
+        "option_type": "CALL",
+        "strike": 47.0,
+        "expiry": "1月9日",
+        "price": 1.1,
+        "position_size": "小仓位",
+        "message_id": "post_1CWtD2ig9B83wJJHEodjBz"
+      }
+    },
+    {
+      "date": "Jan 07, 2026 11:07 PM",
+      "raw_text": "xiaozhaolucky\n•\nJan 07, 2026 11:07 PM\n\niren  1月9日  46.5 call 1.1  小仓位",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.592466",
+        "raw_message": "xiaozhaolucky\n•\nJan 07, 2026 11:07 PM\n\niren  1月9日  46.5 call 1.1  小仓位",
+        "instruction_type": "OPEN",
+        "ticker": "IREN",
+        "option_type": "CALL",
+        "strike": 46.5,
+        "expiry": "1月9日",
+        "price": 1.1,
+        "position_size": "小仓位",
+        "message_id": "post_1CWtE6FQiWxrpBJhW7iCc8"
+      }
+    },
+    {
+      "date": "Jan 12, 2026 11:40 PM",
+      "raw_text": "xiaozhaolucky\n•\nJan 12, 2026 11:40 PM\n\nLYFT 19.5c 1/23 0.58-0.62 日内交易小仓位",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.592902",
+        "raw_message": "xiaozhaolucky\n•\nJan 12, 2026 11:40 PM\n\nLYFT 19.5c 1/23 0.58-0.62 日内交易小仓位",
+        "instruction_type": "OPEN",
+        "ticker": "LYFT",
+        "option_type": "CALL",
+        "strike": 19.5,
+        "expiry": "1/23",
+        "price": 0.58,
+        "position_size": "小仓位",
+        "message_id": "post_1CX3jfLpW9fW7gFDAAZAyp"
+      }
+    },
+    {
+      "date": "Unknown",
+      "raw_text": "CMCSA 30c 2/20  0.83-0.85  小仓位日内交易\n\n\n由 247阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.592923",
+        "raw_message": "CMCSA 30c 2/20  0.83-0.85  小仓位日内交易\n\n\n由 247阅读",
+        "instruction_type": "OPEN",
+        "ticker": "CMCSA",
+        "option_type": "CALL",
+        "strike": 30.0,
+        "expiry": "2/20",
+        "price": 0.83,
+        "position_size": "小仓位",
+        "message_id": "post_1CX3jkCAPHHBBUcTGwYRXe"
+      }
+    },
+    {
+      "date": "Jan 13, 2026 11:52 PM",
+      "raw_text": "xiaozhaolucky\n•\nJan 13, 2026 11:52 PM\n\nMSFT 480c 1/23  2.70 日内小仓位\n\n\n由 286阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.593276",
+        "raw_message": "xiaozhaolucky\n•\nJan 13, 2026 11:52 PM\n\nMSFT 480c 1/23  2.70 日内小仓位\n\n\n由 286阅读",
+        "instruction_type": "OPEN",
+        "ticker": "MSFT",
+        "option_type": "CALL",
+        "strike": 480.0,
+        "expiry": "1/23",
+        "price": 2.7,
+        "position_size": "小仓位",
+        "message_id": "post_1CX5ePXuaJRxnpThm5LMbk"
+      }
+    },
+    {
+      "date": "Jan 20, 2026 10:37 PM",
+      "raw_text": "xiaozhaolucky\n•\nJan 20, 2026 10:37 PM\n\nINTC - $52 CALLS 1月30  1.25 止损在1.00  小仓位\n\n\n由 219阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.593364",
+        "raw_message": "xiaozhaolucky\n•\nJan 20, 2026 10:37 PM\n\nINTC - $52 CALLS 1月30  1.25 止损在1.00  小仓位\n\n\n由 219阅读",
+        "instruction_type": "OPEN",
+        "ticker": "INTC",
+        "option_type": "CALL",
+        "strike": 52.0,
+        "expiry": "1月30",
+        "price": 1.25,
+        "position_size": "小仓位",
+        "message_id": "post_1CXJoN1rEeMHxAcVTfbavU"
+      }
+    },
+    {
+      "date": "Jan 20, 2026 10:38 PM",
+      "raw_text": "xiaozhaolucky\nINTC - $52 CALLS 1月30 1.25 止损在1.00 小仓位\nxiaozhaolucky\n•\nJan 20, 2026 10:38 PM\n\n日内交易不隔夜",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.593385",
+        "raw_message": "xiaozhaolucky\nINTC - $52 CALLS 1月30 1.25 止损在1.00 小仓位\nxiaozhaolucky\n•\nJan 20, 2026 10:38 PM\n\n日内交易不隔夜",
+        "instruction_type": "OPEN",
+        "ticker": "INTC",
+        "option_type": "CALL",
+        "strike": 52.0,
+        "expiry": "1月30",
+        "price": 1.25,
+        "position_size": "小仓位",
+        "message_id": "post_1CXJoRnavHrYy5eEyvFq3N"
+      }
+    },
+    {
+      "date": "Jan 20, 2026 10:52 PM",
+      "raw_text": "xiaozhaolucky\n•\nJan 20, 2026 10:52 PM\n\nINTC - $53 CALLS 1月30日 $1.30 小仓位\n\n\n由 227阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.593456",
+        "raw_message": "xiaozhaolucky\n•\nJan 20, 2026 10:52 PM\n\nINTC - $53 CALLS 1月30日 $1.30 小仓位\n\n\n由 227阅读",
+        "instruction_type": "OPEN",
+        "ticker": "INTC",
+        "option_type": "CALL",
+        "strike": 53.0,
+        "expiry": "1月30日",
+        "price": 1.3,
+        "position_size": "小仓位",
+        "message_id": "post_1CXJpWqVyfKVwb4X72S7Ub"
+      }
+    },
+    {
+      "date": "Jan 20, 2026 10:53 PM",
+      "raw_text": "xiaozhaolucky\nINTC - $53 CALLS 1月30日 $1.30 小仓位\nxiaozhaolucky\n•\nJan 20, 2026 10:53 PM\n\n止损设置1.05  日内\n\n\n由 233阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.593476",
+        "raw_message": "xiaozhaolucky\nINTC - $53 CALLS 1月30日 $1.30 小仓位\nxiaozhaolucky\n•\nJan 20, 2026 10:53 PM\n\n止损设置1.05  日内\n\n\n由 233阅读",
+        "instruction_type": "OPEN",
+        "ticker": "INTC",
+        "option_type": "CALL",
+        "strike": 53.0,
+        "expiry": "1月30日",
+        "price": 1.3,
+        "position_size": "小仓位",
+        "message_id": "post_1CXJpY3vEXeTkHJb1TsEoo"
+      }
+    },
+    {
+      "date": "Jan 21, 2026 10:57 PM",
+      "raw_text": "xiaozhaolucky\n•\nJan 21, 2026 10:57 PM\n\nAMZN 250c 2/20  4.00 小仓位\n\n\n由 189阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.593662",
+        "raw_message": "xiaozhaolucky\n•\nJan 21, 2026 10:57 PM\n\nAMZN 250c 2/20  4.00 小仓位\n\n\n由 189阅读",
+        "instruction_type": "OPEN",
+        "ticker": "AMZN",
+        "option_type": "CALL",
+        "strike": 250.0,
+        "expiry": "2/20",
+        "price": 4.0,
+        "position_size": "小仓位",
+        "message_id": "post_1CXLif2mVWweLSrsFaGPwA"
+      }
+    },
+    {
+      "date": "Jan 21, 2026 10:57 PM",
+      "raw_text": "xiaozhaolucky\nAMZN 250c 2/20 4.00 小仓位\nxiaozhaolucky\n•\nJan 21, 2026 10:57 PM\n\n日内止损在3.7",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.593691",
+        "raw_message": "xiaozhaolucky\nAMZN 250c 2/20 4.00 小仓位\nxiaozhaolucky\n•\nJan 21, 2026 10:57 PM\n\n日内止损在3.7",
+        "instruction_type": "OPEN",
+        "ticker": "AMZN",
+        "option_type": "CALL",
+        "strike": 250.0,
+        "expiry": "2/20",
+        "price": 4.0,
+        "position_size": "小仓位",
+        "message_id": "post_1CXLigB8wY5ZRxfAgC6phy"
+      }
+    },
+    {
+      "date": "Unknown",
+      "raw_text": "$IREN 1月23 $58 calls  1.10\n\n\n由 196阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.593721",
+        "raw_message": "$IREN 1月23 $58 calls  1.10\n\n\n由 196阅读",
+        "instruction_type": "OPEN",
+        "ticker": "IREN",
+        "option_type": "CALL",
+        "strike": 58.0,
+        "expiry": "1月23",
+        "price": 1.1,
+        "message_id": "post_1CXLimnx3GoezEn7jsZ5br"
+      }
+    },
+    {
+      "date": "Jan 21, 2026 10:58 PM",
+      "raw_text": "xiaozhaolucky\n$IREN 1月23 $58 calls 1.10\nxiaozhaolucky\n•\nJan 21, 2026 10:58 PM\n\n小仓位日内 止损在0.75\n\n\nEdited",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.593767",
+        "raw_message": "xiaozhaolucky\n$IREN 1月23 $58 calls 1.10\nxiaozhaolucky\n•\nJan 21, 2026 10:58 PM\n\n小仓位日内 止损在0.75\n\n\nEdited",
+        "instruction_type": "OPEN",
+        "ticker": "IREN",
+        "option_type": "CALL",
+        "strike": 58.0,
+        "expiry": "1月23",
+        "price": 1.1,
+        "position_size": "小仓位",
+        "message_id": "post_1CXLinQPkn6RVTWQggyu5V"
+      }
+    },
+    {
+      "date": "Jan 23, 2026 12:07 AM",
+      "raw_text": "xiaozhaolucky\n•\nJan 23, 2026 12:07 AM\n\nNVDA 190c 1/30  2-2.1  小仓位\n\n\n由 253阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.594399",
+        "raw_message": "xiaozhaolucky\n•\nJan 23, 2026 12:07 AM\n\nNVDA 190c 1/30  2-2.1  小仓位\n\n\n由 253阅读",
+        "instruction_type": "OPEN",
+        "ticker": "NVDA",
+        "option_type": "CALL",
+        "strike": 190.0,
+        "expiry": "1/30",
+        "price": 2.0,
+        "position_size": "小仓位",
+        "message_id": "post_1CXNhpJA8zJ6xhAm5sRKPe"
+      }
+    },
+    {
+      "date": "Jan 23, 2026 12:07 AM",
+      "raw_text": "xiaozhaolucky\nNVDA 190c 1/30 2-2.1 小仓位\nxiaozhaolucky\n•\nJan 23, 2026 12:07 AM\n\n止损在1.74\n\n\n由 265阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.594425",
+        "raw_message": "xiaozhaolucky\nNVDA 190c 1/30 2-2.1 小仓位\nxiaozhaolucky\n•\nJan 23, 2026 12:07 AM\n\n止损在1.74\n\n\n由 265阅读",
+        "instruction_type": "OPEN",
+        "ticker": "NVDA",
+        "option_type": "CALL",
+        "strike": 190.0,
+        "expiry": "1/30",
+        "price": 2.0,
+        "position_size": "小仓位",
+        "message_id": "post_1CXNhrPvjAP6rf69aWUY7R"
+      }
+    },
+    {
+      "date": "Yesterday at 10:39 PM",
+      "raw_text": "xiaozhaolucky\n•\nYesterday at 10:39 PM\n\nNDAQ - $100 CALLS 2/20 $2.30",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.594613",
+        "raw_message": "xiaozhaolucky\n•\nYesterday at 10:39 PM\n\nNDAQ - $100 CALLS 2/20 $2.30",
+        "instruction_type": "OPEN",
+        "ticker": "NDAQ",
+        "option_type": "CALL",
+        "strike": 100.0,
+        "expiry": "2/20",
+        "price": 2.3,
+        "message_id": "post_1CXbqkaU5uG8KwoiLkwL5h"
+      }
+    },
+    {
+      "date": "2:22 AM",
+      "raw_text": "xiaozhaolucky\n•\n2:22 AM\n\nRIVN 16c 3/20  1.35",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.594825",
+        "raw_message": "xiaozhaolucky\n•\n2:22 AM\n\nRIVN 16c 3/20  1.35",
+        "instruction_type": "OPEN",
+        "ticker": "RIVN",
+        "option_type": "CALL",
+        "strike": 16.0,
+        "expiry": "3/20",
+        "price": 1.35,
+        "message_id": "post_1CXc8nmc5gNzbd221bLjas"
+      }
+    },
+    {
+      "date": "2:26 AM",
+      "raw_text": "xiaozhaolucky\n•\n2:26 AM\n\nNUE - $190 CALLS EXPIRATION 2/20 $1.73  彩票",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.594858",
+        "raw_message": "xiaozhaolucky\n•\n2:26 AM\n\nNUE - $190 CALLS EXPIRATION 2/20 $1.73  彩票",
+        "instruction_type": "OPEN",
+        "ticker": "NUE",
+        "option_type": "CALL",
+        "strike": 190.0,
+        "expiry": "2/20",
+        "price": 1.73,
+        "message_id": "post_1CXc94gMCNjrXv4JvpTUzD"
+      }
+    }
+  ],
+  "stop_loss": [
+    {
+      "date": "Unknown",
+      "raw_text": "小仓位止损设置在0.6",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.591019",
+        "raw_message": "小仓位止损设置在0.6",
+        "instruction_type": "STOP_LOSS",
+        "price": 0.6,
+        "message_id": "post_1CWCYSVQtvXSZJpjdEKdov"
+      }
+    },
+    {
+      "date": "Unknown",
+      "raw_text": "没有通用设置就每个下好单子计算下   0.62*价格止损   1.2 1.4 1.6的价格止盈三次\n\n\n由 247阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.591562",
+        "raw_message": "没有通用设置就每个下好单子计算下   0.62*价格止损   1.2 1.4 1.6的价格止盈三次\n\n\n由 247阅读",
+        "instruction_type": "STOP_LOSS",
+        "price": 1.2,
+        "message_id": "post_1CWrDgUeK61bM5ZrNnUDaD"
+      }
+    },
+    {
+      "date": "Jan 06, 2026 11:00 PM",
+      "raw_text": "xiaozhaolucky\n•\nJan 06, 2026 11:00 PM\n\n止损设置在0.17\n\n\n由 241阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.592011",
+        "raw_message": "xiaozhaolucky\n•\nJan 06, 2026 11:00 PM\n\n止损设置在0.17\n\n\n由 241阅读",
+        "instruction_type": "STOP_LOSS",
+        "price": 0.17,
+        "message_id": "post_1CWrKkSKLqED69BqvCaA34"
+      }
+    },
+    {
+      "date": "Unknown",
+      "raw_text": "剩下部分止损设置在4.0\n\n\n由 244阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.592101",
+        "raw_message": "剩下部分止损设置在4.0\n\n\n由 244阅读",
+        "instruction_type": "STOP_LOSS",
+        "price": 4.0,
+        "message_id": "post_1CWrLQmsS5557Tn3ut6nSG"
+      }
+    },
+    {
+      "date": "Unknown",
+      "raw_text": "剩下仓位止损设置在4.4",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.592217",
+        "raw_message": "剩下仓位止损设置在4.4",
+        "instruction_type": "STOP_LOSS",
+        "price": 4.4,
+        "message_id": "post_1CWrLrX4r6DABwAfPdq1tw"
+      }
+    },
+    {
+      "date": "Jan 06, 2026 11:38 PM",
+      "raw_text": "xiaozhaolucky\n剩下仓位止损设置在4.4\nxiaozhaolucky\n•\nJan 06, 2026 11:38 PM\n\ntsla剩下4分之一在跌破4.4都出了  等tsla 重新一轮的检测或者等新的\n\n\n由 246阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.592313",
+        "raw_message": "xiaozhaolucky\n剩下仓位止损设置在4.4\nxiaozhaolucky\n•\nJan 06, 2026 11:38 PM\n\ntsla剩下4分之一在跌破4.4都出了  等tsla 重新一轮的检测或者等新的\n\n\n由 246阅读",
+        "instruction_type": "STOP_LOSS",
+        "price": 4.4,
+        "message_id": "post_1CWrNfq9D8U8w9uM5DqmxP"
+      }
+    },
+    {
+      "date": "Unknown",
+      "raw_text": "小仓位 止损在1.8",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.593611",
+        "raw_message": "小仓位 止损在1.8",
+        "instruction_type": "STOP_LOSS",
+        "price": 1.8,
+        "message_id": "post_1CXLiCXBi1NkLHkZFVfZ3a"
+      }
+    },
+    {
+      "date": "Jan 21, 2026 11:14 PM",
+      "raw_text": "xiaozhaolucky\nAMD - $260 CALLS 下周的$4.45\nxiaozhaolucky\n•\nJan 21, 2026 11:14 PM\n\n小仓位 日内 止损在3.85",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.594086",
+        "raw_message": "xiaozhaolucky\nAMD - $260 CALLS 下周的$4.45\nxiaozhaolucky\n•\nJan 21, 2026 11:14 PM\n\n小仓位 日内 止损在3.85",
+        "instruction_type": "STOP_LOSS",
+        "price": 3.85,
+        "message_id": "post_1CXLjwqDKLx7QeBor1avvc"
+      }
+    },
+    {
+      "date": "Jan 22, 2026 10:41 PM",
+      "raw_text": "xiaozhaolucky\nGILD - $130 CALLS 这周 1.5-1.60\nxiaozhaolucky\n•\nJan 22, 2026 10:41 PM\n\n小仓位 止损 在 1.3",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.594203",
+        "raw_message": "xiaozhaolucky\nGILD - $130 CALLS 这周 1.5-1.60\nxiaozhaolucky\n•\nJan 22, 2026 10:41 PM\n\n小仓位 止损 在 1.3",
+        "instruction_type": "STOP_LOSS",
+        "price": 1.3,
+        "message_id": "post_1CXNbG1zAyv8MfM1oD7dEz"
+      }
+    },
+    {
+      "date": "Jan 22, 2026 10:44 PM",
+      "raw_text": "xiaozhaolucky\n$EOSE call 本周 $18 0.5\nxiaozhaolucky\n•\nJan 22, 2026 10:44 PM\n\n小仓位  止损 0.35",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.594323",
+        "raw_message": "xiaozhaolucky\n$EOSE call 本周 $18 0.5\nxiaozhaolucky\n•\nJan 22, 2026 10:44 PM\n\n小仓位  止损 0.35",
+        "instruction_type": "STOP_LOSS",
+        "price": 0.35,
+        "message_id": "post_1CXNbWAALJguKstphK5rVR"
+      }
+    },
+    {
+      "date": "Unknown",
+      "raw_text": "小仓位 止损2.05",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.594626",
+        "raw_message": "小仓位 止损2.05",
+        "instruction_type": "STOP_LOSS",
+        "price": 2.05,
+        "message_id": "post_1CXbqmR1q5JFHLdoCXkzbv"
+      }
+    },
+    {
+      "date": "Unknown",
+      "raw_text": "慢速 小仓位 止损在0.94\n\n\n由 179阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.594839",
+        "raw_message": "慢速 小仓位 止损在0.94\n\n\n由 179阅读",
+        "instruction_type": "STOP_LOSS",
+        "price": 0.94,
+        "message_id": "post_1CXc8pnaGp8WAywfrr8Nuy"
+      }
+    },
+    {
+      "date": "Unknown",
+      "raw_text": "彩票单 止损 1.5\n\n\n由 179阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.594872",
+        "raw_message": "彩票单 止损 1.5\n\n\n由 179阅读",
+        "instruction_type": "STOP_LOSS",
+        "price": 1.5,
+        "message_id": "post_1CXc95pXursa9L5q5tasq1"
+      }
+    }
+  ],
+  "adjust": [
+    {
+      "date": "Unknown",
+      "raw_text": "止损设置上移到2.16\n\n\n由 263阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.594501",
+        "raw_message": "止损设置上移到2.16\n\n\n由 263阅读",
+        "instruction_type": "ADJUST",
+        "price": 2.16,
+        "message_id": "post_1CXNjUYWKJnTkeYPKFnp2V"
+      }
+    },
+    {
+      "date": "Unknown",
+      "raw_text": "剩下看转弯往下时候都出  止损上移到2.25\n\n\n由 266阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.594544",
+        "raw_message": "剩下看转弯往下时候都出  止损上移到2.25\n\n\n由 266阅读",
+        "instruction_type": "ADJUST",
+        "price": 2.25,
+        "message_id": "post_1CXNkpc1orwfecUMY9ewZr"
+      }
+    }
+  ],
+  "take_profit": [
+    {
+      "date": "Nov 10, 2025 10:53 PM",
+      "raw_text": "xiaozhaolucky\n•\nNov 10, 2025 10:53 PM\n\n2.73出一半 msft期权",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.590180",
+        "raw_message": "xiaozhaolucky\n•\nNov 10, 2025 10:53 PM\n\n2.73出一半 msft期权",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 2.73,
+        "portion": "1/2",
+        "message_id": "post_1CUzQ7N13HRjih2UjtvPFb"
+      }
+    },
+    {
+      "date": "Unknown",
+      "raw_text": "微软期权设置下跌破2.55全出\n\n\n由 418阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.590297",
+        "raw_message": "微软期权设置下跌破2.55全出\n\n\n由 418阅读",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 2.55,
+        "portion": "全部",
+        "message_id": "post_1CUzQAiMwTCdK3WdxbnvfN"
+      }
+    },
+    {
+      "date": "Unknown",
+      "raw_text": "1.5附近把剩下都出了\n\n\n由 356阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.590437",
+        "raw_message": "1.5附近把剩下都出了\n\n\n由 356阅读",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 1.5,
+        "portion": "全部",
+        "message_id": "post_1CVKJvhCTDueHuBDJaUGo4"
+      }
+    },
+    {
+      "date": "Unknown",
+      "raw_text": "0.9附近出\n\n\n由 375阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.590527",
+        "raw_message": "0.9附近出\n\n\n由 375阅读",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 0.9,
+        "portion": "全部",
+        "message_id": "post_1CVKTXmzj95Fiiycfswqm2"
+      }
+    },
+    {
+      "date": "Nov 21, 2025 12:34 AM",
+      "raw_text": "xiaozhaolucky\n•\nNov 21, 2025 12:34 AM\n\n0.61出剩余的",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.590565",
+        "raw_message": "xiaozhaolucky\n•\nNov 21, 2025 12:34 AM\n\n0.61出剩余的",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 0.61,
+        "portion": "全部",
+        "message_id": "post_1CVKTt9sEnYUraTXBAhjc5"
+      }
+    },
+    {
+      "date": "Unknown",
+      "raw_text": "剩下也1.25附近出速度有点快",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.590659",
+        "raw_message": "剩下也1.25附近出速度有点快",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 1.25,
+        "portion": "全部",
+        "message_id": "post_1CVUnAJ1o4FYoEFigK4ETY"
+      }
+    },
+    {
+      "date": "Unknown",
+      "raw_text": "1.15附近出走弱了\n\n\n由 392阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.590785",
+        "raw_message": "1.15附近出走弱了\n\n\n由 392阅读",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 1.15,
+        "portion": "全部",
+        "message_id": "post_1CVi37FddFQyQZx2Ei6gZi"
+      }
+    },
+    {
+      "date": "Unknown",
+      "raw_text": "0.55剩下全出\n\n\n由 388阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.590821",
+        "raw_message": "0.55剩下全出\n\n\n由 388阅读",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 0.55,
+        "portion": "全部",
+        "message_id": "post_1CVmpKbfddhqZzFTuwSUuT"
+      }
+    },
+    {
+      "date": "Unknown",
+      "raw_text": "0.9出三之一\n\n\n由 363阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.591034",
+        "raw_message": "0.9出三之一\n\n\n由 363阅读",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 0.9,
+        "portion": "1/3",
+        "message_id": "post_1CWCYZ9JiAxWNSuBRNGHWA"
+      }
+    },
+    {
+      "date": "Dec 18, 2025 12:08 AM",
+      "raw_text": "xiaozhaolucky\n•\nDec 18, 2025 12:08 AM\n\n0.9剩下都出\n\n\n由 365阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.591066",
+        "raw_message": "xiaozhaolucky\n•\nDec 18, 2025 12:08 AM\n\n0.9剩下都出\n\n\n由 365阅读",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 0.9,
+        "portion": "全部",
+        "message_id": "post_1CWCYotNFaYxXeT3nVkF34"
+      }
+    },
+    {
+      "date": "Unknown",
+      "raw_text": "1.52出剩下一半\n\n\n由 357阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.591102",
+        "raw_message": "1.52出剩下一半\n\n\n由 357阅读",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 1.52,
+        "portion": "1/2",
+        "message_id": "post_1CWEKsn4JQrx9dtgoUkf9b"
+      }
+    },
+    {
+      "date": "Unknown",
+      "raw_text": "0.6附近出剩下的\n\n\n由 304阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.591140",
+        "raw_message": "0.6附近出剩下的\n\n\n由 304阅读",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 0.6,
+        "portion": "全部",
+        "message_id": "post_1CWMtZEX9tvXUqc4PgAevx"
+      }
+    },
+    {
+      "date": "Jan 06, 2026 2:48 AM",
+      "raw_text": "xiaozhaolucky\n•\nJan 06, 2026 2:48 AM\n\neose可以这波上去 0.51出个三分之一",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.591199",
+        "raw_message": "xiaozhaolucky\n•\nJan 06, 2026 2:48 AM\n\neose可以这波上去 0.51出个三分之一",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 0.51,
+        "portion": "1/3",
+        "message_id": "post_1CWpjJxiNwkBPBKR9oaxov"
+      }
+    },
+    {
+      "date": "Unknown",
+      "raw_text": "eose期权 可以这波上去 0.51出个三分之一 然后0.36在挂点接\n\n\n由 198阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.591219",
+        "raw_message": "eose期权 可以这波上去 0.51出个三分之一 然后0.36在挂点接\n\n\n由 198阅读",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 0.51,
+        "portion": "1/3",
+        "message_id": "post_1CWpjQ1GC9bYvZ9PFwyzrn"
+      }
+    },
+    {
+      "date": "Jan 06, 2026 3:37 AM",
+      "raw_text": "xiaozhaolucky\n•\nJan 06, 2026 3:37 AM\n\n0.7再出剩下的一半 留四分之一原始仓位\n\n\n由 240阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.591372",
+        "raw_message": "xiaozhaolucky\n•\nJan 06, 2026 3:37 AM\n\n0.7再出剩下的一半 留四分之一原始仓位\n\n\n由 240阅读",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 0.7,
+        "portion": "1/2",
+        "message_id": "post_1CWpo61EHAR8Urjy8iahLy"
+      }
+    },
+    {
+      "date": "Jan 06, 2026 3:41 AM",
+      "raw_text": "xiaozhaolucky\n•\nJan 06, 2026 3:41 AM\n\n0.65出剩下eose期权 等机器在买入的通知\n\n\n由 248阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.591423",
+        "raw_message": "xiaozhaolucky\n•\nJan 06, 2026 3:41 AM\n\n0.65出剩下eose期权 等机器在买入的通知\n\n\n由 248阅读",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 0.65,
+        "portion": "全部",
+        "message_id": "post_1CWpoNBZitWbx1CgArqMkE"
+      }
+    },
+    {
+      "date": "Unknown",
+      "raw_text": "0。28出一半rivn20call\n\n\n由 251阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.592267",
+        "raw_message": "0。28出一半rivn20call\n\n\n由 251阅读",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 28.0,
+        "portion": "1/2",
+        "message_id": "post_1CWrLxHzD4WrjFFkhCEM53"
+      }
+    },
+    {
+      "date": "Jan 07, 2026 2:01 AM",
+      "raw_text": "xiaozhaolucky\n•\nJan 07, 2026 2:01 AM\n\n0.39出 剩下的rivn今天应该到不了价内 明天再开新的\n\n\n由 241阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.592401",
+        "raw_message": "xiaozhaolucky\n•\nJan 07, 2026 2:01 AM\n\n0.39出 剩下的rivn今天应该到不了价内 明天再开新的\n\n\n由 241阅读",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 0.39,
+        "portion": "全部",
+        "message_id": "post_1CWrZbYAUPbdRKeHr4yitH"
+      }
+    },
+    {
+      "date": "Unknown",
+      "raw_text": "47 call到1.1出\n\n\n由 221阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.592494",
+        "raw_message": "47 call到1.1出\n\n\n由 221阅读",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 1.1,
+        "portion": "全部",
+        "message_id": "post_1CWtE78B492MHJe1exGNN6"
+      }
+    },
+    {
+      "date": "Jan 07, 2026 11:43 PM",
+      "raw_text": "xiaozhaolucky\n•\nJan 07, 2026 11:43 PM\n\n1.3出一半 46的call",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.592640",
+        "raw_message": "xiaozhaolucky\n•\nJan 07, 2026 11:43 PM\n\n1.3出一半 46的call",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 1.3,
+        "portion": "1/2",
+        "message_id": "post_1CWtGsyFaZpHGhExdakjmf"
+      }
+    },
+    {
+      "date": "Jan 12, 2026 11:44 PM",
+      "raw_text": "xiaozhaolucky\n•\nJan 12, 2026 11:44 PM\n\n0.7出一半 lyft期权 进入价内",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.592965",
+        "raw_message": "xiaozhaolucky\n•\nJan 12, 2026 11:44 PM\n\n0.7出一半 lyft期权 进入价内",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 0.7,
+        "portion": "1/2",
+        "message_id": "post_1CX3jwRg4YyWeA5RaTT7Lw"
+      }
+    },
+    {
+      "date": "Unknown",
+      "raw_text": "0.7出剩下一半lyft\n\n\n由 251阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.592986",
+        "raw_message": "0.7出剩下一半lyft\n\n\n由 251阅读",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 0.7,
+        "portion": "1/2",
+        "message_id": "post_1CX3k46k9QE8u8p81wuQnP"
+      }
+    },
+    {
+      "date": "Jan 13, 2026 1:04 AM",
+      "raw_text": "xiaozhaolucky\n•\nJan 13, 2026 1:04 AM\n\n0.92出三分之一cmcsa期权\n\n\n由 260阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.593021",
+        "raw_message": "xiaozhaolucky\n•\nJan 13, 2026 1:04 AM\n\n0.92出三分之一cmcsa期权\n\n\n由 260阅读",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 0.92,
+        "portion": "1/3",
+        "message_id": "post_1CX3r3hbymGPrmoMZSZuAQ"
+      }
+    },
+    {
+      "date": "Jan 13, 2026 1:17 AM",
+      "raw_text": "xiaozhaolucky\n•\nJan 13, 2026 1:17 AM\n\n0.93也出三分之一cmcsa期权\n\n\n由 272阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.593056",
+        "raw_message": "xiaozhaolucky\n•\nJan 13, 2026 1:17 AM\n\n0.93也出三分之一cmcsa期权\n\n\n由 272阅读",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 0.93,
+        "portion": "1/3",
+        "message_id": "post_1CX3s6CGgWmSH4aFFjijWF"
+      }
+    },
+    {
+      "date": "Unknown",
+      "raw_text": "1.06出三分之一xom\n\n\n由 278阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.593154",
+        "raw_message": "1.06出三分之一xom\n\n\n由 278阅读",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 1.06,
+        "portion": "1/3",
+        "message_id": "post_1CX5ZfFEbrFMh59pgwMNTS"
+      }
+    },
+    {
+      "date": "Jan 13, 2026 10:53 PM",
+      "raw_text": "xiaozhaolucky\n•\nJan 13, 2026 10:53 PM\n\n1.0出三分之一xom\n\n\n由 284阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.593184",
+        "raw_message": "xiaozhaolucky\n•\nJan 13, 2026 10:53 PM\n\n1.0出三分之一xom\n\n\n由 284阅读",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 1.0,
+        "portion": "1/3",
+        "message_id": "post_1CX5ZrnJnZSV1KtMfhzaGp"
+      }
+    },
+    {
+      "date": "Jan 13, 2026 10:59 PM",
+      "raw_text": "xiaozhaolucky\n•\nJan 13, 2026 10:59 PM\n\n0.92出剩下的xom等下找机会平移往下买\n\n\n由 284阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.593221",
+        "raw_message": "xiaozhaolucky\n•\nJan 13, 2026 10:59 PM\n\n0.92出剩下的xom等下找机会平移往下买\n\n\n由 284阅读",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 0.92,
+        "portion": "全部",
+        "message_id": "post_1CX5aKrvWeMkkTN5vyYjWu"
+      }
+    },
+    {
+      "date": "Jan 13, 2026 11:56 PM",
+      "raw_text": "xiaozhaolucky\n•\nJan 13, 2026 11:56 PM\n\n2.83出三分之一msft\n\n\n由 285阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.593307",
+        "raw_message": "xiaozhaolucky\n•\nJan 13, 2026 11:56 PM\n\n2.83出三分之一msft\n\n\n由 285阅读",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 2.83,
+        "portion": "1/3",
+        "message_id": "post_1CX5ehGHjYNpxnfDmBxuKn"
+      }
+    },
+    {
+      "date": "Jan 14, 2026 12:07 AM",
+      "raw_text": "xiaozhaolucky\n•\nJan 14, 2026 12:07 AM\n\n2.7出剩下的三分之二msft期权指数上涨没怎么跟随\n\n\n由 286阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.593345",
+        "raw_message": "xiaozhaolucky\n•\nJan 14, 2026 12:07 AM\n\n2.7出剩下的三分之二msft期权指数上涨没怎么跟随\n\n\n由 286阅读",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 2.7,
+        "portion": "全部",
+        "message_id": "post_1CX5fX1BgsJLbN24RVN1Fq"
+      }
+    },
+    {
+      "date": "Unknown",
+      "raw_text": "1.4出三分之一\n\n\n由 226阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.593399",
+        "raw_message": "1.4出三分之一\n\n\n由 226阅读",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 1.4,
+        "portion": "1/3",
+        "message_id": "post_1CXJoW2WKYGs6oQui9a9Mu"
+      }
+    },
+    {
+      "date": "Jan 20, 2026 10:41 PM",
+      "raw_text": "xiaozhaolucky\n•\nJan 20, 2026 10:41 PM\n\n1.35出剩下的intc\n\n\n由 224阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.593437",
+        "raw_message": "xiaozhaolucky\n•\nJan 20, 2026 10:41 PM\n\n1.35出剩下的intc\n\n\n由 224阅读",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 1.35,
+        "portion": "全部",
+        "message_id": "post_1CXJogBJiZGbLPfuLPUiQE"
+      }
+    },
+    {
+      "date": "Jan 20, 2026 11:02 PM",
+      "raw_text": "xiaozhaolucky\n•\nJan 20, 2026 11:02 PM\n\n1.54出剩下的intc\n\n\n由 230阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.593548",
+        "raw_message": "xiaozhaolucky\n•\nJan 20, 2026 11:02 PM\n\n1.54出剩下的intc\n\n\n由 230阅读",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 1.54,
+        "portion": "全部",
+        "message_id": "post_1CXJqEvzap49Lit28Fse8a"
+      }
+    },
+    {
+      "date": "Unknown",
+      "raw_text": "2.75出剩下一半\n\n\n由 181阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.593635",
+        "raw_message": "2.75出剩下一半\n\n\n由 181阅读",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 2.75,
+        "portion": "1/2",
+        "message_id": "post_1CXLiGzeRPCu7g71itNmSd"
+      }
+    },
+    {
+      "date": "Unknown",
+      "raw_text": "1.25出三分之一 iren\n\n\n由 207阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.593787",
+        "raw_message": "1.25出三分之一 iren\n\n\n由 207阅读",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 1.25,
+        "portion": "1/3",
+        "message_id": "post_1CXLivdk1KHF3bCE5djnwT"
+      }
+    },
+    {
+      "date": "Jan 21, 2026 11:03 PM",
+      "raw_text": "xiaozhaolucky\n•\nJan 21, 2026 11:03 PM\n\niren  1.45出三分之一",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.593823",
+        "raw_message": "xiaozhaolucky\n•\nJan 21, 2026 11:03 PM\n\niren  1.45出三分之一",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 1.45,
+        "portion": "1/3",
+        "message_id": "post_1CXLj7ubPqvsSdcGqhFAU7"
+      }
+    },
+    {
+      "date": "Unknown",
+      "raw_text": "1.43  iren 全出 止盈了",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.593849",
+        "raw_message": "1.43  iren 全出 止盈了",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 1.43,
+        "portion": "全部",
+        "message_id": "post_1CXLjBRSbDgJ4k6X1XYY6w"
+      }
+    },
+    {
+      "date": "Unknown",
+      "raw_text": "1.52出三分之一 apld call",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.593958",
+        "raw_message": "1.52出三分之一 apld call",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 1.52,
+        "portion": "1/3",
+        "message_id": "post_1CXLjWKaWfh31aGYJf56n6"
+      }
+    },
+    {
+      "date": "Unknown",
+      "raw_text": "1.47出剩下的apld call\n\n\n由 225阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.593983",
+        "raw_message": "1.47出剩下的apld call\n\n\n由 225阅读",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 1.47,
+        "portion": "全部",
+        "message_id": "post_1CXLjdk6qZcSm7QoLcUv88"
+      }
+    },
+    {
+      "date": "Unknown",
+      "raw_text": "4.75   amd全出\n\n\n由 229阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.594109",
+        "raw_message": "4.75   amd全出\n\n\n由 229阅读",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 4.75,
+        "portion": "全部",
+        "message_id": "post_1CXLk3wgpuhdLv9Gbx3q9m"
+      }
+    },
+    {
+      "date": "Unknown",
+      "raw_text": "1.9附近出三分之一",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.594217",
+        "raw_message": "1.9附近出三分之一",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 1.9,
+        "portion": "1/3",
+        "message_id": "post_1CXNbKK8oK74QriUZv3rmK"
+      }
+    },
+    {
+      "date": "Unknown",
+      "raw_text": "0.75附近出剩下的\n\n\n由 230阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.594341",
+        "raw_message": "0.75附近出剩下的\n\n\n由 230阅读",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 0.75,
+        "portion": "全部",
+        "message_id": "post_1CXNbdJgiD3S6fcDyXFsSY"
+      }
+    },
+    {
+      "date": "Jan 23, 2026 12:17 AM",
+      "raw_text": "xiaozhaolucky\n•\nJan 23, 2026 12:17 AM\n\nNVDA 2.25 出三分之一\n\n\n由 264阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.594458",
+        "raw_message": "xiaozhaolucky\n•\nJan 23, 2026 12:17 AM\n\nNVDA 2.25 出三分之一\n\n\n由 264阅读",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 2.25,
+        "portion": "1/3",
+        "message_id": "post_1CXNiZ3HfCPXqEbDx1vtpK"
+      }
+    },
+    {
+      "date": "Jan 23, 2026 12:29 AM",
+      "raw_text": "xiaozhaolucky\n•\nJan 23, 2026 12:29 AM\n\nNVDA 2.32 出三分之一",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.594488",
+        "raw_message": "xiaozhaolucky\n•\nJan 23, 2026 12:29 AM\n\nNVDA 2.32 出三分之一",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 2.32,
+        "portion": "1/3",
+        "message_id": "post_1CXNjTdtA8Mw1T4r8P4FEW"
+      }
+    },
+    {
+      "date": "Jan 23, 2026 12:51 AM",
+      "raw_text": "xiaozhaolucky\n•\nJan 23, 2026 12:51 AM\n\nnvda剩下部分也2.45附近出\n\n\n由 267阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.594588",
+        "raw_message": "xiaozhaolucky\n•\nJan 23, 2026 12:51 AM\n\nnvda剩下部分也2.45附近出\n\n\n由 267阅读",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 2.45,
+        "portion": "全部",
+        "message_id": "post_1CXNmCYpbYheKjRX4MLWLE"
+      }
+    },
+    {
+      "date": "Unknown",
+      "raw_text": "2.45出三分之一ndaq\n\n\n由 186阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.594665",
+        "raw_message": "2.45出三分之一ndaq\n\n\n由 186阅读",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 2.45,
+        "portion": "1/3",
+        "message_id": "post_1CXbr48PuapiKNaEdUQ9Mi"
+      }
+    },
+    {
+      "date": "Yesterday at 10:47 PM",
+      "raw_text": "xiaozhaolucky\n•\nYesterday at 10:47 PM\n\n2.72出三分之一 ndaq",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.594696",
+        "raw_message": "xiaozhaolucky\n•\nYesterday at 10:47 PM\n\n2.72出三分之一 ndaq",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 2.72,
+        "portion": "1/3",
+        "message_id": "post_1CXbrNAzvYVCTZPrHDA8Yn"
+      }
+    },
+    {
+      "date": "Unknown",
+      "raw_text": "2.4出剩下ndaq 波动大了\n\n\n由 186阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.594715",
+        "raw_message": "2.4出剩下ndaq 波动大了\n\n\n由 186阅读",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 2.4,
+        "portion": "全部",
+        "message_id": "post_1CXbrSEXg8YfxxQiH2nZzX"
+      }
+    },
+    {
+      "date": "2:38 AM",
+      "raw_text": "xiaozhaolucky\n•\n2:38 AM\n\n1.87出三分之一nue\n\n\n由 173阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.594898",
+        "raw_message": "xiaozhaolucky\n•\n2:38 AM\n\n1.87出三分之一nue\n\n\n由 173阅读",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 1.87,
+        "portion": "1/3",
+        "message_id": "post_1CXc9yq2vR4ajvpMFKfN7w"
+      }
+    },
+    {
+      "date": "3:41 AM",
+      "raw_text": "xiaozhaolucky\n•\n3:41 AM\n\n1.95出剩下nue\n\n\n由 165阅读",
+      "instruction": {
+        "timestamp": "2026-01-30T23:16:04.594950",
+        "raw_message": "xiaozhaolucky\n•\n3:41 AM\n\n1.95出剩下nue\n\n\n由 165阅读",
+        "instruction_type": "TAKE_PROFIT",
+        "price": 1.95,
+        "portion": "全部",
+        "message_id": "post_1CXcEqM1LsVU9V6qKAtPkA"
+      }
+    }
+  ]
+}

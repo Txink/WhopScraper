@@ -7,6 +7,7 @@ from .config_loader import LongPortConfigLoader, load_longport_config
 from .longport_broker import (
     LongPortBroker,
     convert_to_longport_symbol,
+    validate_option_expiry,
     calculate_quantity
 )
 from .position_manager import (
@@ -21,6 +22,7 @@ __all__ = [
     'load_longport_config',
     'LongPortBroker',
     'convert_to_longport_symbol',
+    'validate_option_expiry',
     'calculate_quantity',
     'PositionManager',
     'Position',

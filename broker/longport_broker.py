@@ -910,6 +910,31 @@ class LongPortBroker:
             raise
 
 
+def validate_option_expiry(symbol: str) -> None:
+    """
+    从长桥期权代码中解析到期日并校验是否已过期。
+    格式：TICKER + YYMMDD + C/P + 价格 + .US
+    
+    Raises:
+        ValueError: 若期权已过期
+    """
+    import re
+    # 匹配 YYMMDD（6 位数字，在 C 或 P 之前）
+    m = re.search(r"(\d{6})[CP]\d+\.US$", symbol, re.IGNORECASE)
+    if not m:
+        return
+    yy, mm, dd = int(m.group(1)[:2]), int(m.group(1)[2:4]), int(m.group(1)[4:6])
+    year = 2000 + yy
+    now = datetime.now()
+    expiry_date = datetime(year, mm, dd)
+    expiry_end = expiry_date.replace(hour=23, minute=59, second=59)
+    if now > expiry_end:
+        raise ValueError(
+            f"期权已过期: 到期日 {expiry_date.strftime('%Y-%m-%d')} "
+            f"早于当前日期 {now.strftime('%Y-%m-%d %H:%M:%S')}"
+        )
+
+
 def convert_to_longport_symbol(ticker: str, option_type: str, strike: float, expiry: str) -> str:
     """
     将期权信息转换为长桥期权代码格式
@@ -944,6 +969,7 @@ def convert_to_longport_symbol(ticker: str, option_type: str, strike: float, exp
         expiry = expiry_date.strftime("%m/%d")
     
     # 解析到期日
+    import re
     if "/" in expiry:
         # 格式：1/31 或 01/31
         parts = expiry.split("/")
@@ -954,15 +980,26 @@ def convert_to_longport_symbol(ticker: str, option_type: str, strike: float, exp
         expiry_date = datetime(year, month, day)
         expiry_str = f"{year % 100:02d}{month:02d}{day:02d}"
     else:
-        # 假设格式：2025-01-31 或 20250131
-        expiry_clean = expiry.replace("-", "")
-        if len(expiry_clean) == 8:
-            # 格式：20250131
-            year = int(expiry_clean[:4])
-            month = int(expiry_clean[4:6])
-            day = int(expiry_clean[6:8])
+        # 格式：2月13（中文）
+        m_yue_d = re.match(r"^(\d{1,2})月(\d{1,2})$", expiry.strip())
+        if m_yue_d:
+            month, day = int(m_yue_d.group(1)), int(m_yue_d.group(2))
+            year = now.year
+            if month < now.month:
+                year += 1
             expiry_date = datetime(year, month, day)
-        expiry_str = expiry_clean[-6:]  # YYMMDD
+            expiry_str = f"{year % 100:02d}{month:02d}{day:02d}"
+        else:
+            # 假设格式：2025-01-31 或 20250131
+            expiry_clean = expiry.replace("-", "")
+            if len(expiry_clean) == 8 and expiry_clean.isdigit():
+                year = int(expiry_clean[:4])
+                month = int(expiry_clean[4:6])
+                day = int(expiry_clean[6:8])
+                expiry_date = datetime(year, month, day)
+                expiry_str = expiry_clean[-6:]  # YYMMDD
+            else:
+                raise ValueError(f"无法解析到期日格式: {expiry!r}，支持 1/31、2月13、2025-01-31、20250131")
     
     # 检查期权是否已过期
     if expiry_date:

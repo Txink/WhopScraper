@@ -37,6 +37,7 @@ class OptionInstruction:
     option_type: Optional[str] = None  # CALL 或 PUT
     strike: Optional[float] = None
     expiry: Optional[str] = None  # 如 "1/31", "2/20"
+    symbol: Optional[str] = None  # 长桥期权代码，如 TSLA260213C240000.US（解析/展示时生成，可直接用于下单）
 
     # 上下文
     source: Optional[str] = None  # 上下文来源，如 history, refer, last_N
@@ -137,6 +138,73 @@ class OptionInstruction:
             return f"[未识别] {self.raw_message[:50]}..."
 
     @classmethod
+    def normalize_expiry_to_yymmdd(cls, expiry: Optional[str], timestamp: Optional[str] = None) -> Optional[str]:
+        """
+        将到期日统一转为 YYMMDD 格式（6 位字符串）。
+        
+        Args:
+            expiry: 到期日（如 "2/13", "2月13", "本周", "260213"）
+            timestamp: 消息时间戳（如 "Jan 23, 2026 12:51 AM"），用于推断年份和相对日期
+            
+        Returns:
+            "YYMMDD" 字符串，如 "260213"；无法解析时返回 None
+        """
+        import re
+        from datetime import datetime, timedelta
+
+        if not expiry or not str(expiry).strip():
+            return None
+        expiry = str(expiry).strip()
+
+        # 已是 6 位数字 YYMMDD
+        if re.match(r"^\d{6}$", expiry):
+            return expiry
+
+        # 从 timestamp 提取年份
+        year = 26
+        msg_date = None
+        if timestamp:
+            try:
+                ts_match = re.search(r", (\d{4})", timestamp)
+                if ts_match:
+                    year = int(ts_match.group(1)) % 100
+                msg_date = datetime.strptime(timestamp, "%b %d, %Y %I:%M %p")
+            except Exception:
+                pass
+
+        month = None
+        day = None
+
+        # 相对日期：本周/下周 -> 本周五/下周五
+        relative_lower = expiry.lower()
+        if msg_date and relative_lower in ["本周", "这周", "当周", "this week"]:
+            days_until_friday = (4 - msg_date.weekday()) % 7
+            if days_until_friday == 0:
+                days_until_friday = 7
+            target = msg_date + timedelta(days=days_until_friday)
+            month, day = target.month, target.day
+        elif msg_date and relative_lower in ["下周", "next week"]:
+            days_until_friday = (4 - msg_date.weekday()) % 7
+            target = msg_date + timedelta(days=days_until_friday + 7)
+            month, day = target.month, target.day
+        else:
+            # "2/13"
+            match = re.match(r"(\d{1,2})/(\d{1,2})", expiry)
+            if match:
+                month = int(match.group(1))
+                day = int(match.group(2))
+            else:
+                # "2月13" / "2月13日"
+                match = re.match(r"(\d{1,2})月(\d{1,2})日?", expiry)
+                if match:
+                    month = int(match.group(1))
+                    day = int(match.group(2))
+
+        if not month or not day:
+            return None
+        return f"{year:02d}{month:02d}{day:02d}"
+
+    @classmethod
     def generate_option_symbol(cls, ticker: str, option_type: str, strike: float, expiry: str, timestamp: str = None) -> str:
         """
         生成完整的期权代码
@@ -145,58 +213,47 @@ class OptionInstruction:
             ticker: 股票代码（如 "BA"）
             option_type: 期权类型（"CALL" 或 "PUT"）
             strike: 行权价（如 240.0）
-            expiry: 到期日（如 "2/13", "2月13"）
+            expiry: 到期日（如 "2/13", "2月13" 或已规范化的 "260213"）
             timestamp: 消息时间戳（如 "Jan 23, 2026 12:51 AM"），用于推断年份
             
         Returns:
             完整期权代码（如 "BA260213C240000.US"）
         """
-        from datetime import datetime
         import re
-        
+
         if not all([ticker, option_type, strike, expiry]):
             return ticker or "未知"
-        
-        # 从timestamp提取年份
-        year = 26  # 默认2026年
-        if timestamp:
-            try:
-                # 尝试解析 "Jan 23, 2026 12:51 AM" 格式
-                ts_match = re.search(r', (\d{4})', timestamp)
-                if ts_match:
-                    year = int(ts_match.group(1)) % 100  # 取后两位
-            except:
-                pass
-        
-        # 解析到期日
-        month = None
-        day = None
-        
-        # 尝试匹配 "2/13" 格式
-        match = re.match(r'(\d{1,2})/(\d{1,2})', expiry)
-        if match:
-            month = int(match.group(1))
-            day = int(match.group(2))
+
+        # 已是 YYMMDD（6 位），直接用作日期部分
+        if re.match(r"^\d{6}$", str(expiry)):
+            date_str = str(expiry)
         else:
-            # 尝试匹配 "2月13" 格式
-            match = re.match(r'(\d{1,2})月(\d{1,2})', expiry)
+            # 从 timestamp 提取年份
+            year = 26
+            if timestamp:
+                try:
+                    ts_match = re.search(r", (\d{4})", timestamp)
+                    if ts_match:
+                        year = int(ts_match.group(1)) % 100
+                except Exception:
+                    pass
+            month = None
+            day = None
+            match = re.match(r"(\d{1,2})/(\d{1,2})", expiry)
             if match:
                 month = int(match.group(1))
                 day = int(match.group(2))
-        
-        if not month or not day:
-            return ticker
-        
-        # 格式化日期为 YYMMDD
-        date_str = f"{year:02d}{month:02d}{day:02d}"
-        
-        # 期权类型代码
-        option_code = 'C' if option_type == 'CALL' else 'P'
-        
-        # 行权价（乘以1000并格式化为6位，与长桥 API 返回格式一致）
+            else:
+                match = re.match(r"(\d{1,2})月(\d{1,2})", expiry)
+                if match:
+                    month = int(match.group(1))
+                    day = int(match.group(2))
+            if not month or not day:
+                return ticker
+            date_str = f"{year:02d}{month:02d}{day:02d}"
+
+        option_code = "C" if option_type == "CALL" else "P"
         strike_code = f"{int(strike * 1000):06d}"
-        
-        # 组合完整代码
         return f"{ticker}{date_str}{option_code}{strike_code}.US"
 
 

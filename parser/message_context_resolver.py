@@ -1,6 +1,7 @@
 """
 消息上下文解析器
 利用消息的 history、refer 字段和全局消息列表来补全期权指令中缺失的信息
+解析时统一将到期日转为 YYMMDD，并在信息完整时生成期权代码 symbol。
 """
 import os
 from typing import Optional, List, Dict, Tuple
@@ -57,6 +58,7 @@ class MessageContextResolver:
         
         # 2. 检查是否需要补全
         if not self._needs_completion(instruction):
+            self._finalize_instruction(instruction, message_dict)
             return (instruction, None, None)
         
         # 3. 根据策略查找上下文
@@ -76,6 +78,7 @@ class MessageContextResolver:
         completed_instruction.source = context_info['source']
         completed_instruction.depend_message = context_info['message']
         completed_instruction.origin = message_dict
+        self._finalize_instruction(completed_instruction, message_dict)
         return (completed_instruction, context_info['source'], context_info['message'])
     
     def _needs_completion(self, instruction: OptionInstruction) -> bool:
@@ -102,7 +105,29 @@ class MessageContextResolver:
                    not instruction.expiry)
         
         return False
-    
+
+    def _finalize_instruction(self, instruction: OptionInstruction, message_dict: dict) -> None:
+        """
+        解析收尾：将到期日统一转为 YYMMDD，并在信息完整时生成期权代码。
+        """
+        timestamp = message_dict.get("timestamp")
+        if instruction.expiry:
+            normalized = OptionInstruction.normalize_expiry_to_yymmdd(
+                instruction.expiry, timestamp
+            )
+            if normalized:
+                instruction.expiry = normalized
+        if not instruction.symbol and all(
+            [instruction.ticker, instruction.option_type, instruction.strike, instruction.expiry]
+        ):
+            instruction.symbol = OptionInstruction.generate_option_symbol(
+                instruction.ticker,
+                instruction.option_type,
+                instruction.strike,
+                instruction.expiry,
+                timestamp,
+            )
+
     def _find_context_aggressive(self, message_dict: dict, ticker: str) -> Optional[Dict]:
         """
         积极查找策略：有ticker但缺细节
