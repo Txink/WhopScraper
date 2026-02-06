@@ -131,6 +131,98 @@ class EnhancedMessageExtractor:
         """
         self.page = page
     
+    @staticmethod
+    def normalize_timestamp(timestamp: str, milliseconds: int = 0) -> str:
+        """
+        将各种格式的时间戳转换为标准格式 YYYY-MM-DD HH:MM:SS.XXX
+        
+        Args:
+            timestamp: 原始时间戳，支持以下格式：
+                - "Jan 23, 2026 12:51 AM"
+                - "1月23日 12:51"
+                - "2026-01-23 12:51"
+                - "Yesterday at 11:51 PM"
+                - "Today 10:45 PM"
+                - "Wednesday 10:45 PM"
+            milliseconds: 毫秒数 (0-999)
+        
+        Returns:
+            标准格式的时间戳 "YYYY-MM-DD HH:MM:SS.XXX"，例如 "2026-01-23 12:51:00.000"
+            如果解析失败，返回原始时间戳
+        """
+        if not timestamp:
+            return ""
+        
+        try:
+            from datetime import timedelta
+            
+            # 尝试解析英文格式: "Jan 23, 2026 12:51 AM"
+            if re.match(r'[A-Z][a-z]{2}\s+\d{1,2},\s+\d{4}\s+\d{1,2}:\d{2}\s+[AP]M', timestamp):
+                dt = datetime.strptime(timestamp, "%b %d, %Y %I:%M %p")
+                return f"{dt.strftime('%Y-%m-%d %H:%M:%S')}.{milliseconds:03d}"
+            
+            # 尝试解析相对时间格式: "Yesterday at 11:51 PM", "Today 10:45 PM", "Wednesday 10:45 PM"
+            relative_match = re.match(r'^(Yesterday at|Today|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\s+(\d{1,2}:\d{2}\s+[AP]M|at\s+\d{1,2}:\d{2}\s+[AP]M)$', timestamp, re.IGNORECASE)
+            if relative_match:
+                day_part = relative_match.group(1).strip()
+                time_part = relative_match.group(2).strip()
+                
+                # 提取时间（去掉可能的"at"）
+                time_str = time_part.replace('at ', '').strip()
+                time_obj = datetime.strptime(time_str, "%I:%M %p")
+                
+                now = datetime.now()
+                
+                # 计算日期
+                if day_part.lower() == 'yesterday at':
+                    target_date = now.date() - timedelta(days=1)
+                elif day_part.lower() == 'today':
+                    target_date = now.date()
+                else:
+                    # 星期几的情况：Monday, Tuesday, ...
+                    weekday_map = {
+                        'monday': 0, 'tuesday': 1, 'wednesday': 2, 'thursday': 3,
+                        'friday': 4, 'saturday': 5, 'sunday': 6
+                    }
+                    target_weekday = weekday_map.get(day_part.lower())
+                    if target_weekday is not None:
+                        current_weekday = now.weekday()
+                        # 计算距离该星期几的天数（向前查找，最多7天）
+                        days_back = (current_weekday - target_weekday) % 7
+                        if days_back == 0:
+                            # 如果是今天，检查时间是否已过，如果已过则取上周同一天
+                            days_back = 7 if time_obj.time() > now.time() else 0
+                        target_date = now.date() - timedelta(days=days_back)
+                    else:
+                        return timestamp  # 无法识别的星期
+                
+                # 组合日期和时间
+                dt = datetime.combine(target_date, time_obj.time())
+                return f"{dt.strftime('%Y-%m-%d %H:%M:%S')}.{milliseconds:03d}"
+            
+            # 尝试解析中文格式: "1月23日 12:51"
+            if re.match(r'\d{1,2}月\d{1,2}日\s+\d{1,2}:\d{2}', timestamp):
+                # 假设是当前年份
+                current_year = datetime.now().year
+                month_day = re.match(r'(\d{1,2})月(\d{1,2})日\s+(\d{1,2}):(\d{2})', timestamp)
+                if month_day:
+                    month, day, hour, minute = month_day.groups()
+                    dt = datetime(current_year, int(month), int(day), int(hour), int(minute))
+                    return f"{dt.strftime('%Y-%m-%d %H:%M:%S')}.{milliseconds:03d}"
+            
+            # 尝试解析 ISO 格式: "2026-01-23 12:51"
+            if re.match(r'\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}', timestamp):
+                dt = datetime.strptime(timestamp, "%Y-%m-%d %H:%M")
+                return f"{dt.strftime('%Y-%m-%d %H:%M:%S')}.{milliseconds:03d}"
+            
+            # 如果都不匹配，返回原始时间戳
+            return timestamp
+            
+        except Exception as e:
+            # 解析失败，返回原始时间戳
+            print(f"⚠️ 时间戳解析失败: {timestamp}, 错误: {e}")
+            return timestamp
+    
     async def extract_message_groups(self) -> List[MessageGroup]:
         """
         提取消息组（包含关联关系）
@@ -333,6 +425,7 @@ class EnhancedMessageExtractor:
                     
                     // 提取时间戳
                     // 基于真实DOM: <span>•</span><span>Jan 23, 2026 12:51 AM</span>
+                    // 或相对时间: <span>Yesterday at 11:51 PM</span>, <span>Wednesday 10:45 PM</span>, <span>Today 10:45 PM</span>
                     // 在包含"•"的父元素中查找时间戳
                     const timestampContainer = msgEl.querySelector('.inline-flex.items-center.gap-1');
                     if (timestampContainer) {
@@ -340,8 +433,14 @@ class EnhancedMessageExtractor:
                         const spans = timestampContainer.querySelectorAll('span');
                         for (const span of spans) {
                             const text = span.textContent.trim();
-                            // 匹配时间戳格式 "Jan 23, 2026 12:51 AM"
+                            // 匹配绝对时间戳格式 "Jan 23, 2026 12:51 AM"
                             if (/[A-Z][a-z]{2}\s+\d{1,2},\s+\d{4}\s+\d{1,2}:\d{2}\s+[AP]M/.test(text)) {
+                                group.timestamp = text;
+                                group.has_timestamp = true;
+                                break;
+                            }
+                            // 匹配相对时间格式 "Yesterday at 11:51 PM", "Today 10:45 PM", "Wednesday 10:45 PM"
+                            if (/^(Yesterday at|Today|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\s+(\d{1,2}:\d{2}\s+[AP]M|at\s+\d{1,2}:\d{2}\s+[AP]M)$/i.test(text)) {
                                 group.timestamp = text;
                                 group.has_timestamp = true;
                                 break;
@@ -354,6 +453,7 @@ class EnhancedMessageExtractor:
                         const allText = msgEl.textContent;
                         const timePatterns = [
                             /[A-Z][a-z]{2}\s+\d{1,2},\s+\d{4}\s+\d{1,2}:\d{2}\s+[AP]M/,  // Jan 22, 2026 10:41 PM
+                            /(Yesterday at|Today|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\s+(\d{1,2}:\d{2}\s+[AP]M|at\s+\d{1,2}:\d{2}\s+[AP]M)/i,  // 相对时间
                             /\d{1,2}月\d{1,2}日\s+\d{1,2}:\d{2}/,  // 中文格式
                             /\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}/,  // ISO格式
                         ];
@@ -579,12 +679,42 @@ class EnhancedMessageExtractor:
             message_groups = []
             last_timestamp_group = None  # 记录最后一个有时间戳的消息组（用于继承）
             current_group_header = None  # 记录当前消息组的头部信息（用于DOM层级继承）
+            current_group_base_timestamp = None  # 记录当前消息组的基础时间戳
+            timestamp_counter = {}  # 记录每个基础时间戳的消息计数 {base_timestamp: count}
             
             for raw in raw_groups:
+                # 确定基础时间戳（原始时间戳，不含毫秒）
+                base_timestamp = raw['timestamp']
+                
+                # 基于DOM层级关系处理时间戳继承
+                # has_message_above=true 表示与上一条消息在同一个消息组内
+                if raw.get('has_message_above', False) and current_group_base_timestamp:
+                    # 同组消息：继承组头部的基础时间戳
+                    if not base_timestamp:
+                        base_timestamp = current_group_base_timestamp
+                else:
+                    # 新消息组开始
+                    if base_timestamp:
+                        current_group_base_timestamp = base_timestamp
+                    elif last_timestamp_group:
+                        # 备用方案：继承最近的有时间戳的消息
+                        base_timestamp = current_group_base_timestamp or raw['timestamp']
+                
+                # 初始化或获取该时间戳的计数
+                if base_timestamp not in timestamp_counter:
+                    timestamp_counter[base_timestamp] = 0
+                
+                # 计算毫秒数（每条消息加10ms）
+                milliseconds = timestamp_counter[base_timestamp] * 10
+                timestamp_counter[base_timestamp] += 1
+                
+                # 标准化时间戳格式（包含毫秒）
+                normalized_timestamp = self.normalize_timestamp(base_timestamp, milliseconds)
+                
                 group = MessageGroup(
                     group_id=raw['group_id'],
                     author=raw['author'],
-                    timestamp=raw['timestamp'],
+                    timestamp=normalized_timestamp,
                     primary_message=raw['primary_message'],
                     related_messages=raw['related_messages'],
                     quoted_message=raw['quoted_message'],
@@ -596,22 +726,16 @@ class EnhancedMessageExtractor:
                     history=raw.get('history', [])
                 )
                 
-                # 基于DOM层级关系的时间戳继承（优先级最高）
-                # has_message_above=true 表示与上一条消息在同一个消息组内
+                # 基于DOM层级关系的作者继承
                 if group.has_message_above and current_group_header:
-                    # 继承消息组头部的信息
+                    # 继承消息组头部的作者信息
                     if not group.author:
                         group.author = current_group_header.author
-                    if not group.timestamp:
-                        group.timestamp = current_group_header.timestamp
                 else:
-                    # has_message_above=false 或 没有上一个组，表示新消息组开始
-                    # 如果当前消息有时间戳，它就是新的组头部
+                    # 新消息组开始
                     if raw.get('has_timestamp') or group.timestamp:
                         current_group_header = group
-                    # 如果新消息组没有时间戳，继承最近的有时间戳的消息（备用方案）
                     elif last_timestamp_group:
-                        group.timestamp = last_timestamp_group.timestamp
                         if not group.author:
                             group.author = last_timestamp_group.author
                 

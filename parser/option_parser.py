@@ -66,13 +66,14 @@ class OptionParser:
     # 格式4: RIVN 16c 3/20 1.35
     # 格式5: META 900call 2.1
     
-    # 模式1: 标准格式 - 股票 行权价 CALL/PUT 到期 价格（支持价格范围）
+    # 模式1: 标准格式 - 股票 行权价 [ITM/OTM/ATM] CALL/PUT 到期 价格（支持价格范围）
     # 到期支持：本周/下周/这周/当周/今天、EXPIRATION 具体日期、EXPIRATION NEXT WEEK/THIS WEEK
     OPEN_PATTERN_1 = re.compile(
         r'([A-Z]{2,5})\s*[-–]?\s*\$?(\d+(?:\.\d+)?)\s*'
+        r'(?:(?:ITM|OTM|ATM)\s+)?'  # 可选的 ITM/OTM/ATM 修饰（In/Out/At The Money）
         r'(CALLS?|PUTS?)\s*'
         r'(?:(本周|下周|这周|当周|今天)|(?:EXPIRATION\s+)?(\d{1,2}/\d{1,2}|\d{1,2}月\d{1,2}日?|1月\d{1,2}|2月\d{1,2})|(?:EXPIRATION\s+)?(NEXT\s+WEEK|THIS\s+WEEK))?\s*'
-        r'\$?(\d+(?:\.\d+)?(?:-\d+(?:\.\d+)?)?)',  # 支持价格范围 如 0.8-0.85 或 1.5-1.60
+        r'\$?((?:\d+(?:\.\d+)?|\.\d+)(?:-(?:\d+(?:\.\d+)?|\.\d+))?)',  # 支持 .65 格式和价格范围（保持捕获组）
         re.IGNORECASE
     )
     
@@ -83,7 +84,7 @@ class OptionParser:
         r'(?:(\d{1,2}/\d{1,2}|1月\d{1,2}|2月\d{1,2}|本周|下周|这周)\s+)?'
         r'(?:入场价?[：:])?\s*'
         r'(?:彩票)?\s*'  # 可选的"彩票"关键词
-        r'(\d+(?:\.\d+)?)'
+        r'(\d+(?:\.\d+)?|\.\d+)'  # 支持 .65 格式
         r'(?![\/])',  # 负向前瞻：确保价格后面不是 "/"（避免把日期的一部分当成价格）
         re.IGNORECASE
     )
@@ -94,7 +95,7 @@ class OptionParser:
         r'(\d{1,2}月\d{1,2}日?|本周|下周|这周)\s*'
         r'(\d+(?:\.\d+)?)(?:的)?\s*'
         r'(call|put)s?\s+'
-        r'(\d+(?:\.\d+)?)',
+        r'(\d+(?:\.\d+)?|\.\d+)',  # 支持 .65 格式
         re.IGNORECASE
     )
     
@@ -103,7 +104,7 @@ class OptionParser:
         r'([A-Z]{2,5})\s+'
         r'(\d+(?:\.\d+)?)(call|put)s?\s*'
         r'(?:可以)?(?:在)?'
-        r'(\d+(?:\.\d+)?)',
+        r'(\d+(?:\.\d+)?|\.\d+)',  # 支持 .65 格式
         re.IGNORECASE
     )
     
@@ -115,7 +116,7 @@ class OptionParser:
         r'(?:(\d{1,2}月\d{1,2}日?)\s+)?'
         r'\$?(\d+(?:\.\d+)?)\s+'
         r'(?:(call|put)s?\s+)?'  # call/put也可以在后面
-        r'\$?(\d+(?:\.\d+)?(?:-\d+(?:\.\d+)?)?)',  # 支持价格范围
+        r'\$?((?:\d+(?:\.\d+)?|\.\d+)(?:-(?:\d+(?:\.\d+)?|\.\d+))?)',  # 支持 .65 格式和价格范围
         re.IGNORECASE
     )
     
@@ -126,7 +127,7 @@ class OptionParser:
         r'(本周|下周|这周)(?:的)?\s+'
         r'(\d+(?:\.\d+)?)(call|put)s?\s+'
         r'(?:可以注意)?.*?'
-        r'(\d+(?:\.\d+)?)',
+        r'(\d+(?:\.\d+)?|\.\d+)',  # 支持 .65 格式
         re.IGNORECASE
     )
     
@@ -205,9 +206,9 @@ class OptionParser:
         re.IGNORECASE
     )
     
-    # 模式5b: 价格+都出/全出+可选ticker (如: 2.75都出 hon, 2.3全出)
+    # 模式5b: 价格+都出/全出/全部出+可选ticker (如: 2.75都出 hon, 2.3全出, 0.16全部出tsla)
     TAKE_PROFIT_PATTERN_5B = re.compile(
-        r'(\d+(?:\.\d+)?)\s*(?:都|全)出\s*([A-Z]{2,5})?',
+        r'(\d+(?:\.\d+)?)\s*(?:都|全部|全)出\s*([A-Z]{2,5})?',
         re.IGNORECASE
     )
     
@@ -238,6 +239,18 @@ class OptionParser:
     # 模式10: ticker+价格+都出/出剩下的 (如: unp 2.35都出剩下的, ndaq 2.4都出)
     TAKE_PROFIT_PATTERN_10 = re.compile(
         r'([A-Z]{2,5})\s+(\d+(?:\.\d+)?)\s*(?:(?:都|全)?出(?:剩下|剩余)(?:的)?|(?:都|全)出)',
+        re.IGNORECASE
+    )
+    
+    # 模式11: ticker+卖出/出+比例 (如: tsla 卖出 1/3, nvda 出一半, amd 卖出30%)
+    TAKE_PROFIT_PATTERN_11 = re.compile(
+        r'([A-Z]{2,5})\s+(?:卖出|出)\s*(三分之一|三分之二|一半|全部|1/3|2/3|1/2|\d+%)',
+        re.IGNORECASE
+    )
+    
+    # 模式12: ticker+价格+卖出/出+比例 (如: tsla 0.17 卖出 1/3, nvda 1.5 出一半)
+    TAKE_PROFIT_PATTERN_12 = re.compile(
+        r'([A-Z]{2,5})\s+(\d+(?:\.\d+)?)\s+(?:卖出|出)\s*(三分之一|三分之二|一半|全部|1/3|2/3|1/2|\d+%)',
         re.IGNORECASE
     )
     
@@ -654,6 +667,30 @@ class OptionParser:
     def _parse_sell(cls, message: str, message_id: str) -> Optional[OptionInstruction]:
         """解析卖出/清仓指令 - 尝试多种模式"""
         
+        # 尝试模式12: ticker+价格+卖出/出+比例（如: tsla 0.17 卖出 1/3, nvda 1.5 出一半）
+        # 注意：此模式需要优先匹配，因为它更具体（包含ticker）
+        match = cls.TAKE_PROFIT_PATTERN_12.search(message)
+        if match:
+            ticker = match.group(1).upper()
+            price_str = match.group(2)
+            portion_raw = match.group(3)
+            
+            # 解析价格
+            price, price_range = cls._parse_price_range(price_str)
+            
+            # 解析卖出数量
+            instruction_type, sell_quantity = cls._parse_sell_quantity(portion_raw)
+            
+            return OptionInstruction(
+                raw_message=message,
+                instruction_type=instruction_type,
+                ticker=ticker,
+                price=price,
+                price_range=price_range,
+                sell_quantity=sell_quantity,
+                message_id=message_id
+            )
+        
         # 尝试模式1: 价格+出+比例（如: 1.75出三分之一，2.8出一半nvda）
         match = cls.TAKE_PROFIT_PATTERN_1.search(message)
         if match:
@@ -707,6 +744,22 @@ class OptionParser:
                 message_id=message_id
             )
         
+        # 尝试模式5b: 价格+都出/全出/全部出+可选ticker（如: 2.75都出 hon, 2.3全出, 0.16全部出tsla）
+        # 注意：此模式需要在模式4之前，因为它更精确
+        match = cls.TAKE_PROFIT_PATTERN_5B.search(message)
+        if match:
+            price_str = match.group(1)
+            ticker = match.group(2).upper() if match.group(2) else None
+            price, price_range = cls._parse_price_range(price_str)
+            return OptionInstruction(
+                raw_message=message,
+                instruction_type=InstructionType.CLOSE.value,
+                ticker=ticker,
+                price=price,
+                price_range=price_range,
+                message_id=message_id
+            )
+        
         # 尝试模式4: 价格+出+可选ticker+彩票+全出（如: 4.75 amd全出, 1.7出 cop彩票全出）
         match = cls.TAKE_PROFIT_PATTERN_4.search(message)
         if match:
@@ -732,21 +785,6 @@ class OptionParser:
             return OptionInstruction(
                 raw_message=message,
                 instruction_type=InstructionType.CLOSE.value,
-                price=price,
-                price_range=price_range,
-                message_id=message_id
-            )
-        
-        # 尝试模式5b: 价格+都出/全出+可选ticker（如: 2.75都出 hon, 2.3全出）
-        match = cls.TAKE_PROFIT_PATTERN_5B.search(message)
-        if match:
-            price_str = match.group(1)
-            ticker = match.group(2).upper() if match.group(2) else None
-            price, price_range = cls._parse_price_range(price_str)
-            return OptionInstruction(
-                raw_message=message,
-                instruction_type=InstructionType.CLOSE.value,
-                ticker=ticker,
                 price=price,
                 price_range=price_range,
                 message_id=message_id
@@ -848,6 +886,50 @@ class OptionParser:
                 sell_quantity=None,
                 message_id=message_id
             )
+        
+        # 尝试模式11: ticker+卖出/出+比例（市价单）（如: tsla 卖出 1/3, nvda 出一半）
+        match = cls.TAKE_PROFIT_PATTERN_11.search(message)
+        if match:
+            ticker = match.group(1).upper()
+            portion_raw = match.group(2)
+            
+            # 解析卖出数量
+            instruction_type, sell_quantity = cls._parse_sell_quantity(portion_raw)
+            
+            return OptionInstruction(
+                raw_message=message,
+                instruction_type=instruction_type,
+                ticker=ticker,
+                price=None,  # 市价单，不设置价格
+                sell_quantity=sell_quantity,
+                message_id=message_id
+            )
+        
+        # 尝试模式13（兜底）: 纯文本清仓/卖出指令（如: "全部卖出", "清仓"）
+        # 这种情况下没有价格、股票等信息，需要通过上下文补全
+        # 注意：只匹配完整的短语，避免误匹配带价格的指令
+        simple_close_keywords = ['全部卖出', '清仓', '平仓']
+        simple_sell_keywords = ['卖出一半', '减仓']
+        
+        message_stripped = message.strip()
+        
+        # 检查是否为简单清仓指令（精确匹配或非常短的消息）
+        for keyword in simple_close_keywords:
+            if message_stripped == keyword or (keyword in message_stripped and len(message_stripped) < 10):
+                return OptionInstruction(
+                    raw_message=message,
+                    instruction_type=InstructionType.CLOSE.value,
+                    message_id=message_id
+                )
+        
+        # 检查是否为简单卖出指令
+        for keyword in simple_sell_keywords:
+            if message_stripped == keyword or (keyword in message_stripped and len(message_stripped) < 15):
+                return OptionInstruction(
+                    raw_message=message,
+                    instruction_type=InstructionType.SELL.value,
+                    message_id=message_id
+                )
         
         return None
     

@@ -32,7 +32,7 @@ python3 analyze_local_messages.py debug/page_20260202_000748.html
 {
   "domID": "post_1CXNbKK8oK74QriUZv3rmK",
   "content": "1.9附近出三分之一",
-  "timestamp": "Jan 22, 2026 10:41 PM",
+  "timestamp": "2026-02-03 20:44:55.010",
   "refer": null,
   "position": "middle",
   "history": [

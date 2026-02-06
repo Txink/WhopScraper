@@ -2,7 +2,20 @@
 
 ## [Unreleased]
 
+### 功能增强
+- **相对时间格式支持**：`scraper/message_extractor.py` 新增相对时间格式识别和解析
+  - 支持一周内的相对时间格式：`Yesterday at 11:51 PM`、`Today 10:45 PM`、`Wednesday 10:45 PM` 等
+  - 自动计算对应的绝对日期并转换为标准时间戳格式
+  - JavaScript 提取层和 Python 标准化层同步支持
+- **测试工具改进**：`test/test_export_page_dom.py` 新增消息提取和导出功能
+  - 使用 `EnhancedMessageExtractor` 提取页面消息（与 `monitor.py` 保持一致）
+  - 固定导出到 `data/origin_message.json`，支持增量更新和自动去重（按 domID）
+  - 支持多种时间格式解析并按时间排序消息
+  - 显示消息统计信息（本次提取、新增消息、总数、位置分布、引用数量、历史记录数量）
+  - 导出文件包含：HTML、截图、结构分析、消息JSON
+
 ### 修复
+- **开仓指令价格格式**：支持无前导 0 的小数价格（如 `.65`、`.5`），此前正则要求价格必须以数字开头，导致如 `KR - $68 CALLS EXPIRATION NEXT WEEK .65 彩票` 等消息解析失败。已更新 OPEN_PATTERN_1～6 及 TAKE_PROFIT 等模式中的价格部分为正则 `(?:\d+(?:\.\d+)?|\.\d+)`，并保持价格区间（如 `.65-.70`）兼容。
 - **OPEN_PATTERN_1 到期日**：支持英文 "EXPIRATION NEXT WEEK" / "EXPIRATION THIS WEEK" 格式（如 `HON - $237.5 CALLS EXPIRATION NEXT WEEK $2.05`），此前仅支持中文「本周/下周」或 "EXPIRATION" + 具体日期，导致该类消息解析失败。
 - **卖出指令格式**：新增「ticker + 价格 + 都出/出剩下的」模式（`TAKE_PROFIT_PATTERN_10`），支持如 `unp 2.35都出剩下的`、`ndaq 2.4都出` 等表述，此前因无匹配模式导致解析失败。
 - **上下文查找范围**：`MessageContextResolver` 默认向前查找条数由 5 条改为 10 条（`CONTEXT_SEARCH_LIMIT` 默认 10），便于在「前 10 条」内找到 UNP 等买入消息以补全清仓指令。
