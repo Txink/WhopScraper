@@ -145,13 +145,14 @@ class AutoTrader:
         max_total_price = min(self.max_option_total_price, available_cash)
         print_info_message(f"总价上限: ${max_total_price:.2f}")
         
-        # 计算买入数量：由总价上限和数量上限共同控制
+        # 计算买入数量：由总价上限和数量上限共同控制，取两者较小值（至少 1 张）
         single_contract_price = price * 100
         max_quantity_by_price = int(max_total_price / single_contract_price)  # 根据总价计算的最大数量
         max_quantity_by_limit = self.max_option_quantity  # 配置的数量上限
         
-        # 取两者较小值，默认买入 1 张
-        quantity = min(1, max_quantity_by_price, max_quantity_by_limit)
+        quantity = min(max_quantity_by_price, max_quantity_by_limit)
+        if quantity < 1:
+            quantity = 0
         
         if quantity <= 0:
             print_error_message(f"计算的买入数量为0，单价: ${price}, 总价上限: ${max_total_price:.2f}")
