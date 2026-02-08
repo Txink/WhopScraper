@@ -2,15 +2,33 @@
 实时消息监控模块
 监控 Whop 页面的新消息并解析。
 消息提取与解析统一由 EnhancedMessageExtractor 完成（含上下文、引用、消息组）。
+支持长桥交易推送（订单状态变化）监听，参见：https://open.longbridge.com/zh-CN/docs/trade/trade-push
 """
 import asyncio
+import logging
+import threading
+import time
 from typing import Callable, Optional, Set
 from playwright.async_api import Page
+
+from rich.console import Console
 
 from models.record_manager import RecordManager
 from models.instruction import OptionInstruction, InstructionStore
 from models.record import Record
 from scraper.message_extractor import EnhancedMessageExtractor
+
+logger = logging.getLogger(__name__)
+console = Console()
+
+# 长桥交易推送（订单状态变化）依赖可选：未配置长桥时仅禁用订单推送监听
+try:
+    from longport.openapi import TradeContext, PushOrderChanged, TopicType
+    from broker import load_longport_config
+    _LONGPORT_AVAILABLE = True
+except Exception:
+    TradeContext = PushOrderChanged = TopicType = load_longport_config = None  # type: ignore
+    _LONGPORT_AVAILABLE = False
 
 
 class MessageMonitor:
@@ -119,3 +137,106 @@ class MessageMonitor:
         """停止监控"""
         self._running = False
         print("正在停止监控...")
+
+
+class OrderPushMonitor:
+    """
+    长桥订单状态推送监听器
+    通过长桥交易长连接订阅 private topic，接收订单/资产变更推送。
+    参考：https://open.longbridge.com/zh-CN/docs/trade/trade-push
+    """
+
+    def __init__(self, config=None):
+        """
+        初始化订单推送监听器
+
+        Args:
+            config: 长桥 Config，为 None 时从环境变量加载（需先成功 load_longport_config）
+        """
+        if not _LONGPORT_AVAILABLE:
+            raise RuntimeError("长桥 SDK 不可用，无法创建 OrderPushMonitor")
+        self._config = config
+        self._ctx: Optional[TradeContext] = None
+        self._thread: Optional[threading.Thread] = None
+        self._running = False
+        self._on_order_changed: Optional[Callable] = None
+
+    def on_order_changed(self, callback: Callable):
+        """
+        设置订单状态变化回调
+
+        Args:
+            callback: 签名为 (event: PushOrderChanged) -> None 的回调
+        """
+        self._on_order_changed = callback
+
+    @staticmethod
+    def display_order_changed(event) -> None:
+        """
+        打印订单推送关键信息：symbol, side, submitted_quantity, submitted_price, status
+        """
+        symbol = getattr(event, "symbol", "")
+        side = getattr(event, "side", "")
+        qty = getattr(event, "submitted_quantity", 0)
+        price = getattr(event, "submitted_price", None)
+        status = getattr(event, "status", "")
+        # 枚举类型转字符串便于阅读
+        if hasattr(side, "name"):
+            side = side.name
+        if hasattr(status, "name"):
+            status = status.name
+        console.print(
+            "[bold][订单推送][/bold]",
+            f"symbol=[cyan]{symbol}[/]",
+            f"side=[green]{side}[/]",
+            f"submitted_quantity=[yellow]{qty}[/]",
+            f"submitted_price=[yellow]{price}[/]",
+            f"status=[magenta]{status}[/]",
+        )
+
+    def _run_loop(self):
+        """在后台线程中：创建连接、注册回调、订阅，并保持运行"""
+        try:
+            config = self._config or load_longport_config()
+            self._ctx = TradeContext(config)
+
+            def _handle(event: PushOrderChanged):
+                OrderPushMonitor.display_order_changed(event)
+                if self._on_order_changed:
+                    try:
+                        self._on_order_changed(event)
+                    except Exception as e:
+                        logger.exception("订单推送回调异常: %s", e)
+
+            self._ctx.set_on_order_changed(_handle)
+            self._ctx.subscribe([TopicType.Private])
+            logger.info("已订阅长桥交易推送 (TopicType.Private)")
+            while self._running:
+                time.sleep(1)
+        except Exception as e:
+            logger.exception("订单推送监听异常: %s", e)
+        finally:
+            if self._ctx and self._running is False:
+                try:
+                    self._ctx.unsubscribe([TopicType.Private])
+                    logger.info("已取消订阅长桥交易推送")
+                except Exception as e:
+                    logger.warning("取消订阅时出错: %s", e)
+
+    def start(self):
+        """在后台线程中启动订单推送监听"""
+        if self._running:
+            logger.warning("订单推送监听已在运行")
+            return
+        self._running = True
+        self._thread = threading.Thread(target=self._run_loop, daemon=True)
+        self._thread.start()
+        logger.info("订单推送监听已启动（后台线程）")
+
+    def stop(self):
+        """停止订单推送监听"""
+        self._running = False
+        if self._thread:
+            self._thread.join(timeout=5)
+            self._thread = None
+        logger.info("订单推送监听已停止")

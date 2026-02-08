@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## [2026-02-08] 长桥订单状态推送监听
+
+### 新增
+- **订单推送监听**（`scraper/monitor.py`）
+  - 新增 `OrderPushMonitor`：通过长桥交易长连接订阅 `TopicType.Private`，接收订单/资产变更推送
+  - 参考 [长桥交易推送文档](https://open.longbridge.com/zh-CN/docs/trade/trade-push)：`set_on_order_changed` + `subscribe([TopicType.Private])`
+  - 支持 `on_order_changed(callback)` 设置回调，在后台线程中运行，不阻塞消息监控
+- **主程序集成**（`main.py`）
+  - 在长桥交易组件初始化成功后自动创建并启动订单推送监听
+  - 回调 `_on_order_changed` 记录订单状态变化日志，可在该回调中扩展通知或持仓同步
+  - 程序退出时自动取消订阅并停止监听
+
 ## [2026-02-06] 本地大模型训练方案 🎓
 
 ### 🎓 新增功能

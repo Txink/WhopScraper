@@ -12,7 +12,7 @@ from typing import Optional, Tuple
 
 from config import Config
 from scraper.browser import BrowserManager
-from scraper.monitor import MessageMonitor
+from scraper.monitor import MessageMonitor, OrderPushMonitor
 from models.instruction import OptionInstruction
 from models.record import Record
 
@@ -61,7 +61,8 @@ class SignalScraper:
         self.broker: Optional[LongPortBroker] = None
         self.position_manager: Optional[PositionManager] = None
         self.auto_trader: Optional[AutoTrader] = None
-        
+        self.order_push_monitor: Optional[OrderPushMonitor] = None
+
         # 初始化交易组件
         self._init_trading_components()
     
@@ -83,19 +84,33 @@ class SignalScraper:
             # 4. 创建自动交易器
             self.auto_trader = AutoTrader(broker=self.broker)
             logger.info("✅ 自动交易器初始化成功")
-            
+
+            # 5. 创建订单状态推送监听器（长桥交易推送）
+            try:
+                self.order_push_monitor = OrderPushMonitor(config=config)
+                self.order_push_monitor.on_order_changed(self._on_order_changed)
+                logger.info("✅ 订单推送监听器已就绪")
+            except Exception as e:
+                logger.warning("订单推送监听未启用: %s", e)
+                self.order_push_monitor = None
+
             if self.broker.auto_trade:
                 logger.info("🚀 自动交易已启用")
             else:
                 logger.info("ℹ️  自动交易未启用，仅记录信号")
-            
+
         except Exception as e:
             logger.error(f"❌ 交易组件初始化失败: {e}")
             logger.warning("程序将以监控模式运行（不执行交易）")
             self.broker = None
             self.position_manager = None
             self.auto_trader = None
-    
+            self.order_push_monitor = None
+
+    def _on_order_changed(self, event):
+        """长桥订单状态推送回调：打日志并可按需扩展（如更新持仓、通知等）"""
+        None
+        
     async def setup(self) -> bool:
         """
         设置浏览器和监控器
@@ -259,7 +274,10 @@ class SignalScraper:
         print(f"输出文件: {Config.OUTPUT_FILE}")
         print("按 Ctrl+C 停止")
         print("=" * 60 + "\n")
-        
+
+        if self.order_push_monitor:
+            self.order_push_monitor.start()
+
         try:
             if self.monitor:
                 await self.monitor.start()
@@ -282,7 +300,11 @@ class SignalScraper:
         if self.monitor:
             self.monitor.stop()
             logger.info("页面监控已停止")
-        
+
+        if self.order_push_monitor:
+            self.order_push_monitor.stop()
+            logger.info("订单推送监听已停止")
+
         # 关闭浏览器
         if self.browser:
             await self.browser.close()
