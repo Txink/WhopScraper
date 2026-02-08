@@ -17,19 +17,20 @@ def parse_option_symbol(symbol: str) -> str:
     """
     解析期权代码为语义化名称
     
+    格式：TICKER + YYMMDD + C/P + 价格.US，价格为行权价×1000 不补零
+    
     Args:
-        symbol: 期权代码，如 "AAPL260207C00250000.US" 或 "AAPL260207C250000.US"
+        symbol: 期权代码，如 "EOSE260109C13500.US" 或 "AAPL260207C250000.US"
     
     Returns:
-        语义化名称，如 "AAPL 260207 $250 CALL"
+        语义化名称，如 "EOS 260109 $13.5 CALL"
     """
     # 如果不是期权格式，直接返回原名称
-    if not symbol or len(symbol) < 15:
+    if not symbol or len(symbol) < 12:
         return symbol
     
-    # 匹配期权代码格式：TICKER + YYMMDD + C/P + PRICE (6位或8位)
-    # 例如：AAPL260207C00250000.US 或 AAPL260207C250000.US
-    pattern = r'^([A-Z]+)(\d{6})([CP])(\d{6,8})'
+    # 匹配期权代码格式：TICKER + YYMMDD + C/P + PRICE（行权价×1000，不补零）.US
+    pattern = r'^([A-Z]+)(\d{6})([CP])(\d+)'
     match = re.match(pattern, symbol)
     
     if not match:
@@ -38,7 +39,7 @@ def parse_option_symbol(symbol: str) -> str:
     ticker = match.group(1)      # AAPL
     date_str = match.group(2)    # 260207
     option_type = match.group(3) # C or P
-    price_str = match.group(4)   # 00250000 或 250000
+    price_str = match.group(4)   # 行权价×1000，如 13500、250000
     
     # 解析日期（保持原格式 YYMMDD）
     formatted_date = date_str

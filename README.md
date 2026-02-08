@@ -57,7 +57,7 @@ python3 main.py
 
 📖 **完整系统**：[使用指南](./doc/USAGE_GUIDE.md) | [配置说明](./doc/CONFIGURATION.md) | [长桥集成](./doc/LONGPORT_INTEGRATION_GUIDE.md) | [订单管理](./docs/order_management.md) | [自动交易](./docs/auto_trading.md) 🤖 | [完整自动化流程](./docs/full_auto_trading_guide.md) 🚀 | [批量撤销订单](./README_CANCEL_ORDERS.md) | [启动清单](./doc/CHECKLIST.md)
 
-📁 **项目资源**：[项目结构说明](./PROJECT_STRUCTURE.md) | [期权过期校验](./doc/OPTION_EXPIRY_CHECK.md) | [更新日志](./CHANGELOG.md)
+📁 **项目资源**：[项目结构说明](./PROJECT_STRUCTURE.md) | [期权过期校验](./doc/OPTION_EXPIRY_CHECK.md) | [更新日志](./CHANGELOG.md) | [LLM 解析器指南](./docs/llm_parser_guide.md) 🤖 | [LLM 训练方案](./docs/llm_training_guide.md) 🎓 | [训练快速参考](./TRAINING_QUICK_REFERENCE.md) ⚡
 
 ## 功能特性
 
@@ -69,7 +69,11 @@ python3 main.py
   - 自动组合开仓+止损+止盈消息
   - 识别引用/回复的消息内容
   - 提供完整的交易决策上下文
-- ✅ 智能解析期权交易指令
+- ✅ **智能解析期权交易指令**
+  - 规则解析器（快速、确定性）
+  - **LLM 解析器**（智能、泛化性强）🆕
+  - 混合解析器（规则 + LLM，最佳实践）
+  - **LoRA 微调训练**（最高准确率）🎓 新增
 - ✅ **期权过期时间校验**（自动拦截已过期期权）
 - ✅ 自动样本收集与管理
 - ✅ JSON 格式输出，方便对接券商 API
@@ -585,7 +589,6 @@ playwright/
 │   ├── config_loader.py   # 配置加载器
 │   ├── longport_broker.py # 长桥交易接口
 │   ├── position_manager.py  # 持仓管理
-│   └── risk_controller.py   # 风险控制
 │
 ├── scraper/               # 页面抓取模块
 │   ├── browser.py         # Playwright 浏览器管理

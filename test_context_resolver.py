@@ -32,7 +32,7 @@ def test_case_1():
         }
     ]
     
-    resolver = MessageContextResolver(messages)
+    resolver = MessageContextResolver(all_messages=messages)
     
     # 解析第二条消息（应该从 history 补全）
     result = resolver.resolve_instruction(messages[1])
@@ -84,7 +84,7 @@ def test_case_2():
         }
     ]
     
-    resolver = MessageContextResolver(messages)
+    resolver = MessageContextResolver(all_messages=messages)
     
     # 解析第二条消息（应该从 history 补全）
     result = resolver.resolve_instruction(messages[1])
@@ -128,7 +128,7 @@ def test_case_3():
         }
     ]
     
-    resolver = MessageContextResolver(messages)
+    resolver = MessageContextResolver(all_messages=messages)
     
     # 解析消息（应该从 refer 补全）
     result = resolver.resolve_instruction(messages[0])
@@ -197,7 +197,7 @@ def test_case_4():
         }
     ]
     
-    resolver = MessageContextResolver(messages)
+    resolver = MessageContextResolver(all_messages=messages)
     
     # 解析第4条消息（应该从前5条找到 NVDA）
     result = resolver.resolve_instruction(messages[3])
@@ -265,7 +265,7 @@ def test_case_5():
         }
     ]
     
-    resolver = MessageContextResolver(messages)
+    resolver = MessageContextResolver(all_messages=messages)
     
     # 测试第2条消息（止损在2.9）
     print("\n--- 测试消息2：止损在2.9 ---")

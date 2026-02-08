@@ -242,7 +242,7 @@ async def analyze_html_messages(html_file: str, export_json: bool = True):
                 all_messages_simple.append(simple_dict)
             
             # 创建上下文解析器
-            resolver = MessageContextResolver(all_messages_simple)
+            resolver = MessageContextResolver(all_messages=all_messages_simple)
             
             # 统计解析结果
             total_messages = 0

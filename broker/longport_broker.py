@@ -78,7 +78,7 @@ class LongPortBroker:
         提交期权订单（支持止盈止损）
         
         Args:
-            symbol: 期权代码，如 "AAPL250131C00150000.US"
+            symbol: 期权代码，如 "EOSE260109C13500.US"
             side: 买卖方向 BUY/SELL
             quantity: 数量（合约数）
             price: 限价单价格（市价单传 None）
@@ -677,7 +677,7 @@ class LongPortBroker:
         获取期权实时报价
         
         Args:
-            symbols: 期权代码列表，如 ["AAPL260207C00250000.US"]
+            symbols: 期权代码列表，如 ["AAPL260207C250000.US"]
         
         Returns:
             期权报价列表
@@ -939,8 +939,8 @@ def convert_to_longport_symbol(ticker: str, option_type: str, strike: float, exp
     """
     将期权信息转换为长桥期权代码格式
     
-    格式：TICKER + YYMMDD + C/P + 价格(5位，即行权价×1000)
-    示例：AAPL250131C150000.US 或 AAPL260206C110000.US
+    格式：TICKER + YYMMDD + C/P + 价格.US，价格为行权价×1000 不补前导零
+    示例：EOSE260109C13500.US（行权价 13.5）、AAPL260206C110000.US（行权价 110）
     
     Args:
         ticker: 股票代码，如 "AAPL"
@@ -1014,9 +1014,8 @@ def convert_to_longport_symbol(ticker: str, option_type: str, strike: float, exp
     # 期权类型
     opt_type = "C" if option_type.upper() == "CALL" else "P"
     
-    # 行权价格式化（5位数字，与长桥 API 返回格式一致）
-    # 例如：60.0 → 60000, 17.5 → 17500, 150.0 → 150000
-    strike_str = f"{int(strike * 1000):05d}"
+    # 价格为行权价×1000，不补前导零。例：13.5 → 13500, 110 → 110000
+    strike_str = str(int(strike * 1000))
     
     # 组合期权代码
     symbol = f"{ticker}{expiry_str}{opt_type}{strike_str}.US"

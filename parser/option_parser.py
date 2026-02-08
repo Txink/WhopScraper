@@ -7,6 +7,12 @@ import hashlib
 from typing import Optional
 from models.instruction import OptionInstruction, InstructionType
 
+# 消息中常见非 ticker 的 2–5 字母词，不当作从正文解析的 ticker
+_NON_TICKER_WORDS = frozenset({
+    "CALL", "PUT", "CALLS", "PUTS", "THE", "AND", "FOR", "ALL", "OUT",
+    "NEW", "ONE", "SEE", "BUY", "SELL", "ETF", "ITM", "OTM", "ATM",
+})
+
 
 class OptionParser:
     """期权指令解析器"""
@@ -165,11 +171,12 @@ class OptionParser:
     # 止损指令正则
     # 示例: 止损 0.95
     # 示例: 止损在1.00
+    # 示例: 止损价1.65美元 小仓位
     # 示例: 止损设置在0.17
     # 示例: 止损 在 1.3
     # 示例: SL 0.95
     STOP_LOSS_PATTERN = re.compile(
-        r'(?:止损|SL|stop\s*loss)\s*(?:设置)?(?:在)?\s*(\d+(?:\.\d+)?)',
+        r'(?:止损|SL|stop\s*loss)(?:价)?\s*(?:设置)?(?:在)?\s*(\d+(?:\.\d+)?)',
         re.IGNORECASE
     )
     
@@ -202,9 +209,11 @@ class OptionParser:
     # 示例: 2.3附近都出
     # 示例: 2.45也在剩下减一半
     
+    # 价格小数点点位（支持全角。、．，逗号，如 1。63、1,5）
+    _DECIMAL = r'[\.．。,]'
     # 模式1: 价格+出+比例（可选股票代码）
     TAKE_PROFIT_PATTERN_1 = re.compile(
-        r'(\d+(?:\.\d+)?)\s*(?:附近|左右)?\s*(?:也)?'
+        r'(\d+(?:' + _DECIMAL + r'\d+)?)\s*(?:附近|左右)?\s*(?:也)?'
         r'(?:出|减)\s*'
         r'(?:剩下|剩余|个)?\s*'
         r'(三分之一|三分之二|三之一|一半|全部|1/3|2/3|1/2|\d+%)'
@@ -212,16 +221,24 @@ class OptionParser:
         re.IGNORECASE
     )
     
-    # 模式2: 价格+剩下+都出 (如: 0.9剩下都出)
+    # 模式1b: 价格或区间+开始+减/出+比例（如: 1.2-1.3开始减三分之一，区间时仅存 price_range，中间值在 resolver 填）
+    TAKE_PROFIT_PATTERN_1B = re.compile(
+        r'(\d+(?:\.\d+)?(?:-\d+(?:\.\d+)?)?)\s*开始\s*(?:出|减)\s*'
+        r'(三分之一|三分之二|三之一|一半|全部|1/3|2/3|1/2|\d+%)'
+        r'(?:\s*([A-Z]{2,5}))?',
+        re.IGNORECASE
+    )
+    
+    # 模式2: 价格+剩下+都出 (如: 0.9剩下都出, 1,5都出剩下的)
     TAKE_PROFIT_PATTERN_2 = re.compile(
-        r'(\d+(?:\.\d+)?)\s*(?:附近|左右)?\s*'
+        r'(\d+(?:' + _DECIMAL + r'\d+)?)\s*(?:附近|左右)?\s*'
         r'(?:把)?(?:剩下|剩余)(?:的)?(?:都|全)?出(?:了)?',
         re.IGNORECASE
     )
     
-    # 模式3: 价格+出+剩余的+可选ticker (如: 0.61出剩余的, 2.4出剩下ndaq)
+    # 模式3: 价格+出(掉)?+剩余/剩下的+可选ticker → CLOSE (如: 0.61出剩余的, 0.94出掉剩下的cmcsa期权)
     TAKE_PROFIT_PATTERN_3 = re.compile(
-        r'(\d+(?:\.\d+)?)\s*(?:附近)?\s*出\s*(?:剩余|剩下)(?:的)?\s*([A-Z]{2,5})?',
+        r'(\d+(?:\.\d+)?)\s*(?:附近)?\s*出(?:掉)?\s*(?:剩余|剩下)(?:的)?\s*([A-Za-z]{2,5})?',
         re.IGNORECASE
     )
     
@@ -237,9 +254,53 @@ class OptionParser:
         re.IGNORECASE
     )
     
-    # 模式5b: 价格+都出/全出/全部出+可选ticker (如: 2.75都出 hon, 2.3全出, 0.16全部出tsla)
+    # 模式5d: 价格+附近+也?可以?分批?都出+可选ticker (如: 1.5附近也可以分批都出qqq掉下来了)
+    TAKE_PROFIT_PATTERN_5D = re.compile(
+        r'(\d+(?:\.\d+)?)\s*附近\s*(?:也)?(?:可以)?(?:分批)?\s*都出\s*([A-Za-z]{2,5})?',
+        re.IGNORECASE
+    )
+    
+    # 模式2b: 剩下也(在)?+价格+附近?+出 (如: 剩下也1.25附近出, 剩下也在1.45出) → CLOSE
+    TAKE_PROFIT_PATTERN_2B = re.compile(
+        r'(?:剩下|剩余)(?:也)?(?:在)?\s*(\d+(?:\.\d+)?)\s*(?:附近|左右)?\s*(?:出|减)',
+        re.IGNORECASE
+    )
+    
+    # 模式5c: 价格+附近+也+减点/出点 → SELL，默认数量 1/3（无 ticker 需上下文补全）
+    # 示例: 1.4附近也减点, 2.0附近出点（都出/全出 见模式5、5b → CLOSE）
+    TAKE_PROFIT_PATTERN_5C = re.compile(
+        r'^(\d+(?:\.\d+)?)\s*(?:附近|左右)?\s*(?:也)?\s*(?:出|减)(?:点|了)?\s*$',
+        re.IGNORECASE
+    )
+    # 模式5i: 价格+也减点（后可有其他字，无 ticker 由历史补全）→ SELL 1/3（如: 3.4也减点 剩下拿一半）
+    TAKE_PROFIT_PATTERN_5I = re.compile(
+        r'(\d+(?:\.\d+)?)\s*(?:附近|左右)?\s*也减点',
+        re.IGNORECASE
+    )
+    # 模式5e: 价格+附近+出（未说“出点”“出一点”）→ CLOSE（如: 1.15附近出走弱了）
+    TAKE_PROFIT_PATTERN_5E = re.compile(
+        r'(\d+(?:\.\d+)?)\s*附近\s*出',
+        re.IGNORECASE
+    )
+    # 模式5f: 价格+出了（未说数量/比例）→ CLOSE（如: 机器是1.7出了等下一个慢速点的）
+    TAKE_PROFIT_PATTERN_5F = re.compile(
+        r'(\d+(?:\.\d+)?)\s*出了',
+        re.IGNORECASE
+    )
+    # 模式5g: ticker+价格+也减点（无具体数量当 1/3）（如: eose 0.57也减点 持仓原来的一半 博价内）
+    TAKE_PROFIT_PATTERN_5G = re.compile(
+        r'([A-Za-z]{2,5})\s+(\d+(?:\.\d+)?)\s*也减点',
+        re.IGNORECASE
+    )
+    # 模式5h: 价格+在减点+ticker（无具体数量当 1/3）（如: 4.6在减点tsla 留4分之一原来仓位）
+    TAKE_PROFIT_PATTERN_5H = re.compile(
+        r'(\d+(?:\.\d+)?)\s*在减点\s*([A-Za-z]{2,5})',
+        re.IGNORECASE
+    )
+    
+    # 模式5b: 价格+都出/全出/全部出+可选ticker (如: 2.75都出 hon, 2.3全出, 1,5都出剩下的)
     TAKE_PROFIT_PATTERN_5B = re.compile(
-        r'(\d+(?:\.\d+)?)\s*(?:都|全部|全)出\s*([A-Z]{2,5})?',
+        r'(\d+(?:' + _DECIMAL + r'\d+)?)\s*(?:都|全部|全)出\s*([A-Z]{2,5})?',
         re.IGNORECASE
     )
     
@@ -389,48 +450,87 @@ class OptionParser:
             message_id = hashlib.md5(message.encode()).hexdigest()[:12]
         
         # 优先尝试解析买入指令（传入时间戳用于计算相对日期）
-        # 这样可以确保"INTC - $52 CALLS 1月30 1.25 止损在1.00"这种包含完整期权信息的消息被正确识别为买入指令
         instruction = cls._parse_buy(message, message_id, message_timestamp)
         if instruction:
+            cls._fill_ticker_from_message_if_missing(instruction, message)
             return instruction
         
         # 尝试解析修改指令（止损/止盈）
         instruction = cls._parse_modify(message, message_id)
         if instruction:
+            cls._fill_ticker_from_message_if_missing(instruction, message)
             return instruction
         
         # 尝试解析卖出/清仓指令
         instruction = cls._parse_sell(message, message_id)
         if instruction:
+            cls._fill_ticker_from_message_if_missing(instruction, message)
             return instruction
         
         # 无法解析
         return None
     
+    @classmethod
+    def _fill_ticker_from_message_if_missing(cls, instruction: OptionInstruction, message: str) -> None:
+        """当指令无 ticker 时，从消息正文解析首个 ticker 并填入，便于 resolver 从历史匹配同标的。"""
+        if instruction.ticker:
+            return
+        ticker = cls._extract_ticker_from_message(message)
+        if ticker:
+            instruction.ticker = ticker
+
+    @staticmethod
+    def _extract_ticker_from_message(message: str) -> Optional[str]:
+        """
+        从消息正文解析首个可能的 ticker（2–5 字母，排除常见非 ticker）。
+        不用 \\b：Python 中 \\w 含 Unicode 字母，ticker 后紧跟中文（如「tsla剩下」）时无 word boundary，
+        改为要求 ticker 两侧为非字母或首/尾。
+        """
+        if not message or len(message.strip()) < 2:
+            return None
+        words = re.findall(r"(?:^|[^A-Za-z])([A-Za-z]{2,5})(?=[^A-Za-z]|$)", message)
+        for w in words:
+            u = w.upper()
+            if u not in _NON_TICKER_WORDS:
+                return u
+        return None
+
     @staticmethod
     def _parse_price_range(price_str: str) -> tuple:
         """
         解析价格字符串，返回 (单价, 价格区间)
+        支持全角句号。、全角点．作为小数点（如 1。63 → 1.63）；
+        支持逗号作为小数点（如 1,5 → 1.5）。
         
         Args:
-            price_str: 价格字符串，如 "0.83" 或 "0.83-0.85"
+            price_str: 价格字符串，如 "0.83"、"1。63"、"1,5" 或 "0.83-0.85"
             
         Returns:
             (price, price_range): 单价和价格区间
             - 如果是单价：返回 (0.83, None)
-            - 如果是区间：返回 (0.84, [0.83, 0.85])  # 单价取中间值
+            - 如果是区间：返回 (None, [0.83, 0.85])，中间值由 resolver 填
         """
-        if '-' in price_str:
+        if not price_str or not str(price_str).strip():
+            return (None, None)
+        s = str(price_str).strip()
+        s = s.replace("。", ".").replace("．", ".")
+        # 兼容逗号作小数点（如 1,5 → 1.5）：仅当逗号后为 1～3 位数字时替换
+        s = re.sub(r"(\d),(\d{1,3})\b", r"\1.\2", s)
+        if "-" in s:
             try:
-                parts = price_str.split('-')
-                price_low = float(parts[0])
-                price_high = float(parts[1])
-                price_mid = (price_low + price_high) / 2
-                return (price_mid, [price_low, price_high])
-            except:
-                return (float(price_str.split('-')[0]), None)
-        else:
-            return (float(price_str), None)
+                parts = s.split("-", 1)
+                price_low = float(parts[0].strip())
+                price_high = float(parts[1].strip())
+                return (None, [price_low, price_high])
+            except Exception:
+                try:
+                    return (float(parts[0].strip()), None)
+                except Exception:
+                    return (None, None)
+        try:
+            return (float(s), None)
+        except Exception:
+            return (None, None)
     
     @classmethod
     def _parse_buy(cls, message: str, message_id: str, message_timestamp: Optional[str] = None) -> Optional[OptionInstruction]:
@@ -862,9 +962,9 @@ class OptionParser:
                 if portion_match:
                     instruction_type, sell_quantity = cls._parse_sell_quantity(portion_match.group(1))
                 else:
-                    # 默认部分卖出
                     instruction_type = InstructionType.SELL.value
-                    sell_quantity = None
+                    # 减点/出点 没说数量，默认 1/3
+                    sell_quantity = "1/3" if ("减点" in message or "出点" in message) else None
             
             return OptionInstruction(
                 raw_message=message,
@@ -896,7 +996,8 @@ class OptionParser:
                 sell_quantity = None
             else:
                 instruction_type = InstructionType.SELL.value
-                sell_quantity = None
+                # 减点/出点 没说数量，默认 1/3
+                sell_quantity = "1/3" if ("减点" in message or "出点" in message) else None
             
             return OptionInstruction(
                 raw_message=message,
@@ -923,6 +1024,24 @@ class OptionParser:
             # 解析卖出数量
             instruction_type, sell_quantity = cls._parse_sell_quantity(portion_raw)
             
+            return OptionInstruction(
+                raw_message=message,
+                instruction_type=instruction_type,
+                ticker=ticker,
+                price=price,
+                price_range=price_range,
+                sell_quantity=sell_quantity,
+                message_id=message_id
+            )
+        
+        # 尝试模式1b: 价格或区间+开始+减/出+比例（如: 1.2-1.3开始减三分之一）
+        match = cls.TAKE_PROFIT_PATTERN_1B.search(message)
+        if match:
+            price_str = match.group(1)
+            portion_raw = match.group(2)
+            ticker = match.group(3).upper() if match.group(3) else None
+            price, price_range = cls._parse_price_range(price_str)
+            instruction_type, sell_quantity = cls._parse_sell_quantity(portion_raw)
             return OptionInstruction(
                 raw_message=message,
                 instruction_type=instruction_type,
@@ -1031,6 +1150,122 @@ class OptionParser:
                 price_range=price_range,
                 message_id=message_id
             )
+        
+        # 尝试模式5d: 价格+附近+也?可以?分批?都出+可选ticker（如: 1.5附近也可以分批都出qqq掉下来了）
+        match = cls.TAKE_PROFIT_PATTERN_5D.search(message)
+        if match:
+            price_str = match.group(1)
+            ticker = match.group(2).upper() if match.group(2) else None
+            price, price_range = cls._parse_price_range(price_str)
+            return OptionInstruction(
+                raw_message=message,
+                instruction_type=InstructionType.CLOSE.value,
+                ticker=ticker,
+                price=price,
+                price_range=price_range,
+                message_id=message_id
+            )
+        
+        # 尝试模式2b: 剩下也+价格+附近+出（如: 剩下也1.25附近出速度有点快）
+        match = cls.TAKE_PROFIT_PATTERN_2B.search(message)
+        if match:
+            price_str = match.group(1)
+            price, price_range = cls._parse_price_range(price_str)
+            return OptionInstruction(
+                raw_message=message,
+                instruction_type=InstructionType.CLOSE.value,
+                price=price,
+                price_range=price_range,
+                message_id=message_id
+            )
+        
+        # 尝试模式5c: 价格+附近+也+减点/出点 → SELL，默认数量 1/3（如: 1.4附近也减点）
+        match = cls.TAKE_PROFIT_PATTERN_5C.search(message.strip())
+        if match:
+            price_str = match.group(1)
+            price, price_range = cls._parse_price_range(price_str)
+            return OptionInstruction(
+                raw_message=message,
+                instruction_type=InstructionType.SELL.value,
+                price=price,
+                price_range=price_range,
+                sell_quantity="1/3",
+                message_id=message_id
+            )
+        
+        # 尝试模式5i: 价格+也减点（后可有字，symbol 从历史补全）→ SELL 1/3（如: 3.4也减点 剩下拿一半）
+        match = cls.TAKE_PROFIT_PATTERN_5I.search(message)
+        if match:
+            price_str = match.group(1)
+            price, price_range = cls._parse_price_range(price_str)
+            return OptionInstruction(
+                raw_message=message,
+                instruction_type=InstructionType.SELL.value,
+                price=price,
+                price_range=price_range,
+                sell_quantity="1/3",
+                message_id=message_id
+            )
+        
+        # 尝试模式5g: ticker+价格+也减点（无具体数量当 1/3）（如: eose 0.57也减点 持仓原来的一半 博价内）
+        match = cls.TAKE_PROFIT_PATTERN_5G.search(message)
+        if match:
+            ticker = match.group(1).upper()
+            price_str = match.group(2)
+            price, price_range = cls._parse_price_range(price_str)
+            return OptionInstruction(
+                raw_message=message,
+                instruction_type=InstructionType.SELL.value,
+                ticker=ticker,
+                price=price,
+                price_range=price_range,
+                sell_quantity="1/3",
+                message_id=message_id
+            )
+        
+        # 尝试模式5h: 价格+在减点+ticker（无具体数量当 1/3）（如: 4.6在减点tsla 留4分之一原来仓位）
+        match = cls.TAKE_PROFIT_PATTERN_5H.search(message)
+        if match:
+            price_str = match.group(1)
+            ticker = match.group(2).upper()
+            price, price_range = cls._parse_price_range(price_str)
+            return OptionInstruction(
+                raw_message=message,
+                instruction_type=InstructionType.SELL.value,
+                ticker=ticker,
+                price=price,
+                price_range=price_range,
+                sell_quantity="1/3",
+                message_id=message_id
+            )
+        
+        # 尝试模式5e: 价格+附近+出（未说出点/出一点）→ CLOSE（如: 1.15附近出走弱了）
+        match = cls.TAKE_PROFIT_PATTERN_5E.search(message)
+        if match and "出点" not in message and "出一点" not in message:
+            price_str = match.group(1)
+            price, price_range = cls._parse_price_range(price_str)
+            return OptionInstruction(
+                raw_message=message,
+                instruction_type=InstructionType.CLOSE.value,
+                price=price,
+                price_range=price_range,
+                message_id=message_id
+            )
+        
+        # 尝试模式5f: 价格+出了（未说数量/比例）→ CLOSE（如: 机器是1.7出了等下一个慢速点的）
+        match = cls.TAKE_PROFIT_PATTERN_5F.search(message)
+        if match:
+            # 若含比例/数量则交给其他模式处理，此处仅当“出了”且无数量时判为 CLOSE
+            if not re.search(r'出点|出一点|三分之一|三之一|三分之二|一半|全部|1/3|2/3|1/2|\d+%', message):
+                price_str = match.group(1)
+                price, price_range = cls._parse_price_range(price_str)
+                return OptionInstruction(
+                    raw_message=message,
+                    instruction_type=InstructionType.CLOSE.value,
+                    price=price,
+                    price_range=price_range,
+                    message_id=message_id
+                )
         
         # 尝试模式6: 价格+再出+比例（如: 0.7再出剩下的一半，2.45也在剩下减一半）
         match = cls.TAKE_PROFIT_PATTERN_6.search(message)

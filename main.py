@@ -14,6 +14,7 @@ from config import Config
 from scraper.browser import BrowserManager
 from scraper.monitor import MessageMonitor
 from models.instruction import OptionInstruction
+from models.record import Record
 
 # 长桥交易模块
 from broker import (
@@ -168,25 +169,22 @@ class SignalScraper:
         self.monitor = MessageMonitor(
             page=page,
             poll_interval=Config.POLL_INTERVAL,
-            output_file=Config.OUTPUT_FILE,
-            enable_sample_collection=Config.ENABLE_SAMPLE_COLLECTION,
-            display_mode=Config.DISPLAY_MODE,
             skip_initial_messages=Config.SKIP_INITIAL_MESSAGES
         )   
         
         # 设置回调
-        self.monitor.on_new_instruction(self._on_instruction)
+        self.monitor.on_new_record(self._on_record)
         
         print(f"✅ 单页面监控器已设置: {page_type.upper()} - {url}")
     
-    def _on_instruction(self, instruction: OptionInstruction):
+    def _on_record(self, record: Record):
         """
         新指令回调 - 处理交易信号（单页面模式）
         
         Args:
             instruction: 解析出的指令
         """
-        self._handle_instruction(instruction, "OPTION")
+        self._handle_instruction(record.instruction, "OPTION")
     
     def _handle_instruction(self, instruction: OptionInstruction, source: str):
         """

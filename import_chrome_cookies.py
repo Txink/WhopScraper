@@ -177,8 +177,6 @@ async def import_and_verify():
             monitor = MessageMonitor(
                 page=page,
                 poll_interval=2.0,
-                output_file=Config.OUTPUT_FILE,
-                enable_sample_collection=False
             )
             
             messages = await monitor._extract_messages()

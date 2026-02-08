@@ -105,7 +105,7 @@ async def auto_trade_from_html(html_file: str, dry_run: bool = True, require_con
         all_messages_simple.append(simple_dict)
     
     # 创建上下文解析器
-    resolver = MessageContextResolver(all_messages_simple)
+    resolver = MessageContextResolver(all_messages=all_messages_simple)
     
     # 解析所有消息
     instructions = []

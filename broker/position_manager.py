@@ -410,7 +410,7 @@ if __name__ == "__main__":
     
     # 添加测试持仓
     pos1 = create_position_from_order(
-        symbol="AAPL250131C00150000.US",
+        symbol="AAPL250131C150000.US",
         ticker="AAPL",
         option_type="CALL",
         strike=150.0,

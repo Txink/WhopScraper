@@ -233,33 +233,3 @@ class QuoteMatcher:
         
         # 如果筛选后没有结果，降低阈值在所有候选中查找
         return cls.find_best_match(quote, candidates, min_score * 0.8)
-
-
-def test_quote_matcher():
-    """测试引用匹配器"""
-    # 测试清理引用文本
-    quote1 = "xiaozhaoluckyGILD - $130 CALLS 这周 1.5-1.60"
-    clean1 = QuoteMatcher.clean_quote_text(quote1)
-    print(f"原始: {quote1}")
-    print(f"清理后: {clean1}\n")
-    
-    # 测试提取关键信息
-    text = "GILD - $130 CALLS 这周 1.5-1.60"
-    info = QuoteMatcher.extract_key_info(text)
-    print(f"文本: {text}")
-    print(f"关键信息: {info}\n")
-    
-    # 测试相似度计算
-    quote = "GILD - $130 CALLS 这周 1.5-1.60"
-    candidate1 = "GILD - $130 CALLS 这周 1.5-1.60"
-    candidate2 = "小仓位 止损 在 1.3"
-    candidate3 = "NVDA 190c 本周"
-    
-    print(f"引用: {quote}")
-    print(f"候选1: {candidate1}, 相似度: {QuoteMatcher.calculate_similarity(quote, candidate1):.2f}")
-    print(f"候选2: {candidate2}, 相似度: {QuoteMatcher.calculate_similarity(quote, candidate2):.2f}")
-    print(f"候选3: {candidate3}, 相似度: {QuoteMatcher.calculate_similarity(quote, candidate3):.2f}")
-
-
-if __name__ == '__main__':
-    test_quote_matcher()

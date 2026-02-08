@@ -5,6 +5,12 @@
 """
 import logging
 import sys
+from pathlib import Path
+
+# 添加项目根目录到 Python 路径
+PROJECT_ROOT = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
+
 from broker import load_longport_config, LongPortBroker, convert_to_longport_symbol, calculate_quantity
 from broker.order_formatter import (
     print_account_info_table,
@@ -92,7 +98,7 @@ def test_option_chain(broker: LongPortBroker):
     print("="*60)
     
     try:
-        symbol = "AAPL.US"
+        symbol = "EOSE.US"
         
         # 1. 获取到期日列表
         expiry_dates = broker.get_option_expiry_dates(symbol)

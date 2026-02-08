@@ -39,7 +39,7 @@ def test_modify_with_ticker():
         }
     ]
     
-    resolver = MessageContextResolver(messages)
+    resolver = MessageContextResolver(all_messages=messages)
     
     # 解析第3条消息
     result = resolver.resolve_instruction(messages[2])
@@ -102,7 +102,7 @@ def test_modify_wrong_ticker():
         }
     ]
     
-    resolver = MessageContextResolver(messages)
+    resolver = MessageContextResolver(all_messages=messages)
     
     # 解析第3条消息（有tsla ticker）
     result = resolver.resolve_instruction(messages[2])

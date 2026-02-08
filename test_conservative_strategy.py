@@ -56,7 +56,7 @@ def test_conservative_with_recent_messages():
         }
     ]
     
-    resolver = MessageContextResolver(messages)
+    resolver = MessageContextResolver(all_messages=messages)
     
     # 解析第5条消息（无ticker的止损指令）
     result = resolver.resolve_instruction(messages[4])
@@ -133,7 +133,7 @@ def test_conservative_priority():
         }
     ]
     
-    resolver = MessageContextResolver(messages)
+    resolver = MessageContextResolver(all_messages=messages)
     
     # 测试1：从history找到
     print("\n--- 测试1：优先从history查找 ---")
@@ -183,7 +183,7 @@ def test_conservative_with_refer():
         }
     ]
     
-    resolver = MessageContextResolver(messages)
+    resolver = MessageContextResolver(all_messages=messages)
     
     result = resolver.resolve_instruction(messages[1])
     if result:

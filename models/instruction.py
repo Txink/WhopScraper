@@ -1,12 +1,21 @@
 """
 期权指令数据模型
 """
+import sys
+from pathlib import Path
+
+if __name__ == "__main__":
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
 from enum import Enum
 from typing import Optional
 import json
-
+from rich.console import Console
+from rich.table import Table
+from rich import box
+from models.message import MessageGroup
 
 class InstructionType(Enum):
     """指令类型枚举"""
@@ -37,13 +46,13 @@ class OptionInstruction:
     option_type: Optional[str] = None  # CALL 或 PUT
     strike: Optional[float] = None
     expiry: Optional[str] = None  # 如 "1/31", "2/20"
-    symbol: Optional[str] = None  # 长桥期权代码，如 TSLA260213C240000.US（解析/展示时生成，可直接用于下单）
+    symbol: Optional[str] = None  # 期权代码：${ticker}${YYMMDD}${C|P}${price}.US，价格为行权价×1000 不补零，如 EOSE260109C13500.US
 
     # 上下文
     source: Optional[str] = None  # 上下文来源，如 history, refer, last_N
     depend_message: Optional[str] = None  # 依赖的消息内容
 
-    origin: Optional[dict] = None  # 原始消息
+    origin: Optional[MessageGroup] = None  # 原始消息
     
     # 价格信息（支持单个价格或价格区间）
     price: Optional[float] = None  # 单个价格
@@ -75,6 +84,149 @@ class OptionInstruction:
     def to_json(self, indent: int = 2) -> str:
         """转换为 JSON 字符串"""
         return json.dumps(self.to_dict(), ensure_ascii=False, indent=indent)
+
+    def generate_symbol(self) -> bool:
+        if self.symbol is not None:
+            return True
+        
+        # 格式化时间日期
+        timestamp = getattr(self.origin, "timestamp", None) if self.origin else None
+        if self.expiry:
+            normalized = OptionInstruction.normalize_expiry_to_yymmdd(
+                self.expiry, timestamp
+            )
+            if normalized:
+                self.expiry = normalized
+
+        # 价格区间在生成 symbol 前取中间值赋给 price
+        if self.price is None and self.price_range and len(self.price_range) == 2:
+            self.price = (self.price_range[0] + self.price_range[1]) / 2
+        # 创建 symbol
+        if all(
+            [self.ticker, self.option_type, self.strike, self.expiry]
+        ):
+            self.symbol = OptionInstruction.generate_option_symbol(
+                self.ticker,
+                self.option_type,
+                self.strike,
+                self.expiry,
+                self.timestamp,
+            )
+            return True
+        return False
+
+    def has_symbol(self) -> bool:
+        """判断是否具备完整 symbol 信息（ticker, option_type, strike, expiry）。"""
+        return self.symbol is not None or bool(
+            self.ticker
+            and self.option_type
+            and self.strike
+            and self.expiry
+        )
+
+    def sync_with_instruction(self, other: "OptionInstruction") -> None:
+        """从另一条指令补全本指令缺失的 ticker、option_type、strike、expiry。"""
+        if not other:
+            return
+        if not self.ticker and other.ticker:
+            self.ticker = other.ticker
+        if not self.option_type and other.option_type:
+            self.option_type = other.option_type
+        if self.strike is None and other.strike is not None:
+            self.strike = other.strike
+        if not self.expiry and other.expiry:
+            self.expiry = other.expiry
+
+    def display(self):
+        """使用 Rich Table 按文档格式展示单条解析后的指令。"""
+        table = Table(
+            title="[bold blue]解析后消息[/bold blue]",
+            show_header=True,
+            header_style="bold cyan",
+            box=box.SIMPLE,
+            show_lines=False,
+            padding=(0, 0),
+            width=65,
+            expand=False,
+        )
+        table.add_column("字段", style="cyan", width=14, no_wrap=True)
+        table.add_column("值", style="white", width=49, no_wrap=False)
+
+        if self is None:
+            # 红色字体
+            table.add_row("状态", "[bold red]解析失败[/bold red]")
+            Console().print(table)
+            return
+
+        inst = self
+        table.add_row("时间", inst.timestamp)
+        table.add_row(
+            "期权",
+            inst.symbol
+            or OptionInstruction.generate_option_symbol(
+                inst.ticker, inst.option_type, inst.strike, inst.expiry, inst.timestamp
+            ),
+        )
+        table.add_row("指令类型", inst.instruction_type)
+        if inst.instruction_type == 'BUY':
+            # 买入指令
+            if inst.option_type:
+                table.add_row("期权类型", inst.option_type)
+            if inst.strike:
+                table.add_row("行权价", f"${inst.strike}")
+            if inst.expiry:
+                table.add_row("到期日", inst.expiry)
+            if inst.price_range:
+                table.add_row("价格区间", f"${inst.price_range[0]} - ${inst.price_range[1]}")
+                table.add_row("价格(中间值)", f"${inst.price}")
+            elif inst.price:
+                table.add_row("价格", f"${inst.price}")
+            if inst.position_size:
+                table.add_row("仓位大小", inst.position_size)
+
+        elif inst.instruction_type == 'SELL':
+            # 卖出指令
+            if inst.price_range:
+                table.add_row("价格区间", f"${inst.price_range[0]} - ${inst.price_range[1]}")
+                table.add_row("价格(中间值)", f"${inst.price}")
+            elif inst.price:
+                table.add_row("价格", f"${inst.price}")
+            if inst.sell_quantity:
+                table.add_row("卖出数量", inst.sell_quantity)
+
+        elif inst.instruction_type == 'CLOSE':
+            # 清仓指令
+            if inst.price_range:
+                table.add_row("价格区间", f"${inst.price_range[0]} - ${inst.price_range[1]}")
+                table.add_row("价格(中间值)", f"${inst.price}")
+            elif inst.price:
+                table.add_row("价格", f"${inst.price}")
+            table.add_row("数量", "全部")
+
+        elif inst.instruction_type == 'MODIFY':
+            # 修改指令
+            if inst.stop_loss_range:
+                table.add_row("止损区间", f"${inst.stop_loss_range[0]} - ${inst.stop_loss_range[1]}")
+                table.add_row("止损(中间值)", f"${inst.stop_loss_price}")
+            elif inst.stop_loss_price:
+                table.add_row("止损价格", f"${inst.stop_loss_price}")
+
+            if inst.take_profit_range:
+                table.add_row("止盈区间", f"${inst.take_profit_range[0]} - ${inst.take_profit_range[1]}")
+                table.add_row("止盈(中间值)", f"${inst.take_profit_price}")
+            elif inst.take_profit_price:
+                table.add_row("止盈价格", f"${inst.take_profit_price}")
+
+        # 显示上下文补全信息
+        if inst.source:
+            table.add_row("上下文来源", inst.source)
+            if inst.depend_message:
+                ctx_msg = inst.depend_message[:60]
+                if len(inst.depend_message) > 60:
+                    ctx_msg += "..."
+                table.add_row("上下文消息", ctx_msg)
+
+        Console().print(table)
     
     @classmethod
     def from_dict(cls, data: dict) -> "OptionInstruction":
@@ -233,7 +385,7 @@ class OptionInstruction:
             timestamp: 消息时间戳（如 "Jan 23, 2026 12:51 AM"），用于推断年份
             
         Returns:
-            完整期权代码（如 "BA260213C240000.US"）
+            完整期权代码（如 "EOSE260109C13500.US"，价格为行权价×1000 不补零）
         """
         import re
 
@@ -276,8 +428,8 @@ class OptionInstruction:
             date_str = f"{year:02d}{month:02d}{day:02d}"
 
         option_code = "C" if option_type == "CALL" else "P"
-        # LongPort 使用 5 位 strike code (strike × 1000)，例如：60.0 → 60000, 17.5 → 17500
-        strike_code = f"{int(strike * 1000):05d}"
+        # 价格为实际行权价×1000，不补前导零。例：13.5 → 13500, 240 → 240000
+        strike_code = str(int(strike * 1000))
         return f"{ticker}{date_str}{option_code}{strike_code}.US"
 
 

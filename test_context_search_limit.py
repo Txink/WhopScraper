@@ -18,7 +18,7 @@ def test_default_limit():
         del os.environ['CONTEXT_SEARCH_LIMIT']
     
     messages = [{"domID": "test_1", "content": "test", "timestamp": None, "refer": None, "position": "single", "history": []}]
-    resolver = MessageContextResolver(messages)
+    resolver = MessageContextResolver(all_messages=messages)
     
     print(f"默认 context_search_limit: {resolver.context_search_limit}")
     assert resolver.context_search_limit == 5, f"期望默认值为5，得到 {resolver.context_search_limit}"
@@ -35,7 +35,7 @@ def test_custom_limit():
     os.environ['CONTEXT_SEARCH_LIMIT'] = '10'
     
     messages = [{"domID": "test_1", "content": "test", "timestamp": None, "refer": None, "position": "single", "history": []}]
-    resolver = MessageContextResolver(messages)
+    resolver = MessageContextResolver(all_messages=messages)
     
     print(f"自定义 context_search_limit: {resolver.context_search_limit}")
     assert resolver.context_search_limit == 10, f"期望配置值为10，得到 {resolver.context_search_limit}"
@@ -70,7 +70,7 @@ def test_context_source_display():
         }
     ]
     
-    resolver = MessageContextResolver(messages)
+    resolver = MessageContextResolver(all_messages=messages)
     
     print(f"配置 context_search_limit: {resolver.context_search_limit}")
     
@@ -108,7 +108,7 @@ def test_different_limits():
     for env_value, expected_value in test_cases:
         os.environ['CONTEXT_SEARCH_LIMIT'] = env_value
         messages = [{"domID": "test_1", "content": "test", "timestamp": None, "refer": None, "position": "single", "history": []}]
-        resolver = MessageContextResolver(messages)
+        resolver = MessageContextResolver(all_messages=messages)
         
         print(f"CONTEXT_SEARCH_LIMIT={env_value} -> context_search_limit={resolver.context_search_limit}")
         assert resolver.context_search_limit == expected_value

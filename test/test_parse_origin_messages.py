@@ -133,7 +133,7 @@ def parse_origin_messages(input_file: str = "data/origin_message.json",
     
     # 3. 创建上下文解析器并解析所有消息
     print("🔍 正在解析消息...")
-    resolver = MessageContextResolver(cleaned_messages)
+    resolver = MessageContextResolver(all_messages=cleaned_messages)
     
     parse_results = []
     success_count = 0

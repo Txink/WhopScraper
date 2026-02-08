@@ -176,8 +176,6 @@ async def test_with_chrome_profile(profile_path: str = None):
             monitor = MessageMonitor(
                 page=page,
                 poll_interval=2.0,
-                output_file=Config.OUTPUT_FILE,
-                enable_sample_collection=False
             )
             
             messages = await monitor._extract_messages()

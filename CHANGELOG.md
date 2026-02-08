@@ -1,5 +1,186 @@
 # CHANGELOG
 
+## [2026-02-06] 本地大模型训练方案 🎓
+
+### 🎓 新增功能
+
+#### 完整训练方案
+- **训练指南** (`docs/llm_training_guide.md`)
+  - 详细的 LoRA 微调实施步骤
+  - 数据准备、训练、评估、部署完整流程
+  - 硬件要求和性能预期
+  - 常见问题解答
+
+#### 核心训练脚本
+- **数据准备工具** (`scripts/prepare_full_dataset.py`)
+  - 从 5850 条已解析消息中提取成功案例
+  - 数据增强（数字格式、表达方式变换）
+  - 自动划分训练集/验证集/测试集（80%/10%/10%）
+  - 生成 JSONL 格式指令微调数据
+  - 输出数据集统计报告
+
+- **LoRA 训练脚本** (`scripts/train_lora_unsloth.py`)
+  - 使用 Unsloth 框架（训练速度快 2 倍）
+  - 支持 4bit/8bit 量化加载
+  - 自动配置 LoRA 适配器
+  - TensorBoard 训练监控
+  - 可选合并权重导出
+
+- **模型评估脚本** (`scripts/evaluate_model.py`)
+  - 在测试集上评估模型准确率
+  - 字段级准确率分析
+  - 错误案例分析
+  - 生成详细评估报告
+
+- **一键训练脚本** (`scripts/train_model_full.sh`)
+  - 完整训练流程自动化
+  - 数据准备 → 训练 → 评估 → 部署
+  - 支持分步执行
+  - 自动导出 Ollama 模型
+
+#### 训练依赖
+- 新增 `requirements_training.txt`
+  - Unsloth（高效 LoRA 训练）
+  - PEFT（参数高效微调）
+  - Transformers（模型库）
+  - Datasets（数据加载）
+  - BitsAndBytes（量化支持）
+
+### 📊 训练方案特点
+
+#### 数据集规模
+- **原始数据**: 2124 条原始消息
+- **已解析数据**: 5850 条解析结果
+- **训练样本**: 173+ 条（可增强至 500+ 条）
+- **数据增强**: 支持 2-3 倍增强
+
+#### 训练方法
+- **LoRA 微调**（推荐）
+  - 参数量小（仅训练 1-2% 参数）
+  - 训练快速（1-2 小时）
+  - 内存占用低（8GB 显存即可）
+  - 准确率高（90-95%）
+
+#### 推荐模型
+- **Qwen2.5-7B-Instruct**（推荐）
+- Llama-3.1-8B-Instruct
+- Mistral-7B-Instruct-v0.3
+
+#### 硬件要求
+- **最低配置**: GTX 1660 (6GB)
+- **推荐配置**: RTX 3060 (12GB)
+- **训练时间**: 30分钟 - 2小时
+
+### 🚀 快速开始
+
+```bash
+# 1. 安装训练依赖
+pip install -r requirements_training.txt
+
+# 2. 一键训练（完整流程）
+bash scripts/train_model_full.sh
+
+# 或分步执行
+bash scripts/train_model_full.sh --step prepare    # 数据准备
+bash scripts/train_model_full.sh --step train      # 训练
+bash scripts/train_model_full.sh --step evaluate   # 评估
+bash scripts/train_model_full.sh --step deploy     # 部署
+
+# 3. 使用微调后的模型
+from parser.llm_parser import LLMParser
+parser = LLMParser(model="trading-parser")
+result = parser.parse(message, history)
+```
+
+### 📈 预期效果
+
+| 方法 | 准确率 | 速度 | 适用场景 |
+|------|--------|------|---------|
+| Few-shot (当前) | 80-85% | 1-2s | 无需训练 |
+| LoRA 微调 (173条) | 85-90% | 0.8-1.5s | 小数据集 |
+| LoRA 微调 (500条) | 90-95% | 0.8-1.5s | 数据增强后 |
+| 全量微调 (500条) | 93-97% | 1-2s | 最高准确率 |
+
+### 📚 文档更新
+- 新增 `docs/llm_training_guide.md` - 完整的训练方案指南
+- 更新 `README.md` - 添加训练功能说明
+
+---
+
+## [2026-02-06] LLM 消息解析器集成 🤖
+
+### 🤖 新增功能
+
+#### LLM 消息解析系统
+- **LLM 解析器** (`parser/llm_parser.py`)
+  - 使用本地大模型（Ollama）进行消息解析
+  - 支持 Few-shot 学习，无需训练即可使用
+  - 比规则解析器更强的泛化能力和自然语言理解
+  - 支持多种后端：Ollama、OpenAI API
+
+- **混合解析器** (`parser/hybrid_parser.py`)
+  - 结合规则解析和 LLM 解析的优势
+  - 规则解析优先（快速、确定性）
+  - LLM 后备（智能、泛化性强）
+  - 置信度阈值控制
+  - 自动选择最佳解析策略
+
+- **数据准备工具** (`scripts/prepare_parsed_messages_for_llm.py`)
+  - 从 `parsed_messages.json` 提取训练数据
+  - 生成 Few-shot 示例（173 条有效样本）
+  - 生成 JSONL 格式训练数据（用于微调）
+  - 创建 Ollama Modelfile（自定义模型）
+
+- **批量解析工具** (`scripts/batch_parse_with_llm.py`)
+  - 批量解析原始消息
+  - 对比 LLM 和规则解析结果
+  - 生成详细的对比报告
+  - 支持限制处理数量（测试用）
+
+- **快速安装脚本** (`scripts/setup_llm_parser.sh`)
+  - 一键安装 Ollama 和依赖
+  - 自动下载推荐模型
+  - 准备训练数据
+  - 运行测试验证
+
+### 📊 性能提升
+- **解析准确率**（预期）：
+  - 规则解析：~60-70%
+  - LLM Few-shot：~80-85%
+  - LLM 微调：~90-95%
+  - 混合解析：~85-90%
+
+### 📚 文档更新
+- 新增 `docs/llm_parser_guide.md` - 完整的 LLM 解析器使用指南
+- 更新 `README.md` - 添加 LLM 解析器功能说明
+- 更新 `requirements.txt` - 添加 ollama 和 openai 依赖
+
+### 🎯 数据统计
+- 训练样本：173 条（从 225 条消息中提取）
+- 指令类型分布：SELL(34%), BUY(27%), CLOSE(20%), MODIFY(19%)
+- 上下文依赖：49.1% 需要历史上下文
+- 覆盖股票：QQQ、INTC、RIVN、EOSE、IREN 等
+
+### 🚀 使用方式
+```bash
+# 1. 快速安装
+bash scripts/setup_llm_parser.sh
+
+# 2. 测试解析器
+python3 parser/llm_parser.py --test
+python3 parser/hybrid_parser.py
+
+# 3. 批量解析
+python3 scripts/batch_parse_with_llm.py --compare
+```
+
+### 💡 推荐模型
+- **qwen2.5:7b** - 推荐使用（平衡性能和准确率）
+- qwen2.5:3b - 快速测试（低配置）
+- qwen2.5:14b - 最高准确率（需要 16GB 内存）
+
+---
+
 ## [Unreleased]
 
 ### 重大改进

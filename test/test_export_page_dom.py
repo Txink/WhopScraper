@@ -27,6 +27,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config import Config
 from scraper.browser import BrowserManager
 from scraper.message_extractor import EnhancedMessageExtractor
+from models.message import MessageGroup
 
 
 async def export_page_dom():
@@ -295,7 +296,7 @@ async def export_page_dom():
                     
                     # 如果标准格式都失败，尝试使用 EnhancedMessageExtractor 的标准化函数
                     # 但这种情况理论上不应该发生，因为消息已经被标准化了
-                    normalized = EnhancedMessageExtractor.normalize_timestamp(ts_str, 0)
+                    normalized = MessageGroup.normalize_timestamp(ts_str, 0)
                     if normalized != ts_str:
                         # 标准化成功，尝试再次解析
                         for fmt in formats:
