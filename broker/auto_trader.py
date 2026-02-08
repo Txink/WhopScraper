@@ -13,7 +13,8 @@ from broker.order_formatter import (
     print_success_message,
     print_error_message,
     print_warning_message,
-    print_info_message
+    print_info_message,
+    print_order_validation_display,
 )
 
 logger = logging.getLogger(__name__)
@@ -76,91 +77,78 @@ class AutoTrader:
         买入规则：
         1. 获取账户余额，根据env配置和实际余额的较小值决定总价上限
         2. 根据总价上限和单价确认买入数量
-        3. 如果配置需要确认，等待控制台确认后再下单
+        3. 校验结束后统一输出 [订单校验] 格式，再根据配置决定是否确认后下单
         """
-        print_info_message("=" * 80)
-        print_info_message("执行买入指令")
-        print_info_message("=" * 80)
-        
-        # 生成期权代码
         symbol = instruction.symbol
         if not symbol:
             return None
-        
-        # 确定买入价格（指令价格）
+
         if instruction.price_range:
-            # 使用价格区间的中间值
             instruction_price = (instruction.price_range[0] + instruction.price_range[1]) / 2
-            print_info_message(f"指令价格区间: ${instruction.price_range[0]} - ${instruction.price_range[1]}, 使用中间值: ${instruction_price}")
-        elif instruction.price:
+        elif instruction.price is not None:
             instruction_price = instruction.price
-            print_info_message(f"指令价格: ${instruction_price}")
         else:
             print_error_message("买入指令缺少价格信息")
             return None
-        
-        # 获取当前市场价格，决定最终买入价格
-        price = instruction_price  # 默认使用指令价格
+
+        price = instruction_price
+        price_line = ""
         try:
             quotes = self.broker.get_option_quote([symbol])
             if quotes and len(quotes) > 0:
-                market_price = quotes[0].get('last_done', 0)
+                market_price = quotes[0].get("last_done", 0)
                 if market_price > 0:
                     deviation = abs(market_price - instruction_price) / instruction_price * 100
-                    print_info_message(f"当前市场价: ${market_price:.2f}, 指令价: ${instruction_price:.2f}, 偏差: {deviation:.1f}%")
-                    
-                    # 如果偏差超过容忍度，拒绝下单
                     if deviation > self.price_deviation_tolerance:
                         print_warning_message(f"价格偏差超过容忍度 {self.price_deviation_tolerance}%，拒绝下单")
                         print_warning_message(f"请核对消息中的目标价或调高 PRICE_DEVIATION_TOLERANCE（当前 {self.price_deviation_tolerance}%）")
                         return None
-                    
-                    # 如果市场价格更优（更低），使用市场价格
                     if market_price < instruction_price:
                         price = market_price
-                        print_info_message(f"✅ 使用更优的市场价格: ${price:.2f}")
                     else:
                         price = instruction_price
-                        print_info_message(f"✅ 使用指令价格: ${price:.2f}")
+                    price_line = f"查询价格：当前市场价=${market_price:.2f}，指令价=${instruction_price:.2f}，偏差={deviation:.1f}%，使用价格=${price:.2f}"
                 else:
-                    print_warning_message("市场价格无效，使用指令价格")
+                    price_line = "查询价格：市场价格无效，使用指令价格"
             else:
-                # 无法获取市场报价可能意味着 symbol 不存在
                 print_error_message(f"❌ 无法获取 {symbol} 的市场报价，该期权合约可能不存在")
                 print_warning_message(f"请检查 ticker 是否正确（如 GOLD 应为 GLD）或该合约是否在交易所上市")
                 return None
         except Exception as e:
-            print_warning_message(f"获取市场报价失败: {e}，使用指令价格")
-        
-        # 获取账户余额
+            price_line = f"查询价格：获取报价失败（{e}），使用指令价格=${price:.2f}"
+
         try:
             balance_info = self.broker.get_account_balance()
-            available_cash = balance_info.get('available_cash', 0)
-            print_info_message(f"账户可用余额: ${available_cash:.2f}")
-        except Exception as e:
-            print_warning_message(f"无法获取账户余额: {e}，使用配置的上限")
-            available_cash = float('inf')
-        
-        # 确定总价上限（取配置和余额的较小值）
+            available_cash = balance_info.get("available_cash", 0)
+        except Exception:
+            available_cash = float("inf")
+
         max_total_price = min(self.max_option_total_price, available_cash)
-        print_info_message(f"总价上限: ${max_total_price:.2f}")
-        
-        # 计算买入数量：由总价上限和数量上限共同控制，取两者较小值（至少 1 张）
         single_contract_price = price * 100
-        max_quantity_by_price = int(max_total_price / single_contract_price)  # 根据总价计算的最大数量
-        max_quantity_by_limit = self.max_option_quantity  # 配置的数量上限
-        
+        max_quantity_by_price = int(max_total_price / single_contract_price)
+        max_quantity_by_limit = self.max_option_quantity
         quantity = min(max_quantity_by_price, max_quantity_by_limit)
         if quantity < 1:
             quantity = 0
-        
+
         if quantity <= 0:
             print_error_message(f"计算的买入数量为0，单价: ${price}, 总价上限: ${max_total_price:.2f}")
             return None
-        
+
         total_price = quantity * single_contract_price
-        print_info_message(f"买入数量: {quantity} 张 (总价限制: {max_quantity_by_price}张, 数量限制: {max_quantity_by_limit}张), 总价: ${total_price:.2f}")
-        
+        quantity_line = f"买入数量：账户余额=${available_cash:.2f}，单次购买上限=${max_total_price:.2f}，张数限制={max_quantity_by_price}张，最终买入数量={quantity}张"
+        total_line = f"买入总价：${total_price:.2f}"
+
+        print_order_validation_display(
+            side="BUY",
+            symbol=symbol,
+            price=price,
+            price_line=price_line,
+            quantity_line=quantity_line,
+            total_line=total_line,
+            instruction_timestamp=instruction.timestamp,
+        )
+
         # 如果需要确认
         if self.require_confirmation:
             print_warning_message("=" * 80)
@@ -185,7 +173,8 @@ class AutoTrader:
                 'quantity': quantity,
                 'price': price,
                 'order_type': 'LIMIT',
-                'remark': f"Auto buy: {instruction.raw_message[:50]}"
+                'remark': f"Auto buy: {instruction.raw_message[:50]}",
+                'instruction_timestamp': instruction.timestamp,
             }
             
             # 如果有止损价格，添加trigger_price
@@ -194,7 +183,6 @@ class AutoTrader:
                 print_info_message(f"设置止损价格: ${instruction.stop_loss_price}")
             
             result = self.broker.submit_option_order(**order_params)
-            print_success_message("买入订单提交成功!")
             return result
             
         except Exception as e:
@@ -315,7 +303,8 @@ class AutoTrader:
                 'side': 'SELL',
                 'quantity': sell_quantity,
                 'order_type': 'LIMIT' if price else 'MARKET',
-                'remark': f"Auto sell: {instruction.raw_message[:50]}"
+                'remark': f"Auto sell: {instruction.raw_message[:50]}",
+                'instruction_timestamp': instruction.timestamp,
             }
             
             if price:
@@ -397,7 +386,8 @@ class AutoTrader:
                 'side': 'SELL',
                 'quantity': available_quantity,
                 'order_type': 'LIMIT' if price else 'MARKET',
-                'remark': f"Auto close: {instruction.raw_message[:50]}"
+                'remark': f"Auto close: {instruction.raw_message[:50]}",
+                'instruction_timestamp': instruction.timestamp,
             }
             
             if price:
@@ -521,7 +511,8 @@ class AutoTrader:
                     quantity=available_quantity,
                     price=None,
                     order_type='MARKET',
-                    remark=f"Auto close: {close_reason}"
+                    remark=f"Auto close: {close_reason}",
+                    instruction_timestamp=instruction.timestamp,
                 )
                 print_success_message(f"清仓订单提交成功! ({close_reason})")
                 return result

@@ -77,10 +77,9 @@ class SignalScraper:
             self.broker = LongPortBroker(config)
             logger.info("✅ 长桥交易接口初始化成功")
             
-            # 3. 创建持仓管理器
+            # 3. 创建持仓管理器（启动后由 sync_from_broker 统一输出账户持仓摘要，此处不再重复打日志）
             self.position_manager = PositionManager(storage_file="data/positions.json")
-            logger.info(f"✅ 持仓管理器初始化成功（当前持仓: {len(self.position_manager.get_all_positions())} 个）")
-            
+
             # 4. 创建自动交易器
             self.auto_trader = AutoTrader(broker=self.broker)
             logger.info("✅ 自动交易器初始化成功")
@@ -108,8 +107,12 @@ class SignalScraper:
             self.order_push_monitor = None
 
     def _on_order_changed(self, event):
-        """长桥订单状态推送回调：打日志并可按需扩展（如更新持仓、通知等）"""
-        None
+        """长桥订单状态推送回调：更新本地持仓与交易记录"""
+        if self.position_manager and self.broker:
+            try:
+                self.position_manager.on_order_push(event, self.broker)
+            except Exception as e:
+                logger.warning("订单推送更新持仓失败: %s", e)
         
     async def setup(self) -> bool:
         """
@@ -209,16 +212,6 @@ class SignalScraper:
             instruction: 解析出的指令
             source: 信号来源
         """
-        logger.info("\n" + "=" * 80)
-        logger.info(f"📨 [新信号-{source}] {instruction}")
-        logger.info(f"类型: {instruction.instruction_type}")
-        logger.info(f"股票: {instruction.ticker}")
-        if instruction.option_type:
-            logger.info(f"期权: {instruction.option_type} ${instruction.strike} {instruction.expiry}")
-        if instruction.price:
-            logger.info(f"价格: ${instruction.price}")
-        logger.info("=" * 80)
-        
         # 如果没有初始化交易组件，只记录信号
         if not self.auto_trader or not self.broker:
             logger.warning("⚠️  交易组件未初始化，仅记录信号")
@@ -234,13 +227,10 @@ class SignalScraper:
             result = self.auto_trader.execute_instruction(instruction)
             
             if result:
-                logger.info(f"✅ 指令执行成功: {result.get('order_id', 'N/A')}")
-                
-                # 如果是买入订单，更新持仓管理器
+                # 如果是买入订单，更新持仓管理器（静默，不打印摘要）
                 if instruction.instruction_type == "BUY" and self.position_manager:
                     from broker import create_position_from_order
                     
-                    # 生成期权代码（使用 AutoTrader 的方法）
                     symbol = instruction.symbol
                     if symbol:
                         position = create_position_from_order(
@@ -254,8 +244,6 @@ class SignalScraper:
                             order_id=result.get('order_id', '')
                         )
                         self.position_manager.add_position(position)
-                        logger.info(f"✅ 持仓已记录: {symbol}")
-                        self.position_manager.print_summary()
             else:
                 logger.warning("⚠️  指令执行失败或被跳过")
                 
@@ -274,6 +262,12 @@ class SignalScraper:
         print(f"输出文件: {Config.OUTPUT_FILE}")
         print("按 Ctrl+C 停止")
         print("=" * 60 + "\n")
+
+        if self.position_manager and self.broker:
+            try:
+                self.position_manager.sync_from_broker(self.broker)
+            except Exception as e:
+                logger.warning("启动时同步账户/持仓失败: %s", e)
 
         if self.order_push_monitor:
             self.order_push_monitor.start()

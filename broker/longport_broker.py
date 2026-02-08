@@ -4,7 +4,7 @@
 """
 from decimal import Decimal
 from typing import Dict, Optional, List
-from longport.openapi import TradeContext, QuoteContext, Config, OrderSide, OrderType, TimeInForceType
+from longport.openapi import TradeContext, QuoteContext, Config, OrderSide, OrderType, TimeInForceType, OrderStatus, Market
 import logging
 import os
 from datetime import datetime
@@ -12,6 +12,7 @@ from datetime import datetime
 from .config_loader import LongPortConfigLoader
 from .order_formatter import (
     print_order_table,
+    print_order_submitted_display,
     print_order_modify_table,
     print_order_cancel_table,
     print_orders_summary_table,
@@ -72,7 +73,8 @@ class LongPortBroker:
         remark: str = "",
         trigger_price: Optional[float] = None,  # 触发价格（条件单）
         trailing_percent: Optional[float] = None,  # 跟踪止损百分比
-        trailing_amount: Optional[float] = None  # 跟踪止损金额
+        trailing_amount: Optional[float] = None,  # 跟踪止损金额
+        instruction_timestamp: Optional[str] = None,  # 指令时间戳，用于提交订单展示的 time 与 [+Nms]
     ) -> Dict:
         """
         提交期权订单（支持止盈止损）
@@ -105,14 +107,7 @@ class LongPortBroker:
             # 卖出时检查持仓
             if side.upper() == "SELL":
                 if not self._check_position_for_sell(symbol, quantity):
-                    raise ValueError(f"持仓不足: 无法卖出 {quantity} 张 {symbol}")
-            
-            # 风险检查（仅买入时检查）
-            if side.upper() == "BUY":
-                order_amount = (price or 0) * quantity * 100  # 每张期权 100 股
-                if not self._check_risk_limits(order_amount):
-                    raise ValueError("风险检查未通过，订单被拒绝")
-            
+                    raise ValueError(f"持仓不足: 无法卖出 {quantity} 张 {symbol}")    
             # 转换买卖方向
             order_side = OrderSide.Buy if side.upper() == "BUY" else OrderSide.Sell
             
@@ -144,12 +139,8 @@ class LongPortBroker:
                 order_params["trailing_percent"] = Decimal(str(trailing_percent))
             if trailing_amount:
                 order_params["trailing_amount"] = Decimal(str(trailing_amount))
-            
-            # 提交订单
-            resp = self.ctx.submit_order(**order_params)
-            
+                
             order_info = {
-                "order_id": resp.order_id,
                 "symbol": symbol,
                 "side": side,
                 "quantity": quantity,
@@ -160,13 +151,13 @@ class LongPortBroker:
                 "trigger_price": trigger_price,
                 "trailing_percent": trailing_percent,
                 "trailing_amount": trailing_amount,
-                "remark": remark or f"Auto trade via OpenAPI - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+                "remark": remark or f"Auto trade via OpenAPI - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+                "instruction_timestamp": instruction_timestamp,
             }
             
-            # 使用彩色表格输出
-            print_success_message("订单提交成功")
-            print_order_table(order_info, "订单详情")
-            
+            print_order_submitted_display(order_info)
+            # 提交订单
+            resp = self.ctx.submit_order(**order_params)
             return order_info
             
         except ValueError as e:
@@ -408,7 +399,6 @@ class LongPortBroker:
                 )
                 return False
             
-            logger.info(f"✅ 风险检查通过: 订单金额 ${order_amount:.2f}")
             return True
             
         except Exception as e:
@@ -487,7 +477,36 @@ class LongPortBroker:
         except Exception as e:
             logger.error(f"获取订单失败: {e}")
             return []
-    
+
+    def get_history_orders(self, start_at: datetime, end_at: datetime) -> list:
+        """获取历史订单（仅 Filled，美股市场）。用于回填持仓对应的交易记录。"""
+        try:
+            resp = self.ctx.history_orders(
+                status=[OrderStatus.Filled],
+                market=Market.US,
+                start_at=start_at,
+                end_at=end_at,
+            )
+            orders = getattr(resp, "orders", resp) if not isinstance(resp, list) else resp
+            if not isinstance(orders, list):
+                orders = []
+            return [
+                {
+                    "order_id": order.order_id,
+                    "symbol": order.symbol,
+                    "side": "BUY" if order.side == OrderSide.Buy else "SELL",
+                    "quantity": order.quantity,
+                    "executed_quantity": getattr(order, "executed_quantity", order.quantity),
+                    "price": float(order.price) if getattr(order, "price", None) else None,
+                    "status": str(getattr(order, "status", "")),
+                    "submitted_at": order.submitted_at.isoformat() if hasattr(order.submitted_at, "isoformat") else str(order.submitted_at),
+                }
+                for order in orders
+            ]
+        except Exception as e:
+            logger.debug(f"获取历史订单失败: {e}")
+            return []
+
     def get_positions(self) -> list:
         """获取持仓信息"""
         try:
@@ -710,7 +729,6 @@ class LongPortBroker:
                 
                 quotes.append(quote_data)
             
-            logger.info(f"获取 {len(quotes)} 个期权报价")
             return quotes
         except Exception as e:
             logger.error(f"获取期权报价失败: {e}")

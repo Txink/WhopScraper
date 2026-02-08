@@ -1,11 +1,27 @@
 """
 消息组模型：单条消息及其关联上下文
 """
+import re
 from typing import List, Dict
 from rich.console import Console
-from rich.table import Table
-from rich import box
 from datetime import datetime
+
+
+def _display_width(s: str) -> int:
+    """终端显示宽度：ASCII=1，CJK=2。"""
+    return len(s) + sum(1 for c in s if "\u4e00" <= c <= "\u9fff")
+
+
+def _format_timestamp_display(timestamp: str) -> str:
+    """格式化为 2026-02-09T 00:16:48.657（T 后空格，毫秒 3 位）。"""
+    if not timestamp:
+        return ""
+    t = timestamp.replace("T", "T ", 1) if "T" in timestamp and "T " not in timestamp else timestamp
+    if "." in t:
+        idx = t.rfind(".")
+        t = t[: idx + 4] if len(t) > idx + 4 else t
+    return t
+
 
 class MessageGroup:
     """消息组 - 包含一组相关联的消息"""
@@ -117,42 +133,35 @@ class MessageGroup:
 
     def display(self):
         """
-        使用 Rich Table 按文档格式展示单条提取的消息。
+        使用 console.print 展示单条提取的消息（时间 + [原始消息] + 内容，下附字段明细）。
         """
-        
         msg = self.to_dict()
-        table = Table(
-            title="[bold blue]原始消息[/bold blue]",
-            show_header=True,
-            header_style="bold cyan",
-            box=box.SIMPLE,
-            show_lines=False,
-            padding=(0, 0),
-            width=65,
-            expand=False,
-        )
-        table.add_column("字段", style="cyan", width=6, no_wrap=True)
-        table.add_column("值", style="white", no_wrap=False)
-        # 添加一行显示当前时间
         now = datetime.now()
-        table.add_row("current", now.strftime("%Y-%m-%d %H:%M:%S") + ".%03d" % (now.microsecond // 1000))
-        table.add_row("time", str(msg.get("timestamp", "")))
+        ts = now.strftime("%Y-%m-%d %H:%M:%S") + f".{now.microsecond // 1000:03d}"
+        content = str(msg.get("content", msg.get("text", "")))
+        # 与第一行内容左对齐：终端显示宽度（中文占 2 列）
+        label = "[原始消息]"
+        indent = " " * (len(ts) + 1 + _display_width(label) + 1 + 1)
+
+        console = Console()
+        console.print(
+            f"[dim]{ts}[/dim]",
+            "[bold blue][原始消息][/bold blue]",
+            f'[cyan]"{content}"[/cyan]',
+        )
+        time_val = _format_timestamp_display(str(msg.get("timestamp", "")))
+        console.print(f'{indent}[yellow]time[/yellow]: [white]{time_val}[/white]')
         dom_id = msg.get("domID", msg.get("id", "").split("-")[0] if msg.get("id") else "")
-        table.add_row("domID", dom_id)
-        table.add_row("position", str(msg.get("position", "")))
-        table.add_row("content", str(msg.get("content", msg.get("text", ""))))
-        table.add_row("refer", str(msg.get("refer", "")))
-
+        console.print(f'{indent}[yellow]domID[/yellow]: [white]{dom_id}[/white]')
+        console.print(f'{indent}[yellow]position[/yellow]: [white]{msg.get("position", "")}[/white]')
+        refer = msg.get("refer", "")
+        refer_display = f'"{refer}"' if refer else "None"
+        console.print(f'{indent}[yellow]refer[/yellow]: [white]{refer_display}[/white]')
         history = msg.get("history") or []
-        if isinstance(history, list):
-            history_str = "\n".join(f"[{i+1}] {h}" for i, h in enumerate(history)) if history else ""
-        else:
-            history_str = str(history)
-        table.add_row("history", history_str)
-
-        Console().print(table)
-        return f"MessageGroup(author={self.author}, messages={len(self.related_messages)+1})"
-
+        history_display = history if isinstance(history, list) else [str(history)]
+        console.print(f'{indent}[yellow]history[/yellow]: [white]{history_display}[/white]')
+        console.print()
+        
     def __repr__(self):
         return f"MessageGroup(author={self.author}, messages={len(self.related_messages)+1})"
 

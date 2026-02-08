@@ -13,9 +13,7 @@ from enum import Enum
 from typing import Optional
 import json
 from rich.console import Console
-from rich.table import Table
-from rich import box
-from models.message import MessageGroup
+from models.message import MessageGroup, _display_width, _format_timestamp_display
 
 class InstructionType(Enum):
     """指令类型枚举"""
@@ -137,97 +135,110 @@ class OptionInstruction:
         if not self.expiry and other.expiry:
             self.expiry = other.expiry
 
+    def _format_time_with_diff(self, timestamp_str: str, now: datetime) -> tuple:
+        """时间显示：去掉 T 为 2026-02-09 00:22:00.995；并返回 (显示文本, [+Nms] 的 rich 片段)。"""
+        if not timestamp_str:
+            return "", ""
+        t = timestamp_str.replace("T", " ", 1).strip()
+        if "." in t:
+            idx = t.rfind(".")
+            t = t[: idx + 4] if len(t) > idx + 4 else t
+        # 解析用于计算差值（ISO 格式 YYYY-MM-DDTHH:MM:SS.mmm，取前 23 位）
+        try:
+            s = (timestamp_str or "").replace("T ", "T").strip()[:23]
+            if len(s) >= 19:
+                parsed = datetime.fromisoformat(s)
+                diff_ms = int((now - parsed).total_seconds() * 1000)
+                sign = "+" if diff_ms >= 0 else ""
+                ms_tag = f"[{sign}{diff_ms}ms]"
+                if abs(diff_ms) < 1000:
+                    ms_rich = f"[green]{ms_tag}[/green]"
+                else:
+                    ms_rich = f"[yellow]{ms_tag}[/yellow]"
+            else:
+                ms_rich = ""
+        except Exception:
+            ms_rich = ""
+        return t, ms_rich
+
     def display(self):
-        """使用 Rich Table 按文档格式展示单条解析后的指令。"""
-        table = Table(
-            title="[bold blue]解析后消息[/bold blue]",
-            show_header=True,
-            header_style="bold cyan",
-            box=box.SIMPLE,
-            show_lines=False,
-            padding=(0, 0),
-            width=65,
-            expand=False,
-        )
-        table.add_column("字段", style="cyan", width=14, no_wrap=True)
-        table.add_column("值", style="white", width=49, no_wrap=False)
+        """使用 console.print 展示单条解析后的指令（时间 + [解析消息] + symbol，下附字段明细）。"""
+        console = Console()
+        now = datetime.now()
+        ts = now.strftime("%Y-%m-%d %H:%M:%S") + f".{now.microsecond // 1000:03d}"
+        label = "[解析消息]"
+        indent = " " * (len(ts) + 1 + _display_width(label) + 1)
 
         if self is None:
-            # 红色字体
-            table.add_row("状态", "[bold red]解析失败[/bold red]")
-            Console().print(table)
+            console.print(f"[dim]{ts}[/dim]", "[bold blue][解析消息][/bold blue]", "[bold red]解析失败[/bold red]")
+            console.print()
             return
 
         inst = self
-        table.add_row("时间", inst.timestamp)
-        table.add_row(
-            "期权",
-            inst.symbol
-            or OptionInstruction.generate_option_symbol(
-                inst.ticker, inst.option_type, inst.strike, inst.expiry, inst.timestamp
-            ),
+        sym = inst.symbol or OptionInstruction.generate_option_symbol(
+            inst.ticker, inst.option_type, inst.strike, inst.expiry, inst.timestamp
+        ) or ""
+
+        _, ms_rich = self._format_time_with_diff(inst.timestamp or "", now)
+        console.print(
+            f"[dim]{ts}[/dim]",
+            "[bold blue][解析消息][/bold blue]",
+            f"[yellow]symbol[/yellow] = [bold blue]{sym}[/bold blue]",
+            ms_rich,
         )
-        table.add_row("指令类型", inst.instruction_type)
-        if inst.instruction_type == 'BUY':
-            # 买入指令
-            if inst.option_type:
-                table.add_row("期权类型", inst.option_type)
-            if inst.strike:
-                table.add_row("行权价", f"${inst.strike}")
-            if inst.expiry:
-                table.add_row("到期日", inst.expiry)
+        console.print(f'{indent}[yellow]operation[/yellow]: [bold green]{inst.instruction_type}[/bold green]')
+
+        if inst.instruction_type == "BUY":
             if inst.price_range:
-                table.add_row("价格区间", f"${inst.price_range[0]} - ${inst.price_range[1]}")
-                table.add_row("价格(中间值)", f"${inst.price}")
-            elif inst.price:
-                table.add_row("价格", f"${inst.price}")
+                console.print(f'{indent}[yellow]price_range[/yellow]: [bold]${inst.price_range[0]} - ${inst.price_range[1]}[/bold]')
+                if inst.price is not None:
+                    console.print(f'{indent}[yellow]price[/yellow]: [bold]${inst.price}[/bold]')
+            elif inst.price is not None:
+                console.print(f'{indent}[yellow]price[/yellow]: [bold]${inst.price}[/bold]')
             if inst.position_size:
-                table.add_row("仓位大小", inst.position_size)
+                console.print(f'{indent}[yellow]position_size[/yellow]: [bold]{inst.position_size}[/bold]')
 
-        elif inst.instruction_type == 'SELL':
-            # 卖出指令
+        elif inst.instruction_type == "SELL":
             if inst.price_range:
-                table.add_row("价格区间", f"${inst.price_range[0]} - ${inst.price_range[1]}")
-                table.add_row("价格(中间值)", f"${inst.price}")
-            elif inst.price:
-                table.add_row("价格", f"${inst.price}")
+                console.print(f'{indent}[yellow]price_range[/yellow]: [bold]${inst.price_range[0]} - ${inst.price_range[1]}[/bold]')
+                if inst.price is not None:
+                    console.print(f'{indent}[yellow]price[/yellow]: [bold]${inst.price}[/bold]')
+            elif inst.price is not None:
+                console.print(f'{indent}[yellow]price[/yellow]: [bold]${inst.price}[/bold]')
             if inst.sell_quantity:
-                table.add_row("卖出数量", inst.sell_quantity)
+                console.print(f'{indent}[yellow]sell_quantity[/yellow]: [bold]{inst.sell_quantity}[/bold]')
 
-        elif inst.instruction_type == 'CLOSE':
-            # 清仓指令
+        elif inst.instruction_type == "CLOSE":
             if inst.price_range:
-                table.add_row("价格区间", f"${inst.price_range[0]} - ${inst.price_range[1]}")
-                table.add_row("价格(中间值)", f"${inst.price}")
-            elif inst.price:
-                table.add_row("价格", f"${inst.price}")
-            table.add_row("数量", "全部")
+                console.print(f'{indent}[yellow]price_range[/yellow]: [bold]${inst.price_range[0]} - ${inst.price_range[1]}[/bold]')
+                if inst.price is not None:
+                    console.print(f'{indent}[yellow]price[/yellow]: [bold]${inst.price}[/bold]')
+            elif inst.price is not None:
+                console.print(f'{indent}[yellow]price[/yellow]: [bold]${inst.price}[/bold]')
+            console.print(f'{indent}[yellow]quantity[/yellow]: [bold]全部[/bold]')
 
-        elif inst.instruction_type == 'MODIFY':
-            # 修改指令
+        elif inst.instruction_type == "MODIFY":
             if inst.stop_loss_range:
-                table.add_row("止损区间", f"${inst.stop_loss_range[0]} - ${inst.stop_loss_range[1]}")
-                table.add_row("止损(中间值)", f"${inst.stop_loss_price}")
-            elif inst.stop_loss_price:
-                table.add_row("止损价格", f"${inst.stop_loss_price}")
-
+                console.print(f'{indent}[yellow]stop_loss_range[/yellow]: [bold]${inst.stop_loss_range[0]} - ${inst.stop_loss_range[1]}[/bold]')
+                if inst.stop_loss_price is not None:
+                    console.print(f'{indent}[yellow]stop_loss[/yellow]: [bold]${inst.stop_loss_price}[/bold]')
+            elif inst.stop_loss_price is not None:
+                console.print(f'{indent}[yellow]stop_loss[/yellow]: [bold]${inst.stop_loss_price}[/bold]')
             if inst.take_profit_range:
-                table.add_row("止盈区间", f"${inst.take_profit_range[0]} - ${inst.take_profit_range[1]}")
-                table.add_row("止盈(中间值)", f"${inst.take_profit_price}")
-            elif inst.take_profit_price:
-                table.add_row("止盈价格", f"${inst.take_profit_price}")
+                console.print(f'{indent}[yellow]take_profit_range[/yellow]: [bold]${inst.take_profit_range[0]} - ${inst.take_profit_range[1]}[/bold]')
+                if inst.take_profit_price is not None:
+                    console.print(f'{indent}[yellow]take_profit[/yellow]: [bold]${inst.take_profit_price}[/bold]')
+            elif inst.take_profit_price is not None:
+                console.print(f'{indent}[yellow]take_profit[/yellow]: [bold]${inst.take_profit_price}[/bold]')
 
-        # 显示上下文补全信息
         if inst.source:
-            table.add_row("上下文来源", inst.source)
+            console.print(f'{indent}[yellow]source[/yellow]: [bold]{inst.source}[/bold]')
             if inst.depend_message:
-                ctx_msg = inst.depend_message[:60]
-                if len(inst.depend_message) > 60:
-                    ctx_msg += "..."
-                table.add_row("上下文消息", ctx_msg)
+                ctx_msg = inst.depend_message[:60] + ("..." if len(inst.depend_message) > 60 else "")
+                console.print(f'{indent}[yellow]depend_message[/yellow]: [bold]{ctx_msg}[/bold]')
 
-        Console().print(table)
-    
+        console.print()
+
     @classmethod
     def from_dict(cls, data: dict) -> "OptionInstruction":
         """从字典创建实例"""

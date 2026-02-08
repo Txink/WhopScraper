@@ -253,3 +253,4 @@ def test_check_json_validation_and_mismatch_file():
 
 if __name__ == "__main__":
     test_check_json_validation_and_mismatch_file()
+    test_parse_from_origin_and_output()

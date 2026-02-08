@@ -13,6 +13,123 @@ from datetime import datetime
 console = Console()
 
 
+def _display_width(s: str) -> int:
+    """终端显示宽度：ASCII=1，CJK=2。"""
+    return len(s) + sum(1 for c in s if "\u4e00" <= c <= "\u9fff")
+
+
+def _format_time_with_diff(timestamp_str: str, now: datetime) -> tuple:
+    """返回 (显示时间，去掉 T 且毫秒 3 位；[+Nms] 的 rich 片段，<200ms 绿否则黄)。"""
+    if not timestamp_str:
+        return "", ""
+    t = timestamp_str.replace("T", " ", 1).strip()
+    if "." in t:
+        idx = t.rfind(".")
+        t = t[: idx + 4] if len(t) > idx + 4 else t
+    try:
+        s = (timestamp_str or "").replace("T ", "T").strip()[:23]
+        if len(s) >= 19:
+            parsed = datetime.fromisoformat(s)
+            diff_ms = int((now - parsed).total_seconds() * 1000)
+            sign = "+" if diff_ms >= 0 else ""
+            ms_tag = f"[{sign}{diff_ms}ms]"
+            if abs(diff_ms) < 1000:
+                ms_rich = f"[green]{ms_tag}[/green]"
+            else:
+                ms_rich = f"[yellow]{ms_tag}[/yellow]"
+        else:
+            ms_rich = ""
+    except Exception:
+        ms_rich = ""
+    return t, ms_rich
+
+
+def print_order_submitted_display(order: Dict) -> None:
+    """
+    按与「解析消息」一致的格式输出订单提交成功信息：
+    {时间} [提交订单] symbol = xxx [模拟|真实] [+Nms]，下附 operation/price/total，total 绿色加粗，末尾空行。
+    """
+    now = datetime.now()
+    ts = now.strftime("%Y-%m-%d %H:%M:%S") + f".{now.microsecond // 1000:03d}"
+    label = "[提交订单]"
+    indent = " " * (len(ts) + 1 + _display_width(label) + 1)
+
+    symbol = order.get("symbol", "")
+    mode = order.get("mode", "paper")
+    mode_str = "模拟" if mode == "paper" else "真实"
+    mode_rich = f"[dim][{mode_str}][/dim]" if mode == "paper" else f"[orange1][{mode_str}][/orange1]"
+
+    # [+Nms] 为 instruction_timestamp（或 submitted_at）与当前时间的差值
+    time_src = order.get("instruction_timestamp") or order.get("submitted_at", "") or ""
+    if not isinstance(time_src, str) and hasattr(time_src, "isoformat"):
+        time_src = time_src.isoformat()
+    time_src = time_src or ""
+    _, ms_rich = _format_time_with_diff(time_src, now)
+
+    console.print(
+        f"[dim]{ts}[/dim]",
+        "[bold green][提交订单][/bold green]",
+        f"[yellow]symbol[/yellow] = [bold blue]{symbol}[/bold blue]",
+        mode_rich,
+        ms_rich,
+    )
+
+    side = order.get("side", "")
+    console.print(f'{indent}[yellow]operation[/yellow]: [bold green]{side}[/bold green]')
+
+    price = order.get("price")
+    if price is not None:
+        console.print(f'{indent}[yellow]price[/yellow]: [bold]${price}[/bold]')
+
+    quantity = int(order.get("quantity") or 0)
+    multiplier = 100
+    total = (float(price) if price else 0) * quantity * multiplier
+    console.print(f'{indent}[yellow]total[/yellow]: [bold green]${total:.1f}[/bold green]')
+
+    console.print()
+
+
+def print_order_validation_display(
+    side: str,
+    symbol: str,
+    price: float,
+    price_line: str,
+    quantity_line: str,
+    total_line: str,
+    instruction_timestamp: Optional[str] = None,
+) -> None:
+    """
+    提交订单前校验结束后统一输出：
+    {时间} [订单校验] [BUY] symbol=xxx price=x.x [+Nms]
+                                                                查询价格：...
+                                                                买入数量：...
+                                                                买入总价：...
+    订单校验 黄色加粗；下面行均为灰色。+Nms 为指令时间与当前时间差值。
+    """
+    now = datetime.now()
+    ts = now.strftime("%Y-%m-%d %H:%M:%S") + f".{now.microsecond // 1000:03d}"
+    label = "[订单校验]"
+    indent = " " * (len(ts) + 1 + _display_width(label) + 1)
+
+    time_src = instruction_timestamp or ""
+    if not isinstance(time_src, str) and hasattr(time_src, "isoformat"):
+        time_src = time_src.isoformat()
+    _, ms_rich = _format_time_with_diff(time_src, now)
+
+    console.print(
+        f"[dim]{ts}[/dim]",
+        "[bold yellow][订单校验][/bold yellow]",
+        f"[{side}]",
+        f"symbol={symbol}",
+        f"price={price}",
+        ms_rich,
+    )
+    console.print(f"{indent}[dim white]{price_line}[/dim white]")
+    console.print(f"{indent}[dim white]{quantity_line}[/dim white]")
+    console.print(f"{indent}[dim white]{total_line}[/dim white]")
+    console.print()
+
+
 def parse_option_symbol(symbol: str) -> str:
     """
     解析期权代码为语义化名称

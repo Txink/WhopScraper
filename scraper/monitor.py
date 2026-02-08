@@ -8,6 +8,7 @@ import asyncio
 import logging
 import threading
 import time
+from datetime import datetime
 from typing import Callable, Optional, Set
 from playwright.async_api import Page
 
@@ -20,6 +21,12 @@ from scraper.message_extractor import EnhancedMessageExtractor
 
 logger = logging.getLogger(__name__)
 console = Console()
+
+
+def _display_width(s: str) -> int:
+    """终端显示宽度：ASCII=1，CJK=2。"""
+    return len(s) + sum(1 for c in s if "\u4e00" <= c <= "\u9fff")
+
 
 # 长桥交易推送（订单状态变化）依赖可选：未配置长桥时仅禁用订单推送监听
 try:
@@ -95,6 +102,8 @@ class MessageMonitor:
             self._first_scan_done = True
             if messages:
                 print(f"已跳过首次连接时的 {len(messages)} 条历史消息，仅处理此后新消息")
+                print('=' * 80)
+
             return []
 
         # 只处理尚未处理过的消息（过滤历史/已处理）
@@ -173,26 +182,50 @@ class OrderPushMonitor:
     @staticmethod
     def display_order_changed(event) -> None:
         """
-        打印订单推送关键信息：symbol, side, submitted_quantity, submitted_price, status
+        打印订单推送关键信息，格式与订单校验一致：首行 [订单推送] [OrderSide.Buy] symbol=xxx，下附 status/quantity/price/time（灰色缩进）。
         """
         symbol = getattr(event, "symbol", "")
         side = getattr(event, "side", "")
         qty = getattr(event, "submitted_quantity", 0)
         price = getattr(event, "submitted_price", None)
         status = getattr(event, "status", "")
-        # 枚举类型转字符串便于阅读
-        if hasattr(side, "name"):
-            side = side.name
-        if hasattr(status, "name"):
-            status = status.name
+        submitted_at = getattr(event, "submitted_at", "")
+        side_str = f"{type(side).__name__}.{side.name}" if hasattr(side, "name") else str(side)
+        status_str = f"{type(status).__name__}.{status.name}" if hasattr(status, "name") else str(status)
+        status_name = (getattr(status, "name", "") or "").upper() if status else ""
+        if not status_name and status_str:
+            status_name = status_str.upper().split(".")[-1] if "." in status_str else status_str.upper()
+        if status_name in ("CANCELED", "CANCELLED"):
+            status_rich = f"[dim white]{status_str}[/dim white]"
+        elif status_name == "FILLED":
+            status_rich = f"[green]{status_str}[/green]"
+        elif status_name == "REJECTED":
+            status_rich = f"[red]{status_str}[/red]"
+        else:
+            status_rich = status_str
+        if hasattr(submitted_at, "strftime"):
+            time_str = submitted_at.strftime("%Y-%m-%d %H:%M:%S") if submitted_at else ""
+        elif submitted_at:
+            time_str = str(submitted_at).replace("T", " ", 1).strip()
+            if "." in time_str:
+                time_str = time_str[: time_str.rfind(".")] if time_str.rfind(".") > 0 else time_str
+        else:
+            time_str = ""
+        now = datetime.now()
+        ts = now.strftime("%Y-%m-%d %H:%M:%S") + f".{now.microsecond // 1000:03d}"
+        label = "[订单推送]"
+        indent = " " * (len(ts) + 1 + _display_width(label) + 1)
         console.print(
-            "[bold][订单推送][/bold]",
-            f"symbol=[cyan]{symbol}[/]",
-            f"side=[green]{side}[/]",
-            f"submitted_quantity=[yellow]{qty}[/]",
-            f"submitted_price=[yellow]{price}[/]",
-            f"status=[magenta]{status}[/]",
+            f"[dim]{ts}[/dim]",
+            "[bold white][订单推送][/bold white]",
+            f"[{side_str}]",
+            f"symbol={symbol}",
         )
+        console.print(f"{indent}status={status_rich}")
+        console.print(f"{indent}submitted_quantity={qty}")
+        console.print(f"{indent}submitted_price={price}")
+        console.print(f"{indent}[dim white]time={time_str}[/dim white]")
+        console.print()
 
     def _run_loop(self):
         """在后台线程中：创建连接、注册回调、订阅，并保持运行"""
