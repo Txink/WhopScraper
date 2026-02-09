@@ -95,27 +95,30 @@ class AutoTrader:
 
         price = instruction_price
         price_line = ""
+        reject_reason = None
+
         try:
             quotes = self.broker.get_option_quote([symbol])
             if quotes and len(quotes) > 0:
                 market_price = quotes[0].get("last_done", 0)
                 if market_price > 0:
-                    deviation = abs(market_price - instruction_price) / instruction_price * 100
-                    if deviation > self.price_deviation_tolerance:
-                        print_warning_message(f"价格偏差超过容忍度 {self.price_deviation_tolerance}%，拒绝下单")
-                        print_warning_message(f"请核对消息中的目标价或调高 PRICE_DEVIATION_TOLERANCE（当前 {self.price_deviation_tolerance}%）")
-                        return None
-                    if market_price < instruction_price:
-                        price = market_price
+                    # 买入只校验「市价高于指令价」的偏差，避免多付；市价低于指令价更优，不拒单
+                    deviation_pct = (market_price - instruction_price) / instruction_price * 100
+                    if deviation_pct > self.price_deviation_tolerance:
+                        reject_reason = f"当前市价 ${market_price:.2f} 高于指令价 ${instruction_price:.2f} 超过 {self.price_deviation_tolerance}%，未提交订单"
+                        price_line = f"查询价格：当前市场价=${market_price:.2f}，指令价=${instruction_price:.2f}，偏差={deviation_pct:.1f}%"
                     else:
-                        price = instruction_price
-                    price_line = f"查询价格：当前市场价=${market_price:.2f}，指令价=${instruction_price:.2f}，偏差={deviation:.1f}%，使用价格=${price:.2f}"
+                        deviation = abs(market_price - instruction_price) / instruction_price * 100
+                        if market_price < instruction_price:
+                            price = market_price
+                        else:
+                            price = instruction_price
+                        price_line = f"查询价格：当前市场价=${market_price:.2f}，指令价=${instruction_price:.2f}，偏差={deviation:.1f}%，使用价格=${price:.2f}"
                 else:
                     price_line = "查询价格：市场价格无效，使用指令价格"
             else:
-                print_error_message(f"❌ 无法获取 {symbol} 的市场报价，该期权合约可能不存在")
-                print_warning_message(f"请检查 ticker 是否正确（如 GOLD 应为 GLD）或该合约是否在交易所上市")
-                return None
+                price_line = "查询价格：无法获取该期权市场报价"
+                reject_reason = "无法获取该期权市场报价，未提交订单"
         except Exception as e:
             price_line = f"查询价格：获取报价失败（{e}），使用指令价格=${price:.2f}"
 
@@ -127,15 +130,14 @@ class AutoTrader:
 
         max_total_price = min(self.max_option_total_price, available_cash)
         single_contract_price = price * 100
-        max_quantity_by_price = int(max_total_price / single_contract_price)
+        max_quantity_by_price = int(max_total_price / single_contract_price) if single_contract_price > 0 else 0
         max_quantity_by_limit = self.max_option_quantity
         quantity = min(max_quantity_by_price, max_quantity_by_limit)
         if quantity < 1:
             quantity = 0
 
-        if quantity <= 0:
-            print_error_message(f"计算的买入数量为0，单价: ${price}, 总价上限: ${max_total_price:.2f}")
-            return None
+        if quantity <= 0 and not reject_reason:
+            reject_reason = f"计算的买入数量为0，单价: ${price}, 总价上限: ${max_total_price:.2f}，未提交订单"
 
         total_price = quantity * single_contract_price
         quantity_line = f"买入数量：账户余额=${available_cash:.2f}，单次购买上限=${max_total_price:.2f}，张数限制={max_quantity_by_price}张，最终买入数量={quantity}张"
@@ -149,7 +151,11 @@ class AutoTrader:
             quantity_line=quantity_line,
             total_line=total_line,
             instruction_timestamp=instruction.timestamp,
+            reject_reason=reject_reason,
         )
+
+        if reject_reason:
+            return None
 
         # 如果需要确认
         if self.require_confirmation:

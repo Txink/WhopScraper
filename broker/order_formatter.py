@@ -97,6 +97,7 @@ def print_order_validation_display(
     quantity_line: str,
     total_line: str,
     instruction_timestamp: Optional[str] = None,
+    reject_reason: Optional[str] = None,
 ) -> None:
     """
     提交订单前校验结束后统一输出：
@@ -104,6 +105,7 @@ def print_order_validation_display(
                                                                 查询价格：...
                                                                 买入数量：...
                                                                 买入总价：...
+    （若 reject_reason 有值，再输出一行失败原因，且表示未提交订单）
     订单校验 黄色加粗；下面行均为灰色。+Nms 为指令时间与当前时间差值。
     """
     now = datetime.now()
@@ -127,6 +129,8 @@ def print_order_validation_display(
     console.print(f"{indent}[dim white]{price_line}[/dim white]")
     console.print(f"{indent}[dim white]{quantity_line}[/dim white]")
     console.print(f"{indent}[dim white]{total_line}[/dim white]")
+    if reject_reason:
+        console.print(f"{indent}[bold red]{reject_reason}[/bold red]")
     console.print()
 
 
