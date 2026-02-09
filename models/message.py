@@ -179,6 +179,7 @@ class MessageGroup:
                 - "Yesterday at 11:51 PM"
                 - "Today 10:45 PM"
                 - "Wednesday 10:45 PM"
+                - "10:49 PM"（仅时间、无日期无星期，表示今天）
             milliseconds: 毫秒数 (0-999)
         
         Returns:
@@ -194,6 +195,14 @@ class MessageGroup:
             # 尝试解析英文格式: "Jan 23, 2026 12:51 AM"
             if re.match(r'[A-Z][a-z]{2}\s+\d{1,2},\s+\d{4}\s+\d{1,2}:\d{2}\s+[AP]M', timestamp):
                 dt = datetime.strptime(timestamp, "%b %d, %Y %I:%M %p")
+                return f"{dt.strftime('%Y-%m-%d %H:%M:%S')}.{milliseconds:03d}"
+            
+            # 仅时间、无日期无星期（如 "10:49 PM"）表示今天
+            time_only_ts = timestamp.strip()
+            if re.match(r'^\d{1,2}:\d{2}\s+[AP]M$', time_only_ts, re.IGNORECASE):
+                time_obj = datetime.strptime(time_only_ts, "%I:%M %p")
+                today = datetime.now().date()
+                dt = datetime.combine(today, time_obj.time())
                 return f"{dt.strftime('%Y-%m-%d %H:%M:%S')}.{milliseconds:03d}"
             
             # 尝试解析相对时间格式: "Yesterday at 11:51 PM", "Today 10:45 PM", "Wednesday 10:45 PM"

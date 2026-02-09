@@ -238,6 +238,12 @@ class EnhancedMessageExtractor:
                                 group.has_timestamp = true;
                                 break;
                             }
+                            // 仅时间、无日期无星期（如 "10:49 PM"），后端会解析为今天
+                            if (/^\d{1,2}:\d{2}\s+[AP]M$/i.test(text)) {
+                                group.timestamp = text;
+                                group.has_timestamp = true;
+                                break;
+                            }
                         }
                     }
                     
@@ -247,6 +253,7 @@ class EnhancedMessageExtractor:
                         const timePatterns = [
                             /[A-Z][a-z]{2}\s+\d{1,2},\s+\d{4}\s+\d{1,2}:\d{2}\s+[AP]M/,  // Jan 22, 2026 10:41 PM
                             /(Yesterday at|Today|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\s+(\d{1,2}:\d{2}\s+[AP]M|at\s+\d{1,2}:\d{2}\s+[AP]M)/i,  // 相对时间
+                            /\d{1,2}:\d{2}\s+[AP]M/i,  // 仅时间如 "10:49 PM"（子串），表示今天
                             /\d{1,2}月\d{1,2}日\s+\d{1,2}:\d{2}/,  // 中文格式
                             /\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}/,  // ISO格式
                         ];
