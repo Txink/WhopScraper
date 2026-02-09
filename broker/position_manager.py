@@ -510,6 +510,26 @@ class PositionManager:
         """获取所有持仓"""
         return list(self.positions.values())
     
+    def get_total_buy_quantity(self, symbol: str) -> int:
+        """
+        获取该期权所有买入数量（从 trade_records 汇总所有 BUY 的成交数量）。
+        用于卖出比例（如 1/3、1/2）的分母：比例相对「该期权历史上所有买入」而非当前持仓。
+        
+        Args:
+            symbol: 期权代码
+        
+        Returns:
+            该期权所有买入的成交数量之和，无记录时返回 0
+        """
+        records = self.trade_records.get(symbol, [])
+        total = 0
+        for rec in records:
+            if (rec.get("side") or "").upper() != "BUY":
+                continue
+            q = rec.get("executed_quantity") or rec.get("quantity") or 0
+            total += int(float(q))
+        return total
+    
     def sync_positions_from_broker(self, broker_positions: List[dict]):
         """
         从券商同步持仓

@@ -80,8 +80,8 @@ class SignalScraper:
             # 3. 创建持仓管理器（启动后由 sync_from_broker 统一输出账户持仓摘要，此处不再重复打日志）
             self.position_manager = PositionManager(storage_file="data/positions.json")
 
-            # 4. 创建自动交易器
-            self.auto_trader = AutoTrader(broker=self.broker)
+            # 4. 创建自动交易器（传入 position_manager，卖出比例 1/3 等相对该期权所有买入数量计算）
+            self.auto_trader = AutoTrader(broker=self.broker, position_manager=self.position_manager)
             logger.info("✅ 自动交易器初始化成功")
 
             # 5. 创建订单状态推送监听器（长桥交易推送）

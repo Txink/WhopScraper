@@ -22,15 +22,17 @@ logger = logging.getLogger(__name__)
 
 class AutoTrader:
     """自动化交易执行器"""
-    
-    def __init__(self, broker: LongPortBroker):
+
+    def __init__(self, broker: LongPortBroker, position_manager=None):
         """
         初始化自动交易执行器
-        
+
         Args:
             broker: LongPortBroker实例
+            position_manager: 可选，持仓管理器；卖出比例（如 1/3）相对该期权「所有买入数量」时用其 trade_records 计算分母
         """
         self.broker = broker
+        self.position_manager = position_manager
         
         # 从环境变量加载配置
         self.max_option_total_price = float(os.getenv('MAX_OPTION_TOTAL_PRICE', '10000'))  # 单个期权总价上限
@@ -195,7 +197,7 @@ class AutoTrader:
         
         卖出规则：
         1. 先尝试获取持仓，在存在持仓的情况下再去处理
-        2. 卖出比例相对最开始买入的比例，需要先查询买入订单确认总量
+        2. 卖出比例（如 1/3、1/2）相对「该期权所有买入数量」，不是相对当前持仓：有 position_manager 时用其 trade_records 汇总；否则用当日成交买入量，再否则用当前持仓
         """
         print_info_message("=" * 80)
         print_info_message("执行卖出指令")
@@ -221,20 +223,28 @@ class AutoTrader:
         available_quantity = int(target_position.get('available_quantity', 0))
         print_info_message(f"当前持仓: {available_quantity} 张")
         
-        # 2. 查询历史买入订单，确认总买入量
-        try:
-            orders = self.broker.get_today_orders()
-            total_buy_quantity = 0
-            for order in orders:
-                if (order.get('symbol') == symbol and 
-                    order.get('side') == 'BUY' and 
-                    order.get('status') in ['Filled', 'filled']):
-                    total_buy_quantity += order.get('executed_quantity', 0)
-            
-            print_info_message(f"历史买入总量: {total_buy_quantity} 张")
-        except Exception as e:
-            print_warning_message(f"无法查询历史订单: {e}，使用当前持仓作为基准")
-            total_buy_quantity = available_quantity
+        # 2. 确定比例分母：该期权「所有买入数量」（1/3、1/2 相对此总量，非当前持仓）
+        total_buy_quantity = 0
+        if self.position_manager and hasattr(self.position_manager, 'get_total_buy_quantity'):
+            total_buy_quantity = self.position_manager.get_total_buy_quantity(symbol)
+            if total_buy_quantity > 0:
+                print_info_message(f"该期权所有买入总量（比例分母）: {total_buy_quantity} 张")
+        if total_buy_quantity <= 0:
+            try:
+                orders = self.broker.get_today_orders()
+                total_buy_quantity = 0
+                for order in orders or []:
+                    if (order.get('symbol') == symbol and
+                            (order.get('side') or '').upper() == 'BUY' and
+                            str(order.get('status') or '').upper().endswith('FILLED')):
+                        total_buy_quantity += int(float(order.get('executed_quantity') or order.get('quantity') or 0))
+                if total_buy_quantity > 0:
+                    print_info_message(f"历史买入总量（今日订单）: {total_buy_quantity} 张")
+            except Exception as e:
+                pass
+            if total_buy_quantity <= 0:
+                print_warning_message("无法获取该期权所有买入数量，使用当前持仓作为比例分母")
+                total_buy_quantity = available_quantity
         
         # 3. 计算卖出数量
         sell_quantity_str = instruction.sell_quantity
