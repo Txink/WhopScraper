@@ -2,8 +2,11 @@
 消息上下文解析器
 利用消息的 history、refer 字段和全局消息列表来补全期权指令中缺失的信息
 解析时统一将到期日转为 YYMMDD，并在信息完整时生成期权代码 symbol。
+兜底：仅有 ticker（如「tsla 卖出 1/3」）且无历史/引用可用时，从持仓文件补全 symbol。
 """
 import os
+import json
+import logging
 from typing import Optional, List, Dict, Tuple, TYPE_CHECKING
 from parser.option_parser import OptionParser
 from models.instruction import OptionInstruction, InstructionType
@@ -11,6 +14,8 @@ from models.record import Record
 
 if TYPE_CHECKING:
     from models.record_manager import RecordManager
+
+logger = logging.getLogger(__name__)
 
 class MessageContextResolver:
     """
@@ -60,6 +65,8 @@ class MessageContextResolver:
 
         found_inst = self._find_context(record)
         if not found_inst:
+            # 兜底：仅有 ticker、无历史/引用时，从持仓中取 symbol（如「tsla 卖出 1/3」）
+            self._resolve_symbol_from_positions(record)
             return
         record.instruction.sync_with_instruction(found_inst)
         record.instruction.generate_symbol()
@@ -70,6 +77,7 @@ class MessageContextResolver:
         1. 同组（group）中的 record 的 instruction
         2. refer 解析出的 instruction
         3. 当前 record 之前 N 条的 instruction
+        4. 若仍无结果，由 resolve_instruction 内调用 _resolve_symbol_from_positions 做兜底
         返回的 instruction 上已设置 source、depend_message。
         """
         inst = self._search_in_history(record, limit=self.context_search_limit, scope="group")
@@ -90,6 +98,53 @@ class MessageContextResolver:
             record.instruction.depend_message = inst.origin.primary_message or ""
             return inst
         return None
+
+    def _resolve_symbol_from_positions(self, record: Record) -> None:
+        """
+        兜底：当仅有 ticker（如「tsla 卖出 1/3」）、无历史/引用可补全时，从持仓文件中
+        按 ticker 匹配该标的的持仓；若仅有一条则用其 symbol 补全，多条则取第一条。
+        仅对 SELL/CLOSE/MODIFY 且当前无 symbol、有 ticker 时生效。
+        """
+        inst = record.instruction
+        if not inst or inst.instruction_type not in (
+            InstructionType.SELL.value,
+            InstructionType.CLOSE.value,
+            InstructionType.MODIFY.value,
+        ):
+            return
+        if inst.has_symbol() or not (inst.ticker or "").strip():
+            return
+        ticker = (inst.ticker or "").strip().upper()
+        path = os.getenv("POSITIONS_JSON_PATH", "data/positions.json")
+        if not os.path.isfile(path):
+            logger.debug("持仓文件不存在，跳过持仓兜底: %s", path)
+            return
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except Exception as e:
+            logger.warning("读取持仓文件失败: %s", e)
+            return
+        if not isinstance(data, dict):
+            return
+        # 匹配该 ticker 的持仓：symbol 以 ticker 开头，或条目内 ticker 字段一致
+        matches = []
+        for sym, pos in data.items():
+            if not isinstance(pos, dict):
+                continue
+            pos_ticker = (pos.get("ticker") or "").strip().upper()
+            if pos_ticker == ticker or (sym.startswith(ticker) and sym.endswith(".US")):
+                matches.append(sym)
+        if not matches:
+            logger.debug("持仓中无 ticker=%s 的标的，跳过兜底", ticker)
+            return
+        # 仅一条则用；多条取第一条（兜底语义）
+        chosen = matches[0]
+        if len(matches) > 1:
+            logger.info("持仓中 ticker=%s 有多条，兜底使用: %s", ticker, chosen)
+        inst.symbol = chosen
+        inst.source = "positions"
+        inst.depend_message = "持仓"
 
     def _can_reuse_symbol_from(
         self, current_inst: OptionInstruction, prev_inst: OptionInstruction
