@@ -161,6 +161,25 @@ class OptionInstruction:
             ms_rich = ""
         return t, ms_rich
 
+    @staticmethod
+    def display_parse_failed(message_timestamp: Optional[str] = None) -> None:
+        """解析失败时展示：与 display() 同格式，symbol = X（红色加粗），operation: FAIL（红色加粗）。"""
+        console = Console()
+        now = datetime.now()
+        ts = now.strftime("%Y-%m-%d %H:%M:%S") + f".{now.microsecond // 1000:03d}"
+        label = "[解析消息]"
+        indent = " " * (len(ts) + 1 + _display_width(label) + 1)
+        temp = OptionInstruction(timestamp=message_timestamp or "")
+        _, ms_rich = temp._format_time_with_diff(message_timestamp or "", now)
+        console.print(
+            f"[dim]{ts}[/dim]",
+            "[bold blue][解析消息][/bold blue]",
+            f"[yellow]symbol[/yellow] = [bold red]X[/bold red]",
+            ms_rich,
+        )
+        console.print(f'{indent}[yellow]operation[/yellow]: [bold red]FAIL[/bold red]')
+        console.print()
+
     def display(self):
         """使用 console.print 展示单条解析后的指令（时间 + [解析消息] + symbol，下附字段明细）。"""
         console = Console()

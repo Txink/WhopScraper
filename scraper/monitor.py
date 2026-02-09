@@ -6,6 +6,7 @@
 """
 import asyncio
 import logging
+import os
 import threading
 import time
 from datetime import datetime
@@ -96,17 +97,23 @@ class MessageMonitor:
             messages = []
         
         # 若开启“跳过首次历史”：首次扫描仅将当前页消息 ID 登记为已处理，不展示、不解析、不回调
+        # env RECENT_MESSAGES_PARSE_COUNT=N 时，首次只标记「除最后 N 条外」为已处理，最后 N 条下一轮会参与解析一次
         if self.skip_initial_messages and not self._first_scan_done:
-            for msg in messages:
+            recent_n = int(os.getenv("RECENT_MESSAGES_PARSE_COUNT", "0"))
+            to_mark = messages
+            if recent_n > 0 and len(messages) > recent_n:
+                to_mark = messages[:-recent_n]  # 不标记最后 N 条，下一轮会被当作新消息解析一次
+            for msg in to_mark:
                 self._processed_ids.add(msg.group_id)
             self._first_scan_done = True
             if messages:
-                print(f"已跳过首次连接时的 {len(messages)} 条历史消息，仅处理此后新消息")
+                tail = f"，最近 {min(recent_n, len(messages))} 条将在下次扫描解析" if recent_n > 0 else ""
+                print(f"已跳过首次连接时的 {len(messages)} 条历史消息{tail}，仅处理此后新消息")
                 print('=' * 80)
 
             return []
 
-        # 只处理尚未处理过的消息（过滤历史/已处理）
+        # 只处理尚未处理过的消息（过滤历史/已处理）；已处理过的不会再次触发
         new_messages = [msg for msg in messages if msg.group_id not in self._processed_ids]
         for msg in new_messages:
             self._processed_ids.add(msg.group_id)
@@ -120,6 +127,10 @@ class MessageMonitor:
             record.message.display()
             if record.instruction is not None:
                 record.instruction.display()
+            else:
+                OptionInstruction.display_parse_failed(
+                    getattr(record.message, "timestamp", None)
+                )
             if self._on_new_record and record.instruction is not None and record.instruction.has_symbol():
                 self._on_new_record(record)
 
