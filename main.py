@@ -8,7 +8,16 @@ import signal
 import sys
 import logging
 import os
+import time
+from pathlib import Path
 from typing import Optional, Tuple
+
+# 优先从项目根目录加载 .env，避免因工作目录不同导致长桥等配置未加载
+_project_root = Path(__file__).resolve().parent
+_env_path = _project_root / ".env"
+if _env_path.is_file():
+    from dotenv import load_dotenv
+    load_dotenv(_env_path)
 
 from config import Config
 from scraper.browser import BrowserManager
@@ -62,19 +71,37 @@ class SignalScraper:
         self.position_manager: Optional[PositionManager] = None
         self.auto_trader: Optional[AutoTrader] = None
         self.order_push_monitor: Optional[OrderPushMonitor] = None
+        self._warned_no_trader = False  # 仅对「交易组件未初始化」告警一次
 
         # 初始化交易组件
         self._init_trading_components()
-    
+
+    def _create_broker_with_retry(self, config, retry_delay: int = 35):
+        """
+        创建 LongPortBroker，若因连接数达上限(connections limitation)失败则等待后重试一次。
+        """
+        try:
+            return LongPortBroker(config)
+        except Exception as e:
+            err_msg = str(e).lower()
+            if "connections limitation" in err_msg or "limit" in err_msg and "online" in err_msg:
+                logger.warning(
+                    "长桥连接数已达上限，请关闭其他使用同一账户的终端/程序。%s 秒后自动重试一次…",
+                    retry_delay,
+                )
+                time.sleep(retry_delay)
+                return LongPortBroker(config)
+            raise
+
     def _init_trading_components(self):
         """初始化交易组件（长桥API、持仓管理、自动交易器）"""
         try:
             # 1. 加载长桥配置
             logger.info("正在初始化长桥交易接口...")
             config = load_longport_config()
-            
-            # 2. 创建交易接口
-            self.broker = LongPortBroker(config)
+
+            # 2. 创建交易接口（连接数达上限时重试一次）
+            self.broker = self._create_broker_with_retry(config)
             logger.info("✅ 长桥交易接口初始化成功")
             
             # 3. 创建持仓管理器（启动后由 sync_from_broker 统一输出账户持仓摘要，此处不再重复打日志）
@@ -99,7 +126,7 @@ class SignalScraper:
                 logger.info("ℹ️  自动交易未启用，仅记录信号")
 
         except Exception as e:
-            logger.error(f"❌ 交易组件初始化失败: {e}")
+            logger.exception("❌ 交易组件初始化失败（详见下方堆栈，请检查 .env 中长桥凭证与网络）: %s", e)
             logger.warning("程序将以监控模式运行（不执行交易）")
             self.broker = None
             self.position_manager = None
@@ -212,9 +239,13 @@ class SignalScraper:
             instruction: 解析出的指令
             source: 信号来源
         """
-        # 如果没有初始化交易组件，只记录信号
+        # 如果没有初始化交易组件，只记录信号（仅首次打 WARNING，避免刷屏）
         if not self.auto_trader or not self.broker:
-            logger.warning("⚠️  交易组件未初始化，仅记录信号")
+            if not self._warned_no_trader:
+                logger.warning("⚠️  交易组件未初始化，仅记录信号（请查看启动时「交易组件初始化失败」错误原因）")
+                self._warned_no_trader = True
+            else:
+                logger.debug("交易组件未初始化，跳过执行")
             return
         
         # 检查自动交易是否启用
@@ -245,8 +276,7 @@ class SignalScraper:
                         )
                         self.position_manager.add_position(position)
             else:
-                logger.warning("⚠️  指令执行失败或被跳过")
-                
+                pass  # 指令执行失败或被跳过，不输出日志
         except Exception as e:
             logger.error(f"❌ 处理指令失败: {e}", exc_info=True)
     
@@ -298,6 +328,13 @@ class SignalScraper:
         if self.order_push_monitor:
             self.order_push_monitor.stop()
             logger.info("订单推送监听已停止")
+
+        if self.broker:
+            try:
+                self.broker.close()
+                logger.info("长桥连接已释放")
+            except Exception as e:
+                logger.debug("释放长桥连接时忽略: %s", e)
 
         # 关闭浏览器
         if self.browser:

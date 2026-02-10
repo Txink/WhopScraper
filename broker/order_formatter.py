@@ -134,6 +134,139 @@ def print_order_validation_display(
     console.print()
 
 
+def print_position_update_display(message: str) -> None:
+    """
+    持仓更新展示，与订单校验同风格的时间 + 标签行：
+    {时间} [持仓更新] {message}
+    [持仓更新] 为紫色加粗。
+    """
+    now = datetime.now()
+    ts = now.strftime("%Y-%m-%d %H:%M:%S") + f".{now.microsecond // 1000:03d}"
+    console.print(
+        f"[dim]{ts}[/dim]",
+        "[bold magenta][持仓更新][/bold magenta]",
+        message,
+    )
+    console.print()
+
+
+def print_sell_validation_display(
+    symbol: str,
+    quantity: int,
+    instruction_timestamp: Optional[str] = None,
+    detail_lines: Optional[List[str]] = None,
+    reject_reason: Optional[str] = None,
+) -> None:
+    """
+    卖出订单校验展示，与 print_order_validation_display 同风格：
+    {时间} [订单校验] [SELL] symbol=xxx quantity=N [+Nms]
+                                                                当前持仓：...
+                                                                该期权所有买入总量（比例分母）：...
+                                                                卖出比例/数量：...
+                                                                卖出价格/市价：...
+    """
+    now = datetime.now()
+    ts = now.strftime("%Y-%m-%d %H:%M:%S") + f".{now.microsecond // 1000:03d}"
+    label = "[订单校验]"
+    indent = " " * (len(ts) + 1 + _display_width(label) + 1)
+
+    time_src = instruction_timestamp or ""
+    if not isinstance(time_src, str) and hasattr(time_src, "isoformat"):
+        time_src = time_src.isoformat()
+    _, ms_rich = _format_time_with_diff(time_src, now)
+
+    console.print(
+        f"[dim]{ts}[/dim]",
+        "[bold yellow][订单校验][/bold yellow]",
+        "[SELL]",
+        f"symbol={symbol}",
+        f"quantity={quantity}",
+        ms_rich,
+    )
+    for line in detail_lines or []:
+        console.print(f"{indent}[dim white]{line}[/dim white]")
+    if reject_reason:
+        console.print(f"{indent}[bold red]{reject_reason}[/bold red]")
+    console.print()
+
+
+def print_modify_validation_display(
+    symbol: str,
+    instruction_timestamp: Optional[str] = None,
+    detail_lines: Optional[List[str]] = None,
+    reject_reason: Optional[str] = None,
+) -> None:
+    """
+    修改指令（止盈止损）校验展示，与 print_order_validation_display 同风格：
+    {时间} [订单校验] [MODIFY] symbol=xxx [+Nms]
+                                                                当前持仓：...
+                                                                成本价：...
+                                                                当前市场价：...
+                                                                设置止损价/止盈价：...
+    """
+    now = datetime.now()
+    ts = now.strftime("%Y-%m-%d %H:%M:%S") + f".{now.microsecond // 1000:03d}"
+    label = "[订单校验]"
+    indent = " " * (len(ts) + 1 + _display_width(label) + 1)
+
+    time_src = instruction_timestamp or ""
+    if not isinstance(time_src, str) and hasattr(time_src, "isoformat"):
+        time_src = time_src.isoformat()
+    _, ms_rich = _format_time_with_diff(time_src, now)
+
+    console.print(
+        f"[dim]{ts}[/dim]",
+        "[bold yellow][订单校验][/bold yellow]",
+        "[MODIFY]",
+        f"symbol={symbol}",
+        ms_rich,
+    )
+    for line in detail_lines or []:
+        console.print(f"{indent}[dim white]{line}[/dim white]")
+    if reject_reason:
+        console.print(f"{indent}[bold red]{reject_reason}[/bold red]")
+    console.print()
+
+
+def print_close_validation_display(
+    symbol: str,
+    quantity: int,
+    instruction_timestamp: Optional[str] = None,
+    detail_lines: Optional[List[str]] = None,
+    reject_reason: Optional[str] = None,
+) -> None:
+    """
+    清仓订单校验展示，与 print_order_validation_display 同风格：
+    {时间} [订单校验] [CLOSE] symbol=xxx quantity=N [+Nms]
+                                                                当前持仓：...
+                                                                清仓数量：...
+                                                                卖出价格/市价：...
+    """
+    now = datetime.now()
+    ts = now.strftime("%Y-%m-%d %H:%M:%S") + f".{now.microsecond // 1000:03d}"
+    label = "[订单校验]"
+    indent = " " * (len(ts) + 1 + _display_width(label) + 1)
+
+    time_src = instruction_timestamp or ""
+    if not isinstance(time_src, str) and hasattr(time_src, "isoformat"):
+        time_src = time_src.isoformat()
+    _, ms_rich = _format_time_with_diff(time_src, now)
+
+    console.print(
+        f"[dim]{ts}[/dim]",
+        "[bold yellow][订单校验][/bold yellow]",
+        "[CLOSE]",
+        f"symbol={symbol}",
+        f"quantity={quantity}",
+        ms_rich,
+    )
+    for line in detail_lines or []:
+        console.print(f"{indent}[dim white]{line}[/dim white]")
+    if reject_reason:
+        console.print(f"{indent}[bold red]{reject_reason}[/bold red]")
+    console.print()
+
+
 def parse_option_symbol(symbol: str) -> str:
     """
     解析期权代码为语义化名称

@@ -206,6 +206,10 @@ class OrderPushMonitor:
         status_name = (getattr(status, "name", "") or "").upper() if status else ""
         if not status_name and status_str:
             status_name = status_str.upper().split(".")[-1] if "." in status_str else status_str.upper()
+        if status_name == "WAITTONEW":
+            return  # 不展示 WaitToNew 推送
+        if status_name == "PENDINGREPLACE":
+            return  # 不展示 PendingReplace 推送
         if status_name in ("CANCELED", "CANCELLED"):
             status_rich = f"[dim white]{status_str}[/dim white]"
         elif status_name == "FILLED":
@@ -266,6 +270,7 @@ class OrderPushMonitor:
                     logger.info("已取消订阅长桥交易推送")
                 except Exception as e:
                     logger.warning("取消订阅时出错: %s", e)
+            self._ctx = None  # 释放引用，便于连接回收
 
     def start(self):
         """在后台线程中启动订单推送监听"""
@@ -278,9 +283,10 @@ class OrderPushMonitor:
         logger.info("订单推送监听已启动（后台线程）")
 
     def stop(self):
-        """停止订单推送监听"""
+        """停止订单推送监听并释放 TradeContext 引用，便于连接回收"""
         self._running = False
         if self._thread:
             self._thread.join(timeout=5)
             self._thread = None
+        self._ctx = None
         logger.info("订单推送监听已停止")

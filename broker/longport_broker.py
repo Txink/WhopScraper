@@ -45,8 +45,9 @@ class LongPortBroker:
         
         self.config_loader = config_loader
         self.config = config or config_loader.get_config()
-        self.ctx = TradeContext(self.config)
+        # 先创建 QuoteContext 再 TradeContext，避免连接数达上限时先建 Trade 导致泄漏（因异常时未返回实例）
         self.quote_ctx = QuoteContext(self.config)  # 行情接口
+        self.ctx = TradeContext(self.config)
         self.positions: Dict[str, Dict] = {}  # 持仓跟踪
         self.daily_pnl = 0.0
         
@@ -62,7 +63,24 @@ class LongPortBroker:
         self.is_paper = config_loader.is_paper_mode()
         
         logger.info(f"交易接口初始化完成 - 模式: {'模拟' if self.is_paper else '真实'}")
-    
+
+    def close(self) -> None:
+        """
+        释放长桥连接（QuoteContext / TradeContext），便于连接数回收。
+        程序退出时调用，调用后本实例不可再用于请求。
+        """
+        for name in ("quote_ctx", "ctx"):
+            obj = getattr(self, name, None)
+            if obj is None:
+                continue
+            try:
+                if callable(getattr(obj, "close", None)):
+                    obj.close()
+            except Exception as e:
+                logger.debug("关闭 %s 时忽略: %s", name, e)
+            setattr(self, name, None)
+        logger.debug("长桥连接已释放")
+
     def submit_option_order(
         self,
         symbol: str,
@@ -290,16 +308,23 @@ class LongPortBroker:
             
             if not old_order:
                 raise ValueError(f"未找到订单: {order_id}")
-            
-            # 准备修改参数
+
+            # 长桥 API 要求 price 和 quantity 均非空；未传时用原单价格/数量
+            quantity_decimal = Decimal(int(quantity)) if quantity is not None else Decimal(int(old_order.get("quantity", 0)))
+            price_val = price if price is not None else old_order.get("price")
+            if price_val is not None:
+                price_val = Decimal(str(price_val))
+
+            # 准备修改参数（API 要求 quantity、price 必填，缺一不可）
+            if price_val is None:
+                raise ValueError("原订单无价格信息，无法修改订单（长桥要求替换时必传 price）")
             replace_params = {
                 "order_id": order_id,
-                "quantity": quantity
+                "quantity": quantity_decimal,
+                "price": price_val,
             }
-            
+
             # 添加可选参数
-            if price is not None:
-                replace_params["price"] = Decimal(str(price))
             if trigger_price is not None:
                 replace_params["trigger_price"] = Decimal(str(trigger_price))
             if trailing_percent is not None:
@@ -337,7 +362,7 @@ class LongPortBroker:
             return result
             
         except Exception as e:
-            print_error_message(f"订单修改失败: {e}")
+            logger.error("订单修改失败: %s", e)
             raise
     
     def _mock_order_response(self, symbol: str, side: str, quantity: int, price: Optional[float]) -> Dict:

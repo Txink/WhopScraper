@@ -13,6 +13,8 @@ import logging
 
 from rich.console import Console
 
+from broker.order_formatter import print_position_update_display
+
 logger = logging.getLogger(__name__)
 console = Console()
 
@@ -492,7 +494,7 @@ class PositionManager:
         if symbol in self.positions:
             del self.positions[symbol]
             self._save_positions()
-            logger.info(f"移除持仓: {symbol}")
+            print_position_update_display(f"移除持仓: {symbol}")
     
     def get_position(self, symbol: str) -> Optional[Position]:
         """

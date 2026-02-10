@@ -70,6 +70,9 @@ class MessageContextResolver:
             return
         record.instruction.sync_with_instruction(found_inst)
         record.instruction.generate_symbol()
+        # 从历史/引用只能解析出 ticker 时（如 recent 里前一条也是「PLTR 卖出1/3」），最后兜底从持仓拿 symbol
+        if not record.instruction.has_symbol():
+            self._resolve_symbol_from_positions(record)
 
     def _find_context(self, record: Record) -> Optional[OptionInstruction]:
         """

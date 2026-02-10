@@ -216,7 +216,7 @@ class OptionParser:
         r'(\d+(?:' + _DECIMAL + r'\d+)?)\s*(?:附近|左右)?\s*(?:也)?'
         r'(?:出|减)\s*'
         r'(?:剩下|剩余|个)?\s*'
-        r'(三分之一|三分之二|三之一|一半|全部|1/3|2/3|1/2|\d+%)'
+        r'(四分之一|三分之一|三分之二|三之一|一半|全部|1/4|1/3|2/3|1/2|\d+%)'
         r'(?:\s*([A-Z]{2,5}))?',  # 可选的股票代码
         re.IGNORECASE
     )
@@ -224,7 +224,7 @@ class OptionParser:
     # 模式1b: 价格或区间+开始+减/出+比例（如: 1.2-1.3开始减三分之一，区间时仅存 price_range，中间值在 resolver 填）
     TAKE_PROFIT_PATTERN_1B = re.compile(
         r'(\d+(?:\.\d+)?(?:-\d+(?:\.\d+)?)?)\s*开始\s*(?:出|减)\s*'
-        r'(三分之一|三分之二|三之一|一半|全部|1/3|2/3|1/2|\d+%)'
+        r'(四分之一|三分之一|三分之二|三之一|一半|全部|1/4|1/3|2/3|1/2|\d+%)'
         r'(?:\s*([A-Z]{2,5}))?',
         re.IGNORECASE
     )
@@ -336,13 +336,18 @@ class OptionParser:
     
     # 模式11: ticker+卖出/出+比例 (如: tsla 卖出 1/3, nvda 出一半, amd 卖出30%)
     TAKE_PROFIT_PATTERN_11 = re.compile(
-        r'([A-Z]{2,5})\s+(?:卖出|出)\s*(三分之一|三分之二|一半|全部|1/3|2/3|1/2|\d+%)',
+        r'([A-Z]{2,5})\s+(?:卖出|出)\s*(四分之一|三分之一|三分之二|一半|全部|1/4|1/3|2/3|1/2|\d+%)',
         re.IGNORECASE
     )
     
     # 模式12: ticker+价格+卖出/出+比例 (如: tsla 0.17 卖出 1/3, nvda 1.5 出一半)
     TAKE_PROFIT_PATTERN_12 = re.compile(
-        r'([A-Z]{2,5})\s+(\d+(?:\.\d+)?)\s+(?:卖出|出)\s*(三分之一|三分之二|一半|全部|1/3|2/3|1/2|\d+%)',
+        r'([A-Z]{2,5})\s+(\d+(?:\.\d+)?)\s+(?:卖出|出)\s*(四分之一|三分之一|三分之二|一半|全部|1/4|1/3|2/3|1/2|\d+%)',
+        re.IGNORECASE
+    )
+    # 模式12b: 价格+可以出+剩下比例+的+ticker (如: 4.3可以出剩下四分之一的pltr)
+    TAKE_PROFIT_PATTERN_12B = re.compile(
+        r'(\d+(?:\.\d+)?)\s*可以出\s*剩下\s*(四分之一|三分之一|三分之二|一半|全部|1/4|1/3|2/3|1/2|\d+%)\s*的?\s*([A-Za-z]{2,5})',
         re.IGNORECASE
     )
     
@@ -912,14 +917,15 @@ class OptionParser:
         if portion_str.endswith('%'):
             return (InstructionType.SELL.value, portion_str)
         
-        # 判断是否为比例（如 1/3, 2/3）
-        if '/' in portion_str or portion_str in ['三分之一', '三分之二', '一半']:
+        # 判断是否为比例（如 1/3, 2/3, 1/4）
+        if '/' in portion_str or portion_str in ['三分之一', '三分之二', '一半', '四分之一']:
             # 转换中文比例
             portion_map = {
                 '三分之一': '1/3',
                 '三之一': '1/3',
                 '三分之二': '2/3',
                 '一半': '1/2',
+                '四分之一': '1/4',
             }
             quantity = portion_map.get(portion_str, portion_str)
             return (InstructionType.SELL.value, quantity)
@@ -1024,6 +1030,24 @@ class OptionParser:
             # 解析卖出数量
             instruction_type, sell_quantity = cls._parse_sell_quantity(portion_raw)
             
+            return OptionInstruction(
+                raw_message=message,
+                instruction_type=instruction_type,
+                ticker=ticker,
+                price=price,
+                price_range=price_range,
+                sell_quantity=sell_quantity,
+                message_id=message_id
+            )
+        
+        # 尝试模式12b: 价格+可以出+剩下比例+的+ticker（如: 4.3可以出剩下四分之一的pltr）
+        match = cls.TAKE_PROFIT_PATTERN_12B.search(message)
+        if match:
+            price_str = match.group(1)
+            portion_raw = match.group(2)
+            ticker = match.group(3).upper()
+            price, price_range = cls._parse_price_range(price_str)
+            instruction_type, sell_quantity = cls._parse_sell_quantity(portion_raw)
             return OptionInstruction(
                 raw_message=message,
                 instruction_type=instruction_type,
