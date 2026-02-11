@@ -470,10 +470,14 @@ class PositionManager:
                     rec_ts = rec_ts.replace("T", " ")[:19]
                     if len(rec_ts) == 19 and "." not in rec_ts:
                         rec_ts = rec_ts + ".000"
-                side = rec.get("side", "")
-                side_pad = (side or "").ljust(4)[:4]  # 固定 4 字符，使 [BUY]/[SELL] 后「数量」对齐
+                side_raw = rec.get("side", "")
+                # 兼容 "OrderSide.Buy" / "OrderSide.Sell" 与 "BUY" / "SELL"
+                side = "BUY" if "Buy" in (side_raw or "") else ("SELL" if "Sell" in (side_raw or "") else (side_raw or "").upper())
+                if side not in ("BUY", "SELL"):
+                    side = "BUY"
+                side_pad = side.ljust(4)[:4]  # 固定 4 字符，使 [BUY]/[SELL] 后「数量」对齐
                 side_tag = f"[{side_pad}]"
-                side_rich = f"[green]{side_tag}[/green]" if (side or "").upper() == "BUY" else f"[yellow]{side_tag}[/yellow]"
+                side_rich = f"[green]{side_tag}[/green]" if side == "BUY" else f"[yellow]{side_tag}[/yellow]"
                 qty = int(float(rec.get("executed_quantity") or rec.get("quantity") or 0))
                 price = rec.get("price")
                 if price is None:
