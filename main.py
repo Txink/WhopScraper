@@ -183,12 +183,17 @@ class SignalScraper:
             self._config_update_lines = None
 
     def _on_order_changed(self, event):
-        """长桥订单状态推送回调：更新本地持仓与交易记录"""
+        """长桥订单状态推送回调：更新本地持仓与交易记录，并处理未成交订单的止盈止损补偿任务"""
         if self.position_manager and self.broker:
             try:
                 self.position_manager.on_order_push(event, self.broker)
             except Exception as e:
                 logger.warning("订单推送更新持仓失败: %s", e)
+        if self.auto_trader:
+            try:
+                self.auto_trader.on_order_push_for_pending_modify(event)
+            except Exception as e:
+                logger.warning("止盈止损补偿任务处理失败: %s", e)
         
     async def setup(self) -> bool:
         """

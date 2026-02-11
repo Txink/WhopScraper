@@ -45,6 +45,49 @@ class AutoTrader:
         # 价格在容忍度内时买入用市价还是指令价：market=用市价（易成交），instruction=用指令价（不超付）
         buy_price_mode = (os.getenv('BUY_PRICE_WHEN_WITHIN_TOLERANCE', 'instruction') or 'instruction').lower()
         self.buy_use_market_when_within_tolerance = buy_price_mode in ('market', '市价', 'true', '1')
+        # 未成交订单的「成交后补偿止盈止损」任务：order_id -> { symbol, stop_loss_price?, take_profit_price? }
+        self._pending_modify_after_fill: Dict[str, dict] = {}
+
+    def on_order_push_for_pending_modify(self, event) -> None:
+        """
+        订单推送时检查是否有待补偿的止盈止损任务：
+        - 若该订单成交（Filled）：对对应持仓补偿设置止盈/止损，并移除任务
+        - 若该订单已撤（Cancelled）：仅移除任务
+        """
+        order_id = getattr(event, "order_id", None) or ""
+        if not order_id:
+            return
+        status = getattr(event, "status", None)
+        status_name = (getattr(status, "name", "") or "").upper() if status else ""
+        if not status_name and hasattr(event, "status"):
+            status_name = str(getattr(event, "status", "")).upper().split(".")[-1]
+        if status_name in ("CANCELLED", "CANCELED", "REJECTED"):
+            if order_id in self._pending_modify_after_fill:
+                self._pending_modify_after_fill.pop(order_id, None)
+                logger.debug("订单 %s 已撤/拒，移除止盈止损补偿任务", order_id)
+            return
+        if status_name != "FILLED":
+            return
+        task = self._pending_modify_after_fill.pop(order_id, None)
+        if not task or not self.position_manager:
+            return
+        symbol = task.get("symbol")
+        if not symbol:
+            return
+        pos = self.position_manager.get_position(symbol)
+        if not pos:
+            logger.warning("补偿止盈止损：未找到持仓 %s，跳过", symbol)
+            return
+        applied = []
+        if task.get("stop_loss_price") is not None:
+            pos.set_stop_loss(float(task["stop_loss_price"]))
+            applied.append(f"止损=${task['stop_loss_price']}")
+        if task.get("take_profit_price") is not None:
+            pos.set_take_profit(float(task["take_profit_price"]))
+            applied.append(f"止盈=${task['take_profit_price']}")
+        if applied:
+            self.position_manager._save_positions()
+            print_info_message(f"订单 {order_id} 已成交，已补偿设置：{', '.join(applied)}（{symbol}）")
 
     def execute_instruction(self, instruction: OptionInstruction) -> Optional[Dict]:
         """
@@ -614,25 +657,40 @@ class AutoTrader:
                 reject_reason=None,
             )
 
+            # 先登记「成交后补偿止盈止损」任务，若 replace 失败或订单未支持修改，成交时仍会补偿
+            stop_loss_val = None
+            if instruction.stop_loss_price is not None:
+                stop_loss_val = float(instruction.stop_loss_price)
+            elif instruction.stop_loss_range:
+                stop_loss_val = (instruction.stop_loss_range[0] + instruction.stop_loss_range[1]) / 2
+            take_profit_val = None
+            if instruction.take_profit_price is not None:
+                take_profit_val = float(instruction.take_profit_price)
+            elif instruction.take_profit_range:
+                take_profit_val = (instruction.take_profit_range[0] + instruction.take_profit_range[1]) / 2
+            self._pending_modify_after_fill[order_id] = {
+                "symbol": symbol,
+                "stop_loss_price": stop_loss_val,
+                "take_profit_price": take_profit_val,
+            }
+
             # 修改订单（添加止盈止损）
             modify_params = {
                 'order_id': order_id,
                 'quantity': target_order['quantity']
             }
-            
-            # 添加止损价格
-            if instruction.stop_loss_price:
-                modify_params['trigger_price'] = instruction.stop_loss_price
-            elif instruction.stop_loss_range:
-                modify_params['trigger_price'] = (instruction.stop_loss_range[0] + instruction.stop_loss_range[1]) / 2
-            
-            # 添加止盈价格（通过trailing_percent实现）
-            # 注意：longport API可能不直接支持止盈，这里仅作示例
-            # 实际使用时需要根据API文档调整
-            
-            result = self.broker.replace_order(**modify_params)
-            print_success_message("订单修改成功!")
-            return result
+            if stop_loss_val is not None:
+                modify_params['trigger_price'] = stop_loss_val
+
+            try:
+                result = self.broker.replace_order(**modify_params)
+                self._pending_modify_after_fill.pop(order_id, None)  # 修改成功则不再补偿
+                print_success_message("订单修改成功!")
+                return result
+            except Exception as e:
+                print_error_message(f"修改订单失败: {e}")
+                print_info_message(f"已登记补偿任务：订单 {order_id} 成交后将自动设置止盈止损")
+                return None
             
         except Exception as e:
             print_error_message(f"修改订单失败: {e}")
