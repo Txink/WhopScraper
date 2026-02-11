@@ -60,14 +60,7 @@ class LongPortBroker:
             sys.stderr = _old_stderr
         self.ctx = TradeContext(self.config)
         self.positions: Dict[str, Dict] = {}  # 持仓跟踪
-        self.daily_pnl = 0.0
-        
-        # 风险控制配置
-        risk_config = config_loader.get_risk_config()
-        self.max_position_ratio = risk_config["max_position_ratio"]
-        self.max_daily_loss = risk_config["max_daily_loss"]
-        self.min_order_amount = risk_config["min_order_amount"]
-        
+
         # 模式标志
         self.dry_run = config_loader.is_dry_run()
         self.auto_trade = config_loader.is_auto_trade_enabled()
@@ -414,58 +407,6 @@ class LongPortBroker:
             "submitted_at": datetime.now().isoformat(),
             "mode": "dry_run"
         }
-    
-    def _check_risk_limits(self, order_amount: float) -> bool:
-        """
-        检查风险限制
-        
-        Args:
-            order_amount: 订单金额
-        
-        Returns:
-            bool: 是否通过风险检查
-        """
-        try:
-            # 获取账户余额
-            balance = self.ctx.account_balance()
-            total_cash = float(balance[0].total_cash)
-            
-            # 特殊处理：如果是模拟账户且余额为负数，使用绝对值进行风险检查
-            # 这是为了支持模拟账户的测试场景
-            if self.is_paper and total_cash < 0:
-                logger.warning(f"⚠️  模拟账户余额为负数: ${total_cash:.2f}，使用绝对值进行风险检查")
-                total_cash = abs(total_cash)
-            
-            # 检查最小下单金额
-            if order_amount < self.min_order_amount:
-                logger.warning(f"订单金额过小: ${order_amount:.2f} < ${self.min_order_amount:.2f}")
-                return False
-            
-            # 检查单笔投资是否超限
-            max_position_amount = total_cash * self.max_position_ratio
-            if order_amount > max_position_amount:
-                logger.warning(
-                    f"单笔投资超限: ${order_amount:.2f} > "
-                    f"${max_position_amount:.2f} "
-                    f"({self.max_position_ratio*100:.1f}%)"
-                )
-                return False
-            
-            # 检查当日亏损是否超限
-            max_daily_loss = total_cash * self.max_daily_loss
-            if self.daily_pnl < -max_daily_loss:
-                logger.warning(
-                    f"当日亏损超限: ${self.daily_pnl:.2f} < "
-                    f"-${max_daily_loss:.2f} "
-                    f"({self.max_daily_loss*100:.1f}%)"
-                )
-                return False
-            
-            return True
-            
-        except Exception as e:
-            logger.error(f"风险检查失败: {e}")
-            return False
     
     def _check_position_for_sell(self, symbol: str, quantity: int) -> bool:
         """
@@ -891,34 +832,7 @@ class LongPortBroker:
             if side.upper() == "SELL":
                 if not self._check_position_for_sell(symbol, quantity):
                     raise ValueError(f"持仓不足: 无法卖出 {quantity} 股 {symbol}")
-            # 买入时进行风险检查
-            elif side.upper() == "BUY":
-                # 风险检查（市价单跳过风险检查或使用估算价格）
-                if order_type.upper() == "MARKET":
-                    # 市价单：尝试获取当前价格用于风险检查
-                    try:
-                        quotes = self.get_stock_quote([symbol])
-                        if quotes and len(quotes) > 0:
-                            estimated_price = quotes[0]['last_done']
-                            order_amount = estimated_price * quantity
-                            logger.info(f"市价单风险检查使用估算价格: ${estimated_price:.2f}")
-                        else:
-                            # 无法获取价格，跳过风险检查
-                            logger.warning("无法获取市价单估算价格，跳过风险检查")
-                            order_amount = 0
-                    except Exception as e:
-                        logger.warning(f"获取市价单估算价格失败: {e}，跳过风险检查")
-                        order_amount = 0
-                    
-                    # 如果成功获取到估算价格，则进行风险检查
-                    if order_amount > 0 and not self._check_risk_limits(order_amount):
-                        raise ValueError("风险检查未通过，订单被拒绝")
-                else:
-                    # 限价单：使用指定价格进行风险检查
-                    order_amount = (price or 0) * quantity
-                    if not self._check_risk_limits(order_amount):
-                        raise ValueError("风险检查未通过，订单被拒绝")
-            
+
             # 转换买卖方向
             order_side = OrderSide.Buy if side.upper() == "BUY" else OrderSide.Sell
             

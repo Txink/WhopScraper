@@ -274,6 +274,10 @@ LONGPORT_ENABLE_OVERNIGHT=false  # 是否开启夜盘行情
 # 交易设置
 LONGPORT_AUTO_TRADE=false  # 是否启用自动交易（true=自动下单，false=仅监控）
 LONGPORT_DRY_RUN=true  # 是否启用模拟模式（true=不实际下单，仅打印日志）
+
+# 期权默认止损（true=每次期权买入成交后按比例设止损，否则仅根据监听到的止损消息设置）
+ENABLE_DEFAULT_STOP_LOSS=false
+DEFAULT_STOP_LOSS_RATIO=38  # 止损比例%，38 表示价格跌到买入价的 62% 时止损
 """
 
 

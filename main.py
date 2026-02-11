@@ -165,12 +165,18 @@ class SignalScraper:
                 self.order_push_monitor = None
 
             # [配置更新] 延后到 run() 中、账户持仓输出前再打印
+            _default_stop = os.getenv("ENABLE_DEFAULT_STOP_LOSS", "false").strip().lower() in ("true", "1", "yes")
+            _default_stop_ratio = os.getenv("DEFAULT_STOP_LOSS_RATIO", "38").strip() or "38"
+            _ctx_limit = os.getenv("CONTEXT_SEARCH_LIMIT", "10").strip() or "10"
             self._config_update_lines = [
                 f"账户类型：{'模拟' if self.broker.is_paper else '真实'}",
                 f"单次购买期权总价上限：${self.auto_trader.max_option_total_price}",
                 f"单次购买期权数量上限：{self.auto_trader.max_option_quantity}张",
                 f"价差容忍度：{self.auto_trader.price_deviation_tolerance}%",
                 f"容忍度内买入价：{'市价' if self.auto_trader.buy_use_market_when_within_tolerance else '指令价'}",
+                f"默认止损：{'开启，' + _default_stop_ratio + '%' if _default_stop else '关闭'}",
+                f"扫描历史消息数量分析上下文：前{_ctx_limit}条",
+                f"下单是否需要确认：{str(self.auto_trader.require_confirmation).lower()}",
             ]
         except Exception as e:
             self._program_load_live.stop()
