@@ -52,7 +52,6 @@ logs/
 debug/
 
 # 数据文件
-!samples/*.json
 !.env.example
 !package.json
 !package-lock.json

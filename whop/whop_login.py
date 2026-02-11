@@ -1,12 +1,29 @@
 """
 Whop 登录助手脚本
 用于手动登录 Whop 并保存 cookie 以供后续使用
+Cookie 存储路径优先使用环境变量 STORAGE_STATE_PATH（与 main 一致）。
 """
 import asyncio
 import sys
 import os
 from pathlib import Path
+from typing import Optional
 from playwright.async_api import async_playwright
+
+# 从项目根目录加载 .env，以便读取 STORAGE_STATE_PATH
+_project_root = Path(__file__).resolve().parent.parent
+_env_file = _project_root / ".env"
+if _env_file.exists():
+    try:
+        from dotenv import load_dotenv
+        load_dotenv(_env_file)
+    except ImportError:
+        pass
+
+
+def _default_storage_path() -> str:
+    """Cookie 存储路径：使用 env 中的 STORAGE_STATE_PATH，与 main 一致。"""
+    return os.getenv("STORAGE_STATE_PATH", ".auth/whop_cookie.json")
 
 
 class WhopLoginHelper:
@@ -15,17 +32,17 @@ class WhopLoginHelper:
     def __init__(
         self,
         whop_url: str = "https://whop.com/login/",
-        storage_file: str = ".auth/whop_state.json"
+        storage_file: Optional[str] = None,
     ):
         """
         初始化登录助手
         
         Args:
             whop_url: Whop 登录页面 URL
-            storage_file: Cookie 存储文件路径
+            storage_file: Cookie 存储文件路径，默认使用 env 中的 STORAGE_STATE_PATH
         """
         self.whop_url = whop_url
-        self.storage_file = storage_file
+        self.storage_file = storage_file if storage_file is not None else _default_storage_path()
         
     async def manual_login(self):
         """
@@ -229,8 +246,8 @@ async def main():
     parser.add_argument(
         '--storage',
         type=str,
-        default='.auth/whop_state.json',
-        help='Cookie 存储文件路径（默认: .auth/whop_state.json）'
+        default=None,
+        help='Cookie 存储文件路径（默认使用 env 中的 STORAGE_STATE_PATH）'
     )
     
     parser.add_argument(

@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## [2026-02-11] 移除 samples 模块
+
+### 移除
+- **samples**：删除整个 `samples/` 目录（样本管理、数据集管理、setup 脚本等）及所有引用
+  - 配置：`config.py` 中移除 `ENABLE_SAMPLE_COLLECTION`、`SAMPLE_DATA_DIR`
+  - 测试：删除 `test/parser/test_parser_coverage.py`（依赖 `DatasetManager`）
+  - 文档：`README.md` 移除样本管理章节与项目结构中的 samples；`docs/full_auto_trading_guide.md` 移除 `ENABLE_SAMPLE_COLLECTION` 说明
+  - `.gitignore` 移除 `!samples/*.json`
+
+## [2026-02-11] 移除风险控制器模块
+
+### 移除
+- **risk_controller**：删除 `broker/risk_controller.py`（`RiskController`、`AutoTrailingStopLoss`）及所有引用
+  - 测试：`test/broker/test_position_management.py` 中移除风险控制器测试与导入
+  - 文档：`doc/USAGE_GUIDE.md`、`doc/PROJECT_STRUCTURE.md`、`doc/PROJECT_STATUS.md` 中移除相关说明
+
 ## [2026-02-08] 长桥订单状态推送监听
 
 ### 新增

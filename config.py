@@ -125,10 +125,6 @@ class Config:
     # 日志配置
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")  # DEBUG, INFO, WARNING, ERROR
     
-    # 样本和数据集配置
-    ENABLE_SAMPLE_COLLECTION: bool = os.getenv("ENABLE_SAMPLE_COLLECTION", "true").lower() == "true"
-    SAMPLE_DATA_DIR: str = os.getenv("SAMPLE_DATA_DIR", "samples/data")
-    
     # 存储路径配置
     POSITION_FILE: str = os.getenv("POSITION_FILE", "data/positions.json")
     LOG_DIR: str = os.getenv("LOG_DIR", "logs")

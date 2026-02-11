@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-持仓管理和风险控制测试
-演示持仓跟踪、止损止盈等功能
+持仓管理测试
+演示持仓跟踪、止损止盈设置等功能
 """
 import logging
 import time
@@ -12,7 +12,6 @@ from broker import (
     create_position_from_order,
     convert_to_longport_symbol
 )
-from broker.risk_controller import RiskController, AutoTrailingStopLoss
 
 # 配置日志
 logging.basicConfig(
@@ -149,63 +148,10 @@ def test_multiple_positions(manager: PositionManager):
     logger.info("✅ 多持仓管理测试完成")
 
 
-def test_risk_controller():
-    """测试 5: 风险控制器"""
-    print("\n" + "="*60)
-    print("测试 5: 风险控制器")
-    print("="*60)
-    
-    try:
-        # 初始化组件
-        config = load_longport_config()
-        broker = LongPortBroker(config)
-        manager = PositionManager(storage_file="data/test_positions.json")
-        
-        # 创建风险控制器
-        risk_controller = RiskController(
-            broker=broker,
-            position_manager=manager,
-            check_interval=5  # 5秒检查一次
-        )
-        
-        # 设置回调
-        def on_stop_loss(position, order, alert):
-            logger.info(f"🛑 止损回调: {position.symbol} 订单 {order['order_id']}")
-        
-        def on_take_profit(position, order, alert):
-            logger.info(f"💰 止盈回调: {position.symbol} 订单 {order['order_id']}")
-        
-        def on_risk_alert(alert_data):
-            logger.warning(f"⚠️  风险警报: {alert_data}")
-        
-        risk_controller.on_stop_loss = on_stop_loss
-        risk_controller.on_take_profit = on_take_profit
-        risk_controller.on_risk_alert = on_risk_alert
-        
-        logger.info("风险控制器配置完成")
-        logger.info("  • 止损回调: ✅")
-        logger.info("  • 止盈回调: ✅")
-        logger.info("  • 风险警报: ✅")
-        
-        # 测试按百分比设置止损止盈
-        positions = manager.get_all_positions()
-        if positions:
-            pos = positions[0]
-            risk_controller.set_stop_loss_by_percentage(pos.symbol, -15)  # 止损 -15%
-            risk_controller.set_take_profit_by_percentage(pos.symbol, 50)  # 止盈 +50%
-            logger.info(f"为 {pos.symbol} 设置止损 -15%，止盈 +50%")
-        
-        logger.info("✅ 风险控制器测试完成")
-        logger.info("ℹ️  如需实际运行，调用 risk_controller.start()")
-        
-    except Exception as e:
-        logger.error(f"❌ 风险控制器测试失败: {e}")
-
-
 def test_trailing_stop():
-    """测试 6: 移动止损"""
+    """测试 5: 移动止损"""
     print("\n" + "="*60)
-    print("测试 6: 移动止损")
+    print("测试 5: 移动止损")
     print("="*60)
     
     manager = PositionManager(storage_file="data/test_positions.json")
@@ -262,10 +208,7 @@ def main():
         # 测试 4: 多持仓管理
         test_multiple_positions(manager)
         
-        # 测试 5: 风险控制器
-        test_risk_controller()
-        
-        # 测试 6: 移动止损
+        # 测试 5: 移动止损
         test_trailing_stop()
         
         # 最终摘要
@@ -278,9 +221,7 @@ def main():
         
         print("\n📌 下一步:")
         print("1. 在 main.py 中集成持仓管理器")
-        print("2. 启动风险控制器：risk_controller.start()")
-        print("3. 启用移动止损：auto_trailing.start()")
-        print("4. 监控持仓和自动止损止盈")
+        print("2. 监控持仓和止损止盈设置")
         print("="*60 + "\n")
         
     except Exception as e:

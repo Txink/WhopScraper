@@ -478,9 +478,6 @@ POLL_INTERVAL=5
 ### 2. 减少内存使用
 
 ```bash
-# 禁用样本收集
-ENABLE_SAMPLE_COLLECTION=false
-
 # 禁用Parser输出
 SHOW_PARSER_OUTPUT=false
 ```
