@@ -4,8 +4,10 @@ Playwright 浏览器管理模块
 """
 import os
 import asyncio
-from typing import Optional
+from typing import Callable, List, Optional, Tuple
 from playwright.async_api import async_playwright, Browser, BrowserContext, Page, Playwright
+
+from broker.order_formatter import web_listen_timestamp
 
 
 class BrowserManager:
@@ -15,7 +17,9 @@ class BrowserManager:
         self,
         headless: bool = False,
         slow_mo: int = 0,
-        storage_state_path: str = "storage_state.json"
+        storage_state_path: str = "storage_state.json",
+        log_lines: Optional[List[Tuple[str, str]]] = None,
+        log_refresh: Optional[Callable[[], None]] = None,
     ):
         """
         初始化浏览器管理器
@@ -24,10 +28,14 @@ class BrowserManager:
             headless: 是否无头模式运行
             slow_mo: 操作延迟（毫秒），用于调试
             storage_state_path: Cookie 存储路径
+            log_lines: 可选，用于收集 [网页监听] 展示条目，不打印到终端
+            log_refresh: 可选，每次向 log_lines 追加后调用的刷新回调（用于 Live 更新）
         """
         self.headless = headless
         self.slow_mo = slow_mo
         self.storage_state_path = storage_state_path
+        self.log_lines = log_lines
+        self.log_refresh = log_refresh
         
         self._playwright: Optional[Playwright] = None
         self._browser: Optional[Browser] = None
@@ -56,7 +64,17 @@ class BrowserManager:
         
         # 检查是否有保存的登录状态
         if os.path.exists(self.storage_state_path):
-            print(f"加载已保存的登录状态: {self.storage_state_path}")
+            if self.log_lines is not None:
+                path = self.storage_state_path
+                if path.startswith(".auth"):
+                    path = "./auth" + path[5:]
+                elif not path.startswith("."):
+                    path = f"./{path}"
+                self.log_lines.append((web_listen_timestamp(), f"尝试使用cookie登录：{path}"))
+                if self.log_refresh is not None:
+                    self.log_refresh()
+            else:
+                print(f"加载已保存的登录状态: {self.storage_state_path}")
             self._context = await self._browser.new_context(
                 storage_state=self.storage_state_path,
                 viewport={'width': 1920, 'height': 1080},
@@ -67,7 +85,12 @@ class BrowserManager:
                 )
             )
         else:
-            print("首次启动，需要登录")
+            if self.log_lines is not None:
+                self.log_lines.append((web_listen_timestamp(), "首次启动，需要登录"))
+                if self.log_refresh is not None:
+                    self.log_refresh()
+            else:
+                print("首次启动，需要登录")
             self._context = await self._browser.new_context(
                 viewport={'width': 1920, 'height': 1080},
                 user_agent=(
@@ -226,7 +249,12 @@ class BrowserManager:
             raise RuntimeError("浏览器未启动，请先调用 start()")
         
         try:
-            print(f"正在导航到: {url}")
+            if self.log_lines is not None:
+                self.log_lines.append((web_listen_timestamp(), f"正在导航：{url}"))
+                if self.log_refresh is not None:
+                    self.log_refresh()
+            else:
+                print(f"正在导航到: {url}")
             try:
                 await self._page.goto(
                     url,
@@ -234,10 +262,16 @@ class BrowserManager:
                     timeout=60000
                 )
             except Exception as e:
-                print(f"⚠️  页面加载警告: {e}")
+                if self.log_lines is None:
+                    print(f"⚠️  页面加载警告: {e}")
             
             await asyncio.sleep(3)
-            print(f"已到达页面: {self._page.url}")
+            if self.log_lines is not None:
+                self.log_lines.append((web_listen_timestamp(), f"打开页面：{self._page.url}"))
+                if self.log_refresh is not None:
+                    self.log_refresh()
+            else:
+                print(f"已到达页面: {self._page.url}")
             return True
         except Exception as e:
             print(f"导航失败: {e}")

@@ -10,11 +10,12 @@ import os
 import threading
 import time
 from datetime import datetime
-from typing import Callable, Optional, Set
+from typing import Callable, List, Optional, Set, Tuple
 from playwright.async_api import Page
 
 from rich.console import Console
 
+from broker.order_formatter import web_listen_timestamp
 from models.record_manager import RecordManager
 from models.instruction import OptionInstruction, InstructionStore
 from models.record import Record
@@ -136,12 +137,13 @@ class MessageMonitor:
 
         return [r.instruction for r in records if r.instruction is not None]
     
-    async def start(self):
-        """开始实时监控"""
+    async def start(self, skip_start_message: bool = False):
+        """开始实时监控。skip_start_message=True 时不打印开始监控/停止提示（已并入 [网页监听] 时使用）。"""
         self._running = True
-        print(f"开始监控，轮询间隔: {self.poll_interval} 秒")
-        print("按 Ctrl+C 停止监控")
-        
+        if not skip_start_message:
+            print(f"开始监控，轮询间隔: {self.poll_interval} 秒")
+            print("按 Ctrl+C 停止监控")
+
         while self._running:
             try:
                 await self.scan_once()
@@ -180,6 +182,8 @@ class OrderPushMonitor:
         self._thread: Optional[threading.Thread] = None
         self._running = False
         self._on_order_changed: Optional[Callable] = None
+        self._web_listen_lines: Optional[List[str]] = None
+        self._web_listen_refresh: Optional[Callable[[], None]] = None
 
     def on_order_changed(self, callback: Callable):
         """
@@ -258,7 +262,14 @@ class OrderPushMonitor:
 
             self._ctx.set_on_order_changed(_handle)
             self._ctx.subscribe([TopicType.Private])
-            logger.info("已订阅长桥交易推送 (TopicType.Private)")
+            if self._web_listen_lines is not None:
+                self._web_listen_lines.append(
+                    (web_listen_timestamp(), "已订阅长桥交易推送 (TopicType.Private)")
+                )
+                if self._web_listen_refresh is not None:
+                    self._web_listen_refresh()
+            else:
+                logger.info("已订阅长桥交易推送 (TopicType.Private)")
             while self._running:
                 time.sleep(1)
         except Exception as e:
@@ -272,15 +283,28 @@ class OrderPushMonitor:
                     logger.warning("取消订阅时出错: %s", e)
             self._ctx = None  # 释放引用，便于连接回收
 
-    def start(self):
-        """在后台线程中启动订单推送监听"""
+    def start(
+        self,
+        log_lines: Optional[List[Tuple[str, str]]] = None,
+        log_refresh: Optional[Callable[[], None]] = None,
+    ):
+        """在后台线程中启动订单推送监听。可选将启动/订阅信息写入 log_lines 并调用 log_refresh 刷新 [网页监听] 块。"""
         if self._running:
             logger.warning("订单推送监听已在运行")
             return
+        self._web_listen_lines = log_lines
+        self._web_listen_refresh = log_refresh
         self._running = True
         self._thread = threading.Thread(target=self._run_loop, daemon=True)
         self._thread.start()
-        logger.info("订单推送监听已启动（后台线程）")
+        if self._web_listen_lines is not None:
+            self._web_listen_lines.append(
+                (web_listen_timestamp(), "订单推送监听已启动（后台线程）")
+            )
+            if self._web_listen_refresh is not None:
+                self._web_listen_refresh()
+        else:
+            logger.info("订单推送监听已启动（后台线程）")
 
     def stop(self):
         """停止订单推送监听并释放 TradeContext 引用，便于连接回收"""

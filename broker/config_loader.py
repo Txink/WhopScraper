@@ -50,16 +50,10 @@ class LongPortConfigLoader:
             return self._config
         
         if self.mode == self.PAPER_MODE:
-            logger.info("🧪 使用模拟账户 (Paper Trading)")
             self._config = self._load_paper_config()
         else:
             logger.warning("💰 使用真实账户 (Real Trading) - 请谨慎操作！")
             self._config = self._load_real_config()
-        
-        # 设置区域
-        region = os.getenv("LONGPORT_REGION", "cn")
-        logger.info(f"API 接入点: {region}")
-        
         return self._config
     
     def _load_paper_config(self) -> Config:
@@ -127,32 +121,6 @@ class LongPortConfigLoader:
     def is_dry_run(self) -> bool:
         """是否为模拟运行模式（不实际下单）"""
         return os.getenv("LONGPORT_DRY_RUN", "true").lower() == "true"
-    
-    def get_risk_config(self) -> dict:
-        """获取风险控制配置"""
-        return {
-            "max_position_ratio": float(os.getenv("LONGPORT_MAX_POSITION_RATIO", "0.20")),
-            "max_daily_loss": float(os.getenv("LONGPORT_MAX_DAILY_LOSS", "0.05")),
-            "min_order_amount": float(os.getenv("LONGPORT_MIN_ORDER_AMOUNT", "100"))
-        }
-    
-    def print_config_summary(self):
-        """打印配置摘要"""
-        print("\n" + "=" * 60)
-        print("长桥 OpenAPI 配置摘要")
-        print("=" * 60)
-        print(f"账户模式:     {'🧪 模拟账户' if self.is_paper_mode() else '💰 真实账户'}")
-        print(f"自动交易:     {'✅ 已启用' if self.is_auto_trade_enabled() else '❌ 未启用'}")
-        print(f"模拟运行:     {'✅ 已启用 (不实际下单)' if self.is_dry_run() else '❌ 未启用'}")
-        print(f"API 区域:     {os.getenv('LONGPORT_REGION', 'cn')}")
-        
-        risk_config = self.get_risk_config()
-        print(f"\n风险控制:")
-        print(f"  单仓位上限:   {risk_config['max_position_ratio']*100:.1f}%")
-        print(f"  单日止损:     {risk_config['max_daily_loss']*100:.1f}%")
-        print(f"  最小下单额:   ${risk_config['min_order_amount']:.0f}")
-        print("=" * 60 + "\n")
-
 
 def load_longport_config(mode: Optional[str] = None) -> Config:
     """
@@ -169,7 +137,6 @@ def load_longport_config(mode: Optional[str] = None) -> Config:
         >>> config = load_longport_config("paper")  # 强制使用模拟账户
     """
     loader = LongPortConfigLoader(mode)
-    loader.print_config_summary()
     return loader.get_config()
 
 

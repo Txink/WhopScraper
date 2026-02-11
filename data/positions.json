@@ -1,21 +1,40 @@
 {
-  "TSLA260209C440000.US": {
-    "symbol": "TSLA260209C440000.US",
-    "ticker": "TSLA",
+  "PLTR260220C145000.US": {
+    "symbol": "PLTR260220C145000.US",
+    "ticker": "PLTR",
     "option_type": "CALL",
-    "strike": 440.0,
-    "expiry": "260209",
-    "quantity": 3,
-    "available_quantity": 3,
-    "avg_cost": 0.187,
-    "current_price": 0.187,
-    "market_value": 56.099999999999994,
+    "strike": 145.0,
+    "expiry": "260220",
+    "quantity": 21,
+    "available_quantity": 21,
+    "avg_cost": 2.123,
+    "current_price": 2.123,
+    "market_value": 4458.3,
     "unrealized_pnl": 0.0,
     "unrealized_pnl_pct": 0.0,
     "stop_loss_price": null,
     "take_profit_price": null,
-    "open_time": null,
-    "order_id": null,
-    "updated_at": "2026-02-09T22:23:50.658973"
+    "open_time": "2026-02-11T22:13:28.092943",
+    "order_id": "",
+    "updated_at": "2026-02-11T23:43:05.617475"
+  },
+  "AAPL260220C282500.US": {
+    "symbol": "AAPL260220C282500.US",
+    "ticker": "AAPL",
+    "option_type": "CALL",
+    "strike": 282.5,
+    "expiry": "260220",
+    "quantity": 8,
+    "available_quantity": 8,
+    "avg_cost": 2.48,
+    "current_price": 2.48,
+    "market_value": 1984.0,
+    "unrealized_pnl": 0.0,
+    "unrealized_pnl_pct": 0.0,
+    "stop_loss_price": null,
+    "take_profit_price": null,
+    "open_time": "2026-02-11T23:36:39.806141",
+    "order_id": "",
+    "updated_at": "2026-02-11T23:43:05.617487"
   }
 }

@@ -4,10 +4,13 @@
 """
 from decimal import Decimal
 from typing import Dict, Optional, List
-from longport.openapi import TradeContext, QuoteContext, Config, OrderSide, OrderType, TimeInForceType, OrderStatus, Market
+import io
 import logging
 import os
+import sys
 from datetime import datetime
+
+from longport.openapi import TradeContext, QuoteContext, Config, OrderSide, OrderType, TimeInForceType, OrderStatus, Market
 
 from .config_loader import LongPortConfigLoader
 from .order_formatter import (
@@ -46,7 +49,15 @@ class LongPortBroker:
         self.config_loader = config_loader
         self.config = config or config_loader.get_config()
         # 先创建 QuoteContext 再 TradeContext，避免连接数达上限时先建 Trade 导致泄漏（因异常时未返回实例）
-        self.quote_ctx = QuoteContext(self.config)  # 行情接口
+        # 创建 QuoteContext 时 SDK 会打印行情订阅表，临时屏蔽 stdout/stderr 以去掉该输出
+        _old_stdout, _old_stderr = sys.stdout, sys.stderr
+        try:
+            sys.stdout = io.StringIO()
+            sys.stderr = io.StringIO()
+            self.quote_ctx = QuoteContext(self.config)  # 行情接口
+        finally:
+            sys.stdout = _old_stdout
+            sys.stderr = _old_stderr
         self.ctx = TradeContext(self.config)
         self.positions: Dict[str, Dict] = {}  # 持仓跟踪
         self.daily_pnl = 0.0
@@ -61,8 +72,27 @@ class LongPortBroker:
         self.dry_run = config_loader.is_dry_run()
         self.auto_trade = config_loader.is_auto_trade_enabled()
         self.is_paper = config_loader.is_paper_mode()
-        
-        logger.info(f"交易接口初始化完成 - 模式: {'模拟' if self.is_paper else '真实'}")
+        self._quote_std_suppressed = False  # 仅首次行情请求时用 dup2 屏蔽 SDK 打印的订阅表
+
+    def _with_fd_std_suppressed(self, func, *args, **kwargs):
+        """在屏蔽 fd 1/2 的情况下执行 func，用于屏蔽长桥 SDK 直接写 fd 的行情订阅表。仅首次调用时执行屏蔽。"""
+        if self._quote_std_suppressed:
+            return func(*args, **kwargs)
+        try:
+            devnull = os.open(os.devnull, os.O_WRONLY)
+            save_1, save_2 = os.dup(1), os.dup(2)
+            os.dup2(devnull, 1)
+            os.dup2(devnull, 2)
+            os.close(devnull)
+            try:
+                return func(*args, **kwargs)
+            finally:
+                os.dup2(save_1, 1)
+                os.dup2(save_2, 2)
+                os.close(save_1)
+                os.close(save_2)
+        finally:
+            self._quote_std_suppressed = True
 
     def close(self) -> None:
         """
@@ -363,6 +393,13 @@ class LongPortBroker:
             
         except Exception as e:
             logger.error("订单修改失败: %s", e)
+            err_str = str(e)
+            if "602012" in err_str or "order amendment is not supported" in err_str.lower():
+                raise ValueError(
+                    "该订单类型不支持修改（长桥错误 602012）。"
+                    "市价单、部分特殊限价单等不支持 replace。"
+                    "建议：先撤单再按新条件重新下单。"
+                ) from e
             raise
     
     def _mock_order_response(self, symbol: str, side: str, quantity: int, price: Optional[float]) -> Dict:
@@ -653,7 +690,9 @@ class LongPortBroker:
             if not symbol.endswith('.US'):
                 symbol = f"{symbol}.US"
             
-            resp = self.quote_ctx.option_chain_expiry_date_list(symbol)
+            resp = self._with_fd_std_suppressed(
+                self.quote_ctx.option_chain_expiry_date_list, symbol
+            )
             
             # 转换 datetime.date 对象为 YYMMDD 字符串
             expiry_dates = []
@@ -689,7 +728,9 @@ class LongPortBroker:
             date_obj = datetime.strptime(expiry_date, "%y%m%d").date()
             
             # 获取期权链
-            resp = self.quote_ctx.option_chain_info_by_date(symbol, date_obj)
+            resp = self._with_fd_std_suppressed(
+                self.quote_ctx.option_chain_info_by_date, symbol, date_obj
+            )
             
             # 解析响应
             option_chain = {
@@ -727,7 +768,7 @@ class LongPortBroker:
             期权报价列表
         """
         try:
-            resp = self.quote_ctx.option_quote(symbols)
+            resp = self._with_fd_std_suppressed(self.quote_ctx.option_quote, symbols)
             
             quotes = []
             for quote in resp:
@@ -777,7 +818,9 @@ class LongPortBroker:
                     symbol = f"{symbol}.US"
                 symbols_with_market.append(symbol)
             
-            resp = self.quote_ctx.quote(symbols_with_market)
+            resp = self._with_fd_std_suppressed(
+                self.quote_ctx.quote, symbols_with_market
+            )
             
             quotes = []
             for quote in resp:

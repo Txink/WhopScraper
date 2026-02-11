@@ -45,11 +45,7 @@ class AutoTrader:
         # 价格在容忍度内时买入用市价还是指令价：market=用市价（易成交），instruction=用指令价（不超付）
         buy_price_mode = (os.getenv('BUY_PRICE_WHEN_WITHIN_TOLERANCE', 'instruction') or 'instruction').lower()
         self.buy_use_market_when_within_tolerance = buy_price_mode in ('market', '市价', 'true', '1')
-        logger.info(
-            f"自动交易执行器初始化完成 - 单期权总价上限: ${self.max_option_total_price}, 最大数量: {self.max_option_quantity}张, "
-            f"确认模式: {self.require_confirmation}, 容忍度内买入价: {'市价' if self.buy_use_market_when_within_tolerance else '指令价'}"
-        )
-    
+
     def execute_instruction(self, instruction: OptionInstruction) -> Optional[Dict]:
         """
         执行单条指令

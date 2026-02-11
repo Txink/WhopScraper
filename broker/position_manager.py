@@ -449,20 +449,42 @@ class PositionManager:
                 logger.warning(f"订单推送后刷新持仓失败: {e}")
 
     def _log_sync_summary(self) -> None:
-        """同步完成后用 console.print 输出：余额、各期权持仓及对应 Filled 交易记录（缩进格式）。"""
+        """同步完成后用 console.print 输出：余额、总资产、各期权持仓（含总价与占比）及对应 Filled 交易记录（缩进格式）。"""
         ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-        balance = 0.0
+        available_cash = 0.0
+        total_assets = 0.0
+        is_paper = True
         if self.account_balance is not None:
-            balance = float(self.account_balance.get("available_cash") or self.account_balance.get("total_cash") or 0)
+            available_cash = float(
+                self.account_balance.get("available_cash")
+                or self.account_balance.get("total_cash")
+                or 0
+            )
+            total_assets = float(self.account_balance.get("total_cash") or 0)
+            is_paper = self.account_balance.get("mode", "paper") == "paper"
         # 只展示当前仓位 > 0 的标的，不展示仓位=0 的
         symbols = sorted(
             sym for sym in (set(self.positions.keys()) | set(self.trade_records.keys()))
             if (pos := self.positions.get(sym)) and pos.quantity > 0
         )
-        console.print(f"{ts} [账户持仓] 余额=${balance:.2f}")
+        mode_label = "[模拟]" if is_paper else "[真实]"
+        mode_style = "[bold grey70]" if is_paper else "[bold green]"
+        mode_end = "[/bold grey70]" if is_paper else "[/bold green]"
+        console.print(
+            f"[grey70]{ts}[/grey70] [bold red][账户持仓][/bold red] "
+            f"余额=${available_cash:,.2f} 总资产=${total_assets:,.2f} "
+            f"{mode_style}{mode_label}{mode_end}"
+        )
+        # 期权合约乘数（美式期权 1 张 = 100 股）
+        option_multiplier = 100
         for sym in symbols:
             pos = self.positions[sym]
-            console.print(f"    [bold]{sym} || 仓位={pos.quantity}张 价格=${pos.avg_cost:.3f}[/bold]")
+            position_value = pos.quantity * pos.avg_cost * option_multiplier
+            pct = (position_value / total_assets * 100) if total_assets > 0 else 0
+            console.print(
+                f"    [bold]{sym} || 仓位={pos.quantity}张 价格=${pos.avg_cost:.3f} "
+                f"总价=${position_value:,.2f} 占比={pct:.1f}%[/bold]"
+            )
             records = self.trade_records.get(sym, [])
             for rec in sorted(records, key=lambda r: r.get("submitted_at") or ""):
                 rec_ts = rec.get("submitted_at") or ts
@@ -486,7 +508,7 @@ class PositionManager:
                     price_str = f"{int(price)}"
                 else:
                     price_str = f"{price}"
-                console.print(f"        - [dim]{rec_ts}[/dim] {side_rich} 数量={qty:<5} 价格={price_str:<6}")
+                console.print(f"        - [grey70]{rec_ts}[/grey70] {side_rich} 数量={qty:<5} 价格={price_str:<6}")
     
     def remove_position(self, symbol: str):
         """

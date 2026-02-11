@@ -2,10 +2,13 @@
 订单输出格式化工具
 提供彩色表格展示订单信息
 """
-from typing import Dict, Optional, List
-from rich.console import Console
+from typing import Dict, List, Optional, Tuple
+from rich.console import Console, Group
+from rich.columns import Columns
 from rich.table import Table
 from rich.text import Text
+from rich.live import Live
+from rich.spinner import Spinner
 from rich import box
 import re
 from datetime import datetime
@@ -143,10 +146,114 @@ def print_position_update_display(message: str) -> None:
     now = datetime.now()
     ts = now.strftime("%Y-%m-%d %H:%M:%S") + f".{now.microsecond // 1000:03d}"
     console.print(
-        f"[dim]{ts}[/dim]",
+        f"[{_TS_STYLE}]{ts}[/{_TS_STYLE}]",
         "[bold magenta][持仓更新][/bold magenta]",
         message,
     )
+    console.print()
+
+
+def print_program_load_display(lines: List[str]) -> None:
+    """
+    程序加载展示，与 print_order_validation_display 同风格：
+    {时间} [程序加载]
+        - {时间} 长桥交易接口初始化
+        - ...
+    """
+    now = datetime.now()
+    ts = now.strftime("%Y-%m-%d %H:%M:%S") + f".{now.microsecond // 1000:03d}"
+    console.print(
+        f"[{_TS_STYLE}]{ts}[/{_TS_STYLE}]",
+        "[bold yellow][程序加载][/bold yellow]",
+    )
+    for line in lines:
+        console.print(f"    - [{_TS_STYLE}]{ts}[/{_TS_STYLE}] [dim white]{line}[/dim white]")
+    console.print()
+
+
+def print_config_update_display(lines: List[str]) -> None:
+    """
+    配置更新展示，与 print_order_validation_display 同风格：
+    {时间} [配置更新]
+        - 账户类型：模拟
+        - ...
+    """
+    now = datetime.now()
+    ts = now.strftime("%Y-%m-%d %H:%M:%S") + f".{now.microsecond // 1000:03d}"
+    console.print(
+        f"[{_TS_STYLE}]{ts}[/{_TS_STYLE}]",
+        "[bold yellow][配置更新][/bold yellow]",
+    )
+    for line in lines:
+        if "：" in line:
+            key, _, value = line.partition("：")
+            console.print(f"    - [yellow]{key}：[/yellow][blue]{value}[/blue]")
+        elif ":" in line:
+            key, _, value = line.partition(":")
+            console.print(f"    - [yellow]{key}:[/yellow][blue]{value}[/blue]")
+        else:
+            console.print(f"    - [dim white]{line}[/dim white]")
+    console.print()
+
+
+def web_listen_timestamp() -> str:
+    """当前时间戳，用于程序加载/网页监听每条子条目（与 block 标题同格式）。"""
+    now = datetime.now()
+    return now.strftime("%Y-%m-%d %H:%M:%S") + f".{now.microsecond // 1000:03d}"
+
+
+# 时间戳样式：用 grey70 显式灰色，避免在部分终端里 [dim] 显示为白色
+_TS_STYLE = "grey70"
+
+
+def _render_live_block(
+    lines: List[Tuple[str, str]],
+    block_ts: str,
+    title: str,
+    show_spinner: bool = False,
+):
+    """供 rich.Live 使用的可刷新块：标题行 block_ts + title，每条子条目 (ts, line)。"""
+    header = Text.from_markup(f"[{_TS_STYLE}]{block_ts}[/{_TS_STYLE}] [bold yellow]{title}[/bold yellow]")
+    if show_spinner:
+        header = Columns([header, Spinner("dots")], expand=False)
+    parts = [header]
+    for ts, line in lines:
+        parts.append(Text.from_markup(f"    - [{_TS_STYLE}]{ts}[/{_TS_STYLE}] [dim white]{line}[/dim white]"))
+    return Group(*parts)
+
+
+def render_program_load_live(
+    lines: List[Tuple[str, str]],
+    block_ts: str,
+    show_spinner: bool = False,
+):
+    """[程序加载] 流式块，含交易初始化与网页监听等全部子条目。"""
+    return _render_live_block(lines, block_ts, "[程序加载]", show_spinner)
+
+
+def render_web_listen_live(
+    lines: List[Tuple[str, str]],
+    block_ts: str,
+    show_spinner: bool = False,
+):
+    """
+    供 rich.Live 使用的 [网页监听] 可刷新渲染体。
+    标题行显示 block_ts + [网页监听]；每条子条目为 (ts, line)，显示该条发生时间。
+    """
+    return _render_live_block(lines, block_ts, "[网页监听]", show_spinner)
+
+
+def print_web_listen_display(lines: List[Tuple[str, str]]) -> None:
+    """
+    网页监听展示。lines 为 (ts, line) 列表，每条显示该条发生时间。
+    """
+    block_ts = web_listen_timestamp() if not lines else lines[0][0]
+    console.print(
+        f"[{_TS_STYLE}]{block_ts}[/{_TS_STYLE}]",
+        "[bold yellow][网页监听][/bold yellow]",
+    )
+    for ts, line in lines:
+        console.print(f"    - [{_TS_STYLE}]{ts}[/{_TS_STYLE}] [dim white]{line}[/dim white]")
     console.print()
 
 

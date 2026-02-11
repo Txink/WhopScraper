@@ -271,11 +271,6 @@ LONGPORT_REAL_ACCESS_TOKEN=your_real_access_token
 LONGPORT_REGION=cn  # cn=中国大陆，hk=香港（推荐中国大陆用户使用 cn）
 LONGPORT_ENABLE_OVERNIGHT=false  # 是否开启夜盘行情
 
-# 风险控制配置
-LONGPORT_MAX_POSITION_RATIO=0.20  # 单个持仓不超过账户资金的 20%
-LONGPORT_MAX_DAILY_LOSS=0.05  # 单日最大亏损 5%
-LONGPORT_MIN_ORDER_AMOUNT=100  # 最小下单金额（美元）
-
 # 交易设置
 LONGPORT_AUTO_TRADE=false  # 是否启用自动交易（true=自动下单，false=仅监控）
 LONGPORT_DRY_RUN=true  # 是否启用模拟模式（true=不实际下单，仅打印日志）
