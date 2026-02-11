@@ -1,0 +1,498 @@
+{
+  "GOLD260220C60000.US": [],
+  "EOSE260213C17000.US": [],
+  "TSLA260209C440000.US": [
+    {
+      "order_id": "1204089592769163264",
+      "symbol": "TSLA260209C440000.US",
+      "side": "BUY",
+      "quantity": 1.0,
+      "executed_quantity": 1.0,
+      "price": 0.17,
+      "status": "OrderStatus.Filled",
+      "submitted_at": "2026-02-05T23:42:09"
+    },
+    {
+      "order_id": "1204089551061016576",
+      "symbol": "TSLA260209C440000.US",
+      "side": "BUY",
+      "quantity": 1.0,
+      "executed_quantity": 1.0,
+      "price": 0.17,
+      "status": "OrderStatus.Filled",
+      "submitted_at": "2026-02-05T23:41:59"
+    },
+    {
+      "order_id": "1204089463471366144",
+      "symbol": "TSLA260209C440000.US",
+      "side": "BUY",
+      "quantity": 1.0,
+      "executed_quantity": 1.0,
+      "price": 0.17,
+      "status": "OrderStatus.Filled",
+      "submitted_at": "2026-02-05T23:41:39"
+    },
+    {
+      "order_id": "1204088167972499456",
+      "symbol": "TSLA260209C440000.US",
+      "side": "SELL",
+      "quantity": 4.0,
+      "executed_quantity": 4.0,
+      "price": 0.336,
+      "status": "OrderStatus.Filled",
+      "submitted_at": "2026-02-05T23:36:30"
+    },
+    {
+      "order_id": "1204088138608160768",
+      "symbol": "TSLA260209C440000.US",
+      "side": "BUY",
+      "quantity": 1.0,
+      "executed_quantity": 1.0,
+      "price": 0.15,
+      "status": "OrderStatus.Filled",
+      "submitted_at": "2026-02-05T23:36:23"
+    },
+    {
+      "order_id": "1204087142184153088",
+      "symbol": "TSLA260209C440000.US",
+      "side": "BUY",
+      "quantity": 1.0,
+      "executed_quantity": 1.0,
+      "price": 0.17,
+      "status": "OrderStatus.Filled",
+      "submitted_at": "2026-02-05T23:32:25"
+    },
+    {
+      "order_id": "1204086842094268416",
+      "symbol": "TSLA260209C440000.US",
+      "side": "BUY",
+      "quantity": 1.0,
+      "executed_quantity": 1.0,
+      "price": 0.17,
+      "status": "OrderStatus.Filled",
+      "submitted_at": "2026-02-05T23:31:14"
+    },
+    {
+      "order_id": "1204081086162808832",
+      "symbol": "TSLA260209C440000.US",
+      "side": "BUY",
+      "quantity": 1.0,
+      "executed_quantity": 1.0,
+      "price": 3.1,
+      "status": "OrderStatus.Filled",
+      "submitted_at": "2026-02-05T23:08:21"
+    },
+    {
+      "order_id": "1203352912571424768",
+      "symbol": "TSLA260209C440000.US",
+      "side": "SELL",
+      "quantity": 1.0,
+      "executed_quantity": 1.0,
+      "price": 3.396,
+      "status": "OrderStatus.Filled",
+      "submitted_at": "2026-02-03T22:54:51"
+    },
+    {
+      "order_id": "1203350914207870976",
+      "symbol": "TSLA260209C440000.US",
+      "side": "BUY",
+      "quantity": 1.0,
+      "executed_quantity": 1.0,
+      "price": 3.1,
+      "status": "OrderStatus.Filled",
+      "submitted_at": "2026-02-03T22:46:55"
+    },
+    {
+      "order_id": "1205741112090730496",
+      "symbol": "TSLA260209C440000.US",
+      "side": "SELL",
+      "quantity": 3.0,
+      "executed_quantity": 3.0,
+      "price": null,
+      "status": "OrderStatus.Filled",
+      "submitted_at": "2026-02-10T04:00:00"
+    }
+  ],
+  "NDAQ260220C100000.US": [
+    {
+      "order_id": "1203348767844098048",
+      "symbol": "NDAQ260220C100000.US",
+      "side": "SELL",
+      "quantity": 1.0,
+      "executed_quantity": 1.0,
+      "price": 0.12,
+      "status": "OrderStatus.Filled",
+      "submitted_at": "2026-02-03T22:38:23"
+    },
+    {
+      "order_id": "1203348659165487104",
+      "symbol": "NDAQ260220C100000.US",
+      "side": "BUY",
+      "quantity": 1.0,
+      "executed_quantity": 1.0,
+      "price": 2.3,
+      "status": "OrderStatus.Filled",
+      "submitted_at": "2026-02-03T22:37:57"
+    },
+    {
+      "order_id": "1203348767844098048",
+      "symbol": "NDAQ260220C100000.US",
+      "side": "SELL",
+      "quantity": 1.0,
+      "executed_quantity": 1.0,
+      "price": 0.12,
+      "status": "OrderStatus.Filled",
+      "submitted_at": "2026-02-03T22:38:23"
+    },
+    {
+      "order_id": "1203348659165487104",
+      "symbol": "NDAQ260220C100000.US",
+      "side": "BUY",
+      "quantity": 1.0,
+      "executed_quantity": 1.0,
+      "price": 2.3,
+      "status": "OrderStatus.Filled",
+      "submitted_at": "2026-02-03T22:37:57"
+    },
+    {
+      "order_id": "1203348767844098048",
+      "symbol": "NDAQ260220C100000.US",
+      "side": "SELL",
+      "quantity": 1.0,
+      "executed_quantity": 1.0,
+      "price": 0.12,
+      "status": "OrderStatus.Filled",
+      "submitted_at": "2026-02-03T22:38:23"
+    },
+    {
+      "order_id": "1203348659165487104",
+      "symbol": "NDAQ260220C100000.US",
+      "side": "BUY",
+      "quantity": 1.0,
+      "executed_quantity": 1.0,
+      "price": 2.3,
+      "status": "OrderStatus.Filled",
+      "submitted_at": "2026-02-03T22:37:57"
+    },
+    {
+      "order_id": "1203348767844098048",
+      "symbol": "NDAQ260220C100000.US",
+      "side": "SELL",
+      "quantity": 1.0,
+      "executed_quantity": 1.0,
+      "price": 0.12,
+      "status": "OrderStatus.Filled",
+      "submitted_at": "2026-02-03T22:38:23"
+    },
+    {
+      "order_id": "1203348659165487104",
+      "symbol": "NDAQ260220C100000.US",
+      "side": "BUY",
+      "quantity": 1.0,
+      "executed_quantity": 1.0,
+      "price": 2.3,
+      "status": "OrderStatus.Filled",
+      "submitted_at": "2026-02-03T22:37:57"
+    },
+    {
+      "order_id": "1203348767844098048",
+      "symbol": "NDAQ260220C100000.US",
+      "side": "SELL",
+      "quantity": 1.0,
+      "executed_quantity": 1.0,
+      "price": 0.12,
+      "status": "OrderStatus.Filled",
+      "submitted_at": "2026-02-03T22:38:23"
+    },
+    {
+      "order_id": "1203348659165487104",
+      "symbol": "NDAQ260220C100000.US",
+      "side": "BUY",
+      "quantity": 1.0,
+      "executed_quantity": 1.0,
+      "price": 2.3,
+      "status": "OrderStatus.Filled",
+      "submitted_at": "2026-02-03T22:37:57"
+    },
+    {
+      "order_id": "1203348767844098048",
+      "symbol": "NDAQ260220C100000.US",
+      "side": "SELL",
+      "quantity": 1.0,
+      "executed_quantity": 1.0,
+      "price": 0.12,
+      "status": "OrderStatus.Filled",
+      "submitted_at": "2026-02-03T22:38:23"
+    },
+    {
+      "order_id": "1203348659165487104",
+      "symbol": "NDAQ260220C100000.US",
+      "side": "BUY",
+      "quantity": 1.0,
+      "executed_quantity": 1.0,
+      "price": 2.3,
+      "status": "OrderStatus.Filled",
+      "submitted_at": "2026-02-03T22:37:57"
+    },
+    {
+      "order_id": "1203348767844098048",
+      "symbol": "NDAQ260220C100000.US",
+      "side": "SELL",
+      "quantity": 1.0,
+      "executed_quantity": 1.0,
+      "price": 0.12,
+      "status": "OrderStatus.Filled",
+      "submitted_at": "2026-02-03T22:38:23"
+    },
+    {
+      "order_id": "1203348659165487104",
+      "symbol": "NDAQ260220C100000.US",
+      "side": "BUY",
+      "quantity": 1.0,
+      "executed_quantity": 1.0,
+      "price": 2.3,
+      "status": "OrderStatus.Filled",
+      "submitted_at": "2026-02-03T22:37:57"
+    }
+  ],
+  "PLTR260220C145000.US": [
+    {
+      "order_id": "1205526341827436544",
+      "symbol": "PLTR260220C145000.US",
+      "side": "OrderSide.Buy",
+      "quantity": 10,
+      "executed_quantity": 10,
+      "price": 3.25,
+      "status": "FILLED",
+      "submitted_at": "2026-02-09T22:51:17"
+    },
+    {
+      "order_id": "1205529487479959552",
+      "symbol": "PLTR260220C145000.US",
+      "side": "OrderSide.Sell",
+      "quantity": 5,
+      "executed_quantity": 5,
+      "price": 3.7,
+      "status": "FILLED",
+      "submitted_at": "2026-02-09T23:03:47"
+    },
+    {
+      "order_id": "1205530278123036672",
+      "symbol": "PLTR260220C145000.US",
+      "side": "OrderSide.Sell",
+      "quantity": 2,
+      "executed_quantity": 2,
+      "price": 3.9,
+      "status": "FILLED",
+      "submitted_at": "2026-02-09T23:06:56"
+    },
+    {
+      "order_id": "1205530251061407744",
+      "symbol": "PLTR260220C145000.US",
+      "side": "OrderSide.Sell",
+      "quantity": 3,
+      "executed_quantity": 3,
+      "price": 4.1,
+      "status": "FILLED",
+      "submitted_at": "2026-02-09T23:06:49"
+    },
+    {
+      "order_id": "1205541321578672128",
+      "symbol": "PLTR260220C145000.US",
+      "side": "OrderSide.Buy",
+      "quantity": 4,
+      "executed_quantity": 4,
+      "price": 4.25,
+      "status": "FILLED",
+      "submitted_at": "2026-02-09T23:50:48"
+    },
+    {
+      "order_id": "1205541321306042368",
+      "symbol": "PLTR260220C145000.US",
+      "side": "OrderSide.Buy",
+      "quantity": 4,
+      "executed_quantity": 4,
+      "price": 4.1,
+      "status": "FILLED",
+      "submitted_at": "2026-02-09T23:50:48"
+    },
+    {
+      "order_id": "1205883834097246208",
+      "symbol": "PLTR260220C145000.US",
+      "side": "OrderSide.Sell",
+      "quantity": 2,
+      "executed_quantity": 2,
+      "price": 5.46,
+      "status": "FILLED",
+      "submitted_at": "2026-02-10T22:31:50"
+    },
+    {
+      "order_id": "1205909866275696640",
+      "symbol": "PLTR260220C145000.US",
+      "side": "OrderSide.Sell",
+      "quantity": 6,
+      "executed_quantity": 6,
+      "price": 3.9,
+      "status": "FILLED",
+      "submitted_at": "2026-02-11T00:15:16"
+    }
+  ],
+  "CIFR.US": [
+    {
+      "order_id": "1205534367481356288",
+      "symbol": "CIFR.US",
+      "side": "OrderSide.Sell",
+      "quantity": 200,
+      "executed_quantity": 200,
+      "price": 16.35,
+      "status": "FILLED",
+      "submitted_at": "2026-02-09T23:23:10"
+    }
+  ],
+  "TSLL.US": [
+    {
+      "order_id": "1205544509195198464",
+      "symbol": "TSLL.US",
+      "side": "OrderSide.Sell",
+      "quantity": 400,
+      "executed_quantity": 400,
+      "price": 16.03,
+      "status": "FILLED",
+      "submitted_at": "2026-02-10T00:03:28"
+    },
+    {
+      "order_id": "1205555979375108096",
+      "symbol": "TSLL.US",
+      "side": "OrderSide.Sell",
+      "quantity": 800,
+      "executed_quantity": 800,
+      "price": 16.22,
+      "status": "FILLED",
+      "submitted_at": "2026-02-10T00:49:03"
+    },
+    {
+      "order_id": "1205559548270637056",
+      "symbol": "TSLL.US",
+      "side": "OrderSide.Sell",
+      "quantity": 200,
+      "executed_quantity": 200,
+      "price": 16.24,
+      "status": "FILLED",
+      "submitted_at": "2026-02-10T01:03:14"
+    }
+  ],
+  "UAL260213C118000.US": [
+    {
+      "order_id": "1205896766801604608",
+      "symbol": "UAL260213C118000.US",
+      "side": "OrderSide.Buy",
+      "quantity": 9,
+      "executed_quantity": 9,
+      "price": 2.12,
+      "status": "FILLED",
+      "submitted_at": "2026-02-10T23:23:13"
+    },
+    {
+      "order_id": "1205896974272864256",
+      "symbol": "UAL260213C118000.US",
+      "side": "OrderSide.Buy",
+      "quantity": 20,
+      "executed_quantity": 20,
+      "price": 2.06,
+      "status": "FILLED",
+      "submitted_at": "2026-02-10T23:24:03"
+    },
+    {
+      "order_id": "1205899173514223616",
+      "symbol": "UAL260213C118000.US",
+      "side": "OrderSide.Sell",
+      "quantity": 3,
+      "executed_quantity": 3,
+      "price": 2.28,
+      "status": "FILLED",
+      "submitted_at": "2026-02-10T23:32:47"
+    },
+    {
+      "order_id": "1205899214354165760",
+      "symbol": "UAL260213C118000.US",
+      "side": "OrderSide.Sell",
+      "quantity": 6,
+      "executed_quantity": 6,
+      "price": 2.28,
+      "status": "FILLED",
+      "submitted_at": "2026-02-10T23:32:57"
+    },
+    {
+      "order_id": "1205900777235705856",
+      "symbol": "UAL260213C118000.US",
+      "side": "OrderSide.Sell",
+      "quantity": 3,
+      "executed_quantity": 3,
+      "price": 2.45,
+      "status": "FILLED",
+      "submitted_at": "2026-02-10T23:39:09"
+    },
+    {
+      "order_id": "1205900844055162880",
+      "symbol": "UAL260213C118000.US",
+      "side": "OrderSide.Sell",
+      "quantity": 7,
+      "executed_quantity": 7,
+      "price": 2.45,
+      "status": "FILLED",
+      "submitted_at": "2026-02-10T23:39:25"
+    },
+    {
+      "order_id": "1205901667682250752",
+      "symbol": "UAL260213C118000.US",
+      "side": "OrderSide.Sell",
+      "quantity": 7,
+      "executed_quantity": 7,
+      "price": 2.7,
+      "status": "FILLED",
+      "submitted_at": "2026-02-10T23:42:42"
+    },
+    {
+      "order_id": "1205901292338196480",
+      "symbol": "UAL260213C118000.US",
+      "side": "OrderSide.Sell",
+      "quantity": 3,
+      "executed_quantity": 3,
+      "price": 2.7,
+      "status": "FILLED",
+      "submitted_at": "2026-02-10T23:41:12"
+    }
+  ],
+  "SPY260213C700000.US": [
+    {
+      "order_id": "1205907781048115200",
+      "symbol": "SPY260213C700000.US",
+      "side": "OrderSide.Buy",
+      "quantity": 20,
+      "executed_quantity": 20,
+      "price": 1.3,
+      "status": "FILLED",
+      "submitted_at": "2026-02-11T00:06:59"
+    },
+    {
+      "order_id": "1205912907812970496",
+      "symbol": "SPY260213C700000.US",
+      "side": "OrderSide.Sell",
+      "quantity": 10,
+      "executed_quantity": 10,
+      "price": 1.5,
+      "status": "FILLED",
+      "submitted_at": "2026-02-11T00:27:22"
+    },
+    {
+      "order_id": "1205912873587482624",
+      "symbol": "SPY260213C700000.US",
+      "side": "OrderSide.Sell",
+      "quantity": 10,
+      "executed_quantity": 10,
+      "price": 1.3,
+      "status": "FILLED",
+      "submitted_at": "2026-02-11T00:27:13"
+    }
+  ]
+}

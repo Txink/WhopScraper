@@ -1,0 +1,21 @@
+{
+  "TSLA260209C440000.US": {
+    "symbol": "TSLA260209C440000.US",
+    "ticker": "TSLA",
+    "option_type": "CALL",
+    "strike": 440.0,
+    "expiry": "260209",
+    "quantity": 3,
+    "available_quantity": 3,
+    "avg_cost": 0.187,
+    "current_price": 0.187,
+    "market_value": 56.099999999999994,
+    "unrealized_pnl": 0.0,
+    "unrealized_pnl_pct": 0.0,
+    "stop_loss_price": null,
+    "take_profit_price": null,
+    "open_time": null,
+    "order_id": null,
+    "updated_at": "2026-02-09T22:23:50.658973"
+  }
+}
