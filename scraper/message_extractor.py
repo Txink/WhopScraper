@@ -548,5 +548,9 @@ class EnhancedMessageExtractor:
             return message_groups
             
         except Exception as e:
+            err_msg = str(e)
+            # 浏览器/页面已关闭，无法恢复，向上层传播以终止程序
+            if "Target page, context or browser has been closed" in err_msg or "Target closed" in err_msg:
+                raise
             print(f"提取消息组失败: {e}")
             return []

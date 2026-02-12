@@ -94,6 +94,9 @@ class MessageMonitor:
         try:
             messages = await extractor.extract_message_groups()
         except Exception as e:
+            err_msg = str(e)
+            if "Target page, context or browser has been closed" in err_msg or "Target closed" in err_msg:
+                raise
             print(f"消息提取失败: {e}")
             messages = []
         
@@ -152,6 +155,11 @@ class MessageMonitor:
                 print("监控已取消")
                 break
             except Exception as e:
+                err_msg = str(e)
+                if "Target page, context or browser has been closed" in err_msg or "Target closed" in err_msg:
+                    console.print("[bold red]浏览器或页面已关闭，程序终止[/bold red]")
+                    import sys
+                    sys.exit(1)
                 print(f"监控出错: {e}")
                 await asyncio.sleep(self.poll_interval)
     
