@@ -200,6 +200,7 @@ class AutoTrader:
             total_line=total_line,
             instruction_timestamp=instruction.timestamp,
             reject_reason=reject_reason,
+            expiry_fallback_time=getattr(instruction, 'expiry_fallback_time', False),
         )
 
         if reject_reason:
@@ -633,20 +634,84 @@ class AutoTrader:
             orders = self.broker.get_today_orders()
             target_order = None
             for order in orders:
+                status_str = str(order.get('status', '')).lower()
                 if (order.get('symbol') == symbol and
                     order.get('side') == 'BUY' and
-                    order.get('status') not in ['Filled', 'filled', 'Cancelled', 'cancelled']):
+                    'filled' not in status_str and
+                    'cancelled' not in status_str):
                     target_order = order
                     break
 
             if not target_order:
-                print_modify_validation_display(
-                    symbol=symbol,
-                    instruction_timestamp=instruction.timestamp,
-                    detail_lines=detail_lines,
-                    reject_reason="未找到可修改的未成交买入订单",
-                )
-                return None
+                # 无未成交订单（已全部成交），设置止损
+                stop_loss_val = None
+                if instruction.stop_loss_price is not None:
+                    stop_loss_val = float(instruction.stop_loss_price)
+                elif instruction.stop_loss_range:
+                    stop_loss_val = (instruction.stop_loss_range[0] + instruction.stop_loss_range[1]) / 2
+
+                if stop_loss_val is None:
+                    print_modify_validation_display(
+                        symbol=symbol,
+                        instruction_timestamp=instruction.timestamp,
+                        detail_lines=detail_lines,
+                        reject_reason="未找到可修改的未成交买入订单，且无止损价可提交",
+                    )
+                    return None
+
+                # 真实账户：提交 LIT 到价止损卖出单；模拟账户不支持 LIT，降级为持仓管理记录
+                if not self.broker.is_paper:
+                    detail_lines.append(f"提交到价止损卖出单（LIT）：触发价=${stop_loss_val}，限价=${stop_loss_val}，数量={available_quantity}张")
+                    print_modify_validation_display(
+                        symbol=symbol,
+                        instruction_timestamp=instruction.timestamp,
+                        detail_lines=detail_lines,
+                        reject_reason=None,
+                    )
+                    try:
+                        result = self.broker.submit_option_order(
+                            symbol=symbol,
+                            side='SELL',
+                            quantity=available_quantity,
+                            price=stop_loss_val,
+                            order_type='LIT',
+                            trigger_price=stop_loss_val,
+                            remark=f"Auto stop-loss @ {stop_loss_val}",
+                            instruction_timestamp=instruction.timestamp,
+                        )
+                        # 同时在持仓管理中记录止损价
+                        if self.position_manager:
+                            pos = self.position_manager.get_position(symbol)
+                            if pos:
+                                pos.set_stop_loss(stop_loss_val)
+                                self.position_manager._save_positions()
+                        print_success_message(f"到价止损单提交成功! 触发价=${stop_loss_val}")
+                        return result
+                    except Exception as e:
+                        print_error_message(f"到价止损单提交失败: {e}")
+                        # 兜底：在持仓管理中记录
+                        if self.position_manager:
+                            pos = self.position_manager.get_position(symbol)
+                            if pos:
+                                pos.set_stop_loss(stop_loss_val)
+                                self.position_manager._save_positions()
+                                print_info_message(f"已在持仓管理中记录止损价=${stop_loss_val}")
+                        return None
+                else:
+                    # 模拟账户：直接在持仓管理中记录止损
+                    if self.position_manager:
+                        pos = self.position_manager.get_position(symbol)
+                        if pos:
+                            pos.set_stop_loss(stop_loss_val)
+                            self.position_manager._save_positions()
+                            detail_lines.append(f"模拟账户不支持到价止损单，已在持仓管理中记录止损价=${stop_loss_val}")
+                    print_modify_validation_display(
+                        symbol=symbol,
+                        instruction_timestamp=instruction.timestamp,
+                        detail_lines=detail_lines,
+                        reject_reason=None,
+                    )
+                    return None
 
             order_id = target_order['order_id']
             detail_lines.append(f"找到订单：{order_id}")

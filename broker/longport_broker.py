@@ -145,8 +145,8 @@ class LongPortBroker:
             return self._mock_order_response(symbol, side, quantity, price)
         
         try:
-            # 卖出时检查持仓
-            if side.upper() == "SELL":
+            # 卖出时检查持仓（LIT 条件单不立即卖出，跳过持仓检查）
+            if side.upper() == "SELL" and order_type.upper() != "LIT":
                 if not self._check_position_for_sell(symbol, quantity):
                     raise ValueError(f"持仓不足: 无法卖出 {quantity} 张 {symbol}")    
             # 转换买卖方向
@@ -156,12 +156,21 @@ class LongPortBroker:
             if order_type.upper() == "MARKET":
                 o_type = OrderType.MO
                 submitted_price = None
+            elif order_type.upper() == "LIT":
+                # 触价限价单（到价止损/止盈）
+                o_type = OrderType.LIT
+                if price is None:
+                    raise ValueError("触价限价单必须提供限价")
+                submitted_price = Decimal(str(price))
             else:
                 o_type = OrderType.LO
                 if price is None:
                     raise ValueError("限价单必须提供价格")
                 submitted_price = Decimal(str(price))
             
+            # LIT 订单使用 GoodTilCanceled（撤销前有效），其余用 Day
+            tif = TimeInForceType.GoodTilCanceled if o_type == OrderType.LIT else TimeInForceType.Day
+
             # 准备订单参数
             order_params = {
                 "side": order_side,
@@ -169,7 +178,7 @@ class LongPortBroker:
                 "order_type": o_type,
                 "submitted_price": submitted_price,
                 "submitted_quantity": quantity,
-                "time_in_force": TimeInForceType.Day,
+                "time_in_force": tif,
                 "remark": remark or f"Auto trade via OpenAPI - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
             }
             

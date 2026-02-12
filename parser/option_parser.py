@@ -18,7 +18,7 @@ class OptionParser:
     """期权指令解析器"""
     
     @staticmethod
-    def _resolve_relative_date(relative_date: str, message_timestamp: Optional[str] = None) -> str:
+    def _resolve_relative_date(relative_date: str, message_timestamp: Optional[str] = None) -> tuple:
         """
         将相对日期（如"今天"、"下周"）转换为具体日期
         
@@ -27,20 +27,23 @@ class OptionParser:
             message_timestamp: 消息时间戳（如 "Jan 22, 2026 10:41 PM"）
             
         Returns:
-            具体日期字符串
+            (具体日期字符串, 是否使用了当前时间兜底)
         """
         from datetime import datetime, timedelta
         
-        # 如果没有消息时间戳，返回原值
+        # 解析消息时间戳；无时间戳时用当前系统时间兜底（确保 NEXT WEEK 等相对日期能解析）
+        used_fallback = False
         if not message_timestamp:
-            return relative_date
-        
-        # 解析消息时间戳
-        try:
-            # 尝试解析 "Jan 22, 2026 10:41 PM" 格式
-            msg_date = datetime.strptime(message_timestamp, '%b %d, %Y %I:%M %p')
-        except:
-            return relative_date
+            msg_date = datetime.now()
+            used_fallback = True
+        else:
+            try:
+                msg_date = datetime.strptime(message_timestamp, '%b %d, %Y %I:%M %p')
+            except Exception:
+                try:
+                    msg_date = datetime.strptime(message_timestamp[:19], '%Y-%m-%d %H:%M:%S')
+                except Exception:
+                    return relative_date, False
         
         # 计算相对日期
         relative_lower = relative_date.lower()
@@ -60,10 +63,10 @@ class OptionParser:
             days_until_friday = (4 - msg_date.weekday()) % 7
             target_date = msg_date + timedelta(days=days_until_friday + 7)
         else:
-            return relative_date
+            return relative_date, False
         
         # 返回格式化的日期（如 "1/31"）
-        return target_date.strftime('%-m/%-d')
+        return target_date.strftime('%-m/%-d'), used_fallback
     
     # 开仓指令正则（多种格式支持）
     # 格式1: INTC - $52 CALLS 1月30 $1.25
@@ -460,6 +463,13 @@ class OptionParser:
         # 优先尝试解析买入指令（传入时间戳用于计算相对日期）
         instruction = cls._parse_buy(message, message_id, message_timestamp)
         if instruction:
+            # 标记：消息无时间戳且到期日是从相对日期解析而来（使用了当前时间兜底）
+            if not message_timestamp and instruction.expiry:
+                _RELATIVE_DATE_KEYWORDS = {'今天', '明天', 'today', 'tomorrow', '本周', '这周', '当周', '下周',
+                                           'this week', 'next week', 'expiration next week', 'expiration this week'}
+                msg_lower = message.lower()
+                if any(kw in msg_lower for kw in _RELATIVE_DATE_KEYWORDS):
+                    instruction.expiry_fallback_time = True
             cls._fill_ticker_from_message_if_missing(instruction, message)
             return instruction
         
@@ -605,7 +615,7 @@ class OptionParser:
             price, price_range = cls._parse_price_range(price_str)
             
             # 处理相对日期
-            expiry = cls._resolve_relative_date(expiry_raw, message_timestamp) if expiry_raw else None
+            (expiry, _expiry_fallback) = cls._resolve_relative_date(expiry_raw, message_timestamp) if expiry_raw else (None, False)
             
             position_match = cls.POSITION_SIZE_PATTERN.search(message)
             position_size = position_match.group(1) if position_match else None
@@ -638,7 +648,7 @@ class OptionParser:
             price, price_range = cls._parse_price_range(price_str)
             
             # 处理相对日期
-            expiry = cls._resolve_relative_date(expiry_raw, message_timestamp) if expiry_raw else None
+            (expiry, _expiry_fallback) = cls._resolve_relative_date(expiry_raw, message_timestamp) if expiry_raw else (None, False)
             
             position_match = cls.POSITION_SIZE_PATTERN.search(message)
             position_size = position_match.group(1) if position_match else None
@@ -670,7 +680,7 @@ class OptionParser:
             price, price_range = cls._parse_price_range(price_str)
             
             # 处理相对日期
-            expiry = cls._resolve_relative_date(expiry_raw, message_timestamp) if expiry_raw else None
+            (expiry, _expiry_fallback) = cls._resolve_relative_date(expiry_raw, message_timestamp) if expiry_raw else (None, False)
             
             position_match = cls.POSITION_SIZE_PATTERN.search(message)
             position_size = position_match.group(1) if position_match else None
@@ -740,7 +750,7 @@ class OptionParser:
             price, price_range = cls._parse_price_range(price_str)
             
             # 处理日期
-            expiry = cls._resolve_relative_date(expiry_raw, message_timestamp) if expiry_raw else None
+            (expiry, _expiry_fallback) = cls._resolve_relative_date(expiry_raw, message_timestamp) if expiry_raw else (None, False)
             
             position_match = cls.POSITION_SIZE_PATTERN.search(message)
             position_size = position_match.group(1) if position_match else None
@@ -772,7 +782,7 @@ class OptionParser:
             price, price_range = cls._parse_price_range(price_str)
             
             # 处理相对日期
-            expiry = cls._resolve_relative_date(expiry_raw, message_timestamp) if expiry_raw else None
+            (expiry, _expiry_fallback) = cls._resolve_relative_date(expiry_raw, message_timestamp) if expiry_raw else (None, False)
             
             position_match = cls.POSITION_SIZE_PATTERN.search(message)
             position_size = position_match.group(1) if position_match else None
@@ -811,7 +821,7 @@ class OptionParser:
             
             # 处理日期
             expiry_raw = relative_date or specific_date
-            expiry = cls._resolve_relative_date(expiry_raw, message_timestamp) if expiry_raw else None
+            (expiry, _expiry_fallback) = cls._resolve_relative_date(expiry_raw, message_timestamp) if expiry_raw else (None, False)
             
             position_match = cls.POSITION_SIZE_PATTERN.search(message)
             position_size = position_match.group(1) if position_match else None

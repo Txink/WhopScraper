@@ -102,10 +102,12 @@ def print_order_validation_display(
     instruction_timestamp: Optional[str] = None,
     reject_reason: Optional[str] = None,
     stop_loss_line: Optional[str] = None,
+    expiry_fallback_time: bool = False,
 ) -> None:
     """
     提交订单前校验结束后统一输出：
     {时间} [订单校验] [BUY] symbol=xxx price=x.x [+Nms]
+                                                               注意：消息未获取到时间，使用当前时间计算到期日（可选）
                                                                查询价格：...
                                                                买入数量：...
                                                                买入总价：...
@@ -131,6 +133,8 @@ def print_order_validation_display(
         f"price={price}",
         ms_rich,
     )
+    if expiry_fallback_time:
+        console.print(f"{indent}[bold yellow]注意：消息未获取到时间，使用当前时间计算到期日[/bold yellow]")
     console.print(f"{indent}[dim white]{price_line}[/dim white]")
     console.print(f"{indent}[dim white]{quantity_line}[/dim white]")
     console.print(f"{indent}[dim white]{total_line}[/dim white]")

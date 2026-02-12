@@ -71,6 +71,9 @@ class OptionInstruction:
     # 消息标识（用于去重）
     message_id: Optional[str] = None
     
+    # 标记：到期日是否使用当前时间兜底计算（消息无时间戳时）
+    expiry_fallback_time: bool = False
+    
     def to_dict(self) -> dict:
         """转换为字典，过滤掉 None 值"""
         result = {}
