@@ -38,6 +38,20 @@ cp .env.example .env
 
 2. 编辑 `.env` 文件，填入你的凭据。
 
+
+
+## 长桥OpenAPI 配置
+
+[https://open.longbridge.com/zh-CN/](https://open.longbridge.com/zh-CN/)
+
+![](./images/longport_1.png)
+
+登录后，就可以看到自己的AppKey，AppSecret，AccessToken
+> 注意：如果期望通过API完成下单操作，需要购买对应的OpenAPI行情 
+
+![](./images/longport_2.png)
+
+
 ```bash
 # 长桥账户相关配置
 # 账户模式
