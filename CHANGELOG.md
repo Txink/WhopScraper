@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## [2026-02-12] 支持带点号的 ticker 解析（BRK.B → BRKB）
+
+### 新增
+- **带点号 ticker 归一化**（`parser/option_parser.py`）
+  - 新增 `_DOT_TICKER_RE` 正则和 `_normalize_dot_tickers()` 方法
+  - 在 `parse()` 入口处预处理消息，将 `BRK.B`、`BF.A` 等带点号的 ticker 归一化为 `BRKB`、`BFA`
+  - 解决 `[A-Z]{2,5}` 正则无法匹配含点号 ticker 导致解析失败的问题
+
+### 问题场景
+- 消息 `"BRK.B - $510 CALLS EXPIRATION NEXT WEEK $1.90"` 无法解析
+- 原因：正则匹配到 `BRK` 后，`.B` 无法匹配后续期望的空格/横杠/价格模式，所有开仓模式全部失败
+- 修复后正确解析为：ticker=BRKB, strike=510, type=CALL, price=1.90, expiry=NEXT WEEK
+
 ## [2026-02-11] 期权默认止损配置
 
 ### 新增

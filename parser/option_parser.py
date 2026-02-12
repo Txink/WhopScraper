@@ -450,6 +450,9 @@ class OptionParser:
         if not message:
             return None
         
+        # 归一化带点的 ticker（如 BRK.B → BRKB, BF.A → BFA）
+        message = cls._normalize_dot_tickers(message)
+        
         # 生成消息 ID（如果未提供）
         if not message_id:
             message_id = hashlib.md5(message.encode()).hexdigest()[:12]
@@ -475,6 +478,14 @@ class OptionParser:
         # 无法解析
         return None
     
+    # 带点的 ticker 归一化正则：匹配 BRK.B、BF.A 等（2-4字母 + 点 + 1字母）
+    _DOT_TICKER_RE = re.compile(r'(?<![A-Za-z])([A-Za-z]{2,4})\.([A-Za-z])(?![A-Za-z])')
+
+    @classmethod
+    def _normalize_dot_tickers(cls, message: str) -> str:
+        """将带点的 ticker（如 BRK.B → BRKB）归一化，避免正则无法匹配。"""
+        return cls._DOT_TICKER_RE.sub(r'\1\2', message)
+
     @classmethod
     def _fill_ticker_from_message_if_missing(cls, instruction: OptionInstruction, message: str) -> None:
         """当指令无 ticker 时，从消息正文解析首个 ticker 并填入，便于 resolver 从历史匹配同标的。"""
