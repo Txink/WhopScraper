@@ -447,6 +447,58 @@ class PositionManager:
                         self.remove_position(symbol)
             except Exception as e:
                 logger.warning(f"订单推送后刷新持仓失败: {e}")
+            # 输出 [持仓更新] 日志：展示该 symbol 的最新持仓及买卖记录
+            self._log_position_update(symbol, side_str)
+
+    def _log_position_update(self, symbol: str, side_str: str) -> None:
+        """订单成交后输出该 symbol 的持仓概况和交易记录，格式与 [账户持仓] 一致。"""
+        ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+        pos = self.positions.get(symbol)
+        option_multiplier = 100
+        total_assets = 0.0
+        if self.account_balance is not None:
+            total_assets = float(self.account_balance.get("total_cash") or 0)
+
+        action = "买入" if "Buy" in side_str else "卖出"
+        console.print(
+            f"[grey70]{ts}[/grey70] [bold magenta][持仓更新][/bold magenta] "
+            f"{action}成交后 [bold]{symbol}[/bold]"
+        )
+        if pos:
+            position_value = pos.quantity * pos.avg_cost * option_multiplier
+            pct = (position_value / total_assets * 100) if total_assets > 0 else 0
+            sl_info = f" 止损=${pos.stop_loss_price}" if pos.stop_loss_price else ""
+            console.print(
+                f"    [bold]{symbol} || 仓位={pos.quantity}张 成本=${pos.avg_cost:.3f} "
+                f"总价=${position_value:,.2f} 占比={pct:.1f}%{sl_info}[/bold]"
+            )
+        else:
+            console.print(f"    [bold]{symbol} || 仓位=0张（已清仓）[/bold]")
+
+        records = self.trade_records.get(symbol, [])
+        for rec in sorted(records, key=lambda r: r.get("submitted_at") or ""):
+            rec_ts = rec.get("submitted_at") or ts
+            if isinstance(rec_ts, str) and "T" in rec_ts:
+                rec_ts = rec_ts.replace("T", " ")[:19]
+                if len(rec_ts) == 19 and "." not in rec_ts:
+                    rec_ts = rec_ts + ".000"
+            side_raw = rec.get("side", "")
+            side = "BUY" if "Buy" in (side_raw or "") else ("SELL" if "Sell" in (side_raw or "") else (side_raw or "").upper())
+            if side not in ("BUY", "SELL"):
+                side = "BUY"
+            side_pad = side.ljust(4)[:4]
+            side_tag = f"[{side_pad}]"
+            side_rich = f"[green]{side_tag}[/green]" if side == "BUY" else f"[yellow]{side_tag}[/yellow]"
+            qty = int(float(rec.get("executed_quantity") or rec.get("quantity") or 0))
+            price = rec.get("price")
+            if price is None:
+                price_str = "-"
+            elif isinstance(price, (int, float)) and price == int(price):
+                price_str = f"{int(price)}"
+            else:
+                price_str = f"{price}"
+            console.print(f"        - [grey70]{rec_ts}[/grey70] {side_rich} 数量={qty:<5} 价格={price_str:<6}")
+        console.print()
 
     def _log_sync_summary(self) -> None:
         """同步完成后用 console.print 输出：余额、总资产、各期权持仓（含总价与占比）及对应 Filled 交易记录（缩进格式）。"""
@@ -520,7 +572,6 @@ class PositionManager:
         if symbol in self.positions:
             del self.positions[symbol]
             self._save_positions()
-            print_position_update_display(f"移除持仓: {symbol}")
     
     def get_position(self, symbol: str) -> Optional[Position]:
         """
