@@ -409,13 +409,14 @@ class PositionManager:
             self.trade_records.setdefault(symbol, []).append(rec)
             self._save_trade_records()
             try:
+                # 等待券商系统更新持仓数据，避免查到旧数据
+                import time
+                time.sleep(0.5)
                 positions = broker.get_positions()
+                found_in_broker = False
                 for p in positions or []:
                     if (p.get("symbol") or "") == symbol:
-                        parsed = _parse_option_symbol(symbol)
-                        if not parsed:
-                            break
-                        ticker, expiry, option_type, strike = parsed
+                        found_in_broker = True
                         qty_b = int(float(p.get("quantity", 0)))
                         avail_b = int(float(p.get("available_quantity", qty_b)))
                         cost_b = float(p.get("cost_price", 0))
@@ -425,6 +426,13 @@ class PositionManager:
                             self.update_position(symbol, quantity=qty_b, available_quantity=avail_b, avg_cost=cost_b)
                             self.positions[symbol].calculate_pnl(cost_b)
                         else:
+                            # 解析期权代码；正股则用简单默认值
+                            parsed = _parse_option_symbol(symbol)
+                            if parsed:
+                                ticker, expiry, option_type, strike = parsed
+                            else:
+                                ticker = symbol.replace(".US", "")
+                                expiry, option_type, strike = "", "STOCK", 0.0
                             pos = Position(
                                 symbol=symbol,
                                 ticker=ticker,
@@ -442,16 +450,15 @@ class PositionManager:
                             )
                             self.add_position(pos)
                         break
-                else:
-                    if symbol in self.positions and (not positions or not any((p.get("symbol") or "") == symbol for p in positions)):
-                        self.remove_position(symbol)
+                if not found_in_broker and symbol in self.positions:
+                    self.remove_position(symbol)
             except Exception as e:
                 logger.warning(f"订单推送后刷新持仓失败: {e}")
-            # 输出 [持仓更新] 日志：展示该 symbol 的最新持仓及买卖记录
-            self._log_position_update(symbol, side_str)
+            # 输出 [持仓更新] 日志：展示该 symbol 的最新持仓及买卖记录（交易记录从 API 获取）
+            self._log_position_update(symbol, side_str, broker)
 
-    def _log_position_update(self, symbol: str, side_str: str) -> None:
-        """订单成交后输出该 symbol 的持仓概况和交易记录，格式与 [账户持仓] 一致。"""
+    def _log_position_update(self, symbol: str, side_str: str, broker: Any = None) -> None:
+        """订单成交后输出该 symbol 的持仓概况和交易记录（交易记录优先从 API 获取）。"""
         ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
         pos = self.positions.get(symbol)
         option_multiplier = 100
@@ -475,7 +482,20 @@ class PositionManager:
         else:
             console.print(f"    [bold]{symbol} || 仓位=0张（已清仓）[/bold]")
 
-        records = self.trade_records.get(symbol, [])
+        # 优先从 API 获取该 symbol 的已成交订单作为交易记录
+        records = []
+        if broker:
+            try:
+                all_orders = broker.get_today_orders()
+                for order in all_orders:
+                    if order.get("symbol") == symbol and "filled" in str(order.get("status", "")).lower():
+                        records.append(order)
+            except Exception:
+                pass
+        # API 无结果时兜底用本地记录
+        if not records:
+            records = self.trade_records.get(symbol, [])
+
         for rec in sorted(records, key=lambda r: r.get("submitted_at") or ""):
             rec_ts = rec.get("submitted_at") or ts
             if isinstance(rec_ts, str) and "T" in rec_ts:
