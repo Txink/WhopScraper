@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## [2026-02-17] 解析「价格+剩下+ticker+都出」为 CLOSE
+
+### 修复
+- **期权/正股出货解析**（`parser/option_parser.py`）
+  - 新增模式 2c：`价格+剩下+可选ticker+都出`，例如 `3.2 剩下qqq都出`
+  - 此前仅支持「价格+剩下+都出」（中间无 ticker），导致带 ticker 的「剩下XXX都出」解析失败（symbol = X, operation: FAIL）
+  - 修复后正确解析为：instruction_type=CLOSE, ticker=QQQ, price=3.2
+
 ## [2026-02-12] 支持带点号的 ticker 解析（BRK.B → BRKB）
 
 ### 新增

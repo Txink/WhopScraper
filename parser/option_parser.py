@@ -238,6 +238,12 @@ class OptionParser:
         r'(?:把)?(?:剩下|剩余)(?:的)?(?:都|全)?出(?:了)?',
         re.IGNORECASE
     )
+    # 模式2c: 价格+剩下+可选ticker+都出 (如: 3.2 剩下qqq都出)
+    TAKE_PROFIT_PATTERN_2C = re.compile(
+        r'(\d+(?:' + _DECIMAL + r'\d+)?)\s*(?:附近|左右)?\s*'
+        r'(?:把)?(?:剩下|剩余)(?:的)?\s*([A-Za-z]{2,5})?\s*(?:都|全)?出(?:了)?',
+        re.IGNORECASE
+    )
     
     # 模式3: 价格+出(掉)?+剩余/剩下的+可选ticker → CLOSE (如: 0.61出剩余的, 0.94出掉剩下的cmcsa期权)
     TAKE_PROFIT_PATTERN_3 = re.compile(
@@ -1129,6 +1135,21 @@ class OptionParser:
             return OptionInstruction(
                 raw_message=message,
                 instruction_type=InstructionType.CLOSE.value,
+                price=price,
+                price_range=price_range,
+                message_id=message_id
+            )
+        
+        # 尝试模式2c: 价格+剩下+可选ticker+都出（如: 3.2 剩下qqq都出）
+        match = cls.TAKE_PROFIT_PATTERN_2C.search(message)
+        if match:
+            price_str = match.group(1)
+            ticker = match.group(2).upper() if match.group(2) else None
+            price, price_range = cls._parse_price_range(price_str)
+            return OptionInstruction(
+                raw_message=message,
+                instruction_type=InstructionType.CLOSE.value,
+                ticker=ticker,
                 price=price,
                 price_range=price_range,
                 message_id=message_id
