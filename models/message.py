@@ -197,22 +197,23 @@ class MessageGroup:
                 dt = datetime.strptime(timestamp, "%b %d, %Y %I:%M %p")
                 return f"{dt.strftime('%Y-%m-%d %H:%M:%S')}.{milliseconds:03d}"
             
-            # 仅时间、无日期无星期（如 "10:49 PM"）表示今天
+            # 仅时间、无日期无星期（如 "10:49 PM"）表示今天；小时须为 1-12，否则 %I 会报错
             time_only_ts = timestamp.strip()
-            if re.match(r'^\d{1,2}:\d{2}\s+[AP]M$', time_only_ts, re.IGNORECASE):
+            if re.match(r'^(?:1[0-2]|[1-9]):[0-5]\d\s+[AP]M$', time_only_ts, re.IGNORECASE):
                 time_obj = datetime.strptime(time_only_ts, "%I:%M %p")
                 today = datetime.now().date()
                 dt = datetime.combine(today, time_obj.time())
                 return f"{dt.strftime('%Y-%m-%d %H:%M:%S')}.{milliseconds:03d}"
             
             # 尝试解析相对时间格式: "Yesterday at 11:51 PM", "Today 10:45 PM", "Wednesday 10:45 PM"
-            relative_match = re.match(r'^(Yesterday at|Today|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\s+(\d{1,2}:\d{2}\s+[AP]M|at\s+\d{1,2}:\d{2}\s+[AP]M)$', timestamp, re.IGNORECASE)
+            # 时间部分小时须为 1-12，避免 "52:05 PM" 等无效值触发 %I 解析错误
+            relative_match = re.match(
+                r'^(Yesterday at|Today|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\s+(?:at\s+)?((?:1[0-2]|[1-9]):[0-5]\d\s+[AP]M)$',
+                timestamp, re.IGNORECASE
+            )
             if relative_match:
                 day_part = relative_match.group(1).strip()
-                time_part = relative_match.group(2).strip()
-                
-                # 提取时间（去掉可能的"at"）
-                time_str = time_part.replace('at ', '').strip()
+                time_str = relative_match.group(2).strip()
                 time_obj = datetime.strptime(time_str, "%I:%M %p")
                 
                 now = datetime.now()
