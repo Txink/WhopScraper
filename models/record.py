@@ -15,7 +15,8 @@ def _clean_content(content: str) -> str:
     s = content.strip()
     s = re.sub(r'^\[引用\]\s*', '', s)
     s = re.sub(r'^[\w]+•[A-Z][a-z]{2,9}\s+\d{1,2},\s+\d{4}\s+\d{1,2}:\d{2}\s+[AP]M\s*', '', s)
-    s = re.sub(r'^[XxＸｘ]+', '', s)
+    # 仅当开头是单独 X（后接非字母或结尾）时移除头像占位，保留 "XOM" 等 ticker
+    s = re.sub(r'^[XxＸｘ]+\s*(?=[^A-Za-z]|$)', '', s)
     s = re.sub(r'^[\w]+•[A-Z][a-z]{2,9}\s+\d{1,2},\s+\d{4}\s+\d{1,2}:\d{2}\s+[AP]M\s*', '', s)
     s = re.sub(r'^•?\s*[A-Z][a-z]+\s+\d{1,2}:\d{2}\s+[AP]M\s*', '', s)
     return s.strip()

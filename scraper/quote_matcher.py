@@ -22,8 +22,8 @@ class QuoteMatcher:
         if not quote:
             return ""
         
-        # 移除头像fallback "X"
-        text = re.sub(r'^[XＸ]+\s*', '', quote)
+        # 移除头像 fallback "X"（仅当开头是单独的 X，且后接非字母或结尾时；保留 "XOM" 等 ticker）
+        text = re.sub(r'^[XＸ]+\s*(?=[^A-Za-z]|$)', '', quote)
         
         # 移除作者名模式: "xiaozhaolucky" 等（小写字母开头，后跟大写字母）
         # 例如: "xiaozhaoluckyGILD" -> "GILD"

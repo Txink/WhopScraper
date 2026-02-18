@@ -232,7 +232,7 @@ async def analyze_html_messages(html_file: str, export_json: bool = True):
                 content_clean = content
                 content_clean = re.sub(r'^\[引用\]\s*', '', content_clean)
                 content_clean = re.sub(r'^[\w]+•[A-Z][a-z]{2,9}\s+\d{1,2},\s+\d{4}\s+\d{1,2}:\d{2}\s+[AP]M\s*', '', content_clean)
-                content_clean = re.sub(r'^[XxＸｘ]+', '', content_clean)
+                content_clean = re.sub(r'^[XxＸｘ]+\s*(?=[^A-Za-z]|$)', '', content_clean)
                 content_clean = re.sub(r'^[\w]+•[A-Z][a-z]{2,9}\s+\d{1,2},\s+\d{4}\s+\d{1,2}:\d{2}\s+[AP]M\s*', '', content_clean)
                 content_clean = re.sub(r'^•?\s*[A-Z][a-z]+\s+\d{1,2}:\d{2}\s+[AP]M\s*', '', content_clean)
                 content_clean = content_clean.strip()

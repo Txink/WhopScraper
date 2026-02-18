@@ -1,5 +1,25 @@
 # CHANGELOG
 
+## [2026-02-18] 头像 “X” 规则误删 ticker 首字母 X（XOM→OM）
+
+### 修复
+- **移除“开头 X”时保留 ticker XOM**（多处）
+  - **原因**：为过滤头像 fallback “X”，曾用 `^[XxＸｘ]+\s*` 或 `^X\s*` 去掉开头 X，导致 “XOM - ...” 被清成 “OM - ...”，解析得到 ticker=OM。
+  - **修改**：仅在“开头是单独 X（后接非字母或结尾）”时移除，即用 `^[XxＸｘ]+\s*(?=[^A-Za-z]|$)`（Python）或 `^X\s*(?=[^A-Za-z]|$)`（JS），保留 “XOM” 等以 X 开头的 ticker。
+  - **涉及文件**：`models/record.py`（`_clean_content`，主流程）、`scraper/quote_matcher.py`（`clean_quote_text`）、`scraper/message_extractor.py`（两处引用清理）、`test/analyze_local_messages.py`。
+
+## [2026-02-18] XOM 解析为 OM、时间戳无效时相对日期兜底
+
+### 修复
+- **ticker 被解析成 OM 而非 XOM**（`parser/option_parser.py`）
+  - 原因：消息中的 “X” 有时为 Unicode 希腊字母 Chi (U+03A7)，外观与拉丁 X 相同但 `[A-Z]` 不匹配，正则从第二位起匹配到 “OM”
+  - 处理：在 `parse()` 入口对消息做 `_TICKER_LOOKALIKES` 归一化（希腊 Chi/Alpha/Omicron 等 → 对应 ASCII），再走原有正则
+- **时间戳无效时相对日期无法解析**（`parser/option_parser.py`、`models/instruction.py`）
+  - 当 `message_timestamp` 为非法格式（如 `57:14 PM`）时，`_resolve_relative_date` 原先直接返回 `("THIS WEEK", False)`，导致到期日未转为具体日期
+  - 处理：时间戳解析失败时用 `datetime.now()` 兜底，照常计算「本周/下周」对应周五；`normalize_expiry_to_yymmdd` 在 timestamp 无效且到期为相对日期时同样用当前日期兜底
+
+说明：当前「THIS WEEK」= 本周五（如 2/18 周三 → 2/20）；若需 2/27 应使用「NEXT WEEK」。
+
 ## [2026-02-18] 时间戳解析与开仓格式
 
 ### 修复

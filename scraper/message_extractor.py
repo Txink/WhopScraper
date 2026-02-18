@@ -130,7 +130,8 @@ class EnhancedMessageExtractor:
                         // 清理
                         quoteText = quoteText.replace(/Tail$/g, '').trim();
                         quoteText = quoteText.replace(/\s+/g, ' ');
-                        quoteText = quoteText.replace(/^X\s*/, '');
+                        // 仅当开头是单独 "X"（后接非字母或结尾）时移除头像 fallback，保留 "XOM" 等 ticker
+                        quoteText = quoteText.replace(/^X\s*(?=[^A-Za-z]|$)/, '');
                         quoteText = quoteText.replace(/^xiaozhaolucky\s*/i, '');
                         
                         if (quoteText.length > 5 && quoteText.length < 500) {
@@ -302,8 +303,8 @@ class EnhancedMessageExtractor:
                         quoteText = quoteText.replace(/Tail$/g, '').trim();
                         quoteText = quoteText.replace(/\s+/g, ' ');
                         
-                        // 过滤掉头像fallback "X"
-                        quoteText = quoteText.replace(/^X\s*/, '');
+                        // 仅当开头是单独 "X"（后接非字母或结尾）时移除头像 fallback，保留 "XOM" 等 ticker
+                        quoteText = quoteText.replace(/^X\s*(?=[^A-Za-z]|$)/, '');
                         
                         // 过滤掉作者名（如果文本以作者名开头）
                         quoteText = quoteText.replace(/^xiaozhaolucky\s*/i, '');
