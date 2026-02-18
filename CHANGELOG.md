@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## [2026-02-18] 支持「$TICKER - $STRIKE 这周 calls $PRICE」开仓格式
+
+### 新增
+- **期权开仓解析**（`parser/option_parser.py`）
+  - 新增 OPEN_PATTERN_9：行权价在前、相对日期在中间，例如 `$UUUU - $21 这周 calls $.85 彩票`
+  - 此前仅支持「到期在 strike 前」或「strike 后直接 call/put」，导致上述格式解析失败（symbol = X）
+  - 修复后正确解析为：ticker=UUUU, strike=21, expiry=2/20, type=CALL, price=0.85
+
 ## [2026-02-17] 解析「价格+剩下+ticker+都出」为 CLOSE
 
 ### 修复

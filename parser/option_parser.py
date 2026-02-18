@@ -171,6 +171,17 @@ class OptionParser:
         re.IGNORECASE
     )
     
+    # 模式9: 行权价在前、相对日期在中间 - $TICKER - $STRIKE 这周/本周/下周 calls $PRICE
+    # 示例: $UUUU - $21 这周 calls $.85 彩票
+    OPEN_PATTERN_9 = re.compile(
+        r'\$?([A-Z]{2,5})\s*[-–]?\s*'
+        r'\$?(\d+(?:\.\d+)?)\s+'
+        r'(本周|下周|这周|当周|今天)(?:的)?\s*'
+        r'(call|put)s?\s*'
+        r'\$?((?:\d+(?:\.\d+)?|\.\d+)(?:-(?:\d+(?:\.\d+)?|\.\d+))?)',
+        re.IGNORECASE
+    )
+    
     # 止损指令正则
     # 示例: 止损 0.95
     # 示例: 止损在1.00
@@ -832,6 +843,32 @@ class OptionParser:
             position_match = cls.POSITION_SIZE_PATTERN.search(message)
             position_size = position_match.group(1) if position_match else None
             
+            return OptionInstruction(
+                raw_message=message,
+                instruction_type=InstructionType.BUY.value,
+                ticker=ticker,
+                option_type=option_type,
+                strike=strike,
+                expiry=expiry,
+                price=price,
+                price_range=price_range,
+                position_size=position_size,
+                message_id=message_id
+            )
+        
+        # 尝试模式9: 行权价在前、相对日期在中间 ($UUUU - $21 这周 calls $.85)
+        match = cls.OPEN_PATTERN_9.search(message)
+        if match:
+            ticker = match.group(1).upper()
+            strike = float(match.group(2))
+            expiry_raw = match.group(3)  # 本周/下周/这周/当周/今天
+            option_type_str = match.group(4)
+            price_str = match.group(5)
+            option_type = 'CALL' if option_type_str.upper().startswith('CALL') else 'PUT'
+            price, price_range = cls._parse_price_range(price_str)
+            (expiry, _expiry_fallback) = cls._resolve_relative_date(expiry_raw, message_timestamp) if expiry_raw else (None, False)
+            position_match = cls.POSITION_SIZE_PATTERN.search(message)
+            position_size = position_match.group(1) if position_match else None
             return OptionInstruction(
                 raw_message=message,
                 instruction_type=InstructionType.BUY.value,
