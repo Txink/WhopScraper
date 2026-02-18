@@ -346,7 +346,7 @@ class OptionInstruction:
             return expiry
 
         # 从 timestamp 提取年份和日期
-        year = 26
+        year = datetime.now().year % 100
         msg_date = None
         if timestamp:
             try:
@@ -359,20 +359,21 @@ class OptionInstruction:
                 # 尝试解析标准化格式: "2026-02-05 23:51:00.010"
                 try:
                     if re.match(r"\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}", timestamp):
-                        # 提取年份
                         year_match = re.match(r"(\d{4})", timestamp)
                         if year_match:
                             year = int(year_match.group(1)) % 100
-                        # 解析日期
                         msg_date = datetime.strptime(timestamp[:19], "%Y-%m-%d %H:%M:%S")
                 except Exception:
                     pass
+        relative_lower = expiry.lower()
+        # 时间戳无效时用当前日期兜底，保证 "THIS WEEK" 等相对日期仍能算出 YYMMDD
+        if msg_date is None and relative_lower in ["今天", "today", "本周", "这周", "当周", "this week", "下周", "next week"]:
+            msg_date = datetime.now()
 
         month = None
         day = None
 
         # 相对日期：今天/本周/下周 -> 具体日期
-        relative_lower = expiry.lower()
         if msg_date and relative_lower in ["今天", "today"]:
             # 今天
             month, day = msg_date.month, msg_date.day
