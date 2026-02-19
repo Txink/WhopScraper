@@ -20,49 +20,69 @@ class BrowserManager:
         storage_state_path: str = "storage_state.json",
         log_lines: Optional[List[Tuple[str, str]]] = None,
         log_refresh: Optional[Callable[[], None]] = None,
+        maximize_window: bool = False,
     ):
         """
         初始化浏览器管理器
-        
+
         Args:
             headless: 是否无头模式运行
             slow_mo: 操作延迟（毫秒），用于调试
             storage_state_path: Cookie 存储路径
             log_lines: 可选，用于收集 [网页监听] 展示条目，不打印到终端
             log_refresh: 可选，每次向 log_lines 追加后调用的刷新回调（用于 Live 更新）
+            maximize_window: 有界面时是否全屏（--start-maximized + no_viewport=True，仅非 headless 有效）
         """
         self.headless = headless
         self.slow_mo = slow_mo
         self.storage_state_path = storage_state_path
         self.log_lines = log_lines
         self.log_refresh = log_refresh
-        
+        self.maximize_window = maximize_window and not headless
+
         self._playwright: Optional[Playwright] = None
         self._browser: Optional[Browser] = None
         self._context: Optional[BrowserContext] = None
         self._page: Optional[Page] = None
-    
+
     async def start(self) -> Page:
         """
         启动浏览器并返回页面对象
-        
+
         Returns:
             Page 对象
         """
         self._playwright = await async_playwright().start()
-        
-        # 启动 Chromium 浏览器
+
+        launch_args = [
+            '--disable-blink-features=AutomationControlled',
+            '--disable-infobars',
+        ]
+        if self.maximize_window:
+            launch_args.append('--start-maximized')
+        else:
+            launch_args.append('--window-size=1920,1080')
+
         self._browser = await self._playwright.chromium.launch(
             headless=self.headless,
             slow_mo=self.slow_mo,
-            args=[
-                '--disable-blink-features=AutomationControlled',
-                '--disable-infobars',
-                '--window-size=1920,1080',
-            ]
+            args=launch_args,
         )
-        
-        # 检查是否有保存的登录状态
+
+        # maximize 时禁用固定 viewport，使用窗口实际尺寸，避免导航后窗口被缩回 1280x720
+        user_agent = (
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) '
+            'AppleWebKit/537.36 (KHTML, like Gecko) '
+            'Chrome/120.0.0.0 Safari/537.36'
+        )
+        context_kw: dict = {
+            'user_agent': user_agent,
+        }
+        if self.maximize_window:
+            context_kw['no_viewport'] = True
+        else:
+            context_kw['viewport'] = {'width': 1920, 'height': 1080}
+
         if os.path.exists(self.storage_state_path):
             if self.log_lines is not None:
                 path = self.storage_state_path
@@ -77,12 +97,7 @@ class BrowserManager:
                 print(f"加载已保存的登录状态: {self.storage_state_path}")
             self._context = await self._browser.new_context(
                 storage_state=self.storage_state_path,
-                viewport={'width': 1920, 'height': 1080},
-                user_agent=(
-                    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) '
-                    'AppleWebKit/537.36 (KHTML, like Gecko) '
-                    'Chrome/120.0.0.0 Safari/537.36'
-                )
+                **context_kw,
             )
         else:
             if self.log_lines is not None:
@@ -91,14 +106,7 @@ class BrowserManager:
                     self.log_refresh()
             else:
                 print("首次启动，需要登录")
-            self._context = await self._browser.new_context(
-                viewport={'width': 1920, 'height': 1080},
-                user_agent=(
-                    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) '
-                    'AppleWebKit/537.36 (KHTML, like Gecko) '
-                    'Chrome/120.0.0.0 Safari/537.36'
-                )
-            )
+            self._context = await self._browser.new_context(**context_kw)
         
         self._page = await self._context.new_page()
         return self._page

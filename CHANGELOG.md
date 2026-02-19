@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [2026-02-19] 页面抓取脚本独立
+
+### 新增
+- **消息导出脚本**：`scripts/scraper/export_page_message.py` — 全屏打开目标页面、自动滚动抓取消息并导出。参数：`--type`（stock|option，默认 stock）、`--output`（默认 `tmp/<type>/origin_message.json`）、可选 `--url`；不依赖环境变量，默认由参数控制。
+- **HTML 导出脚本**：`scripts/scraper/export_page_html.py` — 打开目标页面并导出当前 HTML。参数：`--type`（stock|option，默认 stock）、`--output`（默认 `tmp/<type>/page_html.html`）、可选 `--url`。
+
 ## [2026-02-18] 头像 “X” 规则误删 ticker 首字母 X（XOM→OM）
 
 ### 修复

@@ -98,6 +98,62 @@ python3 whop/whop_login.py
 python3 main.py
 ```
 
+## 开发者指南
+
+### 导出页面消息（自动滚动抓取）
+
+全屏打开浏览器，自动滚动消息区以加载历史，抓取后按 domID 去重导出为 JSON。
+
+```bash
+python3 scripts/scraper/export_page_message.py [--type stock|option] [--output PATH] [--url URL]
+```
+
+| 参数 | 说明 | 默认值 |
+|------|------|--------|
+| `--type` | 页面类型：`stock` 正股、`option` 期权 | `stock` |
+| `--output` | 消息导出路径 | `tmp/<type>/origin_message.json` |
+| `--url` | 目标页面 URL；不传则从 `.env` 的 `PAGES` 中按 `--type` 取首个 | - |
+
+示例：
+```bash
+# 正股页消息导出到默认路径 tmp/stock/origin_message.json
+python3 scripts/scraper/export_page_message.py
+
+# 期权页消息导出到指定路径
+python3 scripts/scraper/export_page_message.py --type option --output tmp/option/origin_message.json
+
+# 指定 URL（可直接复制 .env 中 PAGES 的 url）
+python3 scripts/scraper/export_page_message.py --type stock --url "https://whop.com/joined/stock-and-option/-GiWyN1ZTuUjwlG/app/"
+python3 scripts/scraper/export_page_message.py --type option --url "https://whop.com/joined/stock-and-option/-gZyq1MzOZAWO98/app/"
+```
+
+### 导出页面 HTML
+
+打开目标页面，将当前 DOM 的 HTML 导出到本地文件（用于分析页面结构或调试滚动逻辑）。
+
+```bash
+python3 scripts/scraper/export_page_html.py [--type stock|option] [--output PATH] [--url URL]
+```
+
+| 参数 | 说明 | 默认值 |
+|------|------|--------|
+| `--type` | 页面类型：`stock` 正股、`option` 期权 | `stock` |
+| `--output` | HTML 导出路径 | `tmp/<type>/page_html.html` |
+| `--url` | 目标页面 URL；不传则从 `.env` 的 `PAGES` 中按 `--type` 取首个 | - |
+
+示例：
+```bash
+# 正股页 HTML 导出到默认路径 tmp/stock/page_html.html
+python3 scripts/scraper/export_page_html.py
+
+# 期权页 HTML 导出到指定路径
+python3 scripts/scraper/export_page_html.py --type option --output tmp/option/page_html.html
+
+# 指定 URL（可直接复制 .env 中 PAGES 的 url）
+python3 scripts/scraper/export_page_html.py --type stock --url "https://whop.com/joined/stock-and-option/-GiWyN1ZTuUjwlG/app/"
+python3 scripts/scraper/export_page_html.py --type option --url "https://whop.com/joined/stock-and-option/-gZyq1MzOZAWO98/app/"
+```
+
 ### 配置分类
 
 #### Whop 平台配置
