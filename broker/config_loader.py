@@ -52,7 +52,6 @@ class LongPortConfigLoader:
         if self.mode == self.PAPER_MODE:
             self._config = self._load_paper_config()
         else:
-            logger.warning("💰 使用真实账户 (Real Trading) - 请谨慎操作！")
             self._config = self._load_real_config()
         return self._config
     
@@ -96,9 +95,6 @@ class LongPortConfigLoader:
         
         if not auto_trade:
             logger.warning("⚠️  LONGPORT_AUTO_TRADE=false，将不会自动下单")
-        
-        if dry_run:
-            logger.warning("⚠️  LONGPORT_DRY_RUN=true，模拟模式已启用，不会真实下单")
         
         return Config(
             app_key=app_key,

@@ -89,26 +89,26 @@ class Position:
         """转换为字典"""
         return asdict(self)
     
-    def calculate_pnl(self, current_price: float = None):
+    def calculate_pnl(self, current_price: float = None, multiplier: int = 100):
         """
         计算盈亏
         
         Args:
             current_price: 当前价格（可选，默认使用对象的 current_price）
+            multiplier: 合约乘数，期权 100（1 张=100 股），股票 1
         """
         if current_price:
             self.current_price = current_price
-        
+        if getattr(self, "option_type", "") == "STOCK":
+            multiplier = 1
         # 计算市值和盈亏
-        self.market_value = self.current_price * self.quantity * 100
-        cost = self.avg_cost * self.quantity * 100
+        self.market_value = self.current_price * self.quantity * multiplier
+        cost = self.avg_cost * self.quantity * multiplier
         self.unrealized_pnl = self.market_value - cost
-        
         if cost > 0:
             self.unrealized_pnl_pct = (self.unrealized_pnl / cost) * 100
         else:
             self.unrealized_pnl_pct = 0.0
-        
         self.updated_at = datetime.now().isoformat()
     
     def should_stop_loss(self) -> bool:
@@ -140,21 +140,31 @@ class Position:
         logger.info(f"调整止损: {self.symbol} {old_price} → {new_price}")
 
 
+def _is_stock_symbol(symbol: str) -> bool:
+    """是否为股票代码（非期权）。期权格式如 AAPL251220C150000.US，股票如 AAPL.US。"""
+    return bool(symbol) and symbol.endswith(".US") and _parse_option_symbol(symbol) is None
+
+
 class PositionManager:
     """持仓管理器"""
     
-    def __init__(self, storage_file: str = "data/positions.json"):
+    def __init__(self, storage_file: str = "data/positions.json", is_stock_mode: bool = False):
         """
         初始化持仓管理器
         
         Args:
             storage_file: 持仓数据存储文件
+            is_stock_mode: True 表示当前监控股票页，同步并展示股票持仓（股、总价=数量×单价）；False 为期权页（张、×100）
         """
         self.storage_file = storage_file
+        self.is_stock_mode = is_stock_mode
         self.positions: Dict[str, Position] = {}
         self.account_balance: Optional[Dict[str, Any]] = None
         self.trade_records: Dict[str, List[Dict[str, Any]]] = {}  # symbol -> list of order/execution records
-        self._trade_records_file = storage_file.replace("positions.json", "trade_records.json") if "positions.json" in storage_file else "data/trade_records.json"
+        if is_stock_mode:
+            self._trade_records_file = "data/stock_trade_records.json"
+        else:
+            self._trade_records_file = storage_file.replace("positions.json", "trade_records.json") if "positions.json" in storage_file else "data/trade_records.json"
         self._load_positions()
         self._load_trade_records()
     
@@ -241,8 +251,9 @@ class PositionManager:
     
     def sync_from_broker(self, broker: Any) -> None:
         """
-        从券商同步：账户余额、所有期权持仓、对应持仓期权的交易记录。
-        应在 monitor 启动时调用。
+        从券商同步：账户余额、持仓及交易记录。
+        股票页（is_stock_mode=True）：同步股票持仓，总价=数量×单价（不乘 100）。
+        期权页：同步期权持仓，总价=数量×单价×100（1 张=100 股）。
         
         Args:
             broker: 具备 get_account_balance()、get_positions()、get_today_orders() 的 broker 实例
@@ -256,27 +267,31 @@ class PositionManager:
             return
         if not broker_positions:
             broker_positions = []
-        option_positions = []
-        for p in broker_positions:
-            sym = p.get("symbol") or ""
-            if _parse_option_symbol(sym):
-                option_positions.append(p)
-        for p in option_positions:
+        multiplier = 1 if self.is_stock_mode else 100
+        if self.is_stock_mode:
+            relevant_positions = [p for p in broker_positions if _is_stock_symbol(p.get("symbol") or "")]
+        else:
+            relevant_positions = [p for p in broker_positions if _parse_option_symbol(p.get("symbol") or "")]
+        for p in relevant_positions:
             symbol = p["symbol"]
-            parsed = _parse_option_symbol(symbol)
-            if not parsed:
-                continue
-            ticker, expiry, option_type, strike = parsed
             qty = int(float(p.get("quantity", 0)))
             avail = int(float(p.get("available_quantity", qty)))
             cost = float(p.get("cost_price", 0))
+            if self.is_stock_mode:
+                ticker = symbol.replace(".US", "") if symbol else ""
+                option_type, strike, expiry = "STOCK", 0.0, ""
+            else:
+                parsed = _parse_option_symbol(symbol)
+                if not parsed:
+                    continue
+                ticker, expiry, option_type, strike = parsed
             if symbol in self.positions:
                 pos = self.positions[symbol]
                 pos.quantity = qty
                 pos.available_quantity = avail
                 pos.avg_cost = cost
                 pos.current_price = cost
-                pos.calculate_pnl()
+                pos.calculate_pnl(multiplier=multiplier)
             else:
                 pos = Position(
                     symbol=symbol,
@@ -288,30 +303,32 @@ class PositionManager:
                     available_quantity=avail,
                     avg_cost=cost,
                     current_price=cost,
-                    market_value=cost * qty * 100,
+                    market_value=cost * qty * multiplier,
                     unrealized_pnl=0.0,
                     unrealized_pnl_pct=0.0,
                     updated_at=datetime.now().isoformat(),
                 )
                 self.positions[symbol] = pos
         for symbol in list(self.positions.keys()):
-            if not any(p.get("symbol") == symbol for p in option_positions):
+            if not any(p.get("symbol") == symbol for p in relevant_positions):
                 del self.positions[symbol]
-        option_symbols = set(self.positions.keys())
+        def _symbol_relevant(s: str) -> bool:
+            return _is_stock_symbol(s) if self.is_stock_mode else bool(_parse_option_symbol(s))
+        relevant_symbols = set(self.positions.keys())
         for o in orders or []:
             sym = o.get("symbol")
-            if sym not in option_symbols and _parse_option_symbol(sym):
-                option_symbols.add(sym)
+            if sym and sym not in relevant_symbols and _symbol_relevant(sym):
+                relevant_symbols.add(sym)
         # 保留已有交易记录，只合并当日 Filled（按 order_id 去重），不覆盖历史
-        for sym in option_symbols:
+        for sym in relevant_symbols:
             self.trade_records.setdefault(sym, [])
         existing_order_ids = {
             sym: {str(r.get("order_id")) for r in self.trade_records.get(sym, [])}
-            for sym in option_symbols
+            for sym in relevant_symbols
         }
         for o in orders or []:
             sym = o.get("symbol")
-            if sym not in option_symbols:
+            if sym not in relevant_symbols:
                 continue
             if not _is_filled(o.get("status")):
                 continue
@@ -341,9 +358,9 @@ class PositionManager:
                 history_orders = get_history(start_at, end_at)
                 for o in history_orders or []:
                     sym = o.get("symbol")
-                    if not sym or not _parse_option_symbol(sym):
+                    if not sym or not _symbol_relevant(sym):
                         continue
-                    option_symbols.add(sym)
+                    relevant_symbols.add(sym)
                     self.trade_records.setdefault(sym, [])
                     if not _is_filled(o.get("status")):
                         continue
@@ -360,7 +377,7 @@ class PositionManager:
                         "status": o.get("status"),
                         "submitted_at": o.get("submitted_at"),
                     }
-                    self.trade_records[sym].append(rec)
+                    self.trade_records.setdefault(sym, []).append(rec)
                     if oid:
                         existing_order_ids.setdefault(sym, set()).add(str(oid))
             except Exception as e:
@@ -424,10 +441,13 @@ class PositionManager:
                             self.remove_position(symbol)
                         elif symbol in self.positions:
                             self.update_position(symbol, quantity=qty_b, available_quantity=avail_b, avg_cost=cost_b)
-                            self.positions[symbol].calculate_pnl(cost_b)
+                            mult = 1 if self.is_stock_mode else 100
+                            self.positions[symbol].calculate_pnl(cost_b, multiplier=mult)
                         else:
                             # 解析期权代码；正股则用简单默认值
                             parsed = _parse_option_symbol(symbol)
+                            is_stock = self.is_stock_mode and _is_stock_symbol(symbol)
+                            mult = 1 if is_stock else 100
                             if parsed:
                                 ticker, expiry, option_type, strike = parsed
                             else:
@@ -443,7 +463,7 @@ class PositionManager:
                                 available_quantity=avail_b,
                                 avg_cost=cost_b,
                                 current_price=cost_b,
-                                market_value=cost_b * qty_b * 100,
+                                market_value=cost_b * qty_b * mult,
                                 unrealized_pnl=0.0,
                                 unrealized_pnl_pct=0.0,
                                 updated_at=datetime.now().isoformat(),
@@ -461,10 +481,19 @@ class PositionManager:
         """订单成交后输出该 symbol 的持仓概况和交易记录（交易记录优先从 API 获取）。"""
         ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
         pos = self.positions.get(symbol)
-        option_multiplier = 100
+        is_stock = pos and getattr(pos, "option_type", "") == "STOCK"
+        mult = 1 if is_stock else 100
+        unit = "股" if is_stock else "张"
         total_assets = 0.0
         if self.account_balance is not None:
-            total_assets = float(self.account_balance.get("total_cash") or 0)
+            total_assets = float(self.account_balance.get("net_assets") or 0)
+        if total_assets == 0:
+            available_cash = float(self.account_balance.get("available_cash") or 0) if self.account_balance else 0.0
+            total_position_value = sum(
+                p.quantity * p.avg_cost * (1 if getattr(p, "option_type", "") == "STOCK" else 100)
+                for p in self.positions.values()
+            )
+            total_assets = available_cash + total_position_value
 
         action = "买入" if "Buy" in side_str else "卖出"
         console.print(
@@ -472,15 +501,15 @@ class PositionManager:
             f"{action}成交后 [bold]{symbol}[/bold]"
         )
         if pos:
-            position_value = pos.quantity * pos.avg_cost * option_multiplier
+            position_value = pos.quantity * pos.avg_cost * mult
             pct = (position_value / total_assets * 100) if total_assets > 0 else 0
             sl_info = f" 止损=${pos.stop_loss_price}" if pos.stop_loss_price else ""
             console.print(
-                f"    [bold]{symbol} || 仓位={pos.quantity}张 成本=${pos.avg_cost:.3f} "
+                f"    [bold]{symbol} || 仓位={pos.quantity}{unit} 成本=${pos.avg_cost:.3f} "
                 f"总价=${position_value:,.2f} 占比={pct:.1f}%{sl_info}[/bold]"
             )
         else:
-            console.print(f"    [bold]{symbol} || 仓位=0张（已清仓）[/bold]")
+            console.print(f"    [bold]{symbol} || 仓位=0{unit}（已清仓）[/bold]")
 
         # 优先从 API 获取该 symbol 的已成交订单作为交易记录
         records = []
@@ -521,20 +550,23 @@ class PositionManager:
         console.print()
 
     def _log_sync_summary(self) -> None:
-        """同步完成后用 console.print 输出：余额、总资产、各期权持仓（含总价与占比）及对应 Filled 交易记录（缩进格式）。"""
+        """同步完成后用 console.print 输出：可用现金、现金、总资产（=net_assets）、持仓及对应 Filled 交易记录。"""
         ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
         available_cash = 0.0
+        cash = 0.0
         total_assets = 0.0
         is_paper = True
         if self.account_balance is not None:
-            available_cash = float(
-                self.account_balance.get("available_cash")
-                or self.account_balance.get("total_cash")
-                or 0
-            )
-            total_assets = float(self.account_balance.get("total_cash") or 0)
+            available_cash = float(self.account_balance.get("available_cash") or 0)
+            cash = float(self.account_balance.get("cash") or 0)
+            total_assets = float(self.account_balance.get("net_assets") or 0)
             is_paper = self.account_balance.get("mode", "paper") == "paper"
-        # 只展示当前仓位 > 0 的标的，不展示仓位=0 的
+        if total_assets == 0:
+            total_position_value = sum(
+                p.quantity * p.avg_cost * (1 if getattr(p, "option_type", "") == "STOCK" else 100)
+                for p in self.positions.values()
+            )
+            total_assets = available_cash + total_position_value
         symbols = sorted(
             sym for sym in (set(self.positions.keys()) | set(self.trade_records.keys()))
             if (pos := self.positions.get(sym)) and pos.quantity > 0
@@ -544,17 +576,18 @@ class PositionManager:
         mode_end = "[/bold grey70]" if is_paper else "[/bold green]"
         console.print(
             f"[grey70]{ts}[/grey70] [bold red][账户持仓][/bold red] "
-            f"余额=${available_cash:,.2f} 总资产=${total_assets:,.2f} "
+            f"可用现金=${available_cash:,.2f} 现金=${cash:,.2f} 总资产=${total_assets:,.2f} "
             f"{mode_style}{mode_label}{mode_end}"
         )
-        # 期权合约乘数（美式期权 1 张 = 100 股）
-        option_multiplier = 100
         for sym in symbols:
             pos = self.positions[sym]
-            position_value = pos.quantity * pos.avg_cost * option_multiplier
+            is_stock = getattr(pos, "option_type", "") == "STOCK"
+            mult = 1 if is_stock else 100
+            unit = "股" if is_stock else "张"
+            position_value = pos.quantity * pos.avg_cost * mult
             pct = (position_value / total_assets * 100) if total_assets > 0 else 0
             console.print(
-                f"    [bold]{sym} || 仓位={pos.quantity}张 价格=${pos.avg_cost:.3f} "
+                f"    [bold]{sym} || 仓位={pos.quantity}{unit} 价格=${pos.avg_cost:.3f} "
                 f"总价=${position_value:,.2f} 占比={pct:.1f}%[/bold]"
             )
             records = self.trade_records.get(sym, [])

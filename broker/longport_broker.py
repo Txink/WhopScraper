@@ -542,13 +542,32 @@ class LongPortBroker:
             return []
     
     def get_account_balance(self) -> dict:
-        """获取账户余额"""
+        """获取账户余额，通过 account_balance(currency=\"USD\") 指定币种为 USD。
+        总资产=net_assets，现金=available_cash+frozen_cash，可用现金=available_cash。
+        """
         try:
-            balance = self.ctx.account_balance()
+            balance = self.ctx.account_balance(currency="USD")
+            if not balance:
+                return {
+                    "available_cash": 0.0,
+                    "cash": 0.0,
+                    "net_assets": 0.0,
+                    "total_cash": 0.0,
+                    "currency": "USD",
+                    "mode": "paper" if self.is_paper else "real"
+                }
+            b = balance[0]
+            cash_infos = b.cash_infos or []
+            available_cash = float(cash_infos[0].available_cash) if cash_infos else 0.0
+            frozen_cash = float(cash_infos[0].frozen_cash) if cash_infos else 0.0
+            cash = available_cash + frozen_cash
+            net_assets = float(b.net_assets)
             return {
-                "total_cash": float(balance[0].total_cash),
-                "available_cash": float(balance[0].cash_infos[0].available_cash) if balance[0].cash_infos else 0,
-                "currency": balance[0].currency,
+                "available_cash": available_cash,
+                "cash": cash,
+                "net_assets": net_assets,
+                "total_cash": net_assets,
+                "currency": "USD",
                 "mode": "paper" if self.is_paper else "real"
             }
         except Exception as e:

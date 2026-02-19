@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## [2026-02-20] 账户余额币种与总资产、配置提醒
+
+### 变更
+- **账户余额（get_account_balance）**：调用 `account_balance(currency="USD")` 指定币种；返回 `available_cash`（可用现金）、`cash`（available_cash + frozen_cash）、`net_assets`（总资产），币种固定为 USD。
+- **[账户持仓] 展示**：总资产改为使用 API 的 `net_assets`；展示项为「可用现金、现金、总资产」；持仓占比计算优先使用 `net_assets`。
+- **配置更新提醒**：仅当「真实账户且 Dry Run 关闭」时显示「下单将产生实际资金变动」的警告；Dry Run 开启或模拟账户时不显示。
+- **config_loader**：移除「使用真实账户」与「LONGPORT_DRY_RUN=true 模拟模式」两条 logger.warning。
+
 ## [2026-02-19] 页面抓取脚本独立与开发者指南
 
 ### 新增

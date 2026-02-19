@@ -138,11 +138,6 @@ class Config:
     @classmethod
     def validate(cls) -> bool:
         """验证必需的配置项"""
-        if not cls.WHOP_EMAIL or not cls.WHOP_PASSWORD:
-            print("错误: 请设置 WHOP_EMAIL 和 WHOP_PASSWORD 环境变量")
-            print("可以在 .env 文件中设置，或直接设置环境变量")
-            return False
-        
         if not cls._PAGES:
             print("错误: 请在 .env 中配置 PAGES（JSON 数组），至少一项，如:")
             print('  PAGES=[{"url":"https://whop.com/.../app/","type":"option"}]')

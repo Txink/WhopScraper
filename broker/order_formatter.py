@@ -193,9 +193,20 @@ def print_config_update_display(lines: List[str]) -> None:
         "[bold yellow][配置更新][/bold yellow]",
     )
     for line in lines:
-        if "：" in line:
+        if line.strip().startswith("⚠️"):
+            console.print(f"    [bold red]{line}[/bold red]")
+        elif "：" in line:
             key, _, value = line.partition("：")
-            console.print(f"    - [yellow]{key}：[/yellow][blue]{value}[/blue]")
+            if key.strip() == "账户类型" and value.strip() == "真实":
+                console.print(f"    - [yellow]{key}：[/yellow][bold red]{value}[/bold red]")
+            elif key.strip() == "Dry Run 模式":
+                v = value.strip()
+                if "开启" in v:
+                    console.print(f"    - [yellow]{key}：[/yellow][bold yellow]{value}[/bold yellow] [dim](不实际下单)[/dim]")
+                else:
+                    console.print(f"    - [yellow]{key}：[/yellow][bold red]{value}[/bold red]")
+            else:
+                console.print(f"    - [yellow]{key}：[/yellow][blue]{value}[/blue]")
         elif ":" in line:
             key, _, value = line.partition(":")
             console.print(f"    - [yellow]{key}:[/yellow][blue]{value}[/blue]")

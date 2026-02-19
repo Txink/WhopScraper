@@ -142,8 +142,14 @@ class SignalScraper:
             )
             self._program_load_refresh()
 
-            # 3. 创建持仓管理器（启动后由 sync_from_broker 统一输出账户持仓摘要，此处不再重复打日志）
-            self.position_manager = PositionManager(storage_file="data/positions.json")
+            # 3. 创建持仓管理器（期权/股票数据独立：股票页用 stock_positions.json + stock_trade_records.json，持仓展示为股、总价=数量×单价）
+            if self.selected_page and self.selected_page[1] == "stock":
+                position_file = "data/stock_positions.json"
+                is_stock_mode = True
+            else:
+                position_file = "data/positions.json"
+                is_stock_mode = False
+            self.position_manager = PositionManager(storage_file=position_file, is_stock_mode=is_stock_mode)
 
             # 4. 创建自动交易器（传入 position_manager，卖出比例 1/3 等相对该期权所有买入数量计算）
             self.auto_trader = AutoTrader(broker=self.broker, position_manager=self.position_manager)
@@ -168,8 +174,11 @@ class SignalScraper:
             _default_stop = os.getenv("ENABLE_DEFAULT_STOP_LOSS", "false").strip().lower() in ("true", "1", "yes")
             _default_stop_ratio = os.getenv("DEFAULT_STOP_LOSS_RATIO", "38").strip() or "38"
             _ctx_limit = os.getenv("CONTEXT_SEARCH_LIMIT", "10").strip() or "10"
+            _is_paper = self.broker.is_paper
+            _dry_run = self.broker.dry_run
             self._config_update_lines = [
-                f"账户类型：{'模拟' if self.broker.is_paper else '真实'}",
+                f"账户类型：{'模拟' if _is_paper else '真实'}",
+                f"Dry Run 模式：{'开启（不实际下单，仅打印）' if _dry_run else '关闭（将真实下单）'}",
                 f"单次购买期权总价上限：${self.auto_trader.max_option_total_price}",
                 f"单次购买期权数量上限：{self.auto_trader.max_option_quantity}张",
                 f"价差容忍度：{self.auto_trader.price_deviation_tolerance}%",
@@ -178,6 +187,8 @@ class SignalScraper:
                 f"扫描历史消息数量分析上下文：前{_ctx_limit}条",
                 f"下单是否需要确认：{str(self.auto_trader.require_confirmation).lower()}",
             ]
+            if not _is_paper and not _dry_run:
+                self._config_update_lines.append("⚠️ 当前为真实账户且 Dry Run 已关闭，下单将产生实际资金变动，请确认配置无误")
         except Exception as e:
             self._program_load_live.stop()
             logger.exception("❌ 交易组件初始化失败（详见下方堆栈，请检查 .env 中长桥凭证与网络）: %s", e)
@@ -285,13 +296,14 @@ class SignalScraper:
         self.monitor = MessageMonitor(
             page=page,
             poll_interval=Config.POLL_INTERVAL,
-            skip_initial_messages=Config.SKIP_INITIAL_MESSAGES
-        )   
-        
+            skip_initial_messages=Config.SKIP_INITIAL_MESSAGES,
+            page_type=page_type,
+        )
+
         # 设置回调
         self.monitor.on_new_record(self._on_record)
         return True
-    
+
     def _on_record(self, record: Record):
         """
         新指令回调 - 处理交易信号（单页面模式）
