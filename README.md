@@ -154,6 +154,29 @@ python3 scripts/scraper/export_page_html.py --type stock --url "https://whop.com
 python3 scripts/scraper/export_page_html.py --type option --url "https://whop.com/joined/stock-and-option/-gZyq1MzOZAWO98/app/"
 ```
 
+### 按股票过滤消息
+
+从原始消息 JSON 中筛出**仅在本条 content 中提及指定股票**的消息，导出到 `tmp/stock/origin_<TICKER>_message.json`（不按 history 匹配）。
+
+```bash
+python3 scripts/parser/filter_target_stock.py TICKER [--input PATH] [--output PATH]
+```
+
+| 参数 | 说明 | 默认值 |
+|------|------|--------|
+| `TICKER` | 股票代码（必填） | - |
+| `--input` | 原始消息 JSON 路径 | `tmp/stock/origin_message.json` |
+| `--output` | 导出路径 | `tmp/stock/origin_<TICKER>_message.json` |
+
+示例：
+```bash
+# 过滤出 content 中提到 TSLL 的消息，导出到 tmp/stock/origin_TSLL_message.json
+python3 scripts/parser/filter_target_stock.py tsll
+
+# 指定输入与输出路径
+python3 scripts/parser/filter_target_stock.py HIMS --input data/stock_origin_message.json --output tmp/stock/origin_HIMS_message.json
+```
+
 ### 配置分类
 
 #### Whop 平台配置

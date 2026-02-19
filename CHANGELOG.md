@@ -1,10 +1,16 @@
 # CHANGELOG
 
-## [2026-02-19] 页面抓取脚本独立
+## [2026-02-19] 页面抓取脚本独立与开发者指南
 
 ### 新增
 - **消息导出脚本**：`scripts/scraper/export_page_message.py` — 全屏打开目标页面、自动滚动抓取消息并导出。参数：`--type`（stock|option，默认 stock）、`--output`（默认 `tmp/<type>/origin_message.json`）、可选 `--url`；不依赖环境变量，默认由参数控制。
 - **HTML 导出脚本**：`scripts/scraper/export_page_html.py` — 打开目标页面并导出当前 HTML。参数：`--type`（stock|option，默认 stock）、`--output`（默认 `tmp/<type>/page_html.html`）、可选 `--url`。
+- **按股票过滤消息脚本**：`scripts/parser/filter_target_stock.py` — 从原始消息 JSON 中仅按本条 `content` 是否提及指定 ticker 过滤，导出到 `tmp/stock/origin_<TICKER>_message.json`。参数：位置参数 TICKER，`--input`（默认 `tmp/stock/origin_message.json`）、`--output`（默认 `tmp/stock/origin_<TICKER>_message.json`）。
+
+### 变更
+- **README**：新增「开发者指南」大标题，含导出页面消息、导出页面 HTML、按股票过滤消息三个脚本的使用说明与示例；`--type` 补充说明为 `stock` 正股、`option` 期权；示例中增加带 `--type` 与真实 URL 的可复制命令。
+- **Python 3.9 兼容**：`scripts/scraper/export_page_message.py`、`export_page_html.py` 中返回类型由 `str | None` 改为 `Optional[str]`，避免在 Python 3.9 及以下报错。
+
 
 ## [2026-02-18] 头像 “X” 规则误删 ticker 首字母 X（XOM→OM）
 

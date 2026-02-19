@@ -57,7 +57,6 @@ debug/
 !package-lock.json
 
 # 临时文件
-tmp/
 *.tmp
 *.temp
 .DS_Store
