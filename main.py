@@ -435,15 +435,28 @@ class SignalScraper:
         logger.info("✅ 程序已安全退出")
 
 
-async def main():
+async def main(args=None):
     """主函数"""
-    print("""
+    # 命令行参数覆盖 .env 中的账户模式
+    if args is not None:
+        if args.mode:
+            os.environ["LONGPORT_MODE"] = args.mode
+        if args.dry_run is not None:
+            os.environ["LONGPORT_DRY_RUN"] = "true" if args.dry_run else "false"
+
+    _mode = os.getenv("LONGPORT_MODE", "paper")
+    _dry_run = os.getenv("LONGPORT_DRY_RUN", "true").lower() in ("true", "1", "yes")
+    _mode_label = "🧪 模拟账户" if _mode == "paper" else "💰 真实账户"
+    _dry_label = " | Dry Run 开启" if _dry_run else ""
+
+    print(f"""
 ╔══════════════════════════════════════════════════════════╗
 ║           期权信号抓取器 + 自动交易系统 v2.1              ║
 ║           Option Signal Scraper & Auto Trading           ║
 ╚══════════════════════════════════════════════════════════╝
     """)
-    
+    print(f"账户模式：{_mode_label}{_dry_label}\n")
+
     selected = Config.load()
     if selected is None:
         return
@@ -470,16 +483,17 @@ async def main():
 def parse_arguments():
     """解析命令行参数"""
     import argparse
-    
+
     parser = argparse.ArgumentParser(
         description="期权信号抓取器 + 自动交易系统",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 示例用法:
-  # 正常运行（监控并执行交易）
-  python3 main.py
-  # 分析本地HTML文件
-  python3 analyze_local_messages.py debug/page_xxx.html
+  python3 main.py              # 使用 .env 中配置的账户模式
+  python3 main.py --paper      # 强制使用模拟账户
+  python3 main.py --real       # 强制使用真实账户
+  python3 main.py --real --dry-run    # 真实账户 + 不实际下单（调试）
+  python3 main.py --real --no-dry-run # 真实账户 + 实际下单
         """
     )
     parser.add_argument(
@@ -487,10 +501,41 @@ def parse_arguments():
         action='version',
         version='期权信号抓取器 v2.1'
     )
-    
+
+    mode_group = parser.add_mutually_exclusive_group()
+    mode_group.add_argument(
+        '--paper',
+        dest='mode',
+        action='store_const',
+        const='paper',
+        help='使用模拟账户（覆盖 .env 中的 LONGPORT_MODE）'
+    )
+    mode_group.add_argument(
+        '--real',
+        dest='mode',
+        action='store_const',
+        const='real',
+        help='使用真实账户（覆盖 .env 中的 LONGPORT_MODE）'
+    )
+
+    dry_run_group = parser.add_mutually_exclusive_group()
+    dry_run_group.add_argument(
+        '--dry-run',
+        dest='dry_run',
+        action='store_true',
+        default=None,
+        help='启用 Dry Run（不实际下单，仅打印）'
+    )
+    dry_run_group.add_argument(
+        '--no-dry-run',
+        dest='dry_run',
+        action='store_false',
+        help='关闭 Dry Run（将实际下单）'
+    )
+
     return parser.parse_args()
 
 
 if __name__ == "__main__":
-    # 正常运行模式
-    asyncio.run(main())
+    _args = parse_arguments()
+    asyncio.run(main(_args))
