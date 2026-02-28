@@ -171,13 +171,14 @@ class OptionParser:
         re.IGNORECASE
     )
     
-    # 模式9: 行权价在前、相对日期在中间 - $TICKER - $STRIKE 这周/本周/下周 calls $PRICE
+    # 模式9: 行权价在前、相对日期在中间 - $TICKER - $STRIKE 这周/本周/下周/this week/next week calls $PRICE
     # 示例: $UUUU - $21 这周 calls $.85 彩票
+    # 示例: $HOOD $78 this week calls - lotto - $0.94
     OPEN_PATTERN_9 = re.compile(
         r'\$?([A-Z]{2,5})\s*[-–]?\s*'
         r'\$?(\d+(?:\.\d+)?)\s+'
-        r'(本周|下周|这周|当周|今天)(?:的)?\s*'
-        r'(call|put)s?\s*'
+        r'(本周|下周|这周|当周|今天|this\s+week|next\s+week)(?:的)?\s*'
+        r'(call|put)s?[\s\S]{0,30}?'
         r'\$?((?:\d+(?:\.\d+)?|\.\d+)(?:-(?:\d+(?:\.\d+)?|\.\d+))?)',
         re.IGNORECASE
     )

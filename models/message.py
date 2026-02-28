@@ -133,34 +133,47 @@ class MessageGroup:
 
     def display(self):
         """
-        使用 console.print 展示单条提取的消息（时间 + [原始消息] + 内容，下附字段明细）。
+        展示单条提取的消息。使用 RichLogger 输出，自动适配交易流程表格。
         """
+        from utils.rich_logger import get_logger
+        logger = get_logger()
         msg = self.to_dict()
-        now = datetime.now()
-        ts = now.strftime("%Y-%m-%d %H:%M:%S") + f".{now.microsecond // 1000:03d}"
         content = str(msg.get("content", msg.get("text", "")))
-        # 与第一行内容左对齐：终端显示宽度（中文占 2 列）
-        label = "[原始消息]"
-        indent = " " * (len(ts) + 1 + _display_width(label) + 1 + 1)
-
-        console = Console()
-        console.print(
-            f"[dim]{ts}[/dim]",
-            "[bold blue][原始消息][/bold blue]",
-            f'[cyan]"{content}"[/cyan]',
-        )
-        time_val = _format_timestamp_display(str(msg.get("timestamp", "")))
-        console.print(f'{indent}[yellow]time[/yellow]: [white]{time_val}[/white]')
         dom_id = msg.get("domID", msg.get("id", "").split("-")[0] if msg.get("id") else "")
-        console.print(f'{indent}[yellow]domID[/yellow]: [white]{dom_id}[/white]')
-        console.print(f'{indent}[yellow]position[/yellow]: [white]{msg.get("position", "")}[/white]')
+        position = msg.get("position", "")
         refer = msg.get("refer", "")
         refer_display = f'"{refer}"' if refer else "None"
-        console.print(f'{indent}[yellow]refer[/yellow]: [white]{refer_display}[/white]')
         history = msg.get("history") or []
-        history_display = history if isinstance(history, list) else [str(history)]
-        console.print(f'{indent}[yellow]history[/yellow]: [white]{history_display}[/white]')
-        console.print()
+        if isinstance(history, list) and len(history) > 1:
+            history_display = "\n".join(f"{i+1}. {h}" for i, h in enumerate(history))
+        elif isinstance(history, list) and len(history) == 1:
+            history_display = history[0]
+        else:
+            history_display = str(history) if history else "[]"
+
+        now = datetime.now()
+        msg_ts_str = str(msg.get("timestamp", ""))
+        msg_time_diff = ""
+        if msg_ts_str:
+            try:
+                s = msg_ts_str.replace("T ", "T").replace("T", " ").strip()[:23]
+                if len(s) >= 19:
+                    parsed = datetime.fromisoformat(s)
+                    diff_ms = int((now - parsed).total_seconds() * 1000)
+                    if diff_ms >= 0:
+                        msg_time_diff = f"[yellow]\\[-{diff_ms}ms][/yellow]"
+            except Exception:
+                pass
+
+        logger.trade_stage("原始消息",
+            tag_suffix=msg_time_diff,
+            rows=[
+                ("domID", dom_id),
+                ("content", f'[cyan]"{content}"[/cyan]'),
+                ("position", str(position), "dim"),
+                ("refer", refer_display, "dim"),
+                ("history", history_display, "dim"),
+            ], tag_style="bold blue")
         
     def __repr__(self):
         return f"MessageGroup(author={self.author}, messages={len(self.related_messages)+1})"

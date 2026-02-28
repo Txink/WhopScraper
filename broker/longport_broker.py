@@ -806,7 +806,7 @@ class LongPortBroker:
                 }
                 quotes.append(quote_data)
             
-            logger.info(f"获取 {len(quotes)} 个正股报价")
+            logger.debug(f"获取 {len(quotes)} 个正股报价")
             return quotes
         except Exception as e:
             logger.error(f"获取正股报价失败: {e}")
@@ -844,12 +844,16 @@ class LongPortBroker:
         # 检查是否启用自动交易
         if not self.auto_trade:
             logger.warning("⚠️  自动交易未启用，跳过订单提交")
-            return self._mock_order_response(symbol, side, quantity, price)
+            mock = self._mock_order_response(symbol, side, quantity, price)
+            print_order_submitted_display(mock, multiplier=1)
+            return mock
         
         # Dry run 模式
         if self.dry_run:
             logger.info(f"🧪 [DRY RUN] 模拟下单: {symbol} {side} {quantity} @ {price}")
-            return self._mock_order_response(symbol, side, quantity, price)
+            mock = self._mock_order_response(symbol, side, quantity, price)
+            print_order_submitted_display(mock, multiplier=1)
+            return mock
         
         try:
             # 确保symbol带有市场后缀
@@ -911,10 +915,7 @@ class LongPortBroker:
                 "remark": remark or f"Auto trade via OpenAPI - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
             }
             
-            # 使用彩色表格输出
-            print_success_message("正股订单提交成功")
-            print_order_table(order_info, "订单详情")
-            
+            print_order_submitted_display(order_info, multiplier=1)
             return order_info
             
         except ValueError as e:

@@ -7,22 +7,23 @@
 import asyncio
 import logging
 import os
+import re
 import threading
 import time
 from datetime import datetime
 from typing import Callable, List, Optional, Set, Tuple
 from playwright.async_api import Page
 
-from rich.console import Console
-
-from broker.order_formatter import web_listen_timestamp
+from broker.order_formatter import web_listen_timestamp, console as _shared_console
 from models.record_manager import RecordManager
 from models.instruction import OptionInstruction, InstructionStore
 from models.record import Record
+from models.stock_instruction import StockInstruction
 from scraper.message_extractor import EnhancedMessageExtractor
+from utils.rich_logger import get_logger
 
 logger = logging.getLogger(__name__)
-console = Console()
+console = _shared_console
 
 
 def _display_width(s: str) -> int:
@@ -47,20 +48,23 @@ class MessageMonitor:
         self,
         page: Page,
         poll_interval: float = 2.0,
-        skip_initial_messages: bool = False
+        skip_initial_messages: bool = False,
+        page_type: str = "option",
     ):
         """
         初始化消息监控器
-        
+
         Args:
             page: Playwright 页面对象
             poll_interval: 轮询间隔（秒）
             skip_initial_messages: 为 True 时首次连接不处理当前页消息，只处理连接后新产生的消息
+            page_type: "option" | "stock"，决定使用期权或股票解析器
         """
         self.page = page
         self.poll_interval = poll_interval
         self.skip_initial_messages = skip_initial_messages
-        self.record_manager = RecordManager()
+        self.page_type = page_type
+        self.record_manager = RecordManager(page_type=page_type)
         
         
         # 已处理的消息 ID 集合（用于去重）
@@ -112,8 +116,8 @@ class MessageMonitor:
             self._first_scan_done = True
             if messages:
                 tail = f"，最近 {min(recent_n, len(messages))} 条将在下次扫描解析" if recent_n > 0 else ""
-                print(f"已跳过首次连接时的 {len(messages)} 条历史消息{tail}，仅处理此后新消息")
-                print('=' * 80)
+                rlogger = get_logger()
+                rlogger.tag_live_append("程序加载", f"已跳过首次连接时的 {len(messages)} 条历史消息{tail}，仅处理此后新消息")
 
             return []
 
@@ -126,17 +130,21 @@ class MessageMonitor:
         # 分析 Records，更新record.instruction
         self.record_manager.analyze_records(records)
 
+        rlogger = get_logger()
         for record in records:
-            print('=' * 80)
+            dom_id = getattr(record.message, "group_id", None) or ""
+            rlogger.trade_start(dom_id=dom_id)
             record.message.display()
             if record.instruction is not None:
                 record.instruction.display()
             else:
-                OptionInstruction.display_parse_failed(
-                    getattr(record.message, "timestamp", None)
-                )
+                if self.page_type == "stock":
+                    StockInstruction.display_parse_failed(getattr(record.message, "timestamp", None))
+                else:
+                    OptionInstruction.display_parse_failed(getattr(record.message, "timestamp", None))
             if self._on_new_record and record.instruction is not None and record.instruction.has_symbol():
                 self._on_new_record(record)
+            rlogger.trade_end()
 
         return [r.instruction for r in records if r.instruction is not None]
     
@@ -176,16 +184,18 @@ class OrderPushMonitor:
     参考：https://open.longbridge.com/zh-CN/docs/trade/trade-push
     """
 
-    def __init__(self, config=None):
+    def __init__(self, config=None, is_option_mode: bool = False):
         """
         初始化订单推送监听器
 
         Args:
             config: 长桥 Config，为 None 时从环境变量加载（需先成功 load_longport_config）
+            is_option_mode: 是否为期权页面监控模式；为 True 时不显示纯股票订单推送
         """
         if not _LONGPORT_AVAILABLE:
             raise RuntimeError("长桥 SDK 不可用，无法创建 OrderPushMonitor")
         self._config = config
+        self._is_option_mode = is_option_mode
         self._ctx: Optional[TradeContext] = None
         self._thread: Optional[threading.Thread] = None
         self._running = False
@@ -203,25 +213,49 @@ class OrderPushMonitor:
         self._on_order_changed = callback
 
     @staticmethod
-    def display_order_changed(event) -> None:
+    def _is_stock_symbol(symbol: str) -> bool:
+        """判断代码是否为纯股票（非期权）：去掉市场后缀后仅含字母。"""
+        if not symbol:
+            return False
+        base = re.sub(r'\.[A-Z]{2,3}$', '', symbol.upper())
+        return bool(re.match(r'^[A-Z]+$', base))
+
+    def display_order_changed(self, event) -> None:
         """
-        打印订单推送关键信息，格式与订单校验一致：首行 [订单推送] [OrderSide.Buy] symbol=xxx，下附 status/quantity/price/time（灰色缩进）。
+        打印订单推送关键信息。
+        - 期权页面监控时：跳过纯股票订单，只显示期权订单。
+        - 股票页面监控时：跳过期权订单，只显示纯股票订单。
         """
         symbol = getattr(event, "symbol", "")
+        status_raw = getattr(event, "status", "")
+        logger.debug(
+            "收到订单推送: symbol=%s status=%s is_option_mode=%s",
+            symbol, status_raw, self._is_option_mode
+        )
+        is_stock = self._is_stock_symbol(symbol)
+        if self._is_option_mode and is_stock:
+            return
+        if not self._is_option_mode and not is_stock:
+            return
         side = getattr(event, "side", "")
         qty = getattr(event, "submitted_quantity", 0)
         price = getattr(event, "submitted_price", None)
         status = getattr(event, "status", "")
         submitted_at = getattr(event, "submitted_at", "")
-        side_str = f"{type(side).__name__}.{side.name}" if hasattr(side, "name") else str(side)
+        if hasattr(side, "name"):
+            side_name = side.name.upper()
+        else:
+            raw = str(side).upper()
+            side_name = "BUY" if "BUY" in raw else "SELL" if "SELL" in raw else raw
+        side_str = side_name
         status_str = f"{type(status).__name__}.{status.name}" if hasattr(status, "name") else str(status)
         status_name = (getattr(status, "name", "") or "").upper() if status else ""
         if not status_name and status_str:
             status_name = status_str.upper().split(".")[-1] if "." in status_str else status_str.upper()
         if status_name == "WAITTONEW":
-            return  # 不展示 WaitToNew 推送
+            return
         if status_name == "PENDINGREPLACE":
-            return  # 不展示 PendingReplace 推送
+            return
         if status_name in ("CANCELED", "CANCELLED"):
             status_rich = f"[dim white]{status_str}[/dim white]"
         elif status_name == "FILLED":
@@ -238,21 +272,25 @@ class OrderPushMonitor:
                 time_str = time_str[: time_str.rfind(".")] if time_str.rfind(".") > 0 else time_str
         else:
             time_str = ""
-        now = datetime.now()
-        ts = now.strftime("%Y-%m-%d %H:%M:%S") + f".{now.microsecond // 1000:03d}"
-        label = "[订单推送]"
-        indent = " " * (len(ts) + 1 + _display_width(label) + 1)
-        console.print(
-            f"[dim]{ts}[/dim]",
-            "[bold white][订单推送][/bold white]",
-            f"[{side_str}]",
-            f"symbol={symbol}",
+
+        rlogger = get_logger()
+        order_id = str(getattr(event, "order_id", ""))
+        is_terminal = status_name in ("FILLED", "REJECTED", "CANCELED", "CANCELLED")
+
+        push_rows = [
+            ("status", status_rich),
+            ("quantity", str(qty)),
+            ("price", str(price)),
+        ]
+        if time_str:
+            push_rows.append(("time", f"[dim white]{time_str}[/dim white]"))
+
+        rlogger.trade_push_update(
+            order_id,
+            rows=push_rows,
+            tag_style="bold white",
+            terminal=is_terminal,
         )
-        console.print(f"{indent}status={status_rich}")
-        console.print(f"{indent}submitted_quantity={qty}")
-        console.print(f"{indent}submitted_price={price}")
-        console.print(f"{indent}[dim white]time={time_str}[/dim white]")
-        console.print()
 
     def _run_loop(self):
         """在后台线程中：创建连接、注册回调、订阅，并保持运行"""
@@ -261,7 +299,10 @@ class OrderPushMonitor:
             self._ctx = TradeContext(config)
 
             def _handle(event: PushOrderChanged):
-                OrderPushMonitor.display_order_changed(event)
+                try:
+                    self.display_order_changed(event)
+                except Exception as e:
+                    logger.exception("display_order_changed 异常: %s", e)
                 if self._on_order_changed:
                     try:
                         self._on_order_changed(event)

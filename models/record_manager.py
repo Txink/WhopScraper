@@ -10,6 +10,9 @@ from models.message import MessageGroup
 from models.record import Record
 from models.instruction import OptionInstruction
 from parser.message_context_resolver import MessageContextResolver
+from parser.stock_context_resolver import StockContextResolver
+from utils.watched_stocks import is_watched
+from models.stock_instruction import StockInstruction
 
 def _parse_timestamp_for_sort(ts: str) -> str:
     """用于排序的时间戳字符串，保证 YYYY-MM-DD HH:MM:SS.XXX 格式可字符串排序。"""
@@ -61,8 +64,11 @@ class RecordManager:
     4. 分析处理失败的 record 放入 discard_items
     """
 
-    def __init__(self, origin_message_path: str = "data/origin_message.json"):
+    def __init__(self, origin_message_path: str = None, page_type: str = "option"):
+        if origin_message_path is None:
+            origin_message_path = "data/stock_origin_message.json" if page_type == "stock" else "data/origin_message.json"
         self.origin_message_path = origin_message_path
+        self.page_type = page_type  # "option" | "stock"
         self.items: List[Record] = []
         self.discard_items: List[Record] = []
         self.current_index: int = 0
@@ -88,13 +94,22 @@ class RecordManager:
     def analyze_records(self, records: List[Record]) -> None:
         """
         对一批 Record 做上下文解析，将解析结果挂载到各 record.instruction。
-        使用当前 items 作为全局上下文。
+        按 page_type 选择期权或股票解析器。
         """
         if not records:
             return
-        resolver = MessageContextResolver(self)
-        for record in records:
-            resolver.resolve_instruction(record)
+        if self.page_type == "stock":
+            resolver = StockContextResolver()
+            for record in records:
+                resolver.resolve_instruction(record)
+                # 仅监听关注列表中的股票；列表为空则不过滤
+                if record.instruction is not None and isinstance(record.instruction, StockInstruction):
+                    if not is_watched(record.instruction.ticker or ""):
+                        record.instruction = None
+        else:
+            resolver = MessageContextResolver(self)
+            for record in records:
+                resolver.resolve_instruction(record)
 
     def mark_processed(
         self,

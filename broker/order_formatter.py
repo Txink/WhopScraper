@@ -47,49 +47,50 @@ def _format_time_with_diff(timestamp_str: str, now: datetime) -> tuple:
     return t, ms_rich
 
 
-def print_order_submitted_display(order: Dict) -> None:
-    """
-    按与「解析消息」一致的格式输出订单提交成功信息：
-    {时间} [提交订单] symbol = xxx [模拟|真实] [+Nms]，下附 operation/price/total，total 绿色加粗，末尾空行。
-    """
-    now = datetime.now()
-    ts = now.strftime("%Y-%m-%d %H:%M:%S") + f".{now.microsecond // 1000:03d}"
-    label = "[提交订单]"
-    indent = " " * (len(ts) + 1 + _display_width(label) + 1)
+def print_order_submitted_display(order: Dict, multiplier: int = 100) -> None:
+    """按表格格式输出订单提交成功信息。"""
+    from utils.rich_logger import get_logger
+    logger = get_logger()
 
     symbol = order.get("symbol", "")
     mode = order.get("mode", "paper")
-    mode_str = "模拟" if mode == "paper" else "真实"
-    mode_rich = f"[dim][{mode_str}][/dim]" if mode == "paper" else f"[orange1][{mode_str}][/orange1]"
-
-    # [+Nms] 为 instruction_timestamp（或 submitted_at）与当前时间的差值
-    time_src = order.get("instruction_timestamp") or order.get("submitted_at", "") or ""
-    if not isinstance(time_src, str) and hasattr(time_src, "isoformat"):
-        time_src = time_src.isoformat()
-    time_src = time_src or ""
-    _, ms_rich = _format_time_with_diff(time_src, now)
-
-    console.print(
-        f"[dim]{ts}[/dim]",
-        "[bold green][提交订单][/bold green]",
-        f"[yellow]symbol[/yellow] = [bold blue]{symbol}[/bold blue]",
-        mode_rich,
-        ms_rich,
-    )
-
+    mode_str = "模拟" if mode in ("paper", "dry_run") else "真实"
     side = order.get("side", "")
-    console.print(f'{indent}[yellow]operation[/yellow]: [bold green]{side}[/bold green]')
-
     price = order.get("price")
-    if price is not None:
-        console.print(f'{indent}[yellow]price[/yellow]: [bold]${price}[/bold]')
-
     quantity = int(order.get("quantity") or 0)
-    multiplier = 100
     total = (float(price) if price else 0) * quantity * multiplier
-    console.print(f'{indent}[yellow]total[/yellow]: [bold green]${total:.1f}[/bold green]')
 
-    console.print()
+    order_id = order.get("order_id")
+    rows = []
+    if order_id:
+        rows.append(("OrderID", f"[dim]{order_id}[/dim]"))
+    summary = f"[green]\\[{side}][/green] {symbol}"
+    if price is not None:
+        summary += f" ${price} × {quantity} = [bold green]${total:.2f}[/bold green]"
+    rows.append(("", summary))
+
+    logger.trade_stage("提交订单", rows=rows,
+                       tag_suffix=f"\\[{mode_str}]", tag_style="bold green")
+    if order_id:
+        logger.trade_register_order(str(order_id))
+
+
+def _parse_detail_rows(lines: List[str], reject_reason: Optional[str] = None,
+                       style: str = "dim") -> list:
+    """将详情行列表解析为 (key, value[, style]) 行，供 trade_stage 使用。"""
+    rows: list = []
+    for line in (lines or []):
+        if "：" in line:
+            k, _, v = line.partition("：")
+            rows.append((k.strip(), v.strip(), style) if style else (k.strip(), v.strip()))
+        elif ": " in line:
+            k, _, v = line.partition(": ")
+            rows.append((k.strip(), v.strip(), style) if style else (k.strip(), v.strip()))
+        else:
+            rows.append(("", line, style) if style else ("", line))
+    if reject_reason:
+        rows.append(("", f"[bold red]{reject_reason}[/bold red]"))
+    return rows
 
 
 def print_order_validation_display(
@@ -104,61 +105,26 @@ def print_order_validation_display(
     stop_loss_line: Optional[str] = None,
     expiry_fallback_time: bool = False,
 ) -> None:
-    """
-    提交订单前校验结束后统一输出：
-    {时间} [订单校验] [BUY] symbol=xxx price=x.x [+Nms]
-                                                               注意：消息未获取到时间，使用当前时间计算到期日（可选）
-                                                               查询价格：...
-                                                               买入数量：...
-                                                               买入总价：...
-                                                               默认止损：...（可选）
-    （若 reject_reason 有值，再输出一行失败原因，且表示未提交订单）
-    订单校验 黄色加粗；下面行均为灰色。+Nms 为指令时间与当前时间差值。
-    """
-    now = datetime.now()
-    ts = now.strftime("%Y-%m-%d %H:%M:%S") + f".{now.microsecond // 1000:03d}"
-    label = "[订单校验]"
-    indent = " " * (len(ts) + 1 + _display_width(label) + 1)
+    """提交订单前校验结束后统一输出。"""
+    from utils.rich_logger import get_logger
+    logger = get_logger()
 
-    time_src = instruction_timestamp or ""
-    if not isinstance(time_src, str) and hasattr(time_src, "isoformat"):
-        time_src = time_src.isoformat()
-    _, ms_rich = _format_time_with_diff(time_src, now)
-
-    console.print(
-        f"[dim]{ts}[/dim]",
-        "[bold yellow][订单校验][/bold yellow]",
-        f"[{side}]",
-        f"symbol={symbol}",
-        f"price={price}",
-        ms_rich,
-    )
+    rows: List[Tuple[str, str]] = []
     if expiry_fallback_time:
-        console.print(f"{indent}[bold yellow]注意：消息未获取到时间，使用当前时间计算到期日[/bold yellow]")
-    console.print(f"{indent}[dim white]{price_line}[/dim white]")
-    console.print(f"{indent}[dim white]{quantity_line}[/dim white]")
-    console.print(f"{indent}[dim white]{total_line}[/dim white]")
+        rows.append(("", "[bold yellow]注意：消息未获取到时间，使用当前时间计算到期日[/bold yellow]"))
+
+    detail_lines = [price_line, quantity_line, total_line]
     if stop_loss_line:
-        console.print(f"{indent}[dim white]{stop_loss_line}[/dim white]")
-    if reject_reason:
-        console.print(f"{indent}[bold red]{reject_reason}[/bold red]")
-    console.print()
+        detail_lines.append(stop_loss_line)
+    rows.extend(_parse_detail_rows(detail_lines, reject_reason))
+    logger.trade_stage("订单校验", rows=rows, tag_style="bold yellow")
 
 
 def print_position_update_display(message: str) -> None:
-    """
-    持仓更新展示，与订单校验同风格的时间 + 标签行：
-    {时间} [持仓更新] {message}
-    [持仓更新] 为紫色加粗。
-    """
-    now = datetime.now()
-    ts = now.strftime("%Y-%m-%d %H:%M:%S") + f".{now.microsecond // 1000:03d}"
-    console.print(
-        f"[{_TS_STYLE}]{ts}[/{_TS_STYLE}]",
-        "[bold magenta][持仓更新][/bold magenta]",
-        message,
-    )
-    console.print()
+    """持仓更新展示：[持仓更新] 紫色加粗。"""
+    from utils.rich_logger import get_logger
+    logger = get_logger()
+    logger.log("持仓更新", message, tag_style="bold magenta")
 
 
 def print_program_load_display(lines: List[str]) -> None:
@@ -180,39 +146,31 @@ def print_program_load_display(lines: List[str]) -> None:
 
 
 def print_config_update_display(lines: List[str]) -> None:
-    """
-    配置更新展示，与 print_order_validation_display 同风格：
-    {时间} [配置更新]
-        - 账户类型：模拟
-        - ...
-    """
-    now = datetime.now()
-    ts = now.strftime("%Y-%m-%d %H:%M:%S") + f".{now.microsecond // 1000:03d}"
-    console.print(
-        f"[{_TS_STYLE}]{ts}[/{_TS_STYLE}]",
-        "[bold yellow][配置更新][/bold yellow]",
-    )
+    """配置更新展示。"""
+    from utils.rich_logger import get_logger
+    logger = get_logger()
+    logger.log_config("配置更新", lines)
+
+
+def print_longbridge_data_display(lines: List[str]) -> None:
+    """长桥 API 数据同步展示，支持两级缩进。"""
+    if not lines:
+        return
+    from utils.rich_logger import get_logger
+    logger = get_logger()
+
+    top_lines = []
+    sub_map: Dict[int, List[str]] = {}
+    idx = -1
     for line in lines:
-        if line.strip().startswith("⚠️"):
-            console.print(f"    [bold red]{line}[/bold red]")
-        elif "：" in line:
-            key, _, value = line.partition("：")
-            if key.strip() == "账户类型" and value.strip() == "真实":
-                console.print(f"    - [yellow]{key}：[/yellow][bold red]{value}[/bold red]")
-            elif key.strip() == "Dry Run 模式":
-                v = value.strip()
-                if "开启" in v:
-                    console.print(f"    - [yellow]{key}：[/yellow][bold yellow]{value}[/bold yellow] [dim](不实际下单)[/dim]")
-                else:
-                    console.print(f"    - [yellow]{key}：[/yellow][bold red]{value}[/bold red]")
-            else:
-                console.print(f"    - [yellow]{key}：[/yellow][blue]{value}[/blue]")
-        elif ":" in line:
-            key, _, value = line.partition(":")
-            console.print(f"    - [yellow]{key}:[/yellow][blue]{value}[/blue]")
+        if line.startswith("  - "):
+            sub_map.setdefault(idx, []).append(line[4:])
         else:
-            console.print(f"    - [dim white]{line}[/dim white]")
-    console.print()
+            idx += 1
+            top_lines.append(line)
+
+    logger.log_nested("长桥数据", lines=top_lines, sub_lines=sub_map,
+                      tag_style="bold cyan")
 
 
 def web_listen_timestamp() -> str:
@@ -283,37 +241,12 @@ def print_sell_validation_display(
     detail_lines: Optional[List[str]] = None,
     reject_reason: Optional[str] = None,
 ) -> None:
-    """
-    卖出订单校验展示，与 print_order_validation_display 同风格：
-    {时间} [订单校验] [SELL] symbol=xxx quantity=N [+Nms]
-                                                                当前持仓：...
-                                                                该期权所有买入总量（比例分母）：...
-                                                                卖出比例/数量：...
-                                                                卖出价格/市价：...
-    """
-    now = datetime.now()
-    ts = now.strftime("%Y-%m-%d %H:%M:%S") + f".{now.microsecond // 1000:03d}"
-    label = "[订单校验]"
-    indent = " " * (len(ts) + 1 + _display_width(label) + 1)
+    """卖出订单校验展示。"""
+    from utils.rich_logger import get_logger
+    logger = get_logger()
 
-    time_src = instruction_timestamp or ""
-    if not isinstance(time_src, str) and hasattr(time_src, "isoformat"):
-        time_src = time_src.isoformat()
-    _, ms_rich = _format_time_with_diff(time_src, now)
-
-    console.print(
-        f"[dim]{ts}[/dim]",
-        "[bold yellow][订单校验][/bold yellow]",
-        "[SELL]",
-        f"symbol={symbol}",
-        f"quantity={quantity}",
-        ms_rich,
-    )
-    for line in detail_lines or []:
-        console.print(f"{indent}[dim white]{line}[/dim white]")
-    if reject_reason:
-        console.print(f"{indent}[bold red]{reject_reason}[/bold red]")
-    console.print()
+    rows = _parse_detail_rows(detail_lines or [], reject_reason)
+    logger.trade_stage("订单校验", rows=rows, tag_style="bold yellow")
 
 
 def print_modify_validation_display(
@@ -322,36 +255,12 @@ def print_modify_validation_display(
     detail_lines: Optional[List[str]] = None,
     reject_reason: Optional[str] = None,
 ) -> None:
-    """
-    修改指令（止盈止损）校验展示，与 print_order_validation_display 同风格：
-    {时间} [订单校验] [MODIFY] symbol=xxx [+Nms]
-                                                                当前持仓：...
-                                                                成本价：...
-                                                                当前市场价：...
-                                                                设置止损价/止盈价：...
-    """
-    now = datetime.now()
-    ts = now.strftime("%Y-%m-%d %H:%M:%S") + f".{now.microsecond // 1000:03d}"
-    label = "[订单校验]"
-    indent = " " * (len(ts) + 1 + _display_width(label) + 1)
+    """修改指令（止盈止损）校验展示。"""
+    from utils.rich_logger import get_logger
+    logger = get_logger()
 
-    time_src = instruction_timestamp or ""
-    if not isinstance(time_src, str) and hasattr(time_src, "isoformat"):
-        time_src = time_src.isoformat()
-    _, ms_rich = _format_time_with_diff(time_src, now)
-
-    console.print(
-        f"[dim]{ts}[/dim]",
-        "[bold yellow][订单校验][/bold yellow]",
-        "[MODIFY]",
-        f"symbol={symbol}",
-        ms_rich,
-    )
-    for line in detail_lines or []:
-        console.print(f"{indent}[dim white]{line}[/dim white]")
-    if reject_reason:
-        console.print(f"{indent}[bold red]{reject_reason}[/bold red]")
-    console.print()
+    rows = _parse_detail_rows(detail_lines or [], reject_reason)
+    logger.trade_stage("订单校验", rows=rows, tag_style="bold yellow")
 
 
 def print_close_validation_display(
@@ -361,36 +270,12 @@ def print_close_validation_display(
     detail_lines: Optional[List[str]] = None,
     reject_reason: Optional[str] = None,
 ) -> None:
-    """
-    清仓订单校验展示，与 print_order_validation_display 同风格：
-    {时间} [订单校验] [CLOSE] symbol=xxx quantity=N [+Nms]
-                                                                当前持仓：...
-                                                                清仓数量：...
-                                                                卖出价格/市价：...
-    """
-    now = datetime.now()
-    ts = now.strftime("%Y-%m-%d %H:%M:%S") + f".{now.microsecond // 1000:03d}"
-    label = "[订单校验]"
-    indent = " " * (len(ts) + 1 + _display_width(label) + 1)
+    """清仓订单校验展示。"""
+    from utils.rich_logger import get_logger
+    logger = get_logger()
 
-    time_src = instruction_timestamp or ""
-    if not isinstance(time_src, str) and hasattr(time_src, "isoformat"):
-        time_src = time_src.isoformat()
-    _, ms_rich = _format_time_with_diff(time_src, now)
-
-    console.print(
-        f"[dim]{ts}[/dim]",
-        "[bold yellow][订单校验][/bold yellow]",
-        "[CLOSE]",
-        f"symbol={symbol}",
-        f"quantity={quantity}",
-        ms_rich,
-    )
-    for line in detail_lines or []:
-        console.print(f"{indent}[dim white]{line}[/dim white]")
-    if reject_reason:
-        console.print(f"{indent}[bold red]{reject_reason}[/bold red]")
-    console.print()
+    rows = _parse_detail_rows(detail_lines or [], reject_reason)
+    logger.trade_stage("订单校验", rows=rows, tag_style="bold yellow")
 
 
 def parse_option_symbol(symbol: str) -> str:

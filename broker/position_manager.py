@@ -161,6 +161,7 @@ class PositionManager:
         self.positions: Dict[str, Position] = {}
         self.account_balance: Optional[Dict[str, Any]] = None
         self.trade_records: Dict[str, List[Dict[str, Any]]] = {}  # symbol -> list of order/execution records
+        self.last_sync_stats: Dict[str, Any] = {}  # 最近一次 sync_from_broker 的统计信息
         if is_stock_mode:
             self._trade_records_file = "data/stock_trade_records.json"
         else:
@@ -249,15 +250,18 @@ class PositionManager:
         self._save_positions()
         logger.debug(f"更新持仓: {symbol}")
     
-    def sync_from_broker(self, broker: Any) -> None:
+    def sync_from_broker(self, broker: Any, full_refresh: bool = False,
+                         config_lines: Optional[List[str]] = None) -> None:
         """
         从券商同步：账户余额、持仓及交易记录。
         股票页（is_stock_mode=True）：同步股票持仓，总价=数量×单价（不乘 100）。
         期权页：同步期权持仓，总价=数量×单价×100（1 张=100 股）。
-        
+
         Args:
             broker: 具备 get_account_balance()、get_positions()、get_today_orders() 的 broker 实例
+            full_refresh: 为 True 时清空本地交易记录并从 API 完整重建（适合股票模式启动时校正）
         """
+        self.last_sync_stats = {}
         try:
             self.account_balance = broker.get_account_balance()
             broker_positions = broker.get_positions()
@@ -319,13 +323,21 @@ class PositionManager:
             sym = o.get("symbol")
             if sym and sym not in relevant_symbols and _symbol_relevant(sym):
                 relevant_symbols.add(sym)
-        # 保留已有交易记录，只合并当日 Filled（按 order_id 去重），不覆盖历史
-        for sym in relevant_symbols:
-            self.trade_records.setdefault(sym, [])
-        existing_order_ids = {
-            sym: {str(r.get("order_id")) for r in self.trade_records.get(sym, [])}
-            for sym in relevant_symbols
-        }
+
+        if full_refresh:
+            # 完整刷新：清空全部本地记录（含旧期权记录），后续从 API 重建
+            logger.debug("full_refresh=True：清空全部本地交易记录，将从 API 完整重建")
+            self.trade_records = {}
+            existing_order_ids: dict = {}
+        else:
+            # 增量模式：保留已有记录，只合并新增 Filled 订单（按 order_id 去重）
+            for sym in relevant_symbols:
+                self.trade_records.setdefault(sym, [])
+            existing_order_ids = {
+                sym: {str(r.get("order_id")) for r in self.trade_records.get(sym, [])}
+                for sym in relevant_symbols
+            }
+
         for o in orders or []:
             sym = o.get("symbol")
             if sym not in relevant_symbols:
@@ -345,22 +357,25 @@ class PositionManager:
                 "status": o.get("status"),
                 "submitted_at": o.get("submitted_at"),
             }
-            self.trade_records[sym].append(rec)
+            self.trade_records.setdefault(sym, []).append(rec)
             if oid:
                 existing_order_ids.setdefault(sym, set()).add(str(oid))
-        # 用券商历史 Filled 订单回填交易记录（若有持仓但本地无记录时可补全）
+
+        # 从券商历史 Filled 订单重建/补全交易记录
+        # full_refresh 时查 365 天完整校正；增量时查 90 天补全缺漏
+        history_days = 365 if full_refresh else 90
         get_history = getattr(broker, "get_history_orders", None)
         if callable(get_history):
             try:
                 from datetime import timedelta
                 end_at = datetime.now()
-                start_at = end_at - timedelta(days=90)
+                start_at = end_at - timedelta(days=history_days)
+                logger.debug(f"从 API 拉取历史订单（最近 {history_days} 天）…")
                 history_orders = get_history(start_at, end_at)
                 for o in history_orders or []:
                     sym = o.get("symbol")
-                    if not sym or not _symbol_relevant(sym):
+                    if not sym or sym not in relevant_symbols:
                         continue
-                    relevant_symbols.add(sym)
                     self.trade_records.setdefault(sym, [])
                     if not _is_filled(o.get("status")):
                         continue
@@ -380,12 +395,25 @@ class PositionManager:
                     self.trade_records.setdefault(sym, []).append(rec)
                     if oid:
                         existing_order_ids.setdefault(sym, set()).add(str(oid))
+                # 按时间升序排序
+                for sym in self.trade_records:
+                    self.trade_records[sym].sort(
+                        key=lambda r: r.get("submitted_at") or ""
+                    )
+                if full_refresh:
+                    total = sum(len(v) for v in self.trade_records.values())
+                    self.last_sync_stats["trade_records_rebuilt"] = total
             except Exception as e:
-                logger.debug(f"回填历史订单失败: {e}")
+                logger.warning(f"{'完整重建' if full_refresh else '回填'}历史订单失败: {e}")
+        # 清理非持仓 symbol 的交易记录（本地文件可能残留旧数据）
+        stale_symbols = [s for s in self.trade_records if s not in relevant_symbols]
+        for s in stale_symbols:
+            del self.trade_records[s]
+
         self._save_positions()
         self._save_trade_records()
-        self._log_sync_summary()
-    
+        self._log_sync_summary(config_lines=config_lines)
+
     def on_order_push(self, event: Any, broker: Any) -> None:
         """
         订单状态推送时更新本地：记录该笔订单到交易记录，若已成交则刷新该 symbol 的持仓。
@@ -478,7 +506,10 @@ class PositionManager:
             self._log_position_update(symbol, side_str, broker)
 
     def _log_position_update(self, symbol: str, side_str: str, broker: Any = None) -> None:
-        """订单成交后输出该 symbol 的持仓概况和交易记录（交易记录优先从 API 获取）。"""
+        """订单成交后输出该 symbol 的持仓表格（交易记录优先从 API 获取）。"""
+        from utils.rich_logger import get_logger
+        rlogger = get_logger()
+
         ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
         pos = self.positions.get(symbol)
         is_stock = pos and getattr(pos, "option_type", "") == "STOCK"
@@ -496,61 +527,123 @@ class PositionManager:
             total_assets = available_cash + total_position_value
 
         action = "买入" if "Buy" in side_str else "卖出"
-        console.print(
-            f"[grey70]{ts}[/grey70] [bold magenta][持仓更新][/bold magenta] "
+        title = (
+            f"[grey70]{ts}[/grey70] [bold magenta]\\[持仓更新][/bold magenta] "
             f"{action}成交后 [bold]{symbol}[/bold]"
         )
+
+        positions_data = []
         if pos:
             position_value = pos.quantity * pos.avg_cost * mult
             pct = (position_value / total_assets * 100) if total_assets > 0 else 0
-            sl_info = f" 止损=${pos.stop_loss_price}" if pos.stop_loss_price else ""
-            console.print(
-                f"    [bold]{symbol} || 仓位={pos.quantity}{unit} 成本=${pos.avg_cost:.3f} "
-                f"总价=${position_value:,.2f} 占比={pct:.1f}%{sl_info}[/bold]"
-            )
+
+            records = []
+            if broker:
+                try:
+                    all_orders = broker.get_today_orders()
+                    for order in all_orders:
+                        if order.get("symbol") == symbol and "filled" in str(order.get("status", "")).lower():
+                            records.append(order)
+                except Exception:
+                    pass
+            if not records:
+                records = self.trade_records.get(symbol, [])
+
+            norm_records = [
+                self._normalize_record(r, ts)
+                for r in sorted(records, key=lambda r: r.get("submitted_at") or "")
+            ]
+            positions_data.append({
+                "symbol": symbol,
+                "quantity": pos.quantity,
+                "unit": unit,
+                "avg_cost": pos.avg_cost,
+                "position_value": position_value,
+                "pct": pct,
+                "stop_loss": getattr(pos, "stop_loss_price", None) or None,
+                "records": norm_records,
+            })
         else:
-            console.print(f"    [bold]{symbol} || 仓位=0{unit}（已清仓）[/bold]")
+            positions_data.append({
+                "symbol": symbol,
+                "quantity": 0,
+                "unit": unit,
+                "avg_cost": 0.0,
+                "position_value": 0.0,
+                "pct": 0.0,
+                "records": [],
+            })
 
-        # 优先从 API 获取该 symbol 的已成交订单作为交易记录
-        records = []
-        if broker:
-            try:
-                all_orders = broker.get_today_orders()
-                for order in all_orders:
-                    if order.get("symbol") == symbol and "filled" in str(order.get("status", "")).lower():
-                        records.append(order)
-            except Exception:
-                pass
-        # API 无结果时兜底用本地记录
-        if not records:
-            records = self.trade_records.get(symbol, [])
+        rlogger.print_position_table(title, positions_data)
 
-        for rec in sorted(records, key=lambda r: r.get("submitted_at") or ""):
-            rec_ts = rec.get("submitted_at") or ts
-            if isinstance(rec_ts, str) and "T" in rec_ts:
-                rec_ts = rec_ts.replace("T", " ")[:19]
-                if len(rec_ts) == 19 and "." not in rec_ts:
-                    rec_ts = rec_ts + ".000"
-            side_raw = rec.get("side", "")
-            side = "BUY" if "Buy" in (side_raw or "") else ("SELL" if "Sell" in (side_raw or "") else (side_raw or "").upper())
-            if side not in ("BUY", "SELL"):
-                side = "BUY"
-            side_pad = side.ljust(4)[:4]
-            side_tag = f"[{side_pad}]"
-            side_rich = f"[green]{side_tag}[/green]" if side == "BUY" else f"[yellow]{side_tag}[/yellow]"
-            qty = int(float(rec.get("executed_quantity") or rec.get("quantity") or 0))
-            price = rec.get("price")
-            if price is None:
-                price_str = "-"
-            elif isinstance(price, (int, float)) and price == int(price):
-                price_str = f"{int(price)}"
-            else:
-                price_str = f"{price}"
-            console.print(f"        - [grey70]{rec_ts}[/grey70] {side_rich} 数量={qty:<5} 价格={price_str:<6}")
-        console.print()
+    def _print_longbridge_data_summary(self, full_refresh: bool = False) -> None:
+        """启动时在 [账户持仓] 之前，打印所有长桥 API 调用动作的汇总 [长桥数据]。"""
+        from broker.order_formatter import print_longbridge_data_display
+        lines = []
 
-    def _log_sync_summary(self) -> None:
-        """同步完成后用 console.print 输出：可用现金、现金、总资产（=net_assets）、持仓及对应 Filled 交易记录。"""
+        # 账户信息 (account_balance)
+        if self.account_balance is not None:
+            available = float(self.account_balance.get("available_cash") or 0)
+            net = float(self.account_balance.get("net_assets") or 0)
+            lines.append(f"调用 account_balance 获取账户信息：可用现金 ${available:,.2f}，总资产 ${net:,.2f}")
+
+        # 持仓 (stock_positions) — 展示所有持仓
+        pos_count = len(self.positions)
+        lines.append(f"调用 stock_positions 获取{'股票' if self.is_stock_mode else '期权'}持仓：{pos_count} 个持仓")
+        for sym in sorted(self.positions.keys()):
+            ticker = sym.replace(".US", "")
+            pos = self.positions[sym]
+            qty = getattr(pos, "quantity", 0)
+            lines.append(f"  - {ticker}（{qty} {'股' if self.is_stock_mode else '张'}）")
+
+        # 交易记录 (history_orders) — 股票模式只展示纯股票代码（过滤期权）
+        if self.is_stock_mode:
+            record_symbols = sorted(s for s in self.trade_records if _is_stock_symbol(s))
+        else:
+            record_symbols = sorted(self.trade_records.keys())
+        sym_count = len(record_symbols)
+        rebuilt = self.last_sync_stats.get("trade_records_rebuilt")
+        if rebuilt is not None:
+            lines.append(f"调用 history_orders 获取交易记录：{sym_count} 个股票；更新本地交易记录（重建 {rebuilt} 条，最近 365 天）")
+        else:
+            total = sum(len(v) for v in self.trade_records.values())
+            lines.append(f"调用 history_orders 获取交易记录：{sym_count} 个股票；更新本地交易记录（增量同步，共 {total} 条）")
+        for sym in record_symbols:
+            ticker = sym.replace(".US", "")
+            count = len(self.trade_records[sym])
+            lines.append(f"  - {ticker}（{count} 条）")
+
+        print_longbridge_data_display(lines)
+
+    @staticmethod
+    def _normalize_record(rec: dict, fallback_ts: str = "") -> dict:
+        """将原始交易记录转为 print_position_table 所需格式。"""
+        rec_ts = rec.get("submitted_at") or fallback_ts
+        if isinstance(rec_ts, str) and "T" in rec_ts:
+            rec_ts = rec_ts.replace("T", " ")[:19]
+            if len(rec_ts) == 19 and "." not in rec_ts:
+                rec_ts = rec_ts + ".000"
+        side_raw = rec.get("side", "")
+        side = ("BUY" if "Buy" in (side_raw or "")
+                else ("SELL" if "Sell" in (side_raw or "")
+                      else (side_raw or "").upper()))
+        if side not in ("BUY", "SELL"):
+            side = "BUY"
+        qty = int(float(rec.get("executed_quantity") or rec.get("quantity") or 0))
+        price = rec.get("price")
+        if price is None:
+            price_str = "-"
+        elif isinstance(price, (int, float)) and price == int(price):
+            price_str = f"{int(price)}"
+        else:
+            price_str = f"{price}"
+        return {"submitted_at": rec_ts, "side": side, "qty": qty, "price": price_str}
+
+    def _log_sync_summary(self, config_lines: Optional[List[str]] = None) -> None:
+        """同步完成后输出账户信息表格 + 持仓表格。"""
+        from utils.rich_logger import get_logger
+        rlogger = get_logger()
+
         ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
         available_cash = 0.0
         cash = 0.0
@@ -567,18 +660,28 @@ class PositionManager:
                 for p in self.positions.values()
             )
             total_assets = available_cash + total_position_value
+
+        watched: set = None
+        if self.is_stock_mode:
+            try:
+                from utils.watched_stocks import get_watched_tickers
+                watched = {f"{t}.US" for t in get_watched_tickers()}
+            except Exception:
+                watched = None
+
         symbols = sorted(
-            sym for sym in (set(self.positions.keys()) | set(self.trade_records.keys()))
-            if (pos := self.positions.get(sym)) and pos.quantity > 0
+            sym for sym in self.positions.keys()
+            if self.positions[sym].quantity > 0
         )
-        mode_label = "[模拟]" if is_paper else "[真实]"
-        mode_style = "[bold grey70]" if is_paper else "[bold green]"
-        mode_end = "[/bold grey70]" if is_paper else "[/bold green]"
-        console.print(
-            f"[grey70]{ts}[/grey70] [bold red][账户持仓][/bold red] "
-            f"可用现金=${available_cash:,.2f} 现金=${cash:,.2f} 总资产=${total_assets:,.2f} "
-            f"{mode_style}{mode_label}{mode_end}"
-        )
+
+        account = {
+            "available_cash": available_cash,
+            "cash": cash,
+            "total_assets": total_assets,
+            "is_paper": is_paper,
+        }
+
+        positions_data = []
         for sym in symbols:
             pos = self.positions[sym]
             is_stock = getattr(pos, "option_type", "") == "STOCK"
@@ -586,39 +689,177 @@ class PositionManager:
             unit = "股" if is_stock else "张"
             position_value = pos.quantity * pos.avg_cost * mult
             pct = (position_value / total_assets * 100) if total_assets > 0 else 0
-            console.print(
-                f"    [bold]{sym} || 仓位={pos.quantity}{unit} 价格=${pos.avg_cost:.3f} "
-                f"总价=${position_value:,.2f} 占比={pct:.1f}%[/bold]"
-            )
-            records = self.trade_records.get(sym, [])
-            for rec in sorted(records, key=lambda r: r.get("submitted_at") or ""):
-                rec_ts = rec.get("submitted_at") or ts
-                if isinstance(rec_ts, str) and "T" in rec_ts:
-                    rec_ts = rec_ts.replace("T", " ")[:19]
-                    if len(rec_ts) == 19 and "." not in rec_ts:
-                        rec_ts = rec_ts + ".000"
-                side_raw = rec.get("side", "")
-                # 兼容 "OrderSide.Buy" / "OrderSide.Sell" 与 "BUY" / "SELL"
-                side = "BUY" if "Buy" in (side_raw or "") else ("SELL" if "Sell" in (side_raw or "") else (side_raw or "").upper())
-                if side not in ("BUY", "SELL"):
-                    side = "BUY"
-                side_pad = side.ljust(4)[:4]  # 固定 4 字符，使 [BUY]/[SELL] 后「数量」对齐
-                side_tag = f"[{side_pad}]"
-                side_rich = f"[green]{side_tag}[/green]" if side == "BUY" else f"[yellow]{side_tag}[/yellow]"
-                qty = int(float(rec.get("executed_quantity") or rec.get("quantity") or 0))
-                price = rec.get("price")
-                if price is None:
-                    price_str = "-"
-                elif isinstance(price, (int, float)) and price == int(price):
-                    price_str = f"{int(price)}"
-                else:
-                    price_str = f"{price}"
-                console.print(f"        - [grey70]{rec_ts}[/grey70] {side_rich} 数量={qty:<5} 价格={price_str:<6}")
+            is_watched = (watched is None or sym in watched)
+            records = self.trade_records.get(sym, []) if is_watched else []
+            norm_records = [
+                self._normalize_record(r, ts)
+                for r in sorted(records, key=lambda r: r.get("submitted_at") or "")
+            ]
+            positions_data.append({
+                "symbol": sym,
+                "quantity": pos.quantity,
+                "unit": unit,
+                "avg_cost": pos.avg_cost,
+                "position_value": position_value,
+                "pct": pct,
+                "stop_loss": getattr(pos, "stop_loss_price", None) or None,
+                "records": norm_records,
+            })
+
+        rlogger.print_position_table(
+            None, positions_data, account=account, config_lines=config_lines,
+        )
     
+    # ──────────────── T 交易分析（股票模式） ────────────────
+
+    @staticmethod
+    def _analyze_t_trades(trades: List[Dict]) -> Dict:
+        """
+        计算哪些买入批次尚未被 T 出。
+        卖出时 FIFO 匹配买入价 < 卖出价的批次；超额卖出记入缓冲，
+        后续出现更低买入价时逆向消除。
+        """
+        def _q(v):
+            try:
+                return int(float(v or 0))
+            except Exception:
+                return 0
+
+        def _p(v):
+            try:
+                return float(v or 0)
+            except Exception:
+                return 0.0
+
+        trades = sorted(trades, key=lambda t: t.get("submitted_at") or "")
+        open_buys: List[Dict] = []   # 未匹配买入 {ts, price, original_qty, remaining_qty}
+        excess_sells: List[Dict] = []  # 超额卖出缓冲
+        total_matched_qty = 0
+        total_profit = 0.0
+
+        for trade in trades:
+            side  = (trade.get("side") or "").upper()
+            qty   = _q(trade.get("executed_quantity") or trade.get("quantity"))
+            price = _p(trade.get("price"))
+            ts    = trade.get("submitted_at") or ""
+            if qty <= 0 or price <= 0:
+                continue
+
+            if side == "BUY":
+                remaining = qty
+                new_excess = []
+                for es in excess_sells:
+                    if es["price"] > price and remaining > 0:
+                        mq = min(remaining, es["remaining_qty"])
+                        total_matched_qty += mq
+                        total_profit += round((es["price"] - price) * mq, 2)
+                        remaining -= mq
+                        leftover = es["remaining_qty"] - mq
+                        if leftover > 0:
+                            new_excess.append({**es, "remaining_qty": leftover})
+                    else:
+                        new_excess.append(es)
+                excess_sells = new_excess
+                if remaining > 0:
+                    open_buys.append({
+                        "ts": ts, "price": price,
+                        "original_qty": remaining, "remaining_qty": remaining,
+                    })
+
+            elif side == "SELL":
+                remaining = qty
+                for lot in open_buys:
+                    if lot["remaining_qty"] > 0 and lot["price"] < price and remaining > 0:
+                        mq = min(remaining, lot["remaining_qty"])
+                        total_matched_qty += mq
+                        total_profit += round((price - lot["price"]) * mq, 2)
+                        lot["remaining_qty"] -= mq
+                        remaining -= mq
+                if remaining > 0:
+                    excess_sells.append({"ts": ts, "price": price, "remaining_qty": remaining})
+
+        unmatched = [lot for lot in open_buys if lot["remaining_qty"] > 0]
+        return {
+            "unmatched": unmatched,
+            "excess_sells": excess_sells,   # 超额卖出：已高价卖出，等待更低价买入对消
+            "total_matched_qty": total_matched_qty,
+            "total_profit": total_profit,
+        }
+
+    def _print_t_analysis_summary(self) -> None:
+        """启动时在 [仓位分析] 标题下输出各股票待 T 出的批次。"""
+        ts_now = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+        try:
+            from utils.watched_stocks import get_watched_tickers
+            watched = {f"{t}.US" for t in get_watched_tickers()}
+        except Exception:
+            watched = set()
+
+        symbols = sorted(
+            sym for sym in self.trade_records
+            if sym in watched and self.trade_records[sym]
+        )
+        if not symbols:
+            return
+
+        console.print(
+            f"[grey70]{ts_now}[/grey70] [bold magenta][仓位分析][/bold magenta]"
+        )
+        indent = "    "
+        for sym in symbols:
+            trades = self.trade_records[sym]
+            result = self._analyze_t_trades(trades)
+            unmatched     = result["unmatched"]
+            excess_sells  = result["excess_sells"]
+            total_matched = result["total_matched_qty"]
+            total_profit  = result["total_profit"]
+
+            unmatched_qty = sum(u["remaining_qty"] for u in unmatched)
+            excess_qty    = sum(e["remaining_qty"] for e in excess_sells)
+            unmatched_cost = (
+                sum(u["price"] * u["remaining_qty"] for u in unmatched) / unmatched_qty
+                if unmatched_qty else 0
+            )
+
+            if unmatched_qty == 0 and excess_qty == 0:
+                console.print(
+                    f"{indent}[bold]{sym}[/bold]  "
+                    f"[green]✅ 无待T仓位[/green]  "
+                    f"已T出 {total_matched} 股 利润 [green]+${total_profit:,.2f}[/green]"
+                )
+                continue
+
+            console.print(
+                f"{indent}[bold]{sym}[/bold]  "
+                f"[yellow]待T: {unmatched_qty} 股  加权均价 ${unmatched_cost:.2f}[/yellow]  "
+                f"已T出 {total_matched} 股 利润 [green]+${total_profit:,.2f}[/green]"
+            )
+            for lot in sorted(unmatched, key=lambda x: x["ts"]):
+                orig = lot["original_qty"]
+                rem  = lot["remaining_qty"]
+                tded = orig - rem
+                ts_short = lot["ts"].replace("T", " ")[:16] if lot["ts"] else "-"
+                already = f"  [dim](已T {tded}股)[/dim]" if tded > 0 else ""
+                console.print(
+                    f"{indent}    - [grey70]{ts_short}[/grey70]  "
+                    f"[yellow]${lot['price']:.2f}[/yellow] × "
+                    f"[bold]{rem}股[/bold]{already}"
+                )
+            # 超额卖出：已高价卖出但尚无对应低价买入，待未来低价买入时对消
+            if excess_sells:
+                for es in sorted(excess_sells, key=lambda x: x["ts"]):
+                    ts_short = es["ts"].replace("T", " ")[:16] if es["ts"] else "-"
+                    console.print(
+                        f"{indent}    ~ [grey70]{ts_short}[/grey70]  "
+                        f"[red]卖出 ${es['price']:.2f}[/red] × "
+                        f"[bold]{es['remaining_qty']}股[/bold]  [dim]待低价买入对消[/dim]"
+                    )
+        console.print()
+
     def remove_position(self, symbol: str):
         """
         移除持仓（已全部平仓）
-        
+
         Args:
             symbol: 期权代码
         """

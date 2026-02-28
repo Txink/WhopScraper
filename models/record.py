@@ -6,8 +6,10 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from typing import Dict, Optional
+from typing import Union
 from models.message import MessageGroup
-from models.instruction import OptionInstruction
+from models.instruction import OperationInstruction, OptionInstruction
+from models.stock_instruction import StockInstruction
 
 
 def _clean_content(content: str) -> str:
@@ -27,10 +29,10 @@ class Record:
     """
     单条消息的完整记录：原始消息 + 解析后的指令。
     监听到新消息时创建，将 MessageGroup 挂载到 message，
-    经上下文解析器处理后把 OptionInstruction 挂载到 instruction。
+    经上下文解析器处理后把 OptionInstruction 或 StockInstruction 挂载到 instruction。
     """
     message: MessageGroup
-    instruction: Optional[OptionInstruction] = None
+    instruction: Optional[Union[OptionInstruction, StockInstruction]] = None
     index: Optional[int] = None  # 在列表中的下标，可由外部设置
     checkedIndex: Optional[int] = None  # 已检查过的下标，用于避免重复检查
 

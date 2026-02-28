@@ -18,10 +18,17 @@ sys.path.insert(0, str(_project_root))
 
 
 def _contains_ticker(text: str, ticker: str) -> bool:
-    """判断文本中是否包含该 ticker（整词、不区分大小写）。"""
+    """判断文本中是否包含该 ticker（整词、不区分大小写）。
+    使用 (?<![a-zA-Z0-9]) / (?![a-zA-Z0-9]) 替代 \\b，
+    避免中文字符被 Python 3 视为 \\w 导致 \\b 边界失效。
+    例：'开仓tsll' 中 \\btsll\\b 因'仓'是 \\w 而不匹配，改用此方法可正确匹配。
+    """
     if not (text and isinstance(text, str)):
         return False
-    pattern = re.compile(r"\b" + re.escape(ticker) + r"\b", re.IGNORECASE)
+    pattern = re.compile(
+        r"(?<![a-zA-Z0-9])" + re.escape(ticker) + r"(?![a-zA-Z0-9])",
+        re.IGNORECASE
+    )
     return pattern.search(text) is not None
 
 

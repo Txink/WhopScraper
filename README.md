@@ -9,10 +9,10 @@
 ### 1. 程序启动
 ![](./images/terminal_1.png)
 
-### 2. 监听到买入消息
+### 2. 更新配置和账户信息
 ![](./images/terminal_2.png)
 
-### 2. 监听到卖出消息
+### 3. 监听消息
 ![](./images/terminal_3.png)
 
 ## 安装依赖
@@ -176,6 +176,10 @@ python3 scripts/parser/filter_target_stock.py tsll
 # 指定输入与输出路径
 python3 scripts/parser/filter_target_stock.py HIMS --input data/stock_origin_message.json --output tmp/stock/origin_HIMS_message.json
 ```
+
+## 文档索引
+
+- [股票页监控与关注列表](docs/stock_monitoring.md) — 正股页面监控、关注股票列表、消息抓取脚本
 
 ### 配置分类
 

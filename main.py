@@ -25,6 +25,7 @@ from scraper.browser import BrowserManager
 from scraper.monitor import MessageMonitor, OrderPushMonitor
 from models.instruction import OptionInstruction
 from models.record import Record
+from models.stock_instruction import StockInstruction
 
 # 长桥交易模块
 from broker import (
@@ -34,11 +35,9 @@ from broker import (
 )
 from broker.auto_trader import AutoTrader
 from broker.order_formatter import (
-    print_config_update_display,
-    render_program_load_live,
     web_listen_timestamp,
 )
-from rich.live import Live
+from utils.rich_logger import get_logger
 
 # 确保日志目录存在
 os.makedirs(Config.LOG_DIR, exist_ok=True)
@@ -80,26 +79,18 @@ class SignalScraper:
         self.order_push_monitor: Optional[OrderPushMonitor] = None
         self._warned_no_trader = False  # 仅对「交易组件未初始化」告警一次
 
-        # [程序加载] 流式块：先显示标题+小菊花，交易初始化与网页监听子条目逐行追加
-        self._program_load_lines = []
-        now = datetime.now()
-        self._program_load_ts = now.strftime("%Y-%m-%d %H:%M:%S") + f".{now.microsecond // 1000:03d}"
-        self._program_load_live = Live(
-            render_program_load_live(
-                self._program_load_lines, self._program_load_ts, show_spinner=True
-            ),
-            refresh_per_second=6,
-        )
-        self._program_load_live.start()
+        # [程序加载] 通过 RichLogger 的 tag_live 模式实现流式追加
+        self._rlogger = get_logger()
+        self._rlogger.tag_live_start("程序加载")
+
+        # 兼容层：browser/monitor 等组件仍使用 (log_lines, log_refresh) 回调模式
+        self._program_load_lines: list = []
 
         def _program_load_refresh(show_spinner: bool = True) -> None:
-            self._program_load_live.update(
-                render_program_load_live(
-                    self._program_load_lines,
-                    self._program_load_ts,
-                    show_spinner=show_spinner,
-                )
-            )
+            tag_data = self._rlogger.tag_live_get_data("程序加载")
+            if tag_data is not None:
+                tag_data.show_spinner = show_spinner
+            self._rlogger.tag_live_refresh("程序加载")
 
         self._program_load_refresh = _program_load_refresh
 
@@ -124,25 +115,16 @@ class SignalScraper:
             raise
 
     def _init_trading_components(self):
-        """初始化交易组件（长桥API、持仓管理、自动交易器），[程序加载] 流式逐行追加"""
+        """初始化交易组件（长桥API、持仓管理、自动交易器），通过 logger tag_live 流式追加"""
         try:
-            # 1. 加载长桥配置
             config = load_longport_config()
             region = os.getenv("LONGPORT_REGION", "cn")
-            self._program_load_lines.append((web_listen_timestamp(), "长桥交易接口初始化"))
-            self._program_load_lines.append(
-                (web_listen_timestamp(), f"API接入点：{region}")
-            )
-            self._program_load_refresh()
+            self._rlogger.tag_live_append("程序加载", "长桥交易接口初始化")
+            self._rlogger.tag_live_append("程序加载", f"API接入点：{region}")
 
-            # 2. 创建交易接口（连接数达上限时重试一次）
             self.broker = self._create_broker_with_retry(config)
-            self._program_load_lines.append(
-                (web_listen_timestamp(), "长桥交易接口初始化成功")
-            )
-            self._program_load_refresh()
+            self._rlogger.tag_live_append("程序加载", "长桥交易接口初始化成功")
 
-            # 3. 创建持仓管理器（期权/股票数据独立：股票页用 stock_positions.json + stock_trade_records.json，持仓展示为股、总价=数量×单价）
             if self.selected_page and self.selected_page[1] == "stock":
                 position_file = "data/stock_positions.json"
                 is_stock_mode = True
@@ -151,26 +133,18 @@ class SignalScraper:
                 is_stock_mode = False
             self.position_manager = PositionManager(storage_file=position_file, is_stock_mode=is_stock_mode)
 
-            # 4. 创建自动交易器（传入 position_manager，卖出比例 1/3 等相对该期权所有买入数量计算）
             self.auto_trader = AutoTrader(broker=self.broker, position_manager=self.position_manager)
-            self._program_load_lines.append(
-                (web_listen_timestamp(), "自动交易模块初始化成功")
-            )
-            self._program_load_refresh()
+            self._rlogger.tag_live_append("程序加载", "自动交易模块初始化成功")
 
-            # 5. 创建订单状态推送监听器（长桥交易推送）
             try:
-                self.order_push_monitor = OrderPushMonitor(config=config)
+                _is_option_mode = not (self.selected_page and self.selected_page[1] == "stock")
+                self.order_push_monitor = OrderPushMonitor(config=config, is_option_mode=_is_option_mode)
                 self.order_push_monitor.on_order_changed(self._on_order_changed)
-                self._program_load_lines.append(
-                    (web_listen_timestamp(), "订单推送监听器初始化成功")
-                )
-                self._program_load_refresh()
+                self._rlogger.tag_live_append("程序加载", "订单推送监听器初始化成功")
             except Exception as e:
                 logger.warning("订单推送监听未启用: %s", e)
                 self.order_push_monitor = None
 
-            # [配置更新] 延后到 run() 中、账户持仓输出前再打印
             _default_stop = os.getenv("ENABLE_DEFAULT_STOP_LOSS", "false").strip().lower() in ("true", "1", "yes")
             _default_stop_ratio = os.getenv("DEFAULT_STOP_LOSS_RATIO", "38").strip() or "38"
             _ctx_limit = os.getenv("CONTEXT_SEARCH_LIMIT", "10").strip() or "10"
@@ -190,7 +164,7 @@ class SignalScraper:
             if not _is_paper and not _dry_run:
                 self._config_update_lines.append("⚠️ 当前为真实账户且 Dry Run 已关闭，下单将产生实际资金变动，请确认配置无误")
         except Exception as e:
-            self._program_load_live.stop()
+            self._rlogger.tag_live_stop("程序加载")
             logger.exception("❌ 交易组件初始化失败（详见下方堆栈，请检查 .env 中长桥凭证与网络）: %s", e)
             logger.warning("程序将以监控模式运行（不执行交易）")
             self.broker = None
@@ -224,13 +198,27 @@ class SignalScraper:
             create_env_template()
             return False
 
-        # 继续往 [程序加载] 流式块追加网页监听相关子条目（复用 __init__ 中已启动的 Live）
-        # 创建浏览器管理器
+        # 浏览器管理器仍使用 (log_lines, log_refresh) 回调；
+        # 通过桥接列表将 browser 的 append 转发到 logger.tag_live_append
+        class _BridgeList(list):
+            """append 时同步到 RichLogger tag_live"""
+            def __init__(self, rlogger, tag):
+                super().__init__()
+                self._rlogger = rlogger
+                self._tag = tag
+            def append(self, item):
+                super().append(item)
+                if isinstance(item, tuple) and len(item) == 2:
+                    self._rlogger.tag_live_append(self._tag, item[1])
+
+        bridge_lines = _BridgeList(self._rlogger, "程序加载")
+        self._program_load_lines = bridge_lines
+
         self.browser = BrowserManager(
             headless=Config.HEADLESS,
             slow_mo=Config.SLOW_MO,
             storage_state_path=Config.STORAGE_STATE_PATH,
-            log_lines=self._program_load_lines,
+            log_lines=bridge_lines,
             log_refresh=self._program_load_refresh,
         )
         
@@ -244,14 +232,13 @@ class SignalScraper:
             page_configs = Config.get_all_pages()
         
         if not page_configs:
-            self._program_load_live.stop()
+            self._rlogger.tag_live_stop("程序加载")
             print("错误: 没有配置任何监控页面")
             return False
         
         # 检查登录状态（使用第一个页面）
         first_url = page_configs[0][0]
-        self._program_load_lines.append((web_listen_timestamp(), "检查登录状态..."))
-        self._program_load_refresh()
+        self._rlogger.tag_live_append("程序加载", "检查登录状态...")
         if not await self.browser.is_logged_in(first_url):
             print("需要登录...")
             success = await self.browser.login(
@@ -261,13 +248,13 @@ class SignalScraper:
             )
             
             if not success:
-                self._program_load_live.stop()
+                self._rlogger.tag_live_stop("程序加载")
                 print("登录失败，请检查凭据是否正确")
                 return False
         
         # 使用单页面监控（向后兼容）
         if not await self._setup_single_page_monitor(page, page_configs[0]):
-            self._program_load_live.stop()
+            self._rlogger.tag_live_stop("程序加载")
             return False
         
         return True
@@ -284,15 +271,11 @@ class SignalScraper:
         
         # 导航到目标页面
         if not await self.browser.navigate(url):
-            self._program_load_live.stop()
+            self._rlogger.tag_live_stop("程序加载")
             print(f"无法导航到目标页面: {url}")
             return False
         
-        # 使用传统轮询监控器
-        self._program_load_lines.append(
-            (web_listen_timestamp(), f"使用轮询监控模式，间隔：{Config.POLL_INTERVAL} 秒")
-        )
-        self._program_load_refresh()
+        self._rlogger.tag_live_append("程序加载", f"使用轮询监控模式，间隔：{Config.POLL_INTERVAL} 秒")
         self.monitor = MessageMonitor(
             page=page,
             poll_interval=Config.POLL_INTERVAL,
@@ -305,13 +288,14 @@ class SignalScraper:
         return True
 
     def _on_record(self, record: Record):
-        """
-        新指令回调 - 处理交易信号（单页面模式）
-        
-        Args:
-            instruction: 解析出的指令
-        """
-        self._handle_instruction(record.instruction, "OPTION")
+        """新指令回调 - 按期权/股票分支处理。"""
+        inst = record.instruction
+        if inst is None:
+            return
+        if isinstance(inst, OptionInstruction):
+            self._handle_instruction(inst, "OPTION")
+        elif isinstance(inst, StockInstruction):
+            self._handle_stock_instruction(inst)
     
     def _handle_instruction(self, instruction: OptionInstruction, source: str):
         """
@@ -361,35 +345,237 @@ class SignalScraper:
                 pass  # 指令执行失败或被跳过，不输出日志
         except Exception as e:
             logger.error(f"❌ 处理指令失败: {e}", exc_info=True)
-    
+
+    def _calc_stock_quantity(self, ticker: str, sell_quantity: Optional[str], position_size: Optional[str]) -> Optional[int]:
+        """根据 watched_stocks 配置计算股数（与 generate_check_stock.py 逻辑一致）。"""
+        from utils.watched_stocks import get_stock_position_shares, get_bucket_ratio
+        position = get_stock_position_shares(ticker)
+        if not position or position <= 0:
+            return None
+        bucket = get_bucket_ratio(ticker)
+        base = position * bucket
+        if sell_quantity:
+            if sell_quantity == '1/2':
+                return max(1, int(base * 0.5))
+            if '/' in sell_quantity and sell_quantity not in ('小仓位', '全部'):
+                try:
+                    num, den = sell_quantity.split('/')
+                    return max(1, int(base * int(num) / int(den)))
+                except Exception:
+                    pass
+        if position_size and '一半' in position_size:
+            return max(1, int(base * 0.5))
+        return max(1, int(base))
+
+    def _handle_stock_instruction(self, instruction: StockInstruction):
+        """处理股票交易指令：校验、打印、下单。"""
+        if not self.auto_trader or not self.broker:
+            if not self._warned_no_trader:
+                logger.warning("⚠️  交易组件未初始化，仅记录信号（请查看启动时「交易组件初始化失败」错误原因）")
+                self._warned_no_trader = True
+            return
+
+        if not self.broker.auto_trade:
+            logger.info("ℹ️  自动交易未启用，仅记录信号")
+            return
+
+        try:
+            instruction.ensure_symbol()
+            symbol = instruction.symbol
+            if not symbol:
+                logger.warning("⚠️  无法确定股票代码，跳过")
+                return
+            if instruction.instruction_type == "BUY":
+                self._execute_stock_buy(instruction)
+            elif instruction.instruction_type == "SELL":
+                self._execute_stock_sell(instruction)
+            else:
+                logger.info("📈 [股票] 非买卖指令，仅记录: %s", instruction)
+        except Exception as e:
+            logger.error("❌ 股票指令执行失败: %s", e, exc_info=True)
+
+    def _execute_stock_buy(self, instruction: StockInstruction):
+        """执行股票买入：查行情 → 价格校验 → 计算数量 → 下单。"""
+        from broker.order_formatter import print_order_validation_display
+        symbol = instruction.symbol
+        ticker = instruction.ticker or symbol.replace('.US', '')
+        deviation_tolerance = float(os.getenv('STOCK_PRICE_DEVIATION_TOLERANCE', '1'))
+
+        if instruction.price_range:
+            instruction_price = (instruction.price_range[0] + instruction.price_range[1]) / 2
+        elif instruction.price is not None:
+            instruction_price = instruction.price
+        else:
+            logger.warning("⚠️  股票买入指令缺少价格，跳过")
+            return
+
+        price = instruction_price
+        price_line = ""
+        reject_reason = None
+
+        try:
+            quotes = self.broker.get_stock_quote([symbol])
+            if quotes:
+                market_price = quotes[0].get("last_done", 0)
+                if market_price > 0:
+                    deviation_pct = (market_price - instruction_price) / instruction_price * 100
+                    if deviation_pct > deviation_tolerance:
+                        reject_reason = (
+                            f"当前市价 ${market_price:.2f} 高于指令价 ${instruction_price:.2f} "
+                            f"超过 {deviation_tolerance}%，未提交订单"
+                        )
+                        price_line = f"查询价格：市场价=${market_price:.2f}，指令价=${instruction_price:.2f}，偏差={deviation_pct:.1f}%"
+                    else:
+                        raw_price = market_price if market_price < instruction_price else instruction_price
+                        price = round(raw_price, 2)
+                        price_line = (
+                            f"查询价格：市场价=${market_price:.2f}，指令价=${instruction_price:.2f}，"
+                            f"偏差={abs(deviation_pct):.1f}%，使用价格=${price:.2f}"
+                        )
+                else:
+                    price_line = "查询价格：市场价格无效，使用指令价格"
+            else:
+                price_line = "查询价格：无法获取报价，使用指令价格"
+        except Exception as e:
+            price_line = f"查询价格：获取报价异常（{e}），使用指令价格=${price:.2f}"
+
+        quantity = instruction.quantity
+        if not quantity:
+            quantity = self._calc_stock_quantity(ticker, None, instruction.position_size)
+        if not quantity or quantity <= 0:
+            reject_reason = reject_reason or f"无法计算买入数量（{ticker} 未在 watched_stocks 配置），未提交订单"
+            quantity = 0
+
+        total_price = (quantity or 0) * price
+        quantity_line = f"买入数量：{quantity} 股（position_size={instruction.position_size or '默认'}）"
+        total_line = f"买入总价：${total_price:.2f}"
+
+        print_order_validation_display(
+            side="BUY",
+            symbol=symbol,
+            price=price,
+            price_line=price_line,
+            quantity_line=quantity_line,
+            total_line=total_line,
+            instruction_timestamp=instruction.timestamp,
+            reject_reason=reject_reason,
+        )
+        if reject_reason or not quantity:
+            return
+
+        try:
+            self.broker.submit_stock_order(
+                symbol=symbol,
+                side="BUY",
+                quantity=quantity,
+                price=price,
+                order_type="LIMIT",
+                remark=f"Auto stock buy: {(instruction.raw_message or '')[:50]}",
+            )
+        except Exception as e:
+            err_msg = str(e)
+            logger.error("股票买入下单失败: %s", err_msg)
+            print_order_validation_display(
+                side="BUY",
+                symbol=symbol,
+                price=price,
+                price_line="",
+                quantity_line=f"下单数量：{quantity} 股",
+                total_line="",
+                instruction_timestamp=instruction.timestamp,
+                reject_reason=f"下单失败：{err_msg}",
+            )
+
+    def _execute_stock_sell(self, instruction: StockInstruction):
+        """执行股票卖出：计算数量 → 查行情 → 下单。"""
+        from broker.order_formatter import print_sell_validation_display
+        symbol = instruction.symbol
+        ticker = instruction.ticker or symbol.replace('.US', '')
+
+        if instruction.price_range:
+            instruction_price = round((instruction.price_range[0] + instruction.price_range[1]) / 2, 2)
+        elif instruction.price is not None:
+            instruction_price = round(instruction.price, 2)
+        else:
+            instruction_price = None
+
+        quantity = instruction.quantity
+        if not quantity:
+            quantity = self._calc_stock_quantity(ticker, instruction.sell_quantity, None)
+
+        reject_reason = None
+        if not quantity or quantity <= 0:
+            reject_reason = f"无法计算卖出数量（{ticker} 未在 watched_stocks 配置），未提交订单"
+            quantity = 0
+
+        detail_lines = [
+            f"卖出比例/数量标注：{instruction.sell_quantity or '全部'}",
+            f"计算股数：{quantity} 股",
+        ]
+        if instruction_price:
+            detail_lines.append(f"目标价格：${instruction_price:.2f}")
+        if instruction.sell_reference_label:
+            detail_lines.append(f"参考买入：{instruction.sell_reference_label}")
+
+        print_sell_validation_display(
+            symbol=symbol,
+            quantity=quantity,
+            instruction_timestamp=instruction.timestamp,
+            detail_lines=detail_lines,
+            reject_reason=reject_reason,
+        )
+        if reject_reason or not quantity:
+            return
+
+        try:
+            self.broker.submit_stock_order(
+                symbol=symbol,
+                side="SELL",
+                quantity=quantity,
+                price=instruction_price,
+                order_type="LIMIT" if instruction_price else "MARKET",
+                remark=f"Auto stock sell: {(instruction.raw_message or '')[:50]}",
+            )
+        except Exception as e:
+            from broker.order_formatter import print_sell_validation_display as _psv
+            err_msg = str(e)
+            logger.error("股票卖出下单失败: %s", err_msg)
+            _psv(
+                symbol=symbol,
+                quantity=quantity,
+                instruction_timestamp=instruction.timestamp,
+                detail_lines=[f"卖出价格：${instruction_price:.2f}" if instruction_price else "市价单"],
+                reject_reason=f"下单失败：{err_msg}",
+            )
+
     async def run(self):
         """运行抓取器"""
         if not await self.setup():
             return
 
-        self._program_load_lines.append(
-            (web_listen_timestamp(), f"开始监控，轮询间隔: {Config.POLL_INTERVAL} 秒")
-        )
-        self._program_load_lines.append((web_listen_timestamp(), "按 Ctrl+C 停止监控"))
-        self._program_load_refresh()
+        self._rlogger.tag_live_append("程序加载", f"开始监控，轮询间隔: {Config.POLL_INTERVAL} 秒")
+        self._rlogger.tag_live_append("程序加载", "按 Ctrl+C 停止监控")
 
         if self.order_push_monitor:
             self.order_push_monitor.start(
                 log_lines=self._program_load_lines,
                 log_refresh=self._program_load_refresh,
             )
-            time.sleep(1)  # 留时间让后台线程完成订阅并刷新「已订阅」到 [程序加载]
+            time.sleep(1)
 
-        self._program_load_refresh(show_spinner=False)
-        self._program_load_live.stop()
+        if self.monitor:
+            await self.monitor.scan_once()
+
+        self._rlogger.tag_live_stop("程序加载")
         print()
-
-        if self._config_update_lines is not None:
-            print_config_update_display(self._config_update_lines)
 
         if self.position_manager and self.broker:
             try:
-                self.position_manager.sync_from_broker(self.broker)
+                is_stock = bool(self.selected_page and self.selected_page[1] == "stock")
+                self.position_manager.sync_from_broker(
+                    self.broker, full_refresh=is_stock,
+                    config_lines=self._config_update_lines,
+                )
             except Exception as e:
                 logger.warning("启动时同步账户/持仓失败: %s", e)
 
