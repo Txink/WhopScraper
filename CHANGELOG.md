@@ -1,5 +1,7 @@
 # CHANGELOG
 
+##[2026-03-02]修护main.py在windows下的报错`loop.add_signal_handler(sig, signal_handler) NotImplementedError`
+
 ## [2026-02-28] 账户持仓表格化显示 + 订单成交更新
 
 ### 新增

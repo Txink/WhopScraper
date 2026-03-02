@@ -656,8 +656,11 @@ async def main(args=None):
         for task in asyncio.all_tasks(loop):
             task.cancel()
     
-    for sig in (signal.SIGINT, signal.SIGTERM):
-        loop.add_signal_handler(sig, signal_handler)
+    try:
+        for sig in (signal.SIGINT, signal.SIGTERM):
+            loop.add_signal_handler(sig, signal_handler)
+    except NotImplementedError:
+        pass
     
     try:
         await scraper.run()
