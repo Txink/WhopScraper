@@ -4,7 +4,8 @@
 """
 import re
 import hashlib
-from typing import Optional
+from datetime import datetime, timedelta
+from typing import Optional, Tuple
 from models.instruction import OptionInstruction, InstructionType
 
 # 消息中常见非 ticker 的 2–5 字母词，不当作从正文解析的 ticker
@@ -16,58 +17,89 @@ _NON_TICKER_WORDS = frozenset({
 
 class OptionParser:
     """期权指令解析器"""
-    
-    @staticmethod
-    def _resolve_relative_date(relative_date: str, message_timestamp: Optional[str] = None) -> tuple:
+
+    @classmethod
+    def _resolve_relative_date(cls, date_str: str, message_timestamp: str = None) -> Tuple[str, bool]:
         """
-        将相对日期（如"今天"、"下周"）转换为具体日期
+        解析相对日期为 m/d 格式（跨平台兼容）
+        
+        支持：本周/下周/今天/明天、THIS WEEK/NEXT WEEK/TODAY/TOMORROW
+        返回：(m/d格式日期, 是否使用了fallback)
+        """
+        if not date_str:
+            return None, False
+        
+        date_str_upper = date_str.strip().upper()
+        now = datetime.now()
+        used_fallback = False
+        
+        # 相对日期处理
+        relative_dates = {
+            ("THIS WEEK", "本周", "当周", "这周"): lambda: cls._get_friday_of_week(now),
+            ("NEXT WEEK", "下周"): lambda: cls._get_friday_of_week(now + timedelta(days=7)),
+            ("TODAY", "今天"): lambda: now,
+            ("TOMORROW", "明天"): lambda: now + timedelta(days=1),
+        }
+        
+        for patterns, date_func in relative_dates.items():
+            for pattern in patterns:
+                if pattern in date_str_upper:
+                    target_date = date_func()
+                    # ✅ 修复：使用跨平台兼容的日期格式（不用 %-m/%-d）
+                    return f"{target_date.month}/{target_date.day}", used_fallback
+        
+        # 具体日期处理（m/d、m月d等）
+        specific_patterns = [
+            (r'(\d{1,2})/(\d{1,2})', lambda m: (int(m.group(1)), int(m.group(2)))),
+            (r'(\d{1,2})月(\d{1,2})', lambda m: (int(m.group(1)), int(m.group(2)))),
+            (r'([A-Za-z]+)\s*(\d{1,2})', lambda m: cls._parse_month_day(m.group(1), int(m.group(2)))),
+        ]
+        
+        for pattern, parser in specific_patterns:
+            match = re.search(pattern, date_str)
+            if match:
+                try:
+                    month, day = parser(match)
+                    if 1 <= month <= 12 and 1 <= day <= 31:
+                        return f"{month}/{day}", used_fallback
+                except:
+                    continue
+        
+        # 无法解析时使用备选（下周五）
+        used_fallback = True
+        next_friday = cls._get_friday_of_week(now + timedelta(days=7))
+        return f"{next_friday.month}/{next_friday.day}", used_fallback
+
+    @classmethod
+    def _get_friday_of_week(cls, date: datetime) -> datetime:
+        """
+        获取该周的星期五
         
         Args:
-            relative_date: 相对日期字符串
-            message_timestamp: 消息时间戳（如 "Jan 22, 2026 10:41 PM"）
+            date: 任意日期
             
         Returns:
-            (具体日期字符串, 是否使用了当前时间兜底)
+            该周星期五的日期
         """
-        from datetime import datetime, timedelta
-        
-        # 解析消息时间戳；无时间戳时用当前系统时间兜底（确保 NEXT WEEK 等相对日期能解析）
-        used_fallback = False
-        if not message_timestamp:
-            msg_date = datetime.now()
-            used_fallback = True
-        else:
-            try:
-                msg_date = datetime.strptime(message_timestamp, '%b %d, %Y %I:%M %p')
-            except Exception:
-                try:
-                    msg_date = datetime.strptime(message_timestamp[:19], '%Y-%m-%d %H:%M:%S')
-                except Exception:
-                    return relative_date, False
-        
-        # 计算相对日期
-        relative_lower = relative_date.lower()
-        
-        if relative_lower in ['今天', 'today']:
-            target_date = msg_date
-        elif relative_lower in ['明天', 'tomorrow']:
-            target_date = msg_date + timedelta(days=1)
-        elif relative_lower in ['本周', '这周', '当周', 'this week']:
-            # 本周五
-            days_until_friday = (4 - msg_date.weekday()) % 7
-            if days_until_friday == 0:
-                days_until_friday = 7  # 如果今天是周五，指向下周五
-            target_date = msg_date + timedelta(days=days_until_friday)
-        elif relative_lower in ['下周', 'next week']:
-            # 下周五
-            days_until_friday = (4 - msg_date.weekday()) % 7
-            target_date = msg_date + timedelta(days=days_until_friday + 7)
-        else:
-            return relative_date, False
-        
-        # 返回格式化的日期（如 "1/31"）
-        return target_date.strftime('%-m/%-d'), used_fallback
-    
+        # weekday() 返回 0-6，其中 4 是星期五
+        days_until_friday = (4 - date.weekday()) % 7
+        if days_until_friday == 0:
+            # 如果已经是星期五，返回本周五
+            return date
+        return date + timedelta(days=days_until_friday)
+
+    @classmethod
+    def _parse_month_day(cls, month_str: str, day: int) -> Tuple[int, int]:
+        """解析英文月份名称"""
+        months = {
+            'JAN': 1, 'FEB': 2, 'MAR': 3, 'APR': 4, 'MAY': 5, 'JUN': 6,
+            'JUL': 7, 'AUG': 8, 'SEP': 9, 'OCT': 10, 'NOV': 11, 'DEC': 12
+        }
+        month = months.get(month_str.upper())
+        if month:
+            return month, day
+        raise ValueError(f"Invalid month: {month_str}")
+
     # 开仓指令正则（多种格式支持）
     # 格式1: INTC - $52 CALLS 1月30 $1.25
     # 格式2: QQQ 11/20 614c 入场价：1.1
@@ -81,8 +113,12 @@ class OptionParser:
         r'([A-Z]{2,5})\s*[-–]?\s*\$?(\d+(?:\.\d+)?)\s*'
         r'(?:(?:ITM|OTM|ATM)\s+)?'  # 可选的 ITM/OTM/ATM 修饰（In/Out/At The Money）
         r'(CALLS?|PUTS?)\s*'
-        r'(?:(本周|下周|这周|当周|今天)(?:的)?\s*|(?:EXPIRATION\s+)?(\d{1,2}/\d{1,2}|\d{1,2}月\d{1,2}日?|1月\d{1,2}|2月\d{1,2})\s*|(?:EXPIRATION\s+)?(NEXT\s+WEEK|THIS\s+WEEK)(?:到期)?\s*)?'  # 添加"的"字和"到期"支持
-        r'\$?((?:\d+(?:\.\d+)?|\.\d+)(?:-(?:\d+(?:\.\d+)?|\.\d+))?)',  # 支持 .65 格式和价格范围（保持捕获组）
+        r'(?:'
+            r'(本周|下周|这周|当周|今天)(?:的)?\s*'  # group(4): 中文相对日期
+            r'|(?:EXPIRATION\s+)?(\d{1,2}/\d{1,2}|\d{1,2}月\d{1,2}日?)\s*'  # group(5): 具体日期
+            r'|(?:EXPIRATION\s+)?(NEXT\s+WEEK|THIS\s+WEEK)(?:到期)?\s*'  # group(6): 英文相对日期
+        r')?'
+        r'\$?((?:\d+(?:\.\d+)?|\.\d+)(?:-(?:\d+(?:\.\d+)?|\.\d+))?)',  # group(7): 价格或价格范围
         re.IGNORECASE
     )
     
@@ -185,7 +221,7 @@ class OptionParser:
     
     # 止损指令正则
     # 示例: 止损 0.95
-    # 示例: 止损在1.00
+    # 示例: 止损提高到1.5
     # 示例: 止损价1.65美元 小仓位
     # 示例: 止损设置在0.17
     # 示例: 止损 在 1.3
@@ -227,6 +263,19 @@ class OptionParser:
     # 价格小数点点位（支持全角。、．，逗号，如 1。63、1,5）
     _DECIMAL = r'[\.．。,]'
     # 模式1: 价格+出+比例（可选股票代码）
+
+    # 模式1c: 价格区间+附近+出剩下+比例 → CLOSE（优先匹配，含"出剩下"视为清仓，价格区间取小值）
+    # 示例: 4.8-5附近出剩下三分之一 → 取小值4.8清仓
+    TAKE_PROFIT_PATTERN_1C = re.compile(
+        r'((?:\d+(?:\.\d+)?|\.\d+)(?:-(?:\d+(?:\.\d+)?|\.\d+))?)\s*'  # 价格或价格区间
+        r'(?:附近|左右)?\s*'
+        r'(?:出|减)\s*'
+        r'(?:剩下|剩余)(?:的)?\s*'  # 必须含"剩下/剩余"
+        r'(?:四分之一|三分之一|三分之二|三之一|一半|全部|1/4|1/3|2/3|1/2|\d+%)?'  # 比例可选（忽略）
+        r'(?:\s*([A-Z]{2,5}))?',  # 可选的股票代码
+        re.IGNORECASE
+    )
+    # 模式1: 价格+出+比例（可选股票代码）
     TAKE_PROFIT_PATTERN_1 = re.compile(
         r'(\d+(?:' + _DECIMAL + r'\d+)?)\s*(?:附近|左右)?\s*(?:也)?'
         r'(?:出|减)\s*'
@@ -235,7 +284,6 @@ class OptionParser:
         r'(?:\s*([A-Z]{2,5}))?',  # 可选的股票代码
         re.IGNORECASE
     )
-    
     # 模式1b: 价格或区间+开始+减/出+比例（如: 1.2-1.3开始减三分之一，区间时仅存 price_range，中间值在 resolver 填）
     TAKE_PROFIT_PATTERN_1B = re.compile(
         r'(\d+(?:\.\d+)?(?:-\d+(?:\.\d+)?)?)\s*开始\s*(?:出|减)\s*'
@@ -243,6 +291,8 @@ class OptionParser:
         r'(?:\s*([A-Z]{2,5}))?',
         re.IGNORECASE
     )
+    
+    
     
     # 模式2: 价格+剩下+都出 (如: 0.9剩下都出, 1,5都出剩下的)
     TAKE_PROFIT_PATTERN_2 = re.compile(
@@ -433,6 +483,13 @@ class OptionParser:
         re.IGNORECASE
     )
     
+    # 模式18: 价格+附近+清仓+剩下的（取靠近"清仓"关键词的价格）
+    # 示例: 5元上限到了 可以5.23附近清仓剩下的
+    TAKE_PROFIT_PATTERN_18 = re.compile(
+        r'(\d+(?:\.\d+)?)\s*(?:附近|左右)?\s*清仓\s*(?:剩下|剩余)?(?:的)?',
+        re.IGNORECASE
+    )
+    
     # 仓位大小正则
     # 示例: 小仓位
     # 示例: 中仓位
@@ -454,6 +511,157 @@ class OptionParser:
         '1/2': '1/2',
     }
     
+    # ==================== n8n 兜底解析正则 ====================
+    # 用于在所有模式都无法匹配时，使用更宽松的方式提取关键信息
+    
+    # n8n 兜底: 粘连格式 (如 440c, 180p) - 数字+c/p
+    _N8N_STRIKE_CP_PATTERN = re.compile(r'(\d+(?:\.\d+)?)(c|p)\b', re.IGNORECASE)
+    
+    # n8n 兜底: 独立 call/put 关键词
+    _N8N_OPTION_TYPE_PATTERN = re.compile(r'\b(call|calls|put|puts)\b', re.IGNORECASE)
+    
+    # n8n 兜底: 中文期权类型
+    _N8N_OPTION_TYPE_CN_PATTERN = re.compile(r'(看涨|看跌)')
+    
+    # n8n 兜底: 提取所有数字（用于价格/行权价）
+    _N8N_NUMBER_PATTERN = re.compile(r'(\d+(?:\.\d+)?|\.\d+)')
+    
+    # n8n 兜底: 止损价格排除（清洗用）
+    _N8N_STOP_LOSS_CLEAN = re.compile(r'止损[^0-9.]*(\d+(?:\.\d+)?)', re.IGNORECASE)
+    
+    # n8n 兜底: 价格区间排除（清洗用）
+    _N8N_PRICE_RANGE_CLEAN = re.compile(r'[-–]\s*\d+(?:\.\d+)?')
+
+    @classmethod
+    def _parse_buy_n8n_fallback(cls, message: str, message_id: str, message_timestamp: Optional[str] = None) -> Optional[OptionInstruction]:
+        """
+        n8n 风格的兜底买入解析（更宽松的顺序提取方式）
+        
+        解析逻辑：
+        1. 提取 ticker（首个 2-5 字母词，排除常见非 ticker 词）
+        2. 提取期权类型（优先粘连格式如 440c，否则独立 call/put，或中文看涨/看跌）
+        3. 解析到期日（中文相对日期/英文相对日期/具体日期）
+        4. 提取数字流，第一个作为行权价（若粘连格式已有则跳过），最后一个作为入场价
+        """
+        text = message.strip()
+        if not text:
+            return None
+        
+        # ---------- 1. 提取 ticker ----------
+        ticker = cls._extract_ticker_from_message(text)
+        if not ticker:
+            return None
+        
+        # ---------- 2. 提取期权类型 ----------
+        option_type = None
+        strike = None
+        cp_match = None
+        
+        # 优先匹配粘连格式（如 440c、180p）
+        cp_match = cls._N8N_STRIKE_CP_PATTERN.search(text)
+        if cp_match:
+            strike = float(cp_match.group(1))
+            option_type = 'CALL' if cp_match.group(2).upper() == 'C' else 'PUT'
+        else:
+            # 尝试独立 call/put
+            opt_match = cls._N8N_OPTION_TYPE_PATTERN.search(text)
+            if opt_match:
+                opt_str = opt_match.group(1).upper()
+                option_type = 'PUT' if opt_str in ('PUT', 'PUTS') else 'CALL'
+            else:
+                # 尝试中文
+                cn_match = cls._N8N_OPTION_TYPE_CN_PATTERN.search(text)
+                if cn_match:
+                    option_type = 'PUT' if '看跌' in cn_match.group(1) else 'CALL'
+        
+        # 如果没有识别出期权类型，不作为买入指令
+        if not option_type:
+            return None
+        
+        # ---------- 3. 解析到期日 ----------
+        expiry = None
+        
+        # 相对日期优先级：下周 > 本周/这周 > 今天/明天
+        if re.search(r'下周|next\s*week', text, re.IGNORECASE):
+            expiry, _ = cls._resolve_relative_date('下周', message_timestamp)
+        elif re.search(r'本周|这周|当周|this\s*week', text, re.IGNORECASE):
+            expiry, _ = cls._resolve_relative_date('本周', message_timestamp)
+        elif re.search(r'今天|today', text, re.IGNORECASE):
+            expiry, _ = cls._resolve_relative_date('今天', message_timestamp)
+        elif re.search(r'明天|tomorrow', text, re.IGNORECASE):
+            expiry, _ = cls._resolve_relative_date('明天', message_timestamp)
+        else:
+            # 尝试具体日期格式
+            date_patterns = [
+                (r'(\d{1,2})/(\d{1,2})', lambda m: f"{m.group(1)}/{m.group(2)}"),
+                (r'(\d{1,2})月(\d{1,2})', lambda m: f"{m.group(1)}/{m.group(2)}"),
+            ]
+            for pattern, formatter in date_patterns:
+                date_match = re.search(pattern, text)
+                if date_match:
+                    expiry = formatter(date_match)
+                    break
+        
+        # ---------- 4. 提取数字流 ----------
+        # 清洗文本：移除 ticker、止损价格
+        clean_text = text
+        # 移除 ticker
+        clean_text = re.sub(re.escape(ticker), '', clean_text, flags=re.IGNORECASE)
+        # 移除粘连格式（已提取）
+        if cp_match:
+            # 只移除匹配到的粘连格式部分
+            match_str = cp_match.group(0)
+            clean_text = clean_text.replace(match_str, ' ', 1)
+        # 移除止损价格
+        clean_text = cls._N8N_STOP_LOSS_CLEAN.sub(' ', clean_text)
+        
+        # 提取剩余数字
+        nums = cls._N8N_NUMBER_PATTERN.findall(clean_text)
+        
+        # 需要至少一个数字作为价格
+        if not nums:
+            return None
+        
+        # 如果行权价还没有（非粘连格式），取第一个数字
+        if strike is None:
+            if len(nums) < 2:
+                # 只有一个数字，无法区分行权价和入场价
+                return None
+            strike = float(nums[0])
+            nums = nums[1:]
+        
+        # 最后一个数字作为入场价
+        price_str = nums[-1]
+        price, price_range = cls._parse_price_range(price_str)
+        
+        if price is None and price_range is None:
+            return None
+        
+        # 价格合理性检查（期权价格通常在 0.01 - 100 之间）
+        check_price = price if price else (price_range[0] if price_range else None)
+        if check_price and (check_price < 0.01 or check_price > 500):
+            return None
+        
+        # ---------- 5. 构建指令 ----------
+        position_match = cls.POSITION_SIZE_PATTERN.search(message)
+        position_size = position_match.group(1) if position_match else None
+        
+        instruction = OptionInstruction(
+            raw_message=message,
+            instruction_type=InstructionType.BUY.value,
+            ticker=ticker,
+            option_type=option_type,
+            strike=strike,
+            expiry=expiry,
+            price=price,
+            price_range=price_range,
+            position_size=position_size,
+            message_id=message_id,
+            parsed_by_fallback=True
+        )
+        
+        return instruction
+
     @classmethod
     def parse(cls, message: str, message_id: Optional[str] = None, message_timestamp: Optional[str] = None) -> Optional[OptionInstruction]:
         """
@@ -503,8 +711,26 @@ class OptionParser:
             cls._fill_ticker_from_message_if_missing(instruction, message)
             return instruction
         
-        # 无法解析
-        return None
+        # ==================== n8n 兜底解析 ====================
+        # 所有精确模式都无法匹配时，使用 n8n 风格的宽松解析
+        instruction = cls._parse_buy_n8n_fallback(message, message_id, message_timestamp)
+        if instruction:
+            if not message_timestamp and instruction.expiry:
+                _RELATIVE_DATE_KEYWORDS = {'今天', '明天', 'today', 'tomorrow', '本周', '这周', '当周', '下周',
+                                           'this week', 'next week', 'expiration next week', 'expiration this week'}
+                msg_lower = message.lower()
+                if any(kw in msg_lower for kw in _RELATIVE_DATE_KEYWORDS):
+                    instruction.expiry_fallback_time = True
+            cls._fill_ticker_from_message_if_missing(instruction, message)
+            return instruction
+        
+        # 无法解析 - 返回带有解析错误标记的指令
+        return OptionInstruction(
+            raw_message=message,
+            instruction_type="PARSE_ERROR",
+            message_id=message_id,
+            parse_error=True
+        )
     
     # 带点的 ticker 归一化正则：匹配 BRK.B、BF.A 等（2-4字母 + 点 + 1字母）
     _DOT_TICKER_RE = re.compile(r'(?<![A-Za-z])([A-Za-z]{2,4})\.([A-Za-z])(?![A-Za-z])')
@@ -527,7 +753,7 @@ class OptionParser:
     def _extract_ticker_from_message(message: str) -> Optional[str]:
         """
         从消息正文解析首个可能的 ticker（2–5 字母，排除常见非 ticker）。
-        不用 \\b：Python 中 \\w 含 Unicode 字母，ticker 后紧跟中文（如「tsla剩下」）时无 word boundary，
+        不用 \\b：Python 中 \\w 含 Unicode 字母，ticker 后紧跟中文（如「tsla剩下」）时无 word boundary,
         改为要求 ticker 两侧为非字母或首/尾。
         """
         if not message or len(message.strip()) < 2:
@@ -589,7 +815,7 @@ class OptionParser:
             price_str = match.group(4)
             
             # 从消息中判断期权类型（c/p/call/put）
-            option_type_match = re.search(r'(\d+(?:\.\d+)?)\s*[cCpP](?:all|ut)?', message)
+            option_type_match = re.search(r'(\d+(?:\.\d+)?|\.\d+)(?:[cCpP](?:all|ut)?|call|put)', message)
             if option_type_match:
                 option_char = message[option_type_match.end(1):option_type_match.end(1)+1].upper()
                 option_type = 'CALL' if option_char == 'C' else 'PUT'
@@ -625,7 +851,7 @@ class OptionParser:
             strike = float(match.group(2))
             option_type = match.group(3).upper()
             option_type = 'CALL' if option_type.startswith('CALL') else 'PUT'
-            # group(4) 相对日期中文，group(5) 具体日期，group(6) EXPIRATION NEXT/THIS WEEK
+            # group(4) 相对日期中文，group(5) 具体日期，group(6) EXPIRATION NEXT WEEK/THIS WEEK
             expiry_raw = match.group(4) or match.group(5) or match.group(6)
             price_str = match.group(7)
             
@@ -1080,7 +1306,19 @@ class OptionParser:
                 sell_quantity=sell_quantity,
                 message_id=message_id
             )
-        
+        # 尝试模式18: 价格+附近+清仓+剩下的（如: 5元上限到了 可以5.23附近清仓剩下的）
+        match = cls.TAKE_PROFIT_PATTERN_18.search(message)
+        if match:
+            price_str = match.group(1)
+            price, price_range = cls._parse_price_range(price_str)
+            return OptionInstruction(
+                raw_message=message,
+                instruction_type=InstructionType.CLOSE.value,
+                price=price,
+                price_range=price_range,
+                message_id=message_id
+            )
+
         # 尝试模式12: ticker+价格+卖出/出+比例（如: tsla 0.17 卖出 1/3, nvda 1.5 出一半）
         # 注意：此模式需要优先匹配，因为它更具体（包含ticker）
         match = cls.TAKE_PROFIT_PATTERN_12.search(message)
@@ -1138,6 +1376,26 @@ class OptionParser:
                 price=price,
                 price_range=price_range,
                 sell_quantity=sell_quantity,
+                message_id=message_id
+            )
+        
+        # 尝试模式1c: 价格区间+附近+出剩下+比例 → CLOSE（如: 4.8-5附近出剩下三分之一）
+        # 注意：含"出剩下/出剩余"视为清仓，价格区间取小值
+        match = cls.TAKE_PROFIT_PATTERN_1C.search(message)
+        if match:
+            price_str = match.group(1)
+            ticker = match.group(2).upper() if match.group(2) else None
+            price, price_range = cls._parse_price_range(price_str)
+            # 价格区间取小值作为清仓价格
+            if price_range:
+                price = price_range[0]
+                price_range = None
+            return OptionInstruction(
+                raw_message=message,
+                instruction_type=InstructionType.CLOSE.value,
+                ticker=ticker,
+                price=price,
+                price_range=price_range,
                 message_id=message_id
             )
         
@@ -1270,7 +1528,7 @@ class OptionParser:
                 message_id=message_id
             )
         
-        # 尝试模式2b: 剩下也+价格+附近+出（如: 剩下也1.25附近出速度有点快）
+        # 尝试模式2b: 剩下也(在)?+价格+附近?+出 (如: 剩下也1.25附近出速度有点快)
         match = cls.TAKE_PROFIT_PATTERN_2B.search(message)
         if match:
             price_str = match.group(1)
@@ -1297,7 +1555,7 @@ class OptionParser:
                 message_id=message_id
             )
         
-        # 尝试模式5i: 价格+也减点（后可有字，symbol 从历史补全）→ SELL 1/3（如: 3.4也减点 剩下拿一半）
+        # 尝试模式5i: 价格+也减点（后可有其他字，无 ticker 由历史补全）→ SELL 1/3（如: 3.4也减点 剩下拿一半）
         match = cls.TAKE_PROFIT_PATTERN_5I.search(message)
         if match:
             price_str = match.group(1)
