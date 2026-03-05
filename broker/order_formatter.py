@@ -47,11 +47,10 @@ def _format_time_with_diff(timestamp_str: str, now: datetime) -> tuple:
     return t, ms_rich
 
 
-def print_order_submitted_display(order: Dict, multiplier: int = 100) -> None:
-    """按表格格式输出订单提交成功信息。"""
+def print_order_submitting_display(order: Dict, multiplier: int = 100) -> None:
+    """在调用 submit_order 之前展示「提交订单」阶段（时间点为即将提交），不包含 order_id。"""
     from utils.rich_logger import get_logger
     logger = get_logger()
-
     symbol = order.get("symbol", "")
     mode = order.get("mode", "paper")
     mode_str = "模拟" if mode in ("paper", "dry_run") else "真实"
@@ -59,7 +58,49 @@ def print_order_submitted_display(order: Dict, multiplier: int = 100) -> None:
     price = order.get("price")
     quantity = int(order.get("quantity") or 0)
     total = (float(price) if price else 0) * quantity * multiplier
+    summary = f"[green]\\[{side}][/green] {symbol}"
+    if price is not None:
+        summary += f" ${price} × {quantity} = [bold green]${total:.2f}[/bold green]"
+    logger.trade_stage("提交订单", rows=[("", summary)],
+                       tag_suffix=f"\\[{mode_str}]", tag_style="bold green")
 
+
+def print_order_push_submitted_display(order: Dict, multiplier: int = 100) -> None:
+    """submit_order 返回后调用：注册 order_id 并更新「订单推送」行为已提交。"""
+    from utils.rich_logger import get_logger
+    logger = get_logger()
+    order_id = order.get("order_id")
+    if not order_id:
+        return
+    logger.trade_register_order(str(order_id))
+    symbol = order.get("symbol", "")
+    side = order.get("side", "")
+    price = order.get("price")
+    quantity = int(order.get("quantity") or 0)
+    total = (float(price) if price else 0) * quantity * multiplier
+    summary = f"[green]\\[{side}][/green] {symbol}"
+    if price is not None:
+        summary += f" ${price} × {quantity} = [bold green]${total:.2f}[/bold green]"
+    logger.trade_push_update(
+        str(order_id),
+        rows=[("OrderID", f"[dim]{order_id}[/dim]"), ("", summary)],
+        tag_suffix="[green]已提交[/green]",
+        tag_style="bold white",
+        terminal=False,
+    )
+
+
+def print_order_submitted_display(order: Dict, multiplier: int = 100) -> None:
+    """按表格格式输出订单提交成功信息（股票等：提交后展示，含 order_id）。期权买入已改为提交前展示 + 订单推送已提交。"""
+    from utils.rich_logger import get_logger
+    logger = get_logger()
+    symbol = order.get("symbol", "")
+    mode = order.get("mode", "paper")
+    mode_str = "模拟" if mode in ("paper", "dry_run") else "真实"
+    side = order.get("side", "")
+    price = order.get("price")
+    quantity = int(order.get("quantity") or 0)
+    total = (float(price) if price else 0) * quantity * multiplier
     order_id = order.get("order_id")
     rows = []
     if order_id:
@@ -68,7 +109,6 @@ def print_order_submitted_display(order: Dict, multiplier: int = 100) -> None:
     if price is not None:
         summary += f" ${price} × {quantity} = [bold green]${total:.2f}[/bold green]"
     rows.append(("", summary))
-
     logger.trade_stage("提交订单", rows=rows,
                        tag_suffix=f"\\[{mode_str}]", tag_style="bold green")
     if order_id:
@@ -118,6 +158,32 @@ def print_order_validation_display(
         detail_lines.append(stop_loss_line)
     rows.extend(_parse_detail_rows(detail_lines, reject_reason))
     logger.trade_stage("订单校验", rows=rows, tag_style="bold yellow")
+
+
+def print_timing_breakdown_display(
+    quote_ms: float,
+    balance_ms: float,
+    submit_total_ms: float,
+    submit_api_ms: Optional[float] = None,
+) -> None:
+    """在提交订单后输出耗时分析阶段，便于优化。"""
+    from utils.rich_logger import get_logger
+    logger = get_logger()
+
+    rows: List[Tuple[str, str]] = [
+        ("查询报价", f"[dim]{quote_ms:.0f}ms[/dim]"),
+        ("账户余额", f"[dim]{balance_ms:.0f}ms[/dim]"),
+    ]
+    if submit_api_ms is not None:
+        # 发单到长桥并收到响应的耗时（含网络 RTT + 券商处理）
+        rows.append(("提交API(发单→券商→响应)", f"[dim]{submit_api_ms:.0f}ms[/dim]"))
+        other_ms = submit_total_ms - submit_api_ms
+        if other_ms > 0:
+            rows.append(("提交后处理", f"[dim]{other_ms:.0f}ms[/dim]"))
+    rows.append(("提交总耗时", f"[bold]{submit_total_ms:.0f}ms[/bold]"))
+    total_ms = quote_ms + balance_ms + submit_total_ms
+    rows.append(("合计", f"[bold]{total_ms:.0f}ms[/bold]"))
+    logger.trade_stage("耗时分析", rows=rows, tag_style="dim")
 
 
 def print_position_update_display(message: str) -> None:

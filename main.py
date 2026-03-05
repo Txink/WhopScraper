@@ -276,10 +276,12 @@ class SignalScraper:
             return False
         
         self._rlogger.tag_live_append("程序加载", f"使用轮询监控模式，间隔：{Config.POLL_INTERVAL} 秒")
+        skip_initial = Config.SKIP_INITIAL_MESSAGES
+        self._rlogger.tag_live_append("程序加载", "跳过首次历史消息：%s" % ("开启" if skip_initial else "关闭"))
         self.monitor = MessageMonitor(
             page=page,
             poll_interval=Config.POLL_INTERVAL,
-            skip_initial_messages=Config.SKIP_INITIAL_MESSAGES,
+            skip_initial_messages=skip_initial,
             page_type=page_type,
         )
 

@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
 """
 批量撤销今日所有订单
+支持 --paper（模拟账户）、--real（真实账户）选择账户类型。
 """
+import argparse
 import sys
 import os
 import logging
 from typing import List, Dict
 
-# 添加项目根目录到 Python 路径
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# 添加项目根目录到 Python 路径（脚本在 scripts/operation/ 下，根目录需上溯两级）
+_project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, _project_root)
 
+from broker.config_loader import LongPortConfigLoader
 from broker.longport_broker import LongPortBroker
 from broker.order_formatter import (
     print_orders_summary_table,
@@ -68,17 +72,24 @@ def can_cancel_order(order: Dict) -> bool:
     return status in cancellable_statuses
 
 
-def cancel_all_today_orders():
-    """批量撤销今日所有订单"""
-    
+def cancel_all_today_orders(mode: str = "paper"):
+    """
+    批量撤销今日所有订单
+
+    Args:
+        mode: 账户类型 'paper'（模拟）或 'real'（真实）
+    """
+    mode_label = "🧪 模拟账户" if mode == "paper" else "💰 真实账户"
     console.print("\n" + "="*60, style="bold cyan")
     console.print("📋 批量撤销今日订单", style="bold cyan")
+    console.print(f"   账户: {mode_label}", style="yellow")
     console.print("="*60 + "\n", style="bold cyan")
-    
-    # 初始化 broker
+
+    # 初始化 broker（按参数指定账户类型）
     try:
-        broker = LongPortBroker()
-        logger.info("✅ LongPort broker 初始化成功")
+        config_loader = LongPortConfigLoader(mode=mode)
+        broker = LongPortBroker(config_loader=config_loader)
+        logger.info("✅ LongPort broker 初始化成功 (%s)", mode_label)
     except Exception as e:
         print_error_message(f"初始化 broker 失败: {e}")
         return
@@ -191,9 +202,33 @@ def cancel_all_today_orders():
         print_error_message(f"{failed_count} 个订单撤销失败")
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="批量撤销今日所有订单。使用 --paper 操作模拟账户，--real 操作真实账户。"
+    )
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
+        "--paper",
+        action="store_const",
+        dest="mode",
+        const="paper",
+        help="使用模拟账户",
+    )
+    group.add_argument(
+        "--real",
+        action="store_const",
+        dest="mode",
+        const="real",
+        help="使用真实账户",
+    )
+    parser.set_defaults(mode=os.getenv("LONGPORT_MODE", "paper"))
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
+    args = parse_args()
     try:
-        cancel_all_today_orders()
+        cancel_all_today_orders(mode=args.mode)
     except KeyboardInterrupt:
         print_warning_message("\n操作已被用户中断")
         sys.exit(0)

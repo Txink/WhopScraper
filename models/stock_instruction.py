@@ -26,6 +26,9 @@ class StockInstruction(OperationInstruction):
     # 买入时：数量按历史参考（如“加回周五卖出的那部分”“吸回今天卖出的”）。
     buy_quantity_reference: Optional[str] = None  # 如 "周五卖出的" "今天卖出的" "卖出的一部分"
 
+    # 解析成功但未在关注列表，仅展示不触发交易
+    ignored_by_watchlist: bool = False
+
     def has_symbol(self) -> bool:
         """有 ticker 或 symbol 即视为具备标的信息。"""
         return bool((self.ticker or "").strip()) or bool((self.symbol or "").strip())
@@ -73,6 +76,8 @@ class StockInstruction(OperationInstruction):
 
         if self.source:
             rows.append(("source", str(self.source)))
+        if self.ignored_by_watchlist:
+            rows.append(("", "[dim]未在关注列表，不交易[/dim]"))
 
         logger.trade_stage("解析消息", rows=rows, tag_style="bold blue")
 

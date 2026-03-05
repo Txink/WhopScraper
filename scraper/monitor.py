@@ -143,7 +143,8 @@ class MessageMonitor:
                 else:
                     OptionInstruction.display_parse_failed(getattr(record.message, "timestamp", None))
             if self._on_new_record and record.instruction is not None and record.instruction.has_symbol():
-                self._on_new_record(record)
+                if not getattr(record.instruction, "ignored_by_watchlist", False):
+                    self._on_new_record(record)
             rlogger.trade_end()
 
         return [r.instruction for r in records if r.instruction is not None]
@@ -256,40 +257,42 @@ class OrderPushMonitor:
             return
         if status_name == "PENDINGREPLACE":
             return
-        if status_name in ("CANCELED", "CANCELLED"):
-            status_rich = f"[dim white]{status_str}[/dim white]"
-        elif status_name == "FILLED":
-            status_rich = f"[green]{status_str}[/green]"
+        # 订单推送标题后缀：状态 + 颜色（[Filled] 绿 / [Rejected] 红 / 其他 dim），统一带方括号
+        if status_name == "FILLED":
+            tag_suffix = "[green][Filled][/green]"
         elif status_name == "REJECTED":
-            status_rich = f"[red]{status_str}[/red]"
+            tag_suffix = "[red][Rejected][/red]"
+        elif status_name in ("CANCELED", "CANCELLED"):
+            tag_suffix = "[dim][Cancelled][/dim]"
         else:
-            status_rich = status_str
+            tag_suffix = f"[dim][{status_name}][/dim]" if status_name else ""
+
+        executed = int(getattr(event, "executed_quantity", 0) or qty)
         if hasattr(submitted_at, "strftime"):
-            time_str = submitted_at.strftime("%Y-%m-%d %H:%M:%S") if submitted_at else ""
+            date_str = submitted_at.strftime("%m-%d") if submitted_at else ""
         elif submitted_at:
-            time_str = str(submitted_at).replace("T", " ", 1).strip()
-            if "." in time_str:
-                time_str = time_str[: time_str.rfind(".")] if time_str.rfind(".") > 0 else time_str
+            s = str(submitted_at).replace("T", "-", 1)
+            date_str = s[5:10] if len(s) >= 10 else s[:5]  # MM-DD
         else:
-            time_str = ""
+            date_str = ""
+
+        price_f = float(price) if price is not None else 0.0
+        # 仅成交（Filled）时展示交易记录行；拒绝/撤单不更新交易记录
+        trade_record_line = (
+            (date_str, side_str, executed, price_f) if date_str and status_name == "FILLED" else None
+        )
 
         rlogger = get_logger()
         order_id = str(getattr(event, "order_id", ""))
         is_terminal = status_name in ("FILLED", "REJECTED", "CANCELED", "CANCELLED")
 
-        push_rows = [
-            ("status", status_rich),
-            ("quantity", str(qty)),
-            ("price", str(price)),
-        ]
-        if time_str:
-            push_rows.append(("time", f"[dim white]{time_str}[/dim white]"))
-
         rlogger.trade_push_update(
             order_id,
-            rows=push_rows,
+            rows=[],
             tag_style="bold white",
             terminal=is_terminal,
+            tag_suffix=tag_suffix,
+            trade_record_line=trade_record_line,
         )
 
     def _run_loop(self):
@@ -299,15 +302,16 @@ class OrderPushMonitor:
             self._ctx = TradeContext(config)
 
             def _handle(event: PushOrderChanged):
-                try:
-                    self.display_order_changed(event)
-                except Exception as e:
-                    logger.exception("display_order_changed 异常: %s", e)
+                # 先更新持仓并写入 pending（若有对应交易流程），再展示订单推送并合并持仓阶段到同一表格
                 if self._on_order_changed:
                     try:
                         self._on_order_changed(event)
                     except Exception as e:
                         logger.exception("订单推送回调异常: %s", e)
+                try:
+                    self.display_order_changed(event)
+                except Exception as e:
+                    logger.exception("display_order_changed 异常: %s", e)
 
             self._ctx.set_on_order_changed(_handle)
             self._ctx.subscribe([TopicType.Private])

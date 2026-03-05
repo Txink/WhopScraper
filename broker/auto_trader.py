@@ -15,6 +15,7 @@ from broker.order_formatter import (
     print_warning_message,
     print_info_message,
     print_order_validation_display,
+    print_order_push_submitted_display,
     print_sell_validation_display,
     print_modify_validation_display,
     print_close_validation_display,
@@ -124,7 +125,7 @@ class AutoTrader:
         执行买入指令
         
         买入规则：
-        1. 获取账户余额，根据env配置和实际余额的较小值决定总价上限
+        1. 总价上限直接使用 env 配置的单次购买上限（不再校验账户余额）
         2. 根据总价上限和单价确认买入数量
         3. 校验结束后统一输出 [订单校验] 格式，再根据配置决定是否确认后下单
         """
@@ -170,13 +171,7 @@ class AutoTrader:
         except Exception as e:
             price_line = f"查询价格：获取报价失败（{e}），使用指令价格=${price:.2f}"
 
-        try:
-            balance_info = self.broker.get_account_balance()
-            available_cash = balance_info.get("available_cash", 0)
-        except Exception:
-            available_cash = float("inf")
-
-        max_total_price = min(self.max_option_total_price, available_cash)
+        max_total_price = self.max_option_total_price
         single_contract_price = price * 100
         max_quantity_by_price = int(max_total_price / single_contract_price) if single_contract_price > 0 else 0
         max_quantity_by_limit = self.max_option_quantity
@@ -188,7 +183,7 @@ class AutoTrader:
             reject_reason = f"计算的买入数量为0，单价: ${price}, 总价上限: ${max_total_price:.2f}，未提交订单"
 
         total_price = quantity * single_contract_price
-        quantity_line = f"买入数量：账户余额=${available_cash:.2f}，单次购买上限=${max_total_price:.2f}，张数限制={max_quantity_by_limit}张，按总价上限可买{max_quantity_by_price}张，最终买入数量={quantity}张"
+        quantity_line = f"买入数量：总价上限=${max_total_price:.2f}，张数限制={max_quantity_by_limit}张，按总价上限可买{max_quantity_by_price}张，最终买入数量={quantity}张"
         total_line = f"买入总价：${total_price:.2f}"
 
         print_order_validation_display(
@@ -240,6 +235,8 @@ class AutoTrader:
                 print_info_message(f"设置止损价格: ${instruction.stop_loss_price}")
             
             result = self.broker.submit_option_order(**order_params)
+            # submit 返回后更新「订单推送」为已提交
+            print_order_push_submitted_display(result)
             return result
             
         except Exception as e:

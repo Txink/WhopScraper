@@ -440,6 +440,15 @@ class PositionManager:
         submitted_at = getattr(event, "submitted_at", None)
         if hasattr(submitted_at, "isoformat"):
             submitted_at = submitted_at.isoformat()
+
+        # 卖出成交时在更新持仓前计算本次利润，供订单推送表格展示
+        realized_profit = None
+        if status_name == "FILLED" and "SELL" in (side_str or "").upper() and price is not None:
+            pos_before = self.positions.get(symbol)
+            if pos_before and executed > 0:
+                mult = 1 if _is_stock_symbol(symbol) else 100
+                realized_profit = round((price - pos_before.avg_cost) * executed * mult, 2)
+
         if status_name == "FILLED":
             rec = {
                 "order_id": order_id,
@@ -502,11 +511,17 @@ class PositionManager:
                     self.remove_position(symbol)
             except Exception as e:
                 logger.warning(f"订单推送后刷新持仓失败: {e}")
-            # 输出 [持仓更新] 日志：展示该 symbol 的最新持仓及买卖记录（交易记录从 API 获取）
-            self._log_position_update(symbol, side_str, broker)
+            # 卖出利润写入 logger，供订单推送阶段展示
+            if order_id and realized_profit is not None:
+                from utils.rich_logger import get_logger
+                rlog = get_logger()
+                if rlog.is_order_in_flow(order_id):
+                    rlog.set_pending_order_profit(order_id, realized_profit)
+            # 输出 [持仓更新] 日志：若该 order 在交易流程中则并入同一表格，否则独立打印
+            self._log_position_update(symbol, side_str, broker, order_id=str(order_id) if order_id else None)
 
-    def _log_position_update(self, symbol: str, side_str: str, broker: Any = None) -> None:
-        """订单成交后输出该 symbol 的持仓表格（交易记录优先从 API 获取）。"""
+    def _log_position_update(self, symbol: str, side_str: str, broker: Any = None, order_id: Optional[str] = None) -> None:
+        """订单成交后输出该 symbol 的持仓表格。若提供 order_id 且该订单在交易流程中，则仅写入 pending 供同一表格合并展示。"""
         from utils.rich_logger import get_logger
         rlogger = get_logger()
 
@@ -588,6 +603,9 @@ class PositionManager:
                 "records": [],
             })
 
+        if order_id and rlogger.is_order_in_flow(order_id):
+            rlogger.set_pending_position_stage(order_id, positions_data)
+            return
         rlogger.print_position_table(title, positions_data)
 
     def _print_longbridge_data_summary(self, full_refresh: bool = False) -> None:

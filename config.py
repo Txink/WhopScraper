@@ -3,11 +3,17 @@
 """
 import json
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 from typing import List, Optional, Tuple
 
-# 加载 .env 文件
-load_dotenv()
+# 从项目根目录加载 .env（与 main.py 一致，避免因工作目录不同导致未加载）
+_project_root = Path(__file__).resolve().parent
+_env_path = _project_root / ".env"
+if _env_path.is_file():
+    load_dotenv(_env_path)
+else:
+    load_dotenv()
 
 
 def _read_pages_raw() -> str:
@@ -113,7 +119,7 @@ class Config:
     DISPLAY_MODE: str = os.getenv("DISPLAY_MODE", "both")  # raw, parsed, both
     
     # 是否跳过首次连接时的历史消息（仅处理连接后新产生的消息）
-    SKIP_INITIAL_MESSAGES: bool = os.getenv("SKIP_INITIAL_MESSAGES", "false").lower() in ("true", "1", "yes")
+    SKIP_INITIAL_MESSAGES: bool = os.getenv("SKIP_INITIAL_MESSAGES", "true").strip().lower() in ("true", "1", "yes")
     
     # 消息过滤配置
     FILTER_AUTHORS: List[str] = [
@@ -239,8 +245,8 @@ POLL_INTERVAL=2.0  # 轮询间隔（秒）
 # 输出设置
 # OUTPUT_FILE=output/signals.json
 
-# 监控消息：是否跳过首次连接时的历史消息（true=只处理连接后新消息，false=首次也处理当前页消息）
-# SKIP_INITIAL_MESSAGES=false
+# 监控消息：是否跳过首次连接时的历史消息（默认 true=只处理连接后新消息；设为 false 则首次也处理当前页消息）
+# SKIP_INITIAL_MESSAGES=true
 
 # 消息过滤设置
 # FILTER_AUTHORS=xiaozhaolucky  # 只处理指定作者的消息，多个作者用逗号分隔

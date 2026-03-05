@@ -218,6 +218,16 @@ class OptionParser:
         r'\$?((?:\d+(?:\.\d+)?|\.\d+)(?:-(?:\d+(?:\.\d+)?|\.\d+))?)',
         re.IGNORECASE
     )
+
+    # 模式10: ticker call/put strike price（无到期日，默认本周）
+    # 示例: aapl call 150 2.5 / TSLA put 250 1.2
+    OPEN_PATTERN_10 = re.compile(
+        r'\$?([A-Z]{2,5})\s+'
+        r'(call|put)s?\s+'
+        r'\$?(\d+(?:\.\d+)?)\s+'
+        r'\$?((?:\d+(?:\.\d+)?|\.\d+)(?:-(?:\d+(?:\.\d+)?|\.\d+))?)',
+        re.IGNORECASE
+    )
     
     # 止损指令正则
     # 示例: 止损 0.95
@@ -1094,6 +1104,31 @@ class OptionParser:
             option_type = 'CALL' if option_type_str.upper().startswith('CALL') else 'PUT'
             price, price_range = cls._parse_price_range(price_str)
             (expiry, _expiry_fallback) = cls._resolve_relative_date(expiry_raw, message_timestamp) if expiry_raw else (None, False)
+            position_match = cls.POSITION_SIZE_PATTERN.search(message)
+            position_size = position_match.group(1) if position_match else None
+            return OptionInstruction(
+                raw_message=message,
+                instruction_type=InstructionType.BUY.value,
+                ticker=ticker,
+                option_type=option_type,
+                strike=strike,
+                expiry=expiry,
+                price=price,
+                price_range=price_range,
+                position_size=position_size,
+                message_id=message_id
+            )
+        
+        # 尝试模式10: ticker call/put strike price（无到期日时默认本周）
+        match = cls.OPEN_PATTERN_10.search(message)
+        if match:
+            ticker = match.group(1).upper()
+            option_type_str = match.group(2).upper()
+            option_type = 'CALL' if option_type_str.startswith('CALL') else 'PUT'
+            strike = float(match.group(3))
+            price_str = match.group(4)
+            price, price_range = cls._parse_price_range(price_str)
+            (expiry, _expiry_fallback) = cls._resolve_relative_date('本周', message_timestamp)
             position_match = cls.POSITION_SIZE_PATTERN.search(message)
             position_size = position_match.group(1) if position_match else None
             return OptionInstruction(

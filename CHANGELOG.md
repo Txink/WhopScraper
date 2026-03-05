@@ -1,5 +1,36 @@
 # CHANGELOG
 
+## [2026-03-05] 订单推送不再追加持仓更新；利润颜色与格式
+
+- **utils/rich_logger.py**：订单终态（Filled）时不再追加「持仓更新」阶段，仅保留订单推送中的交易记录行。交易记录行中卖出利润：去掉前导 `+`，正数绿色、负数红色显示（如 `$123.00` 绿、`$-411.00` 红）。
+
+## [2026-03-05] 拒绝/撤单不展示交易记录行
+
+- **scraper/monitor.py**：`display_order_changed` 仅在订单状态为 Filled 时传入 `trade_record_line`；Rejected、Cancelled 时不再展示「MM-DD BUY/SELL qty @price」行，仅保留状态标题（如 [red]Rejected[/red]）。持久化交易记录仍由 position_manager 仅在 Filled 时写入，无改动。
+
+## [2026-03-05] 默认跳过首次连接时的历史消息 + .env 生效修复
+
+- **config.py**：`SKIP_INITIAL_MESSAGES` 默认值改为 `true`；从项目根目录显式加载 `.env`（与 main 一致，避免因工作目录导致未加载）；解析时对取值做 `.strip()`，避免 `.env` 中首尾空格导致误判为 false。
+- **main.py**：创建 MessageMonitor 时在「程序加载」中输出当前「跳过首次历史消息：开启/关闭」，便于确认配置是否生效。
+
+## [2026-03-05] 订单推送表格：状态标题 + 交易记录行与卖出利润
+
+- **utils/rich_logger.py**：`trade_push_update` 支持 `tag_suffix`（订单推送标题后缀，如 ` [green]Filled[/green]`）、`trade_record_line`（(date_str, side, qty, price) 生成一行交易记录）；卖出时从 `_pending_order_profit` 取利润追加展示 `+$xxx`；新增 `set_pending_order_profit(order_id, profit)`；阶段标题的 `tag_suffix` 支持含 markup 或纯文本（纯文本用 dim）
+- **scraper/monitor.py**：`display_order_changed` 改为按状态设置 `tag_suffix`（Filled 绿 / Rejected 红 / Cancelled dim），并传入 `trade_record_line`（MM-DD、side、executed_quantity、price），不再传 status/quantity/price 等 key-value rows
+- **broker/position_manager.py**：订单推送为 Filled 且卖出时，在更新持仓前用当前持仓均价计算 `realized_profit`，并在流程内时调用 `set_pending_order_profit(order_id, realized_profit)` 供订单推送阶段展示
+
+## [2026-03-05] 订单成交后持仓更新并入同一交易流程表格
+
+- **scraper/monitor.py**：订单推送回调顺序改为先 `_on_order_changed`（更新持仓并写入 pending），再 `display_order_changed`（展示订单推送并合并持仓阶段）
+- **utils/rich_logger.py**：新增 `_pending_position_stages`、`set_pending_position_stage(order_id, positions_data)`、`is_order_in_flow(order_id)`；`trade_push_update(..., terminal=True)` 时若有该 order 的 pending 持仓数据，作为「持仓更新」阶段追加到同一流程并一起渲染；新增 `_build_position_inner_table(positions)`，`_TradeTableStage` 支持可选 `position_table_data` 用于内嵌持仓表
+- **broker/position_manager.py**：`_log_position_update` 增加参数 `order_id`；当 `order_id` 存在且该订单在交易流程中时，仅调用 `set_pending_position_stage` 不独立打印，由推送展示时并入同一表格
+
+## [2026-03-05] 股票页：未在关注列表仍展示解析结果、不触发交易
+
+- **models/stock_instruction.py**：新增 `ignored_by_watchlist: bool`；`display()` 在 `ignored_by_watchlist` 时多展示一行「未在关注列表，不交易」
+- **models/record_manager.py**：股票页分析时，未在关注列表的 ticker 不再将 `instruction` 置为 `None`，改为设置 `instruction.ignored_by_watchlist = True`
+- **scraper/monitor.py**：仅当 `not instruction.ignored_by_watchlist` 时才调用 `_on_new_record`，未在关注列表的指令仅展示、不进入交易流程
+
 ## [2026-03-05] 股票仓位表格内展示待 T 出分析
 
 - **broker/position_manager.py**：同步/更新股票仓位时，对每只股票用与 `t_trade_analysis` 一致的逻辑（高价优先匹配）计算待 T 出批次，写入 `positions_data` 的 `t_unmatched_buys`、`t_unmatched_qty`、`t_weighted_avg`；`_analyze_t_trades` 卖单匹配改为按买入价从高到低

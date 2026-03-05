@@ -102,10 +102,10 @@ class RecordManager:
             resolver = StockContextResolver()
             for record in records:
                 resolver.resolve_instruction(record)
-                # 仅监听关注列表中的股票；列表为空则不过滤
+                # 仅监听关注列表中的股票；列表为空则不过滤。未在列表中则标记为仅展示不交易
                 if record.instruction is not None and isinstance(record.instruction, StockInstruction):
                     if not is_watched(record.instruction.ticker or ""):
-                        record.instruction = None
+                        record.instruction.ignored_by_watchlist = True
         else:
             resolver = MessageContextResolver(self)
             for record in records:
