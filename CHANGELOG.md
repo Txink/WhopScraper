@@ -1,5 +1,47 @@
 # CHANGELOG
 
+## [2026-03-05] n8n 兜底解析 + 清仓关键词优化
+
+### 新增
+
+- **n8n 风格兜底买入解析**（`option_parser.py`）
+  - `_parse_buy_n8n_fallback()` 方法：在所有精确模式失败后使用宽松的顺序提取方式
+  - 支持粘连格式（如 `440c`、`180p`）
+  - 支持独立 call/put 关键词和中文期权类型（看涨/看跌）
+  - 解析流程：ticker → 期权类型 → 到期日 → 数字流（行权价/入场价）
+- **`TAKE_PROFIT_PATTERN_18`**：价格+附近+清仓+剩下的
+  - 示例：`5元上限到了 可以5.23附近清仓剩下的` → CLOSE, price=5.23
+  - 取靠近"清仓"关键词的价格
+
+- **`OptionInstruction` 新字段**（`instruction.py`）
+  - `parsed_by_fallback: bool` - 标记是否由 n8n 兜底解析
+  - `parse_error: bool` - 标记是否解析失败
+
+### 优化
+
+- **`TAKE_PROFIT_PATTERN_1C`**：价格区间+出剩下 → CLOSE
+  - 示例：`4.8-5附近出剩下三分之一` → CLOSE, price=4.8
+  - 有"出剩下/出剩余"关键词时视为清仓，价格区间取小值
+
+- **`parse()` 方法**：无法解析时返回带 `parse_error=True` 的指令，而非 `None`
+
+### 解析流程
+
+```
+消息 → 精确模式匹配 (9种买入 + 修改 + 卖出)
+     → n8n 兜底解析 (宽松提取)
+     → 返回 PARSE_ERROR 指令
+```
+
+### 测试验证
+
+- ✅ `tsla 440c 3.5` → BUY（精确匹配）
+- ✅ `aapl call 150 2.5` → BUY（n8n 兜底）
+- ✅ `NBIS - $92 CALLS EXPIRATION THIS WEEK $3.8` → BUY
+- ✅ `5元上限到了 可以5.23附近清仓剩下的` → CLOSE, price=5.23
+- ✅ `4.8-5附近出剩下三分之一` → CLOSE, price=4.8
+- ✅ 无法解析的消息 → `PARSE_ERROR`
+
 ## [2026-03-04] T 交易分析：支持长桥 API 拉取最近 90 天成交（含当日）
 
 - **scripts/analysis/t_trade_analysis.py**：默认从长桥 API 获取指定股票最近 90 天已成交订单并做 T 交易分析

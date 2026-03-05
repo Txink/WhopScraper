@@ -141,6 +141,8 @@ class OptionInstruction(OperationInstruction):
     expiry: Optional[str] = None  # 如 "1/31", "2/20"
     symbol: Optional[str] = None  # 期权代码
     expiry_fallback_time: bool = False
+    parsed_by_fallback: bool = False  # 是否由 n8n 兜底解析器解析
+    parse_error: bool = False  # 是否解析失败
 
     def to_dict(self) -> dict:
         return _serializable_dict(self)
