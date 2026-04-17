@@ -207,12 +207,11 @@ class LongPortBroker:
                 "remark": remark or f"Auto trade via OpenAPI - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
                 "instruction_timestamp": instruction_timestamp,
             }
-            # 以即将调用 submit_order 的此刻（t0）作为「提交订单」时间点
-            print_order_submitting_display(order_info)
             t0 = time.perf_counter()
             resp = self.ctx.submit_order(**order_params)
             order_info["_timing_submit_api_ms"] = (time.perf_counter() - t0) * 1000
             order_info["order_id"] = getattr(resp, "order_id", None) or getattr(resp, "id", None) or (str(resp) if resp else None)
+            print_order_submitting_display(order_info)
             return order_info
             
         except ValueError as e:
@@ -897,15 +896,6 @@ class LongPortBroker:
             if trailing_amount:
                 order_params["trailing_amount"] = Decimal(str(trailing_amount))
             
-            # 以即将调用 submit_order 的此刻作为「提交订单」时间点
-            pre_info = {
-                "symbol": symbol,
-                "side": side,
-                "quantity": quantity,
-                "price": float(price) if price else None,
-                "mode": "paper" if self.is_paper else "real",
-            }
-            print_order_submitting_display(pre_info, multiplier=1)
             resp = self.ctx.submit_order(**order_params)
             order_info = {
                 "order_id": resp.order_id,
@@ -921,6 +911,7 @@ class LongPortBroker:
                 "trailing_amount": trailing_amount,
                 "remark": remark or f"Auto trade via OpenAPI - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
             }
+            print_order_submitting_display(order_info, multiplier=1)
             print_order_push_submitted_display(order_info, multiplier=1)
             return order_info
             

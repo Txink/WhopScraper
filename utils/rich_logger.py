@@ -406,7 +406,6 @@ class RichLogger:
             self._trade_flows[dom_id] = flow
             self._current_dom_id = dom_id
             self._ensure_trade_live()
-            self._update_trade_display()
 
     def trade_stage(self, tag: str,
                     rows: Optional[List[Tuple[str, str]]] = None,
@@ -829,13 +828,15 @@ class RichLogger:
             if stage_ts:
                 header_elems.append(f"[{_TS_STYLE}]{stage_ts}[/{_TS_STYLE}]")
 
-            if stage.diff_ms > 0:
-                if stage.diff_ms < 1000:
-                    header_elems.append(f"[green]\\[+{stage.diff_ms}ms][/green]")
-                elif stage.diff_ms < 3000:
-                    header_elems.append(f"[yellow]\\[+{stage.diff_ms}ms][/yellow]")
+            prev_diff_ms = flow.stages[i - 1].diff_ms if i > 0 else 0
+            inter_diff = stage.diff_ms - prev_diff_ms
+            if inter_diff > 0:
+                if inter_diff < 1000:
+                    header_elems.append(f"[green]\\[+{inter_diff}ms][/green]")
+                elif inter_diff < 3000:
+                    header_elems.append(f"[yellow]\\[+{inter_diff}ms][/yellow]")
                 else:
-                    header_elems.append(f"[bold yellow]\\[+{stage.diff_ms}ms][/bold yellow]")
+                    header_elems.append(f"[bold yellow]\\[+{inter_diff}ms][/bold yellow]")
             elif stage.tag_suffix and stage.tag != "订单推送":
                 header_elems.append(stage.tag_suffix)
 

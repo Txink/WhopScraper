@@ -135,6 +135,38 @@
       "price": 1.95,
       "status": "FILLED",
       "submitted_at": "2026-04-17T21:45:55"
+    },
+    {
+      "order_id": "1229789971930427392",
+      "symbol": "AMZN260424C260000.US",
+      "side": "OrderSide.Sell",
+      "quantity": 15,
+      "executed_quantity": 15,
+      "price": 2.01,
+      "status": "FILLED",
+      "submitted_at": "2026-04-17T21:46:17"
+    }
+  ],
+  "TSLL.US": [
+    {
+      "order_id": "1229804371512926208",
+      "symbol": "TSLL.US",
+      "side": "OrderSide.Sell",
+      "quantity": 1000,
+      "executed_quantity": 1000,
+      "price": 13.96,
+      "status": "FILLED",
+      "submitted_at": "2026-04-17T22:43:30"
+    },
+    {
+      "order_id": "1229807771545812992",
+      "symbol": "TSLL.US",
+      "side": "OrderSide.Sell",
+      "quantity": 1000,
+      "executed_quantity": 1000,
+      "price": 14.2,
+      "status": "FILLED",
+      "submitted_at": "2026-04-17T22:57:01"
     }
   ]
 }

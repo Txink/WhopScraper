@@ -16,7 +16,7 @@
     "take_profit_price": null,
     "open_time": null,
     "order_id": null,
-    "updated_at": "2026-04-17T21:22:52.016158"
+    "updated_at": "2026-04-17T22:26:36.126293"
   },
   "HOOD260618C170000.US": {
     "symbol": "HOOD260618C170000.US",
@@ -35,25 +35,25 @@
     "take_profit_price": null,
     "open_time": null,
     "order_id": null,
-    "updated_at": "2026-04-17T21:22:52.016182"
+    "updated_at": "2026-04-17T22:26:36.126312"
   },
-  "AMZN260424C260000.US": {
-    "symbol": "AMZN260424C260000.US",
-    "ticker": "AMZN",
-    "option_type": "CALL",
-    "strike": 260.0,
-    "expiry": "260424",
-    "quantity": 15,
-    "available_quantity": 15,
-    "avg_cost": 1.97,
-    "current_price": 1.97,
-    "market_value": 2955.0,
+  "TSLL.US": {
+    "symbol": "TSLL.US",
+    "ticker": "TSLL",
+    "option_type": "STOCK",
+    "strike": 0.0,
+    "expiry": "",
+    "quantity": 501,
+    "available_quantity": 501,
+    "avg_cost": 16.722,
+    "current_price": 15.042,
+    "market_value": 2257804.2,
     "unrealized_pnl": 0.0,
     "unrealized_pnl_pct": 0.0,
-    "stop_loss_price": 0.71,
+    "stop_loss_price": null,
     "take_profit_price": null,
     "open_time": null,
     "order_id": null,
-    "updated_at": "2026-04-17T21:45:56.928689"
+    "updated_at": "2026-04-17T22:58:01.080690"
   }
 }
