@@ -207,14 +207,16 @@ class OptionParser:
         re.IGNORECASE
     )
     
-    # 模式9: 行权价在前、相对日期在中间 - $TICKER - $STRIKE 这周/本周/下周/this week/next week calls $PRICE
+    # 模式9: 行权价在前、相对日期在中间 - $TICKER - $STRIKE 这周/本周/下周/this week/next week [calls] $PRICE
+    # call/put 可省略（缺省时按 CALL 处理，例如"彩票"类消息）
     # 示例: $UUUU - $21 这周 calls $.85 彩票
     # 示例: $HOOD $78 this week calls - lotto - $0.94
+    # 示例: ROKU - $115 下周 $1.9 彩票
     OPEN_PATTERN_9 = re.compile(
         r'\$?([A-Z]{2,5})\s*[-–]?\s*'
         r'\$?(\d+(?:\.\d+)?)\s+'
         r'(本周|下周|这周|当周|今天|this\s+week|next\s+week)(?:的)?\s*'
-        r'(call|put)s?[\s\S]{0,30}?'
+        r'(?:(call|put)s?[\s\S]{0,30}?)?'
         r'\$?((?:\d+(?:\.\d+)?|\.\d+)(?:-(?:\d+(?:\.\d+)?|\.\d+))?)',
         re.IGNORECASE
     )
@@ -327,7 +329,18 @@ class OptionParser:
         r'(?:把)?(?:剩下|剩余)(?:的)?\s*([A-Za-z]{2,5})?\s*(?:都|全)?出(?:了)?',
         re.IGNORECASE
     )
-    
+
+    # 模式2d: 价格+剩下+比例+可选ticker+也?+出 (如: 1.12剩下一半nvda也出, 2.8剩下三分之一出)
+    # 顺序: 价格 → 剩下 → 比例 → ticker → (也)(都|全) → 出
+    TAKE_PROFIT_PATTERN_2D = re.compile(
+        r'(\d+(?:' + _DECIMAL + r'\d+)?)\s*(?:附近|左右)?\s*'
+        r'(?:把)?(?:剩下|剩余)(?:的)?\s*'
+        r'(四分之一|三分之一|三分之二|三之一|一半|全部|1/4|1/3|2/3|1/2|\d+%)\s*'
+        r'([A-Za-z]{2,5})?\s*'
+        r'(?:也)?\s*(?:都|全)?出(?:了)?',
+        re.IGNORECASE
+    )
+
     # 模式3: 价格+出(掉)?+剩余/剩下的+可选ticker → CLOSE (如: 0.61出剩余的, 0.94出掉剩下的cmcsa期权)
     TAKE_PROFIT_PATTERN_3 = re.compile(
         r'(\d+(?:\.\d+)?)\s*(?:附近)?\s*出(?:掉)?\s*(?:剩余|剩下)(?:的)?\s*([A-Za-z]{2,5})?',
@@ -595,9 +608,20 @@ class OptionParser:
                 if cn_match:
                     option_type = 'PUT' if '看跌' in cn_match.group(1) else 'CALL'
         
-        # 如果没有识别出期权类型，不作为买入指令
+        # 缺省 CALL 兜底：消息未显式写 call/put/看涨/看跌，但同时具备
+        # "$数字"行权价锚点和日期锚点时，按频道约定默认 CALL
+        # （例：AMZN - $260 4/24 $2.00 彩票）
         if not option_type:
-            return None
+            has_dollar_strike = bool(re.search(r'\$\d', text))
+            has_date = bool(re.search(
+                r'\d{1,2}/\d{1,2}|\d{1,2}月\d{1,2}|本周|下周|这周|当周|今天|明天'
+                r'|this\s*week|next\s*week|weekly|today|tomorrow',
+                text, re.IGNORECASE
+            ))
+            if has_dollar_strike and has_date:
+                option_type = 'CALL'
+            else:
+                return None
         
         # ---------- 3. 解析到期日 ----------
         expiry = None
@@ -1138,7 +1162,10 @@ class OptionParser:
             expiry_raw = match.group(3)  # 本周/下周/这周/当周/今天
             option_type_str = match.group(4)
             price_str = match.group(5)
-            option_type = 'CALL' if option_type_str.upper().startswith('CALL') else 'PUT'
+            if option_type_str:
+                option_type = 'CALL' if option_type_str.upper().startswith('CALL') else 'PUT'
+            else:
+                option_type = 'CALL'  # 省略 call/put 时默认按 CALL（如"彩票"类消息）
             price, price_range = cls._parse_price_range(price_str)
             (expiry, _expiry_fallback) = cls._resolve_relative_date(expiry_raw, message_timestamp) if expiry_raw else (None, False)
             position_match = cls.POSITION_SIZE_PATTERN.search(message)
@@ -1523,6 +1550,25 @@ class OptionParser:
                 message_id=message_id
             )
         
+        # 尝试模式2d: 价格+剩下+比例+可选ticker+也?+出（如: 1.12剩下一半nvda也出）
+        # 比例为"全部"时按 CLOSE 处理；其他比例按 SELL 处理
+        match = cls.TAKE_PROFIT_PATTERN_2D.search(message)
+        if match:
+            price_str = match.group(1)
+            portion_raw = match.group(2)
+            ticker = match.group(3).upper() if match.group(3) else None
+            price, price_range = cls._parse_price_range(price_str)
+            instruction_type, sell_quantity = cls._parse_sell_quantity(portion_raw)
+            return OptionInstruction(
+                raw_message=message,
+                instruction_type=instruction_type,
+                ticker=ticker,
+                price=price,
+                price_range=price_range,
+                sell_quantity=sell_quantity,
+                message_id=message_id
+            )
+
         # 尝试模式3: 价格+出剩余的+可选ticker（如: 0.61出剩余的, 2.4出剩下ndaq）
         match = cls.TAKE_PROFIT_PATTERN_3.search(message)
         if match:
