@@ -37,7 +37,7 @@ class OptionParser:
         relative_dates = {
             ("THIS WEEK", "WEEKLY", "本周", "当周", "这周"): lambda: cls._get_friday_of_week(now),
             ("NEXT WEEK", "下周"): lambda: cls._get_friday_of_week(now + timedelta(days=7)),
-            ("TODAY", "今天"): lambda: now,
+            ("TODAY", "今天", "0DTE"): lambda: now,
             ("TOMORROW", "明天"): lambda: now + timedelta(days=1),
         }
         
@@ -114,7 +114,7 @@ class OptionParser:
         r'(?:(?:ITM|OTM|ATM)\s+)?'  # 可选的 ITM/OTM/ATM 修饰（In/Out/At The Money）
         r'(CALLS?|PUTS?)\s*'
         r'(?:'
-            r'(本周|下周|这周|当周|今天)(?:的)?\s*'  # group(4): 中文相对日期
+            r'(本周|下周|这周|当周|今天|0DTE)(?:的)?\s*'  # group(4): 中文相对日期 / 0DTE(当天到期)
             r'|(?:EXPIRATION\s+)?(\d{1,2}/\d{1,2}|\d{1,2}月\d{1,2}日?)\s*'  # group(5): 具体日期
             r'|(?:EXPIRATION\s+)?(NEXT\s+WEEK|THIS\s+WEEK)(?:到期)?\s*'  # group(6): 英文相对日期
         r')?'
@@ -250,25 +250,27 @@ class OptionParser:
     # 示例: 止损 在 1.3
     # 示例: SL 0.95
     STOP_LOSS_PATTERN = re.compile(
-        r'(?:止损|SL|stop\s*loss)(?:价)?\s*(?:设置)?(?:在)?\s*(\d+(?:\.\d+)?)',
+        r'(?:止损|SL|stop\s*loss)(?:价|点位|价位)?\s*(?:设置)?\s*(?:到|至|在)?\s*(\d+(?:[.。．]\d+)?)',
         re.IGNORECASE
     )
-    
+
     # 反向止损正则（价格在前）
     # 示例: 2.5止损
     # 示例: 3.0止损剩下的ba
+    # 示例: 2.56附近止损
     REVERSE_STOP_LOSS_PATTERN = re.compile(
-        r'(\d+(?:\.\d+)?)\s*(?:止损|SL)',
+        r'(\d+(?:[.。．]\d+)?)\s*(?:附近)?\s*(?:止损|SL)',
         re.IGNORECASE
     )
-    
+
     # 调整止损正则
     # 示例: 止损提高到1.5
     # 示例: 止损调整到 1.5
     # 示例: 止损设置上移到2.16
     # 示例: 止损上移到2.25
+    # 示例: 止损点位提高到2.7
     ADJUST_STOP_PATTERN = re.compile(
-        r'(?:止损|SL|stop\s*loss)\s*(?:设置)?(?:提高|调整|移动|上调|上移)(?:到|至)?\s*(\d+(?:\.\d+)?)',
+        r'(?:止损|SL|stop\s*loss)\s*(?:点位|价|设置)?\s*(?:提高|调整|移动|上调|上移)(?:到|至)?\s*(\d+(?:[.。．]\d+)?)',
         re.IGNORECASE
     )
     
@@ -295,23 +297,23 @@ class OptionParser:
         r'(?:出|减)\s*'
         r'(?:剩下|剩余)(?:的)?\s*'  # 必须含"剩下/剩余"
         r'(?:四分之一|三分之一|三分之二|三之一|一半|全部|1/4|1/3|2/3|1/2|\d+%)?'  # 比例可选（忽略）
-        r'(?:\s*([A-Z]{2,5}))?',  # 可选的股票代码
+        r'(?:\s*([A-Z]{2,5})(?![A-Za-z]))?',  # 可选的股票代码（要求后面非字母，防止误吞长词）
         re.IGNORECASE
     )
     # 模式1: 价格+出+比例（可选股票代码）
     TAKE_PROFIT_PATTERN_1 = re.compile(
         r'(\d+(?:' + _DECIMAL + r'\d+)?)\s*(?:附近|左右)?\s*(?:也)?'
-        r'(?:出|减)\s*'
+        r'(?:出|减|卖出)\s*'
         r'(?:剩下|剩余|个)?\s*'
         r'(四分之一|三分之一|三分之二|三之一|一半|全部|1/4|1/3|2/3|1/2|\d+%)'
-        r'(?:\s*([A-Z]{2,5}))?',  # 可选的股票代码
+        r'(?:\s*([A-Z]{2,5})(?![A-Za-z]))?',  # 可选的股票代码
         re.IGNORECASE
     )
     # 模式1b: 价格或区间+开始+减/出+比例（如: 1.2-1.3开始减三分之一，区间时仅存 price_range，中间值在 resolver 填）
     TAKE_PROFIT_PATTERN_1B = re.compile(
-        r'(\d+(?:\.\d+)?(?:-\d+(?:\.\d+)?)?)\s*开始\s*(?:出|减)\s*'
+        r'(\d+(?:\.\d+)?(?:-\d+(?:\.\d+)?)?)\s*开始\s*(?:出|减|卖出)\s*'
         r'(四分之一|三分之一|三分之二|三之一|一半|全部|1/4|1/3|2/3|1/2|\d+%)'
-        r'(?:\s*([A-Z]{2,5}))?',
+        r'(?:\s*([A-Z]{2,5})(?![A-Za-z]))?',
         re.IGNORECASE
     )
     
@@ -343,7 +345,7 @@ class OptionParser:
 
     # 模式3: 价格+出(掉)?+剩余/剩下的+可选ticker → CLOSE (如: 0.61出剩余的, 0.94出掉剩下的cmcsa期权)
     TAKE_PROFIT_PATTERN_3 = re.compile(
-        r'(\d+(?:\.\d+)?)\s*(?:附近)?\s*出(?:掉)?\s*(?:剩余|剩下)(?:的)?\s*([A-Za-z]{2,5})?',
+        r'(\d+(?:\.\d+)?)\s*(?:附近)?\s*(?:出|卖出)(?:掉)?\s*(?:剩余|剩下)(?:的)?\s*([A-Za-z]{2,5})?(?![A-Za-z])',
         re.IGNORECASE
     )
     
@@ -353,28 +355,30 @@ class OptionParser:
         re.IGNORECASE
     )
     
-    # 模式5: 价格+附近+都出 (如: 2.3附近都出)
+    # 模式5: 价格+附近+...+都出/都卖出 (如: 2.3附近都出, 1.68附近 nvda可以都卖出)
+    # 允许"附近"与"都出"之间最多 20 个非数字字符（防止跨越新价格）
     TAKE_PROFIT_PATTERN_5 = re.compile(
-        r'(\d+(?:\.\d+)?)\s*附近\s*都出',
+        r'(\d+(?:\.\d+)?)\s*附近\s*[^\d]{0,20}?(?:都出|都卖出)(?:掉|了)?',
         re.IGNORECASE
     )
-    
+
     # 模式5d: 价格+附近+也?可以?分批?都出+可选ticker (如: 1.5附近也可以分批都出qqq掉下来了)
     TAKE_PROFIT_PATTERN_5D = re.compile(
-        r'(\d+(?:\.\d+)?)\s*附近\s*(?:也)?(?:可以)?(?:分批)?\s*都出\s*([A-Za-z]{2,5})?',
+        r'(\d+(?:\.\d+)?)\s*附近\s*(?:也)?(?:可以)?(?:分批)?\s*都出\s*([A-Za-z]{2,5})?(?![A-Za-z])',
         re.IGNORECASE
     )
     
-    # 模式2b: 剩下也(在)?+价格+附近?+出 (如: 剩下也1.25附近出, 剩下也在1.45出) → CLOSE
+    # 模式2b: 剩下也(在)?+价格+附近?+出 (如: 剩下也1.25附近出, lmnd剩下的在1.29出) → CLOSE
     TAKE_PROFIT_PATTERN_2B = re.compile(
-        r'(?:剩下|剩余)(?:也)?(?:在)?\s*(\d+(?:\.\d+)?)\s*(?:附近|左右)?\s*(?:出|减)',
+        r'(?:剩下|剩余)(?:的)?(?:也)?(?:在)?\s*(\d+(?:\.\d+)?)\s*(?:附近|左右)?\s*(?:出|减)',
         re.IGNORECASE
     )
     
-    # 模式5c: 价格+附近+也+减点/出点 → SELL，默认数量 1/3（无 ticker 需上下文补全）
-    # 示例: 1.4附近也减点, 2.0附近出点（都出/全出 见模式5、5b → CLOSE）
+    # 模式5c: 价格+(附近)+(再|也|继续|在)?+(出|减|卖出)(点|了)+(可选ticker) → SELL 1/3
+    # 示例: 1.4附近也减点, 2.0附近出点, 1.53再出点nvda, 2.05在卖出点, 2.05继续卖出点pl
     TAKE_PROFIT_PATTERN_5C = re.compile(
-        r'^(\d+(?:\.\d+)?)\s*(?:附近|左右)?\s*(?:也)?\s*(?:出|减)(?:点|了)?\s*$',
+        r'^(\d+(?:\.\d+)?)\s*(?:附近|左右)?\s*(?:再|也|继续|在)?\s*(?:出|减|卖出)(?:点|了)'
+        r'(?:\s*([A-Za-z]{2,5})(?![A-Za-z]))?',
         re.IGNORECASE
     )
     # 模式5i: 价格+也减点（后可有其他字，无 ticker 由历史补全）→ SELL 1/3（如: 3.4也减点 剩下拿一半）
@@ -399,19 +403,39 @@ class OptionParser:
     )
     # 模式5h: 价格+在减点+ticker（无具体数量当 1/3）（如: 4.6在减点tsla 留4分之一原来仓位）
     TAKE_PROFIT_PATTERN_5H = re.compile(
-        r'(\d+(?:\.\d+)?)\s*在减点\s*([A-Za-z]{2,5})',
+        r'(\d+(?:\.\d+)?)\s*在减点\s*([A-Za-z]{2,5})(?![A-Za-z])',
         re.IGNORECASE
     )
     
-    # 模式5b: 价格+都出/全出/全部出+可选ticker (如: 2.75都出 hon, 2.3全出, 1,5都出剩下的)
+    # 模式5b: 价格+都出/全出/全部出/卖出+可选ticker (如: 2.75都出 hon, 2.3全出, 1,5都出剩下的)
     TAKE_PROFIT_PATTERN_5B = re.compile(
-        r'(\d+(?:' + _DECIMAL + r'\d+)?)\s*(?:都|全部|全)出\s*([A-Z]{2,5})?',
+        r'(\d+(?:' + _DECIMAL + r'\d+)?)\s*(?:都|全部|全|卖)出\s*([A-Z]{2,5})?(?![A-Za-z])',
         re.IGNORECASE
     )
     
-    # 模式6: 价格+再出+比例 (如: 0.7再出剩下的一半)
+    # 模式5j: 价格+(出)?+ticker+(全部|都|全)+(出)? 或 价格+ticker+都出
+    # 示例: 4.0出aapl全部, 3.0出amd全部, 2.38 spy都出, 1.9出aapl都出
+    TAKE_PROFIT_PATTERN_5J = re.compile(
+        r'((?:\d+(?:\.\d+)?|\.\d+)(?:-(?:\d+(?:\.\d+)?|\.\d+))?)\s*'
+        r'(?:出)?\s*'
+        r'([A-Za-z]{2,5})(?![A-Za-z])\s*'
+        r'(?:彩票\s*)?'
+        r'(?:全部出?|都出|全出)',
+        re.IGNORECASE
+    )
+
+    # 模式5k: 价格+出+ticker+彩票 → CLOSE（如: 0.75-0.8出intc彩票）
+    TAKE_PROFIT_PATTERN_5K = re.compile(
+        r'((?:\d+(?:\.\d+)?|\.\d+)(?:-(?:\d+(?:\.\d+)?|\.\d+))?)\s*'
+        r'出\s*'
+        r'([A-Za-z]{2,5})(?![A-Za-z])\s*'
+        r'彩票',
+        re.IGNORECASE
+    )
+
+    # 模式6: 价格+再出+比例 (如: 0.7再出剩下的一半, 3.9剩下里面出一半, 2.53再出剩下里面的一半)
     TAKE_PROFIT_PATTERN_6 = re.compile(
-        r'(\d+(?:\.\d+)?)\s*(?:再|也)?(?:在)?\s*(?:剩下)?\s*(?:出|减)\s*(?:剩下|剩余)?\s*(一半|三分之一|三分之二)',
+        r'(\d+(?:\.\d+)?)\s*(?:再|也)?(?:在)?\s*(?:剩下)?(?:里面)?\s*(?:出|减)\s*(?:剩下|剩余)?(?:里面)?(?:的)?\s*(一半|三分之一|三分之二)',
         re.IGNORECASE
     )
     
@@ -660,9 +684,12 @@ class OptionParser:
         # 移除止损价格
         clean_text = cls._N8N_STOP_LOSS_CLEAN.sub(' ', clean_text)
         
-        # 提取剩余数字
-        nums = cls._N8N_NUMBER_PATTERN.findall(clean_text)
-        
+        # 提取剩余数字，剔除 4 位年份（1900-2099）避免误作 strike
+        nums = [
+            n for n in cls._N8N_NUMBER_PATTERN.findall(clean_text)
+            if not (re.match(r'^\d{4}$', n) and 1900 <= int(n) <= 2099)
+        ]
+
         # 需要至少一个数字作为价格
         if not nums:
             return None
@@ -896,8 +923,8 @@ class OptionParser:
             # 解析价格（支持价格区间）
             price, price_range = cls._parse_price_range(price_str)
             
-            # 处理日期（直接使用，不需要 resolve 因为已经是 M/D 格式）
-            expiry = expiry_raw if expiry_raw else None
+            # 统一走 _resolve_relative_date：M/D 格式原样返回，中文格式（如"1月9日"）转换为 M/D
+            (expiry, _expiry_fallback) = cls._resolve_relative_date(expiry_raw, message_timestamp) if expiry_raw else (None, False)
             
             position_match = cls.POSITION_SIZE_PATTERN.search(message)
             position_size = position_match.group(1) if position_match else None
@@ -1308,7 +1335,7 @@ class OptionParser:
             return (InstructionType.SELL.value, portion_str)
         
         # 判断是否为比例（如 1/3, 2/3, 1/4）
-        if '/' in portion_str or portion_str in ['三分之一', '三分之二', '一半', '四分之一']:
+        if '/' in portion_str or portion_str in ['三分之一', '三之一', '三分之二', '一半', '四分之一']:
             # 转换中文比例
             portion_map = {
                 '三分之一': '1/3',
@@ -1601,6 +1628,36 @@ class OptionParser:
                 message_id=message_id
             )
         
+        # 尝试模式5j: 价格+(出)?+ticker+(全部|都出|全出)（如: 4.0出aapl全部, 2.38 spy都出）
+        match = cls.TAKE_PROFIT_PATTERN_5J.search(message)
+        if match:
+            price_str = match.group(1)
+            ticker = match.group(2).upper()
+            price, price_range = cls._parse_price_range(price_str)
+            return OptionInstruction(
+                raw_message=message,
+                instruction_type=InstructionType.CLOSE.value,
+                ticker=ticker,
+                price=price,
+                price_range=price_range,
+                message_id=message_id
+            )
+
+        # 尝试模式5k: 价格+出+ticker+彩票 → CLOSE（如: 0.75-0.8出intc彩票）
+        match = cls.TAKE_PROFIT_PATTERN_5K.search(message)
+        if match:
+            price_str = match.group(1)
+            ticker = match.group(2).upper()
+            price, price_range = cls._parse_price_range(price_str)
+            return OptionInstruction(
+                raw_message=message,
+                instruction_type=InstructionType.CLOSE.value,
+                ticker=ticker,
+                price=price,
+                price_range=price_range,
+                message_id=message_id
+            )
+
         # 尝试模式4: 价格+出+可选ticker+彩票+全出（如: 4.75 amd全出, 1.7出 cop彩票全出）
         match = cls.TAKE_PROFIT_PATTERN_4.search(message)
         if match:
@@ -1659,14 +1716,16 @@ class OptionParser:
                 message_id=message_id
             )
         
-        # 尝试模式5c: 价格+附近+也+减点/出点 → SELL，默认数量 1/3（如: 1.4附近也减点）
+        # 尝试模式5c: 价格+(再|也|继续|在)?+(出|减|卖出)(点|了)+可选ticker → SELL 1/3
         match = cls.TAKE_PROFIT_PATTERN_5C.search(message.strip())
         if match:
             price_str = match.group(1)
+            ticker = match.group(2).upper() if match.group(2) else None
             price, price_range = cls._parse_price_range(price_str)
             return OptionInstruction(
                 raw_message=message,
                 instruction_type=InstructionType.SELL.value,
+                ticker=ticker,
                 price=price,
                 price_range=price_range,
                 sell_quantity="1/3",
