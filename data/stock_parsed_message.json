@@ -1,0 +1,380 @@
+[
+  {
+    "timestamp": "2026-02-10 00:02:00.000",
+    "raw_message": "周三周四 tsll到14.7-15.3附近有回调在回吸一笔新的死拿的",
+    "instruction_type": "BUY",
+    "message_id": "post_1CXxmzWpWbRqDPZzmopfRK",
+    "price": 15.0,
+    "price_range": [
+      14.7,
+      15.3
+    ],
+    "ticker": "TSLL",
+    "symbol": "TSLL.US"
+  },
+  {
+    "timestamp": "2026-02-10 22:37:00.000",
+    "raw_message": "tsll 16.55出之前16.05吸的做T仓位",
+    "instruction_type": "SELL",
+    "message_id": "post_1CXzZLzjFjV3icjNXNTmqm",
+    "price": 16.55,
+    "sell_quantity": "全部",
+    "ticker": "TSLL",
+    "symbol": "TSLL.US",
+    "sell_reference_price": 16.05,
+    "sell_reference_label": "16.05吸的"
+  },
+  {
+    "timestamp": "2026-02-13 00:55:00.000",
+    "raw_message": "tsll 在16.02附近开个底仓 常规仓的一半 明天再看看有没有15-4附近的",
+    "instruction_type": "BUY",
+    "message_id": "post_1CY4XVVUgRJNQ2htCFBGxR",
+    "price": 16.02,
+    "position_size": "常规仓的一半",
+    "ticker": "TSLL",
+    "symbol": "TSLL.US"
+  },
+  {
+    "timestamp": "2026-02-13 22:43:00.000",
+    "raw_message": "15.43加了常规一半的tsll",
+    "instruction_type": "BUY",
+    "message_id": "post_1CY6FDbZrC5HByAvkdzqvo",
+    "price": 15.43,
+    "position_size": "常规一半",
+    "ticker": "TSLL",
+    "symbol": "TSLL.US"
+  },
+  {
+    "timestamp": "2026-02-14 00:37:00.000",
+    "raw_message": "tsll 直线了下 16.04附近可以出昨天16.02的 保留今天15.43低吸那部分",
+    "instruction_type": "BUY",
+    "message_id": "post_1CY6Pw9vRjkF78cE8XqC2x",
+    "price": 15.43,
+    "ticker": "TSLL",
+    "symbol": "TSLL.US"
+  },
+  {
+    "timestamp": "2026-02-14 02:50:00.000",
+    "raw_message": "tsll盘中有个利好消息刺激 16.4可以出15.43的一半",
+    "instruction_type": "SELL",
+    "message_id": "post_1CY6a5XrbiPFjpwD351qAo",
+    "price": 16.4,
+    "sell_quantity": "1/2",
+    "ticker": "TSLL",
+    "symbol": "TSLL.US",
+    "sell_reference_price": 15.43
+  },
+  {
+    "timestamp": "2026-02-17 22:35:00.000",
+    "raw_message": "15.17附近加回了周五卖出的那部分tsll",
+    "instruction_type": "BUY",
+    "message_id": "post_1CYDoox11pixmcp6gamEtQ",
+    "price": 15.17,
+    "ticker": "TSLL",
+    "symbol": "TSLL.US",
+    "buy_quantity_reference": "周五卖出的"
+  },
+  {
+    "timestamp": "2026-02-18 00:24:00.000",
+    "raw_message": "tsll 可以15.3出15.17的等在找下低点",
+    "instruction_type": "SELL",
+    "message_id": "post_1CYDxAfB9uiekVj2gnTqbu",
+    "price": 15.3,
+    "sell_quantity": "全部",
+    "ticker": "TSLL",
+    "symbol": "TSLL.US",
+    "sell_reference_price": 15.17,
+    "sell_reference_label": "15.17的"
+  },
+  {
+    "timestamp": "2026-02-18 22:33:00.000",
+    "raw_message": "15.35加个tsll 常规的一半",
+    "instruction_type": "BUY",
+    "message_id": "post_1CYFhVransRbpPqbTWzpdf",
+    "price": 15.35,
+    "position_size": "常规的一半",
+    "ticker": "TSLL",
+    "symbol": "TSLL.US"
+  },
+  {
+    "timestamp": "2026-02-18 23:07:00.000",
+    "raw_message": "15.75出之前15.45剩下一半tsll 留今天的15.35的",
+    "instruction_type": "SELL",
+    "message_id": "post_1CYFk6zta6zKVYawSZTH3L",
+    "price": 15.75,
+    "sell_quantity": "1/2",
+    "ticker": "TSLL",
+    "symbol": "TSLL.US",
+    "sell_reference_price": 15.45,
+    "sell_reference_label": "之前15.45"
+  },
+  {
+    "timestamp": "2026-02-18 23:32:00.000",
+    "raw_message": "tsll15.48在吸回卖出的一部分",
+    "instruction_type": "BUY",
+    "message_id": "post_1CYFmzcr9Z1fCTqTqBrGxj",
+    "price": 15.48,
+    "ticker": "TSLL",
+    "symbol": "TSLL.US",
+    "buy_quantity_reference": "卖出的一部分"
+  },
+  {
+    "timestamp": "2026-02-19 00:00:00.000",
+    "raw_message": "tsll 在到15.76可以在出15.48那部分 在等回踩吸",
+    "instruction_type": "SELL",
+    "message_id": "post_1CYFp9gU9o6LomZpr8iYv9",
+    "price": 15.76,
+    "sell_quantity": "全部",
+    "ticker": "TSLL",
+    "symbol": "TSLL.US",
+    "sell_reference_price": 15.48,
+    "sell_reference_label": "15.48那部分"
+  },
+  {
+    "timestamp": "2026-02-19 03:41:00.000",
+    "raw_message": "15.40在吸回卖出的tsll",
+    "instruction_type": "BUY",
+    "message_id": "post_1CYG6wnmxkg5uTmuhQmQon",
+    "price": 15.4,
+    "ticker": "TSLL",
+    "symbol": "TSLL.US"
+  },
+  {
+    "timestamp": "2026-02-19 22:38:00.000",
+    "raw_message": "14.93附近加仓了tsll",
+    "instruction_type": "BUY",
+    "message_id": "post_1CYHbfC4H13tsZPF3m4j7o",
+    "price": 14.93,
+    "ticker": "TSLL",
+    "symbol": "TSLL.US"
+  },
+  {
+    "timestamp": "2026-02-19 23:35:00.000",
+    "raw_message": "tsll 直线了 可以15.47可以把15.35的出 14.95今天的出个一半",
+    "instruction_type": "SELL",
+    "message_id": "post_1CYHg4AuFgQoRboymPUa8r",
+    "price": 15.47,
+    "sell_quantity": "全部",
+    "ticker": "TSLL",
+    "symbol": "TSLL.US",
+    "sell_reference_price": 14.95,
+    "sell_reference_label": "14.95买的"
+  },
+  {
+    "timestamp": "2026-02-20 00:02:00.000",
+    "raw_message": "tsll这轮 脉冲在注意把15.4的在15.6附近出就留14.95的",
+    "instruction_type": "SELL",
+    "message_id": "post_1CYHi5k7tfrhSFNVabpE8V",
+    "price": 15.6,
+    "sell_quantity": "全部",
+    "ticker": "TSLL",
+    "symbol": "TSLL.US"
+  },
+  {
+    "timestamp": "2026-02-20 22:32:00.000",
+    "raw_message": "tsll 回踩15.05回吸昨天卖出的部分",
+    "instruction_type": "BUY",
+    "message_id": "post_1CYKV4P5Y9pQYoXpvdAkzu",
+    "price": 15.05,
+    "ticker": "TSLL",
+    "symbol": "TSLL.US",
+    "buy_quantity_reference": "昨天卖出的"
+  },
+  {
+    "timestamp": "2026-02-20 22:48:00.000",
+    "raw_message": "tsll直线时候 15.39附近出 15.05的一半",
+    "instruction_type": "SELL",
+    "message_id": "post_1CYKWDSKa6vcwA9ThQLAPQ",
+    "price": 15.39,
+    "sell_quantity": "1/2",
+    "ticker": "TSLL",
+    "symbol": "TSLL.US",
+    "sell_reference_price": 15.05,
+    "sell_reference_label": "15.05买的"
+  },
+  {
+    "timestamp": "2026-02-20 23:01:00.010",
+    "raw_message": "15.57-15.65附近出 今天15.05剩下一半tsll 保留昨天14.95的做死拿",
+    "instruction_type": "SELL",
+    "message_id": "post_1CYKXMxeB82mGBxCtFFoGi",
+    "price": 15.61,
+    "price_range": [
+      15.57,
+      15.65
+    ],
+    "sell_quantity": "1/2",
+    "ticker": "TSLL",
+    "symbol": "TSLL.US"
+  },
+  {
+    "timestamp": "2026-02-20 23:07:00.000",
+    "raw_message": "tsll 15.1-15在回吸今天卖出的部分",
+    "instruction_type": "BUY",
+    "message_id": "post_1CYKXjWhNTP1SkcsoMfaHt",
+    "price": 15.05,
+    "price_range": [
+      15.0,
+      15.1
+    ],
+    "ticker": "TSLL",
+    "symbol": "TSLL.US"
+  },
+  {
+    "timestamp": "2026-02-20 23:50:00.000",
+    "raw_message": "tsll今天日内剩下一半也是在冲15.5-15.6出日内 死拿的仓位14.95那部分不动",
+    "instruction_type": "SELL",
+    "message_id": "post_1CYKawo14UcTvGx89sqiVi",
+    "price": 15.55,
+    "price_range": [
+      15.5,
+      15.6
+    ],
+    "sell_quantity": "全部",
+    "ticker": "TSLL",
+    "symbol": "TSLL.US"
+  },
+  {
+    "timestamp": "2026-02-21 01:26:00.000",
+    "raw_message": "tsll 做T部分第三轮可以 15.03附近接",
+    "instruction_type": "BUY",
+    "message_id": "post_1CYKiK2FFLFGhzrFfhonTB",
+    "price": 15.03,
+    "ticker": "TSLL",
+    "symbol": "TSLL.US"
+  },
+  {
+    "timestamp": "2026-02-21 02:03:00.000",
+    "raw_message": "15.37-15.4附近出一半 15.03的tsll",
+    "instruction_type": "SELL",
+    "message_id": "post_1CYKm6FqsbJxYi6MojnToF",
+    "price": 15.4,
+    "sell_quantity": "1/2",
+    "ticker": "TSLL",
+    "symbol": "TSLL.US",
+    "sell_reference_price": 15.03,
+    "sell_reference_label": "15.03买的"
+  },
+  {
+    "timestamp": "2026-02-21 02:46:00.000",
+    "raw_message": "15.37-15.4附近出一半 15.03的tsll",
+    "instruction_type": "SELL",
+    "message_id": "post_1CYKpQH2FTzyyJrTJS4atz",
+    "price": 15.4,
+    "sell_quantity": "1/2",
+    "ticker": "TSLL",
+    "symbol": "TSLL.US",
+    "sell_reference_price": 15.03,
+    "sell_reference_label": "15.03买的"
+  },
+  {
+    "timestamp": "2026-02-23 23:02:00.000",
+    "raw_message": "14.8附近加了 常规仓一半的tsll",
+    "instruction_type": "BUY",
+    "message_id": "post_1CYRCixcnskw4TKDJQQ3Zq",
+    "price": 14.8,
+    "ticker": "TSLL",
+    "symbol": "TSLL.US"
+  },
+  {
+    "timestamp": "2026-02-24 03:57:00.000",
+    "raw_message": "14.2附近 加了tsll",
+    "instruction_type": "BUY",
+    "message_id": "post_1CYRbFDRjWciCvF38vnHnd",
+    "price": 14.2,
+    "ticker": "TSLL",
+    "symbol": "TSLL.US"
+  },
+  {
+    "timestamp": "2026-02-24 05:02:00.000",
+    "raw_message": "tsll 14.58可以出 14.2的一半 把14.2剩下一半暂时当死拿的 14.8那笔 明天盘前人工干预再看",
+    "instruction_type": "SELL",
+    "message_id": "post_1CYRgDGRmaCFuGEytTsSoh",
+    "price": 14.58,
+    "sell_quantity": "1/2",
+    "ticker": "TSLL",
+    "symbol": "TSLL.US",
+    "sell_reference_price": 14.2
+  },
+  {
+    "timestamp": "2026-02-24 22:50:00.000",
+    "raw_message": "tsll14.8附近出昨天14.8 那部分 把14.2剩下一半保留死拿",
+    "instruction_type": "SELL",
+    "message_id": "post_1CYT5cCzS7skUZ2gEa7wcb",
+    "price": 14.8,
+    "sell_quantity": "1/2",
+    "ticker": "TSLL",
+    "symbol": "TSLL.US"
+  },
+  {
+    "timestamp": "2026-02-24 23:24:00.000",
+    "raw_message": "tsll 14.96-15附近 出当时 14.95死拿的部分 现在14.2剩下一半当死拿了",
+    "instruction_type": "SELL",
+    "message_id": "post_1CYT8FrjGYSxP461r8cVtj",
+    "price": 14.98,
+    "price_range": [
+      14.96,
+      15.0
+    ],
+    "sell_quantity": "全部",
+    "ticker": "TSLL",
+    "symbol": "TSLL.US"
+  },
+  {
+    "timestamp": "2026-02-27 22:33:00.000",
+    "raw_message": "14.7附近 加了tsll 做T仓位的另外一半",
+    "instruction_type": "BUY",
+    "message_id": "post_1CYYjn424jTFXCLFwDEHV5",
+    "price": 14.7,
+    "ticker": "TSLL",
+    "symbol": "TSLL.US"
+  },
+  {
+    "timestamp": "2026-02-27 23:25:00.000",
+    "raw_message": "tsll也是注意直线 14.98-15附近出 14.7的",
+    "instruction_type": "SELL",
+    "message_id": "post_1CYYohmNYJqkaMo2JUe7Mv",
+    "price": 14.99,
+    "price_range": [
+      14.98,
+      15.0
+    ],
+    "sell_quantity": "全部",
+    "ticker": "TSLL",
+    "symbol": "TSLL.US"
+  },
+  {
+    "timestamp": "2026-03-02 09:06:00.000",
+    "raw_message": "夜盘14.05加仓了tsll",
+    "instruction_type": "BUY",
+    "message_id": "post_1CYdMdMcPkHcatQ2KRcABc",
+    "price": 14.05,
+    "ticker": "TSLL",
+    "symbol": "TSLL.US"
+  },
+  {
+    "timestamp": "2026-03-02 22:50:00.000",
+    "raw_message": "14.37-14.45附近可以出 之前14.2那部分 或者出夜盘14.05的一半tsll",
+    "instruction_type": "SELL",
+    "message_id": "post_1CYeSWwXWjnMeqE4Gnsxyw",
+    "price": 14.41,
+    "price_range": [
+      14.37,
+      14.45
+    ],
+    "sell_quantity": "1/2",
+    "ticker": "TSLL",
+    "symbol": "TSLL.US",
+    "sell_reference_price": 14.05,
+    "sell_reference_label": "14.05的一半"
+  },
+  {
+    "timestamp": "2026-03-03 16:22:00.000",
+    "raw_message": "夜盘14.13加了tsll常规仓的一半当做t仓位 在挂了另外一半在13.67",
+    "instruction_type": "BUY",
+    "message_id": "post_1CYfpiGUuuJYfGsBu1Pftq",
+    "price": 13.67,
+    "position_size": "常规仓的一半",
+    "ticker": "TSLL",
+    "symbol": "TSLL.US"
+  }
+]

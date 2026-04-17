@@ -1,0 +1,21 @@
+{
+  "TSLL.US": {
+    "symbol": "TSLL.US",
+    "ticker": "TSLL",
+    "option_type": "STOCK",
+    "strike": 0.0,
+    "expiry": "",
+    "quantity": 500,
+    "available_quantity": 500,
+    "avg_cost": 16.856,
+    "current_price": 16.856,
+    "market_value": 8428.0,
+    "unrealized_pnl": 0.0,
+    "unrealized_pnl_pct": 0.0,
+    "stop_loss_price": null,
+    "take_profit_price": null,
+    "open_time": null,
+    "order_id": null,
+    "updated_at": "2026-03-10T21:31:58.383419"
+  }
+}
