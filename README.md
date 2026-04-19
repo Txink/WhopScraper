@@ -320,7 +320,7 @@ python3 main.py
 - ✅ 风险控制和 Dry Run 模式
 - ✅ 完整的测试流程
 
-**查看完整接入指南**：[LONGPORT_INTEGRATION_GUIDE.md](./doc/LONGPORT_INTEGRATION_GUIDE.md)
+详细 API 说明请参考 [长桥 OpenAPI 官方文档](https://open.longbridge.com/zh-CN/)。
 
 快速开始：
 
