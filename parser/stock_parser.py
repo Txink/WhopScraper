@@ -17,12 +17,17 @@ try:
 except ImportError:
     get_watched_tickers = None  # 测试或无 utils 时
 
+try:
+    from utils.ticker_aliases import normalize_message as _normalize_aliases
+except ImportError:
+    _normalize_aliases = None  # 测试或无 utils 时
+
 
 class StockParser:
     """正股指令解析器"""
 
     BUY_PATTERN_1 = re.compile(
-        r'([A-Z]{2,5})\s+(?:买入|买)\s+\$?(\d+(?:\.\d+)?)',
+        r'([A-Z]{2,5})\s+(?:买入|买了?|建仓了?)\s*\$?(\d+(?:\.\d+)?)',
         re.IGNORECASE
     )
     BUY_PATTERN_2 = re.compile(
@@ -30,7 +35,7 @@ class StockParser:
         re.IGNORECASE
     )
     BUY_PATTERN_3 = re.compile(
-        r'([A-Z]{2,5})\s+\$?(\d+(?:\.\d+)?)\s+(?:买入|买)',
+        r'([A-Z]{2,5})\s+\$?(\d+(?:\.\d+)?)\s*(?:买入|买了?|建仓了?)',
         re.IGNORECASE
     )
 
@@ -424,6 +429,19 @@ class StockParser:
         r'(\d+(?:[.。]\d+)?)\s*附近\s*开仓了?\s*[\s\S]{0,20}?([A-Za-z]{2,5})(?![a-zA-Z0-9])',
         re.IGNORECASE
     )
+    # 买入 T8: 单价+(附近)?+(可以)?+加仓/建仓/配置/买回/接回/回买+ticker 句尾
+    # "321附近可以加仓mstr" / "6.7附近建仓个新的 bbai" / "3.68附近买回之前卖出的rxrx"
+    # "194接回 常规一半的 之前218卖出的amd" / "21附近配置点mara"
+    # 约束：
+    #   - 价格后不跟"分/秒"，避免把"18点30分"的"30"当价格
+    #   - ticker 最少 3 字符 + 两侧 boundary，避免从 openai/ai叙事 错抽 AI/PENAI
+    #   - 不含"介入"动词，因"人工介入"等非交易语义在议论性消息中过多
+    BUY_VERBOSE_ACTION_SUFFIX = re.compile(
+        r'(\d+(?:[.。]\d+)?)(?![分秒])\s*(?:附近)?\s*[\s\S]{0,15}?'
+        r'(?:加仓|建仓了?|配置点?|买回|接回|回买)'
+        r'\s*[\s\S]{0,25}?(?<![a-zA-Z0-9])([A-Za-z]{3,5})(?![a-zA-Z0-9])',
+        re.IGNORECASE
+    )
 
     # 卖出 T8: 单价+减仓/减点/减+ticker 句尾: "21.7也减仓点tsll" / "22附近也可以减点tsll" / "17附近再减点tsll"
     SELL_SINGLE_REDUCE_SUFFIX = re.compile(
@@ -462,7 +480,32 @@ class StockParser:
         re.IGNORECASE
     )
     BUY_HINT_SINGLE = re.compile(
-        r'(\d+(?:[.。]\d+)?)\s*(?:附近)?\s*[\s\S]{0,20}?(?:加(?!仓|密)|吸回|回吸|吸(?!筹)|开仓|建仓|介入|(?:做点)?配置|开(?!盘|始)|进(?!场|行)|接(?!下)|回买)',
+        r'(\d+(?:[.。]\d+)?)(?![分秒])\s*(?:附近)?\s*[\s\S]{0,20}?(?:加(?!仓|密)|吸回|回吸|吸(?!筹)|开仓|建仓|(?<!人工)介入|(?:做点)?配置|开(?!盘|始|涨|跌|低|高)|进(?!场|行)|接(?!下)|回买)',
+        re.IGNORECASE
+    )
+    # 止盈口语化：价格（单价或区间）+ 全部/都/先 + 止盈（+ 一半/一点/一部分/了?）
+    # "15.9全部止盈" / "7.2-7.3都止盈" / "47.7附近止盈一半" / "216-217止盈196的" / "都止盈一些"
+    TP_HINT = re.compile(
+        r'(\d+(?:[.。]\d+)?)(?![分秒])\s*(?:[-~到]\s*(\d+(?:[.。]\d+)?))?\s*(?:附近)?\s*'
+        r'[\s\S]{0,20}?(?:全部|都|先)?\s*止盈(?:一半|一点|一部分|了)?',
+        re.IGNORECASE
+    )
+    # 止盈口语化（价格在动词后）："都止盈 45-46附近"
+    TP_HINT_POST = re.compile(
+        r'止盈(?:一半|一点|一部分|了)?\s*(?:在)?\s*\$?'
+        r'(\d+(?:[.。]\d+)?)(?![分秒])(?:\s*[-~到]\s*(\d+(?:[.。]\d+)?))?',
+        re.IGNORECASE
+    )
+    # 止损口语化：价格（单价或区间）+ 全部/都/先 + 止损（+ 了?）
+    # "42.15附近...先止损了"
+    SL_HINT = re.compile(
+        r'(\d+(?:[.。]\d+)?)(?![分秒])\s*(?:[-~到]\s*(\d+(?:[.。]\d+)?))?\s*(?:附近)?\s*'
+        r'[\s\S]{0,20}?(?:全部|都|先)?\s*止损(?:一半|一点|了)?',
+        re.IGNORECASE
+    )
+    # 止损口语化（价格在动词后）："止损 20.2"
+    SL_HINT_POST = re.compile(
+        r'止损(?:一半|一点|了)?\s*(?:在)?\s*\$?(\d+(?:[.。]\d+)?)(?![分秒])',
         re.IGNORECASE
     )
 
@@ -502,6 +545,18 @@ class StockParser:
             instruction = cls._parse_with_watched_ticker(message, message_id, ticker)
             if instruction:
                 return instruction
+        # 中文昵称 fallback：把"博通/奈飞双倍/微软双倍"等替换为 ticker 再重试
+        if _normalize_aliases:
+            normalized = _normalize_aliases(message)
+            if normalized != message:
+                for fn in (cls._parse_buy, cls._parse_sell, cls._parse_stop_loss, cls._parse_take_profit):
+                    instruction = fn(normalized, message_id)
+                    if instruction:
+                        return instruction
+                for ticker in cls._watched_tickers_in_message(normalized):
+                    instruction = cls._parse_with_watched_ticker(normalized, message_id, ticker)
+                    if instruction:
+                        return instruction
         return None
 
     # 买入：数量按历史参考
@@ -643,6 +698,41 @@ class StockParser:
                 sell_quantity=sell_quantity,
                 sell_reference_price=ref_price,
                 sell_reference_label=ref_label,
+                message_id=message_id
+            )
+
+        # 止盈：价格（区间或单价）+ 止盈 | 止盈 + 价格
+        match = cls.TP_HINT.search(message) or cls.TP_HINT_POST.search(message)
+        if match:
+            lo = cls._normalize_price(match.group(1))
+            hi_s = match.group(2)
+            if hi_s:
+                hi = cls._normalize_price(hi_s)
+                lo, hi = cls._sort_range(lo, hi)
+                price = cls._round2((lo + hi) / 2)
+                price_range = [lo, hi]
+            else:
+                price = lo
+                price_range = None
+            tp_portion = '1/2' if '一半' in message else '全部'
+            return StockInstruction(
+                raw_message=message,
+                instruction_type=InstructionType.SELL.value,
+                ticker=ticker,
+                price=price,
+                price_range=price_range,
+                sell_quantity=tp_portion,
+                message_id=message_id
+            )
+        # 止损：价格 + 止损 | 止损 + 价格
+        match = cls.SL_HINT.search(message) or cls.SL_HINT_POST.search(message)
+        if match:
+            price = cls._normalize_price(match.group(1))
+            return StockInstruction(
+                raw_message=message,
+                instruction_type=InstructionType.MODIFY.value,
+                ticker=ticker,
+                stop_loss_price=price,
                 message_id=message_id
             )
 
@@ -1202,6 +1292,21 @@ class StockParser:
 
         # "夜盘83附近开仓了常规仓一半的nvdl"
         match = cls.BUY_OPEN_POSITION_TICKER_SUFFIX.search(message)
+        if match:
+            price = cls._normalize_price(match.group(1))
+            ticker = match.group(2).upper()
+            position_size = cls._resolve_position_size(message)
+            return StockInstruction(
+                raw_message=message,
+                instruction_type=InstructionType.BUY.value,
+                ticker=ticker,
+                price=price,
+                position_size=position_size,
+                message_id=message_id
+            )
+
+        # "321附近可以加仓mstr" / "6.7附近建仓个新的 bbai" / "3.68附近买回之前卖出的rxrx"
+        match = cls.BUY_VERBOSE_ACTION_SUFFIX.search(message)
         if match:
             price = cls._normalize_price(match.group(1))
             ticker = match.group(2).upper()
@@ -1906,11 +2011,13 @@ class StockParser:
         if not match:
             return None
         ticker = match.group(1) or match.group(2)
+        if not ticker:
+            return None  # 无 ticker 时让给关注列表 fallback
         price = float(match.group(3))
         return StockInstruction(
             raw_message=message,
             instruction_type=InstructionType.MODIFY.value,
-            ticker=ticker.upper() if ticker else None,
+            ticker=ticker.upper(),
             stop_loss_price=price,
             message_id=message_id
         )
@@ -1921,13 +2028,15 @@ class StockParser:
         if not match:
             return None
         ticker = match.group(1) or match.group(2)
+        if not ticker:
+            return None  # 无 ticker 时让给关注列表 fallback
         price = float(match.group(3))
         portion_raw = match.group(4) if len(match.groups()) >= 4 and match.group(4) else '全部'
         portion = cls.PORTION_MAP.get(portion_raw, portion_raw)
         return StockInstruction(
             raw_message=message,
             instruction_type=InstructionType.SELL.value,
-            ticker=ticker.upper() if ticker else None,
+            ticker=ticker.upper(),
             price=price,
             sell_quantity=portion,
             message_id=message_id
