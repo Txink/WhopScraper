@@ -473,7 +473,14 @@ class RichLogger:
             if not self._trade_flows:
                 self._maybe_stop_trade_live()
             else:
-                self._console.print(panel)
+                # 修复"一闪而过"：把 Live 最后一帧替换为仅含本次结束的 panel，
+                # stop 后该帧冻结进 scrollback；再重启一个新 Live 显示剩余 flows。
+                # 这样每个结束 flow 只出现一次，且不会被下一次 Live refresh 覆盖。
+                if self._trade_live is not None:
+                    self._trade_live.update(panel, refresh=True)
+                    self._trade_live.stop()
+                    self._trade_live = None
+                self._ensure_trade_live()
                 self._update_trade_display()
 
     def trade_register_order(self, order_id: str, dom_id: Optional[str] = None) -> None:

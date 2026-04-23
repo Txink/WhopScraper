@@ -89,10 +89,30 @@ class MessageMonitor:
     async def scan_once(self) -> list[OptionInstruction]:
         """
         扫描一次页面，返回新的指令
-        
+
         Returns:
             新解析出的指令列表
-        """        
+        """
+        # [DEBUG] DEBUG_SCAN=1 时打印 DOM 刷新情况（消息总数 / 最后一条 / 是否已被 dedup）
+        if os.getenv("DEBUG_SCAN") == "1":
+            try:
+                await self.page.evaluate("() => window.scrollTo(0, document.body.scrollHeight)")
+                info = await self.page.evaluate(
+                    "() => { const els = document.querySelectorAll('[data-message-id]'); "
+                    "const last = els.length ? els[els.length-1] : null; "
+                    "return { count: els.length, "
+                    "last_id: last ? last.getAttribute('data-message-id') : null, "
+                    "last_text: last ? (last.innerText || '').slice(0, 120) : null }; }"
+                )
+                last_id = info.get("last_id") or ""
+                seen = last_id in self._processed_ids
+                tail = (info.get("last_text") or "").replace("\n", " | ")
+                print(f"[DEBUG_SCAN] 时刻={datetime.now().strftime('%H:%M:%S')} "
+                      f"DOM消息数={info.get('count')} 已处理池={len(self._processed_ids)} "
+                      f"最新ID={last_id} 已dedup={seen} 末条='{tail}'")
+            except Exception as e:
+                print(f"[DEBUG_SCAN] 读取 DOM 失败: {e}")
+
         # 统一使用 EnhancedMessageExtractor 提取并解析页面消息（含消息组、引用、上下文）
         extractor = EnhancedMessageExtractor(self.page)
         try:
@@ -133,18 +153,35 @@ class MessageMonitor:
         rlogger = get_logger()
         for record in records:
             dom_id = getattr(record.message, "group_id", None) or ""
+            content = (getattr(record.message, "primary_message", "") or "")[:300]
+            ts = getattr(record.message, "timestamp", "") or ""
+            # 持久化日志（stdlib logger -> logs/trading.log），不经过 Rich Live，避免"一闪而过"
+            logger.info("[INGEST] dom=%s ts=%s content=%r", dom_id, ts, content)
+
             rlogger.trade_start(dom_id=dom_id)
             record.message.display()
-            if record.instruction is not None:
-                record.instruction.display()
+            inst = record.instruction
+            if inst is not None:
+                inst.display()
+                ticker = getattr(inst, "ticker", None) or getattr(inst, "symbol", None)
+                price = getattr(inst, "price", None)
+                ignored = getattr(inst, "ignored_by_watchlist", False)
+                logger.info(
+                    "[PARSED] dom=%s ticker=%s price=%s ignored_by_watchlist=%s has_symbol=%s",
+                    dom_id, ticker, price, ignored, inst.has_symbol(),
+                )
             else:
+                logger.info("[PARSE_FAIL] dom=%s content=%r", dom_id, content)
                 if self.page_type == "stock":
                     StockInstruction.display_parse_failed(getattr(record.message, "timestamp", None))
                 else:
                     OptionInstruction.display_parse_failed(getattr(record.message, "timestamp", None))
             if self._on_new_record and record.instruction is not None and record.instruction.has_symbol():
                 if not getattr(record.instruction, "ignored_by_watchlist", False):
+                    logger.info("[DISPATCH] dom=%s -> on_new_record", dom_id)
                     self._on_new_record(record)
+                else:
+                    logger.info("[SKIP_WATCHLIST] dom=%s ticker not in watched_stocks", dom_id)
             rlogger.trade_end()
 
         return [r.instruction for r in records if r.instruction is not None]
