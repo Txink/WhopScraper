@@ -1,3 +1,4 @@
+from dataclasses import FrozenInstanceError
 from datetime import UTC, datetime
 
 import pytest
@@ -23,7 +24,7 @@ def _make(**overrides):
 
 def test_message_is_frozen():
     m = _make()
-    with pytest.raises(Exception):
+    with pytest.raises(FrozenInstanceError):
         m.content = "hacked"
 
 
