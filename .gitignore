@@ -71,3 +71,4 @@ playwright-report/
 .coverage
 htmlcov/
 .pytest_cache/
+.superpowers/
