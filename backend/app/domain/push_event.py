@@ -24,7 +24,7 @@ class PushEvent:
     order_id: str
     state: PushState
     received_at: datetime
-    payload: dict
+    payload: dict[str, object]
     delta_qty: int | None = None
     delta_price: float | None = None
     cumulative_qty: int | None = None
