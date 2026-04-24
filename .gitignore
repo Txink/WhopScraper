@@ -4,6 +4,12 @@ __pycache__/
 .venv/
 .pytest_cache/
 .ruff_cache/
+.mypy_cache/
+
+# Coverage
+.coverage
+htmlcov/
+coverage.xml
 
 # Node
 node_modules/
