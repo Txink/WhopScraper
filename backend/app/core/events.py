@@ -15,10 +15,12 @@ Convention:
 - ``message.received`` carries a ``MessagePayload``.
 - every ``task.*`` event except ``task.push_event`` carries a ``TaskPayload``.
 - ``task.push_event`` carries a ``TaskPushPayload``.
+- ``whop.page_changed`` carries a ``WhopPagePayload``.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 from app.domain.message import Message
 from app.domain.push_event import PushEvent
@@ -35,6 +37,7 @@ class Topics:
     TASK_PUSH_EVENT = "task.push_event"
     TASK_STATUS_CHANGED = "task.status_changed"
     SYSTEM_CONNECTION_CHANGED = "system.connection_changed"
+    WHOP_PAGE_CHANGED = "whop.page_changed"
 
 
 @dataclass(frozen=True)
@@ -57,3 +60,17 @@ class TaskPushPayload:
 
     task: Task
     push_event: PushEvent
+
+
+@dataclass(frozen=True)
+class WhopPagePayload:
+    """Payload for ``whop.page_changed`` events.
+
+    Emitted whenever the WhopRegistry mutates an entry (add/remove/restart/
+    settings update). ``page_dict`` is the JSON-ready dict produced by
+    ``schemas.whop_page_to_out(...).model_dump(mode="json")`` at publish time
+    so the downstream WS bridge can forward it verbatim.
+    """
+
+    action: str          # "added" | "removed" | "restarted" | "settings_updated"
+    page_dict: dict[str, Any]

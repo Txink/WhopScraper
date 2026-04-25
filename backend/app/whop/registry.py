@@ -10,14 +10,21 @@ import asyncio
 import json
 import logging
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from app.core.config import Settings
-from app.core.event_bus import EventBus
+from app.core.event_bus import Event, EventBus
+from app.core.events import Topics, WhopPagePayload
 from app.whop.listener import WhopListener, _is_placeholder_url
+from app.whop.page_settings import (
+    PageSettings,
+    default_settings_for,
+    page_settings_from_dict,
+    page_settings_to_dict,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +40,10 @@ class WhopPageEntry:
     source: str  # "stock" | "option"
     name: str
     added_at: datetime
+    # Per-page listener/parser settings. Default factory yields a "stock" preset
+    # because that matches the `source` default; callers MUST pass an explicit
+    # `default_settings_for(source)` when constructing for option pages.
+    settings: PageSettings = field(default_factory=lambda: default_settings_for("stock"))
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -41,16 +52,25 @@ class WhopPageEntry:
             "source": self.source,
             "name": self.name,
             "added_at": self.added_at.isoformat(),
+            "settings": page_settings_to_dict(self.settings),
         }
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> WhopPageEntry:
+        source = d["source"]
+        settings_raw = d.get("settings")
+        if settings_raw is None:
+            # Legacy entry written before per-page settings existed.
+            settings = default_settings_for(source)
+        else:
+            settings = page_settings_from_dict(settings_raw, source=source)
         return cls(
             id=d["id"],
             url=d["url"],
-            source=d["source"],
+            source=source,
             name=d.get("name") or d["url"],
             added_at=datetime.fromisoformat(d["added_at"]),
+            settings=settings,
         )
 
 
@@ -75,6 +95,9 @@ class WhopRegistry:
         self._lock = asyncio.Lock()
         self._entries: dict[str, WhopPageEntry] = {}
         self._listeners: dict[str, WhopListener] = {}
+        # url -> entry_id; rebuilt after every entries-dict mutation. O(1) lookup
+        # for the trader's "which page should this message use?" query.
+        self._url_index: dict[str, str] = {}
 
     async def load_and_start_all(self) -> None:
         """At app startup: load JSON file + start a listener per entry.
@@ -95,6 +118,7 @@ class WhopRegistry:
                     logger.warning(
                         "whop registry: listener for %s failed to start: %s", entry.id, e
                     )
+            self._rebuild_url_index()
 
     async def shutdown_all(self) -> None:
         async with self._lock:
@@ -135,6 +159,7 @@ class WhopRegistry:
                 source=source,
                 name=(name or url),
                 added_at=datetime.now(UTC),
+                settings=default_settings_for(source),
             )
             self._entries[entry.id] = entry
             self._save_entries()
@@ -144,7 +169,9 @@ class WhopRegistry:
                 logger.warning(
                     "listener for new page %s failed to start: %s", entry.id, e
                 )
-            return entry
+            self._rebuild_url_index()
+        await self._publish_change("added", entry)
+        return entry
 
     async def remove_page(self, page_id: str) -> bool:
         """Stop listener + remove entry + persist. Returns False if not found."""
@@ -159,7 +186,9 @@ class WhopRegistry:
                 except Exception as e:  # noqa: BLE001
                     logger.warning("error stopping removed listener: %s", e)
             self._save_entries()
-            return True
+            self._rebuild_url_index()
+        await self._publish_change("removed", entry)
+        return True
 
     async def restart_page(self, page_id: str) -> bool:
         """Stop + restart listener for an entry, replaying all currently-visible
@@ -188,7 +217,36 @@ class WhopRegistry:
             except Exception as e:  # noqa: BLE001
                 logger.warning("restart: start failed: %s", e)
                 return False
-            return True
+        await self._publish_change("restarted", entry)
+        return True
+
+    async def update_settings(
+        self, page_id: str, patch: dict[str, Any]
+    ) -> WhopPageEntry:
+        """PATCH-style settings update.
+
+        ``patch`` is merged on top of the current page_settings_to_dict(entry.settings)
+        before re-validating via ``page_settings_from_dict``. Keys not present in
+        ``patch`` are preserved (so the frontend can send only the fields it changed).
+
+        Raises:
+            KeyError: if the page_id does not exist.
+            ValueError: if ``patch`` violates source-specific rules (e.g. setting
+                tickers on an option page).
+        """
+        async with self._lock:
+            entry = self._entries.get(page_id)
+            if entry is None:
+                raise KeyError(f"page not found: {page_id}")
+            if entry.source == "option" and "tickers" in patch:
+                raise ValueError("option page does not accept 'tickers'")
+            current_dict = page_settings_to_dict(entry.settings)
+            current_dict.update(patch)
+            new_settings = page_settings_from_dict(current_dict, source=entry.source)
+            entry.settings = new_settings
+            self._save_entries()
+        await self._publish_change("settings_updated", entry)
+        return entry
 
     # ---- read ops ----
 
@@ -196,7 +254,42 @@ class WhopRegistry:
         """Return entries + their (optional) live listener. No lock — caller is read-only."""
         return [(e, self._listeners.get(e.id)) for e in self._entries.values()]
 
+    def get_settings_for_url(self, url: str | None) -> PageSettings | None:
+        """O(1) reverse lookup: url → PageSettings. Returns None for unknown/None url.
+
+        Used by the trader/parser pipeline to pick up per-page tolerances and
+        ticker whitelists when handed a Message that knows only its source url.
+        """
+        if not url:
+            return None
+        eid = self._url_index.get(url)
+        if eid is None:
+            return None
+        return self._entries[eid].settings
+
     # ---- internal ----
+
+    def _rebuild_url_index(self) -> None:
+        """Recompute url → entry_id mapping from current entries dict."""
+        self._url_index = {e.url: e.id for e in self._entries.values()}
+
+    async def _publish_change(self, action: str, entry: WhopPageEntry) -> None:
+        """Build a JSON-ready page dict + publish a whop.page_changed event.
+
+        ``whop_page_to_out`` is imported lazily to avoid an app.api → app.whop
+        import-cycle (schemas itself only references WhopPageEntry under
+        TYPE_CHECKING, so the runtime import here is one-way).
+        """
+        from app.api.schemas import whop_page_to_out
+
+        listener = self._listeners.get(entry.id)
+        page_dict = whop_page_to_out(entry, listener).model_dump(mode="json")
+        await self._bus.publish(
+            Event(
+                Topics.WHOP_PAGE_CHANGED,
+                WhopPagePayload(action=action, page_dict=page_dict),
+            )
+        )
 
     async def _start_listener(
         self, entry: WhopPageEntry, *, skip_initial: bool = True

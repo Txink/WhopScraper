@@ -8,6 +8,7 @@ import pytest
 
 from app.core.config import Settings
 from app.core.event_bus import EventBus
+from app.whop.page_settings import PageSettings, TickerConfig  # noqa: F401  (used in new tests)
 from app.whop.registry import WhopRegistry
 
 # ---------------------------------------------------------------------------
@@ -286,3 +287,190 @@ async def test_load_skips_malformed_entries(
     assert pages[0][0].id == "good1"
 
     await reg.shutdown_all()
+
+
+# ---------------------------------------------------------------------------
+# Settings + URL lookup + page_changed event tests (Task D)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_add_page_uses_default_settings(patch_browser, settings_test, tmp_path):
+    """add_page without settings → entry.settings = source default."""
+    bus = EventBus()
+    reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=tmp_path / "pages.json")
+    await reg.load_and_start_all()
+    entry = await reg.add_page(url="https://whop.com/x/app/", source="stock", name="X")
+    assert entry.settings.dedupe_processed_messages is True
+    assert entry.settings.price_deviation_tolerance == 1.0
+    assert entry.settings.tickers == {}
+
+
+@pytest.mark.asyncio
+async def test_add_page_option_default_settings(patch_browser, settings_test, tmp_path):
+    bus = EventBus()
+    reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=tmp_path / "pages.json")
+    await reg.load_and_start_all()
+    entry = await reg.add_page(url="https://whop.com/o/app/", source="option", name="O")
+    assert entry.settings.tickers is None
+    assert entry.settings.price_deviation_tolerance == 5.0
+
+
+@pytest.mark.asyncio
+async def test_settings_persisted_in_json(patch_browser, settings_test, tmp_path):
+    bus = EventBus()
+    pages_file = tmp_path / "pages.json"
+    reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=pages_file)
+    await reg.load_and_start_all()
+    await reg.add_page(url="https://whop.com/p/app/", source="stock", name="P")
+
+    raw = json.loads(pages_file.read_text())
+    assert "settings" in raw[0]
+    assert raw[0]["settings"]["price_deviation_tolerance"] == 1.0
+
+
+@pytest.mark.asyncio
+async def test_update_settings_persists_and_returns_entry(
+    patch_browser, settings_test, tmp_path
+):
+    bus = EventBus()
+    pages_file = tmp_path / "pages.json"
+    reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=pages_file)
+    await reg.load_and_start_all()
+    entry = await reg.add_page(url="https://whop.com/upd/app/", source="stock", name="upd")
+
+    updated = await reg.update_settings(entry.id, {
+        "tickers": {"NVDA": {"trade_quantity": 500}},
+        "price_deviation_tolerance": 0.7,
+    })
+    assert updated.settings.tickers == {"NVDA": TickerConfig(trade_quantity=500)}
+    assert updated.settings.price_deviation_tolerance == 0.7
+    # dedupe was not in patch → preserved
+    assert updated.settings.dedupe_processed_messages is True
+
+    # Persisted?
+    raw = json.loads(pages_file.read_text())
+    s = next(p["settings"] for p in raw if p["id"] == entry.id)
+    assert s["tickers"] == {"NVDA": {"trade_quantity": 500}}
+    assert s["price_deviation_tolerance"] == 0.7
+
+
+@pytest.mark.asyncio
+async def test_update_settings_unknown_id_raises(patch_browser, settings_test, tmp_path):
+    bus = EventBus()
+    reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=tmp_path / "pages.json")
+    await reg.load_and_start_all()
+    with pytest.raises(KeyError):
+        await reg.update_settings("does-not-exist", {})
+
+
+@pytest.mark.asyncio
+async def test_update_settings_option_rejects_tickers(patch_browser, settings_test, tmp_path):
+    bus = EventBus()
+    reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=tmp_path / "pages.json")
+    await reg.load_and_start_all()
+    entry = await reg.add_page(url="https://whop.com/optx/app/", source="option", name="optx")
+    with pytest.raises(ValueError, match="tickers"):
+        await reg.update_settings(entry.id, {"tickers": {"AAPL": {"trade_quantity": 1}}})
+
+
+@pytest.mark.asyncio
+async def test_get_settings_for_url_match(patch_browser, settings_test, tmp_path):
+    bus = EventBus()
+    reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=tmp_path / "pages.json")
+    await reg.load_and_start_all()
+    entry = await reg.add_page(url="https://whop.com/lookup/app/", source="stock", name="lk")
+    s = reg.get_settings_for_url(entry.url)
+    assert s is not None
+    assert s.dedupe_processed_messages is True
+
+
+@pytest.mark.asyncio
+async def test_get_settings_for_url_orphan(patch_browser, settings_test, tmp_path):
+    bus = EventBus()
+    reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=tmp_path / "pages.json")
+    await reg.load_and_start_all()
+    assert reg.get_settings_for_url("https://whop.com/never/app/") is None
+    assert reg.get_settings_for_url(None) is None
+
+
+@pytest.mark.asyncio
+async def test_legacy_entry_without_settings_loads_default(
+    patch_browser, settings_test, tmp_path
+):
+    """A pages.json file written before settings existed should load with default settings."""
+    pages_file = tmp_path / "pages.json"
+    pages_file.write_text(json.dumps([
+        {"id": "legacy1", "url": "https://whop.com/legacy/app/", "source": "stock",
+         "name": "Legacy", "added_at": "2026-04-01T00:00:00+00:00"}
+    ]))
+    bus = EventBus()
+    reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=pages_file)
+    await reg.load_and_start_all()
+    s = reg.get_settings_for_url("https://whop.com/legacy/app/")
+    assert s is not None
+    assert s.tickers == {}
+    assert s.price_deviation_tolerance == 1.0
+
+
+@pytest.mark.asyncio
+async def test_page_change_event_published_on_add(patch_browser, settings_test, tmp_path):
+    bus = EventBus()
+    received: list = []
+    from app.core.events import Topics
+
+    async def _handler(evt):
+        received.append(evt.payload)
+
+    bus.subscribe(Topics.WHOP_PAGE_CHANGED, _handler)
+    reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=tmp_path / "pages.json")
+    await reg.load_and_start_all()
+    entry = await reg.add_page(url="https://whop.com/evt/app/", source="stock", name="evt")
+    await bus.wait_idle()
+    assert len(received) == 1
+    assert received[0].action == "added"
+    assert received[0].page_dict["id"] == entry.id
+
+
+@pytest.mark.asyncio
+async def test_page_change_event_published_on_settings_update(
+    patch_browser, settings_test, tmp_path
+):
+    bus = EventBus()
+    received: list = []
+    from app.core.events import Topics
+
+    async def _handler(evt):
+        received.append(evt.payload)
+
+    bus.subscribe(Topics.WHOP_PAGE_CHANGED, _handler)
+    reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=tmp_path / "pages.json")
+    await reg.load_and_start_all()
+    entry = await reg.add_page(url="https://whop.com/evt2/app/", source="stock", name="evt2")
+    await bus.wait_idle()
+    received.clear()
+    await reg.update_settings(entry.id, {"price_deviation_tolerance": 0.3})
+    await bus.wait_idle()
+    assert len(received) == 1
+    assert received[0].action == "settings_updated"
+
+
+@pytest.mark.asyncio
+async def test_page_change_event_published_on_remove(patch_browser, settings_test, tmp_path):
+    bus = EventBus()
+    received: list = []
+    from app.core.events import Topics
+
+    async def _handler(evt):
+        received.append(evt.payload)
+
+    bus.subscribe(Topics.WHOP_PAGE_CHANGED, _handler)
+    reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=tmp_path / "pages.json")
+    await reg.load_and_start_all()
+    entry = await reg.add_page(url="https://whop.com/del/app/", source="stock", name="del")
+    await bus.wait_idle()
+    received.clear()
+    await reg.remove_page(entry.id)
+    await bus.wait_idle()
+    assert len(received) == 1
+    assert received[0].action == "removed"

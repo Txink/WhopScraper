@@ -6,7 +6,7 @@ Converter functions translate app.domain.* dataclasses → Pydantic models.
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -197,6 +197,8 @@ class WhopPageOut(BaseModel):
     last_poll_at: datetime | None
     messages_published: int
     last_error: str | None
+    # Per-page listener settings (Task D stub: dict; Task H replaces with WhopPageSettingsOut).
+    settings: dict[str, Any] | None = None
 
 
 class WhopPagesOut(BaseModel):
@@ -350,6 +352,9 @@ def whop_page_to_out(
     listener: WhopListener | None,
 ) -> WhopPageOut:
     """Build WhopPageOut from a (entry, listener) pair from registry.list_pages()."""
+    from app.whop.page_settings import page_settings_to_dict
+
+    settings_dict = page_settings_to_dict(entry.settings)
     if listener is not None:
         return WhopPageOut(
             id=entry.id,
@@ -362,6 +367,7 @@ def whop_page_to_out(
             last_poll_at=listener.last_poll_at,
             messages_published=listener.messages_published,
             last_error=listener.last_error,
+            settings=settings_dict,
         )
     return WhopPageOut(
         id=entry.id,
@@ -374,4 +380,5 @@ def whop_page_to_out(
         last_poll_at=None,
         messages_published=0,
         last_error=None,
+        settings=settings_dict,
     )
