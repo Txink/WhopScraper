@@ -105,12 +105,17 @@ class WhopListener:
         return self._source
 
     async def _prime_dedupe(self) -> None:
-        """Load seen ids from DB; called when dedupe=on.
+        """Seed _seen from DB so restart-time message replays are filtered.
 
-        If session_factory is missing (legacy ctor without DB wiring), fall back
-        to ``_prime_skip_initial`` when ``skip_initial=True`` so existing callers
-        that relied on the old default keep their behavior. Otherwise log a
-        warning and leave the seen set empty.
+        Behavior:
+        - session_factory provided: load all message ids for self._url via SELECT and
+          add to _seen. This is the production path (registry-wired listeners).
+        - session_factory None + skip_initial=True: gracefully degrade to DOM-based
+          priming (callers like register_whop_listeners that lack DB wiring still get
+          replay protection within the current process).
+        - session_factory None + skip_initial=False: log warning, leave _seen empty.
+
+        Either degradation path emits a warning so misconfigured deployments are visible.
         """
         if self._session_factory is None:
             if self._skip_initial:
