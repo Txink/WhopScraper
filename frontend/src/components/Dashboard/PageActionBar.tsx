@@ -82,7 +82,7 @@ export function PageActionBar({ page, onOpenSettings }: Props) {
         title={powerTitle}
         aria-label={powerAria}
       >
-        <PowerIcon size={20} />
+        <PowerIcon size={18} />
       </button>
       <button
         onClick={onOpenSettings}
@@ -91,7 +91,7 @@ export function PageActionBar({ page, onOpenSettings }: Props) {
         title="设置"
         aria-label="设置"
       >
-        <SettingsIcon size={20} />
+        <SettingsIcon size={22} />
       </button>
       <button
         onClick={cycleExpandMode}

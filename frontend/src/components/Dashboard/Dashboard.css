@@ -78,14 +78,13 @@
 .page-action-bar .action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .page-action-bar .action-btn.icon-only,
 .page-action-bar .power-btn.icon-only {
-  padding: 4px 10px;
-  font-size: 22px;
+  padding: 2px 14px;
   line-height: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 40px;
-  min-height: 36px;
+  min-width: 52px;
+  min-height: 26px;
 }
 
 .page-action-bar .power-btn {
