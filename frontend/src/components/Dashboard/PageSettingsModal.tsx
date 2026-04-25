@@ -15,13 +15,6 @@ interface TickerRow {
   trade_quantity: number;
 }
 
-function fmtTs(ts: string | null): string {
-  if (!ts) return "—";
-  const d = new Date(ts);
-  if (Number.isNaN(d.getTime())) return ts;
-  return d.toLocaleString();
-}
-
 export function PageSettingsModal({ page, onClose }: Props) {
   const [dedupe, setDedupe] = useState(page.settings.dedupe_processed_messages);
   const [tolerance, setTolerance] = useState(String(page.settings.price_deviation_tolerance));
@@ -306,33 +299,6 @@ export function PageSettingsModal({ page, onClose }: Props) {
               </p>
             </section>
           )}
-
-          <section>
-            <h4>监听诊断</h4>
-            <div className="diag-grid">
-              <span className="k">当前状态</span>
-              <span className={`v ${page.running ? "ok" : "muted"}`}>
-                {page.running ? "运行中" : "已停止"}
-              </span>
-
-              <span className="k">启动时间</span>
-              <span className="v">{fmtTs(page.started_at)}</span>
-
-              <span className="k">最近轮询</span>
-              <span className="v">{fmtTs(page.last_poll_at)}</span>
-
-              <span className="k">抓到消息数</span>
-              <span className="v">{page.messages_published}</span>
-
-              <span className="k">最近错误</span>
-              <span className={`v ${page.last_error ? "err" : "muted"}`}>
-                {page.last_error ?? "无"}
-              </span>
-            </div>
-            <p className="hint small">
-              若“运行中”但“最近轮询/抓到消息数”长期不变，可先关闭去重后重启监听，再观察该区块是否更新。
-            </p>
-          </section>
 
           <section className="danger-zone">
             <h4>危险操作</h4>

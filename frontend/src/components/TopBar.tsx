@@ -2,15 +2,13 @@ import "./TopBar.css";
 import { useViewStore } from "../stores/view";
 
 export interface TopBarProps {
-  connWhop: "up" | "down" | "unknown";
   connLongport: "up" | "down" | "unknown";
   mode: "paper" | "real";
   dryRun: boolean;
   onLogout?: () => void;
 }
 
-export function TopBar({ connWhop, connLongport, mode, dryRun, onLogout }: TopBarProps) {
-  void connWhop;
+export function TopBar({ connLongport, mode, dryRun, onLogout }: TopBarProps) {
   const view = useViewStore((s) => s.view);
   const setView = useViewStore((s) => s.setView);
 
@@ -22,8 +20,6 @@ export function TopBar({ connWhop, connLongport, mode, dryRun, onLogout }: TopBa
       <div className="brand-mark">
         <span className="brand-dot" />
         <span className="brand-name">Signal Station</span>
-        <span className="brand-sep" />
-        <span className="brand-sub">whop → longport</span>
       </div>
 
       {/* View switcher */}

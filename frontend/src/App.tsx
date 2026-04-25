@@ -304,7 +304,6 @@ export default function App() {
   return (
     <div className="app">
       <TopBar
-        connWhop={conn.whop}
         connLongport={conn.longport}
         mode={conn.mode}
         dryRun={conn.dryRun}

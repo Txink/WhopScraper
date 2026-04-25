@@ -39,11 +39,12 @@ export function DatabaseRecordsPanel({ pageNameByUrl }: Props) {
         api.listTasks(cursor ? { limit: PAGE_SIZE, cursor } : { limit: PAGE_SIZE }),
         api.countTasks(),
       ]);
+      const nextCursor = r.next_cursor ?? null;
       setPageRows((prev) => ({ ...prev, [page]: r.tasks }));
-      setPageNextCursor((prev) => ({ ...prev, [page]: r.next_cursor ?? null }));
+      setPageNextCursor((prev) => ({ ...prev, [page]: nextCursor }));
       setTotalCount(c.total_count);
-      if (r.next_cursor) {
-        setPageCursor((prev) => (prev[page + 1] !== undefined ? prev : { ...prev, [page + 1]: r.next_cursor }));
+      if (nextCursor !== null) {
+        setPageCursor((prev) => (prev[page + 1] !== undefined ? prev : { ...prev, [page + 1]: nextCursor }));
       }
     } catch (e) {
       if (e instanceof HttpError) {

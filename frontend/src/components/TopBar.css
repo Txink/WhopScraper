@@ -34,19 +34,6 @@
   color: var(--fg-1);
 }
 
-.brand-sep {
-  width: 1px;
-  height: 14px;
-  background: var(--line-strong);
-  flex-shrink: 0;
-}
-
-.brand-sub {
-  font-size: 10px;
-  color: var(--fg-3);
-  letter-spacing: 0.04em;
-}
-
 /* View switcher */
 .topbar-views {
   display: flex;

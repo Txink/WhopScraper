@@ -28,7 +28,7 @@ export function Login({ errorHint }: LoginProps) {
           <span className="dot"></span>
           <h1>Signal Station</h1>
         </div>
-        <p className="login-subtitle">whop → longport · 监控看板</p>
+        <p className="login-subtitle">监控看板</p>
         {errorHint && <div className="login-error">{errorHint}</div>}
         <form onSubmit={handleSubmit}>
           <label className="login-label" htmlFor="token-input">

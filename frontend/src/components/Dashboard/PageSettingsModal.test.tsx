@@ -124,19 +124,4 @@ describe("<PageSettingsModal>", () => {
     expect(arg.option_total_price_limit).toBe(1200);
   });
 
-  it("shows listener diagnostics block", () => {
-    const pageWithRuntime: WhopPage = {
-      ...stockPage,
-      running: true,
-      started_at: "2026-04-25T10:00:00Z",
-      last_poll_at: "2026-04-25T10:01:00Z",
-      messages_published: 12,
-      last_error: null,
-    };
-    render(<PageSettingsModal page={pageWithRuntime} onClose={vi.fn()} />);
-    expect(screen.getByText(/监听诊断/)).toBeInTheDocument();
-    expect(screen.getByText("运行中")).toBeInTheDocument();
-    expect(screen.getByText("12")).toBeInTheDocument();
-    expect(screen.getByText("无")).toBeInTheDocument();
-  });
 });
