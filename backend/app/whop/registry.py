@@ -162,7 +162,17 @@ class WhopRegistry:
             return True
 
     async def restart_page(self, page_id: str) -> bool:
-        """Stop + restart listener for an entry. Returns False if not found."""
+        """Stop + restart listener for an entry, replaying all currently-visible
+        DOM messages.
+
+        Restart semantics: skip_initial=False so the listener publishes every
+        message present in the DOM right after start. This is the user-facing
+        "重启" intent: re-process visible messages (e.g., after fixing a parser
+        bug, after clearing the DB, etc.). Storage UPSERT dedupes by domID, so
+        existing tasks are updated in place rather than duplicated.
+
+        Returns False if not found or start fails.
+        """
         async with self._lock:
             entry = self._entries.get(page_id)
             if entry is None:
@@ -174,7 +184,7 @@ class WhopRegistry:
                 except Exception as e:  # noqa: BLE001
                     logger.warning("restart: stop failed: %s", e)
             try:
-                await self._start_listener(entry)
+                await self._start_listener(entry, skip_initial=False)
             except Exception as e:  # noqa: BLE001
                 logger.warning("restart: start failed: %s", e)
                 return False
@@ -188,14 +198,28 @@ class WhopRegistry:
 
     # ---- internal ----
 
-    async def _start_listener(self, entry: WhopPageEntry) -> None:
-        """Build + start a listener for an entry. Lock must be held by caller."""
+    async def _start_listener(
+        self, entry: WhopPageEntry, *, skip_initial: bool = True
+    ) -> None:
+        """Build + start a listener for an entry. Lock must be held by caller.
+
+        skip_initial=True (default for boot + add_page): prime the seen set
+        from the current DOM so we only publish messages that arrive AFTER
+        startup. Avoids flooding when adding a brand-new channel that has
+        years of history visible.
+
+        skip_initial=False (used by restart_page): _seen starts empty so the
+        listener publishes every message currently in the DOM. Combined with
+        storage UPSERT this lets users re-process existing tasks (e.g., after
+        a parser fix) without duplicating rows.
+        """
         listener = WhopListener(
             bus=self._bus,
             url=entry.url,
             source=entry.source,
             poll_interval=self._settings.whop_poll_interval,
             headless=self._settings.whop_headless,
+            skip_initial=skip_initial,
         )
         await listener.start()
         self._listeners[entry.id] = listener
