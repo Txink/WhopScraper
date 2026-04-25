@@ -143,3 +143,19 @@
   background: rgba(239, 91, 91, 0.1);
   border-color: rgba(239, 91, 91, 0.25);
 }
+
+.logout-btn {
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  color: var(--fg-3);
+  padding: 3px 8px;
+  border-radius: var(--radius-chip);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  transition: color var(--dur) var(--ease);
+}
+.logout-btn:hover {
+  color: var(--fg-1);
+  border-color: var(--brand);
+}

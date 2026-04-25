@@ -20,6 +20,15 @@ from app.whop.extractor import extract_messages
 logger = logging.getLogger(__name__)
 
 
+def _is_placeholder_url(url: str | None) -> bool:
+    """Detect known placeholder URLs that should be treated as 'no URL set'."""
+    if not url:
+        return True
+    bad_tokens = ("/xxx/", "/yyy/", "example.com", "your-page-here")
+    low = url.lower()
+    return any(t in low for t in bad_tokens)
+
+
 class WhopListener:
     """Polls a single Whop page URL, publishes new messages to bus."""
 
@@ -150,7 +159,7 @@ def register_whop_listeners(
     Returns empty list if no whop URLs are configured (graceful no-op for dev).
     """
     listeners: list[WhopListener] = []
-    if settings.whop_stock_url:
+    if not _is_placeholder_url(settings.whop_stock_url):
         listeners.append(
             WhopListener(
                 bus=bus,
@@ -160,7 +169,9 @@ def register_whop_listeners(
                 headless=settings.whop_headless,
             )
         )
-    if settings.whop_option_url:
+    else:
+        logger.info("WHOP_STOCK_URL not configured (or placeholder) — skipping stock listener")
+    if not _is_placeholder_url(settings.whop_option_url):
         listeners.append(
             WhopListener(
                 bus=bus,
@@ -170,4 +181,6 @@ def register_whop_listeners(
                 headless=settings.whop_headless,
             )
         )
+    else:
+        logger.info("WHOP_OPTION_URL not configured (or placeholder) — skipping option listener")
     return listeners

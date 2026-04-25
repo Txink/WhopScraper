@@ -1,5 +1,5 @@
-import { useEffect, useRef } from "react";
-import { configureHttp, api } from "./api/http";
+import { useEffect, useRef, useState } from "react";
+import { configureHttp, api, HttpError } from "./api/http";
 import { createWsClient } from "./api/ws";
 import { useConnStore } from "./stores/conn";
 import { useTasksStore } from "./stores/tasks";
@@ -8,6 +8,7 @@ import { usePositionsStore } from "./stores/positions";
 import { TopBar } from "./components/TopBar";
 import { RightRail } from "./components/RightRail";
 import { Card } from "./components/Card/Card";
+import { Login } from "./components/Login";
 import { useStickyTop } from "./hooks/useStickyTop";
 import type { TaskSummary, PushEvent } from "./api/domain-types";
 import "./App.css";
@@ -17,27 +18,23 @@ const BASE_URL = import.meta.env.VITE_API_BASE ?? "http://localhost:8000";
 
 /**
  * Token resolution priority:
- *  1. URL query param ?token=   (stores to localStorage for future loads)
+ *  1. URL query param ?token=   (stores to localStorage and strips from URL)
  *  2. localStorage["APP_TOKEN"]
- *  3. VITE_APP_TOKEN build-time env var
- *  4. "dev-token" fallback
  *
- * Usage: open http://localhost:8000?token=your-token once; subsequent
- * page loads pick it from localStorage without needing the query param.
+ * Returns null if no token is found.
  */
-function getToken(): string {
+function getStoredToken(): string | null {
   const url = new URL(window.location.href);
   const fromUrl = url.searchParams.get("token");
   if (fromUrl) {
     localStorage.setItem("APP_TOKEN", fromUrl);
+    // Clean URL after persisting
+    url.searchParams.delete("token");
+    window.history.replaceState({}, "", url.toString());
     return fromUrl;
   }
-  const stored = localStorage.getItem("APP_TOKEN");
-  if (stored) return stored;
-  return import.meta.env.VITE_APP_TOKEN ?? "dev-token";
+  return localStorage.getItem("APP_TOKEN");
 }
-
-const TOKEN = getToken();
 
 const ACTIVE_STATUSES = new Set([
   "RECEIVED", "PARSING", "INSTRUCTION_READY",
@@ -71,8 +68,6 @@ async function refreshPositions() {
     console.warn("positions fetch failed:", e);
   }
 }
-
-configureHttp({ baseUrl: BASE_URL, token: TOKEN });
 
 interface TaskGroupsProps {
   tasks: TaskSummary[];
@@ -115,7 +110,12 @@ function TaskGroups({ tasks, pushEventsByTask }: TaskGroupsProps) {
   );
 }
 
-export default function App() {
+function handleLogout() {
+  localStorage.removeItem("APP_TOKEN");
+  window.location.reload();
+}
+
+function Dashboard({ token }: { token: string }) {
   useStickyTop();
   const conn = useConnStore();
   const tasks = useTasksStore((s) => s.tasks);
@@ -166,7 +166,7 @@ export default function App() {
     // WebSocket
     const client = createWsClient({
       baseUrl: BASE_URL,
-      token: TOKEN,
+      token,
       onEvent: (evt) => {
         applyWs(evt);
         useConnStore.getState().setLastEventId(evt.event_id);
@@ -188,6 +188,7 @@ export default function App() {
         connLongport={conn.longport}
         mode={conn.mode}
         dryRun={conn.dryRun}
+        onLogout={handleLogout}
       />
       <main className="main">
         <section className="stream">
@@ -210,4 +211,50 @@ export default function App() {
       </main>
     </div>
   );
+}
+
+export default function App() {
+  const [authState, setAuthState] = useState<"checking" | "valid" | "missing" | "invalid">(
+    "checking",
+  );
+  const [authError, setAuthError] = useState<string | undefined>();
+  const [token, setToken] = useState<string>("");
+
+  // First effect: validate token on mount
+  useEffect(() => {
+    const stored = getStoredToken();
+    if (!stored) {
+      setAuthState("missing");
+      return;
+    }
+    setToken(stored);
+    configureHttp({ baseUrl: BASE_URL, token: stored });
+    api.health()
+      .then(() => setAuthState("valid"))
+      .catch((e: unknown) => {
+        if (e instanceof HttpError && e.status === 403) {
+          setAuthState("invalid");
+          setAuthError("token 无效，请重新输入");
+          // Clear bad token so login form renders fresh
+          localStorage.removeItem("APP_TOKEN");
+        } else {
+          // Network error etc — assume valid and let normal flow handle it
+          setAuthState("valid");
+        }
+      });
+  }, []);
+
+  if (authState === "checking") {
+    return (
+      <div className="login-screen">
+        <p style={{ color: "var(--fg-3)" }}>检查登录中…</p>
+      </div>
+    );
+  }
+  if (authState === "missing" || authState === "invalid") {
+    return <Login errorHint={authError} />;
+  }
+
+  // Valid token: render the dashboard
+  return <Dashboard token={token} />;
 }

@@ -1,0 +1,109 @@
+.login-screen {
+  min-height: 100vh;
+  background: var(--bg-0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+}
+
+.login-card {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  padding: 32px;
+  width: 100%;
+  max-width: 380px;
+}
+
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.login-brand .dot {
+  width: 10px;
+  height: 10px;
+  background: var(--brand);
+  border-radius: 50%;
+}
+.login-brand h1 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.login-subtitle {
+  color: var(--fg-3);
+  font-size: 12px;
+  margin: 0 0 20px;
+}
+
+.login-error {
+  background: rgba(239, 91, 91, 0.08);
+  border: 1px solid rgba(239, 91, 91, 0.32);
+  color: var(--err);
+  padding: 8px 12px;
+  border-radius: var(--radius-chip);
+  font-size: 12px;
+  margin-bottom: 16px;
+}
+
+.login-label {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--fg-3);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.login-input {
+  width: 100%;
+  background: var(--bg-1);
+  border: 1px solid var(--line-strong);
+  color: var(--fg-1);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: 10px 12px;
+  border-radius: var(--radius-chip);
+  outline: none;
+  transition: border-color var(--dur) var(--ease);
+  box-sizing: border-box;
+}
+.login-input:focus {
+  border-color: var(--brand);
+}
+
+.login-button {
+  width: 100%;
+  margin-top: 12px;
+  background: var(--brand);
+  color: var(--bg-0);
+  border: none;
+  padding: 10px 12px;
+  border-radius: var(--radius-chip);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity var(--dur) var(--ease);
+}
+.login-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.login-hint {
+  margin-top: 16px;
+  color: var(--fg-3);
+  font-size: 11px;
+  line-height: 1.55;
+}
+.login-hint code {
+  font-family: var(--font-mono);
+  background: var(--bg-1);
+  padding: 1px 5px;
+  border-radius: 2px;
+  color: var(--fg-2);
+}

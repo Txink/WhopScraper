@@ -5,11 +5,12 @@ export interface TopBarProps {
   connLongport: "up" | "down" | "unknown";
   mode: "paper" | "real";
   dryRun: boolean;
+  onLogout?: () => void;
 }
 
 const FILTER_LABELS = ["全部", "正股", "期权", "已成交", "解析失败"] as const;
 
-export function TopBar({ connWhop, connLongport, mode, dryRun }: TopBarProps) {
+export function TopBar({ connWhop, connLongport, mode, dryRun, onLogout }: TopBarProps) {
   const pillLabel = `${mode === "paper" ? "PAPER" : "REAL"} · ${dryRun ? "DRY" : "LIVE"}`;
 
   return (
@@ -48,6 +49,16 @@ export function TopBar({ connWhop, connLongport, mode, dryRun }: TopBarProps) {
           </div>
         </div>
         <span className={`acct-pill ${mode}`}>{pillLabel}</span>
+        {onLogout && (
+          <button
+            className="logout-btn"
+            onClick={onLogout}
+            title="退出登录"
+            aria-label="退出登录"
+          >
+            ⎋
+          </button>
+        )}
       </div>
     </header>
   );

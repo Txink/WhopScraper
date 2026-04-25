@@ -221,3 +221,61 @@ async def test_listener_handles_browser_navigate_failure(monkeypatch) -> None:
 
     assert len(instances) == 1
     assert instances[0].closed is True
+
+
+# ---------------------------------------------------------------------------
+# register_whop_listeners — placeholder / missing URL detection
+# ---------------------------------------------------------------------------
+
+
+def test_register_skips_placeholder_urls() -> None:
+    """Listener factory must skip placeholder/example URLs without launching Playwright."""
+    from types import SimpleNamespace
+
+    from app.whop.listener import register_whop_listeners
+
+    settings = SimpleNamespace(
+        whop_stock_url="https://whop.com/joined/stock-and-option/xxx/app/",
+        whop_option_url="",
+        whop_poll_interval=2.0,
+        whop_headless=True,
+    )
+    bus = EventBus()
+    listeners = register_whop_listeners(bus, settings)  # type: ignore[arg-type]
+    assert listeners == []
+
+
+def test_register_skips_empty_urls() -> None:
+    """Empty string URLs (default .env.example) must also produce no listeners."""
+    from types import SimpleNamespace
+
+    from app.whop.listener import register_whop_listeners
+
+    settings = SimpleNamespace(
+        whop_stock_url=None,
+        whop_option_url=None,
+        whop_poll_interval=2.0,
+        whop_headless=True,
+    )
+    bus = EventBus()
+    listeners = register_whop_listeners(bus, settings)  # type: ignore[arg-type]
+    assert listeners == []
+
+
+def test_register_creates_listeners_for_real_urls() -> None:
+    """Real URLs (no placeholder tokens) must produce listeners."""
+    from types import SimpleNamespace
+
+    from app.whop.listener import register_whop_listeners
+
+    settings = SimpleNamespace(
+        whop_stock_url="https://whop.com/joined/stock-and-option/abc123/app/",
+        whop_option_url="https://whop.com/joined/stock-and-option/def456/app/",
+        whop_poll_interval=2.0,
+        whop_headless=True,
+    )
+    bus = EventBus()
+    listeners = register_whop_listeners(bus, settings)  # type: ignore[arg-type]
+    assert len(listeners) == 2
+    assert listeners[0]._source == "stock"
+    assert listeners[1]._source == "option"
