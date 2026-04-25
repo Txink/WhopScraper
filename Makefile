@@ -1,4 +1,4 @@
-.PHONY: install dev backend-dev frontend-dev build run test lint typecheck db-migrate db-reset clean
+.PHONY: install dev backend-dev frontend-dev build run stop stop-all test lint typecheck db-migrate db-reset clean
 
 install:
 	cd backend && uv venv && uv pip install -e ".[dev]"
@@ -21,6 +21,12 @@ build:
 
 run: build
 	cd backend && uv run uvicorn app.main:app --host 127.0.0.1 --port 8000
+
+stop:
+	@bash scripts/stop.sh
+
+stop-all:
+	@bash scripts/stop.sh --all
 
 test:
 	cd backend && uv run pytest -v
