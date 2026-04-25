@@ -29,7 +29,27 @@ while [[ $# -gt 0 ]]; do
 done
 
 # ANSI colors
-GREEN=$'\033[32m'; YELLOW=$'\033[33m'; DIM=$'\033[2m'; RESET=$'\033[0m'
+GREEN=$'\033[32m'; YELLOW=$'\033[33m'; CYAN=$'\033[36m'; DIM=$'\033[2m'; RESET=$'\033[0m'
+
+# Render PID as `<pid> <truncated-command>`. Falls back gracefully if ps fails.
+describe_pid() {
+  local pid=$1
+  # macOS ps: -o pid=,command= → no header; truncate command for readability.
+  local row
+  row=$(ps -p "${pid}" -o pid=,command= 2>/dev/null | sed -E 's/^[[:space:]]+//') || row=""
+  if [[ -z "${row}" ]]; then
+    echo "  • ${pid}  ${DIM}(already gone)${RESET}"
+    return
+  fi
+  # Trim any duplicate pid prefix the ps already added
+  local cmd="${row#${pid} }"
+  # Limit command width so output stays readable
+  local max=110
+  if [[ ${#cmd} -gt ${max} ]]; then
+    cmd="${cmd:0:max}…"
+  fi
+  echo "  • ${CYAN}${pid}${RESET}  ${cmd}"
+}
 
 stop_port() {
   local port=$1
@@ -40,7 +60,12 @@ stop_port() {
     echo "${DIM}[${label}] no process on :${port}${RESET}"
     return 0
   fi
-  echo "${YELLOW}[${label}] sending SIGTERM to ${pids} (port ${port})${RESET}"
+  local count
+  count=$(echo "${pids}" | wc -l | tr -d ' ')
+  echo "${YELLOW}[${label}] :${port} → killing ${count} process(es):${RESET}"
+  for pid in ${pids}; do
+    describe_pid "${pid}"
+  done
   # shellcheck disable=SC2086
   kill ${pids} 2>/dev/null || true
   # Wait up to 3s for graceful shutdown
@@ -50,7 +75,10 @@ stop_port() {
     [[ -z "${pids}" ]] && break
   done
   if [[ -n "${pids}" ]]; then
-    echo "${YELLOW}[${label}] still alive, sending SIGKILL${RESET}"
+    echo "${YELLOW}[${label}] still alive, escalating to SIGKILL:${RESET}"
+    for pid in ${pids}; do
+      describe_pid "${pid}"
+    done
     # shellcheck disable=SC2086
     kill -9 ${pids} 2>/dev/null || true
   fi
@@ -64,7 +92,11 @@ if [[ "${KILL_CHROMIUM}" -eq 1 ]]; then
   # Only kill chromium spawned by Playwright (path contains 'playwright')
   pids=$(pgrep -f 'playwright.*chromium' 2>/dev/null || true)
   if [[ -n "${pids}" ]]; then
-    echo "${YELLOW}[chromium] killing Playwright chromium pids: ${pids}${RESET}"
+    count=$(echo "${pids}" | wc -l | tr -d ' ')
+    echo "${YELLOW}[chromium] killing ${count} Playwright chromium process(es):${RESET}"
+    for pid in ${pids}; do
+      describe_pid "${pid}"
+    done
     # shellcheck disable=SC2086
     kill ${pids} 2>/dev/null || true
     sleep 1
