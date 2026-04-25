@@ -201,7 +201,7 @@ def test_acceptance_browser_refresh_recovers_via_initial_list() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_acceptance_per_page_settings_drive_trader(monkeypatch) -> None:
+def test_acceptance_per_page_settings_drive_trader(monkeypatch, tmp_path) -> None:
     """End-to-end: add page → PATCH settings → publish message → trader uses
     new tickers + tolerance.
 
@@ -211,6 +211,14 @@ def test_acceptance_per_page_settings_drive_trader(monkeypatch) -> None:
         Trader picks up trade_quantity + tolerance from page settings →
         order submitted with computed qty (700 * 0.5 = 350) + MARKET order_type.
     """
+
+    # Isolate registry's pages_file from production data/whop_pages.json.
+    # MUST happen BEFORE create_app() so the registry constructed inside picks
+    # up the patched default.
+    monkeypatch.setattr(
+        "app.whop.registry._DEFAULT_PAGES_FILE",
+        tmp_path / "test_pages.json",
+    )
 
     # Patch the registry's listener-launcher so add_page doesn't try to spawn
     # real Playwright. The listener instance is irrelevant — the test only needs
@@ -279,12 +287,20 @@ def test_acceptance_per_page_settings_drive_trader(monkeypatch) -> None:
         assert order["order_type"] == "MARKET"
 
 
-def test_acceptance_unknown_ticker_skipped(monkeypatch) -> None:
+def test_acceptance_unknown_ticker_skipped(monkeypatch, tmp_path) -> None:
     """End-to-end: ticker not in page whitelist → SKIPPED, no broker call.
 
     Page is added with default settings (tickers={} = explicit empty whitelist).
     Trader sees ticker missing from whitelist and skips without submitting.
     """
+
+    # Isolate registry's pages_file from production data/whop_pages.json.
+    # MUST happen BEFORE create_app() so the registry constructed inside picks
+    # up the patched default.
+    monkeypatch.setattr(
+        "app.whop.registry._DEFAULT_PAGES_FILE",
+        tmp_path / "test_pages.json",
+    )
 
     async def _noop_start(self, entry, *, skip_initial=True):  # noqa: ANN001
         self._listeners[entry.id] = None
