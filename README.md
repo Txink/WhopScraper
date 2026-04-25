@@ -1,461 +1,711 @@
 # Signal Station v2
 
-Real-time Whop signal monitoring, LongPort auto-trading, and a dark monitoring dashboard —
-all wired together in a single-command production stack.
+实时 Whop 信号监控 + 长桥（LongPort）自动下单 + Dark 监控看板，前后端单端口集成。
 
-## Status
+> 中文为主，英文术语保留以匹配代码 / API。
 
-| Layer       | Tests      | Type-check         |
-|-------------|------------|--------------------|
-| Backend     | 231 passing | mypy strict (clean) |
-| Frontend    | 70 passing  | TypeScript strict (clean) |
-| Integration | 4 e2e acceptance tests (spec §11) | — |
+## 状态
 
-CI baseline: all suites green on Python 3.11 + Node 18.
+| 层 | 测试 | 类型检查 |
+|----|------|---------|
+| Backend | 262 passing + 2 skipped | mypy strict 干净 |
+| Frontend | 91 passing | TypeScript strict 干净 |
+| 集成 | 4 个 e2e acceptance 测试（spec §11） | — |
+
+`ruff` / `vitest` 全绿；CI baseline：Python 3.11 + Node 18+。
 
 ---
 
-## Architecture
+## 目录
+
+- [架构](#架构)
+- [模块清单](#模块清单)
+- [快速开始](#快速开始)
+- [日常使用](#日常使用)
+- [配置（.env）](#配置env)
+- [Whop 监听 UI 工作流](#whop-监听-ui-工作流)
+- [开发模式](#开发模式)
+- [REST API 参考](#rest-api-参考)
+- [WebSocket 协议](#websocket-协议)
+- [运维 cheatsheet](#运维-cheatsheet)
+- [故障排查](#故障排查)
+- [验收标准 §11](#验收标准-11)
+- [项目结构](#项目结构)
+- [设计说明](#设计说明)
+
+---
+
+## 架构
 
 ```
-Whop forum (browser)
-        |
-        v
-  WhopBrowser (Playwright)
-        |  DOM → Message
-        v
-  WhopListener (poll every 2 s)
-        |  EVENT: message.received
-        v
-    EventBus (in-process async pub/sub)
-        |
-   ┌────┴─────────────┐
-   |                  |
-   v                  v
-ParserService    StorageListeners
-(stock / option    (DB upsert on
- regex parser)      every task.* event)
-   |
-   | EVENT: task.instruction_ready
-   v
+Whop 频道页（chromium）
+        │
+        ▼
+  WhopBrowser（Playwright async）
+        │  DOM → Message
+        ▼
+  WhopListener（轮询，去重，发布）
+        │  EVENT: message.received
+        ▼
+  EventBus（进程内 asyncio pub/sub）
+        │
+   ┌────┴───────────────┐
+   │                    │
+   ▼                    ▼
+ParserService       StorageListeners
+（stock/option       （SQLite upsert：
+  正则解析 +           每个 task.* 事件落盘）
+  context resolver）
+   │
+   │ EVENT: task.instruction_ready
+   ▼
   Trader
-  (risk checks → submit / dry-run)
-   |
-   v
-LongPortClient  ←──── PushListener
-(REST + WS SDK)         (order change callbacks)
-   |                          |
-   | EVENT: task.push_event   |
+  （风控 → 提交订单 / dry-run）
+   │
+   ▼
+LongPortClient    ←──── PushListener
+（REST + WS SDK）       （订单状态推送回调）
+   │                          │
+   │ EVENT: task.push_event   │
    └──────────────────────────┘
-                |
-                v
+                │
+                ▼
          WebSocketHub
-         (ring buffer, ?since= replay)
-                |
-                v
-         FastAPI /ws endpoint
-                |
-         React frontend
-         (Zustand stores, Card/TopBar/RightRail)
+         （ring buffer，?since= replay）
+                │
+                ▼
+         FastAPI /ws
+                │
+                ▼
+         React 前端
+         （Zustand stores · Card/TopBar/RightRail/WhopPanel）
 ```
 
-### Data persistence
+**关键设计**：
 
-All domain events that touch a Task are persisted to SQLite:
-
-```
-EventBus → StorageListeners → SQLite (tasks + push_events tables)
-                                  ↑
-                          GET /api/tasks (REST)
-```
-
-Browser refresh restores full state from `GET /api/tasks` (cursor-paginated).
-WebSocket reconnect with `?since=<event_id>` replays the last 500 buffered events.
+- 模块间**只**通过 `EventBus` 通信。新增功能（比如 Telegram 通知）订阅事件即可，零侵入
+- Whop 监听是**动态注册**：`WhopRegistry` 持久化页面列表到 `data/whop_pages.json`，REST + 前端 UI 可运行时增删
+- `Task.id = Message.id = whop domID`：贯穿前后端、DB、日志、WS 事件，全链路同 id 溯源
+- LongPort 凭据缺失时降级到 `NoopBrokerClient`：仍然能跑解析 + UI，只是不下单
 
 ---
 
-## Modules
+## 模块清单
 
 ### Backend (`backend/app/`)
 
-| Module | Responsibility |
-|--------|---------------|
-| `main.py` | App factory (`create_app`), lifespan startup/shutdown, static frontend mount |
-| `core/config.py` | Pydantic-settings; all config loaded from `.env` |
-| `core/event_bus.py` | In-process async pub/sub with fan-out and failure isolation |
-| `core/events.py` | Typed topic constants + payload dataclasses (MessagePayload, TaskPayload, …) |
-| `domain/` | Pure domain model: Message, Task, Instruction, PushEvent, Status |
-| `parser/service.py` | Subscribes to `message.received`; runs stock/option parsers |
-| `parser/stock_parser.py` | Regex-based stock signal parser (89.6% parse rate) |
-| `parser/option_parser.py` | Option contract signal parser |
-| `parser/context_resolver.py` | Loads watched tickers from `config/watched_stocks.json` |
-| `broker/longport_client.py` | LongPort SDK wrapper: submit/cancel orders + quote |
-| `broker/trader.py` | Risk gate + order submission on `task.instruction_ready` |
-| `broker/push_listener.py` | Subscribes to LongPort push callbacks → `task.push_event` |
-| `storage/db.py` | SQLAlchemy async engine factory + session scope helper |
-| `storage/schema.py` | ORM models: TaskRow, PushEventRow |
-| `storage/repo.py` | Repository functions: save_task, load_task, list_tasks |
-| `storage/listeners.py` | EventBus → DB persistence (upsert on every task.* event) |
-| `api/http.py` | REST router: GET /api/tasks, /api/health, /api/stats/today, /api/positions |
-| `api/ws.py` | WebSocketHub: broadcast + ring buffer replay |
-| `api/auth.py` | Token auth (query param / Bearer header / X-App-Token header) |
-| `api/schemas.py` | Pydantic response schemas (TaskOut, HealthOut, …) |
-| `whop/browser.py` | Playwright browser wrapper (headless / headed) |
-| `whop/login.py` | Cookie persistence + interactive login helper |
-| `whop/extractor.py` | DOM → Message pure function |
-| `whop/listener.py` | Poll loop: navigate → extract → deduplicate → publish |
+| 模块 | 职责 |
+|------|------|
+| `main.py` | App 工厂 `create_app(...)` + lifespan startup/shutdown + 静态前端挂载 |
+| `core/config.py` | pydantic-settings；从 `.env` 加载所有配置 |
+| `core/event_bus.py` | 进程内 asyncio pub/sub，fan-out + 失败隔离 |
+| `core/events.py` | 事件 topic 常量 + payload dataclass（MessagePayload, TaskPayload …） |
+| `domain/` | 纯领域模型：Message · Instruction · Task · Status · PushEvent |
+| `parser/service.py` | 订阅 `message.received` → 跑解析器 + context resolver |
+| `parser/stock_parser.py` | 正股信号正则解析（snapshot 命中率 94%+） |
+| `parser/option_parser.py` | 期权合约信号解析；标准化 expiry 为 date |
+| `parser/context_resolver.py` | refer / watchlist / recent 三段式补齐 ticker |
+| `broker/longport_client.py` | LongPort SDK 封装（提交/撤单/报价/推送订阅） |
+| `broker/noop_client.py` | 凭据缺失时的兜底实现，监控-only 模式 |
+| `broker/trader.py` | 风控 + 订阅 `task.instruction_ready` 提交订单 |
+| `broker/push_listener.py` | LongPort 推送回调 → `task.push_event` |
+| `storage/db.py` | SQLAlchemy async engine + session_scope（路径自动锚定项目根） |
+| `storage/schema.py` | ORM 表（5 张：tasks / messages / instructions / push_events / positions） |
+| `storage/repo.py` | save_task / load_task / list_tasks / append_push_event（含 SQLite UPSERT 防 race） |
+| `storage/listeners.py` | EventBus → DB 自动落盘 |
+| `api/http.py` | REST 路由（任务列表 / 任务详情 / 撤单 / 统计 / 持仓 / 健康 / **Whop 管理 5 个端点**） |
+| `api/ws.py` | WebSocketHub：广播 + 500 条 ring buffer + `?since=` 续传 |
+| `api/auth.py` | APP_TOKEN 校验（query / Bearer / X-App-Token 三种来源） |
+| `api/schemas.py` | Pydantic 出参 schema |
+| `whop/browser.py` | WhopBrowser：Playwright async 封装 |
+| `whop/login.py` | Cookie 加载/保存（与 `scripts/whop_login.py` 共用路径） |
+| `whop/extractor.py` | 纯函数 DOM → Message（用 `tmp/*/page_html.html` 离线测试） |
+| `whop/listener.py` | 单页轮询循环，去重发事件，暴露 running/last_poll/error 状态 |
+| `whop/registry.py` | **多页面运行时注册表**，持久化到 JSON，async-safe 增删 |
 
 ### Frontend (`frontend/src/`)
 
-| Module | Responsibility |
-|--------|---------------|
-| `App.tsx` | Root component: WS client, initial fetch, layout |
-| `api/http.ts` | Typed HTTP client (health, tasks, stats, positions) |
-| `api/ws.ts` | WebSocket client with exponential back-off reconnect |
-| `api/domain-types.ts` | Shared TypeScript types mirroring backend schemas |
-| `stores/` | Zustand stores: conn, tasks, stats, positions |
-| `components/Card/` | Task Card family (Compact, Expanded, PushChain, PushDetail) |
-| `components/TopBar.tsx` | Connection status indicators (Whop, LongPort, mode) |
-| `components/RightRail.tsx` | Live stats + positions sidebar |
-| `hooks/useStickyTop.ts` | Sticky top bar utility |
+| 模块 | 职责 |
+|------|------|
+| `App.tsx` | 根组件：登录 gate · 路由（Dashboard / WhopPanel） · WS 客户端启动 |
+| `api/http.ts` | 类型化 fetch wrapper（11 个方法：tasks / health / stats / positions / **whop/* 5 个**） |
+| `api/ws.ts` | WebSocket 客户端 + 指数退避重连 + `?since=` 续传 |
+| `api/types.ts` | 从后端 OpenAPI 自动生成 |
+| `api/domain-types.ts` | 类型别名 re-export |
+| `stores/conn.ts` | 连接状态 store |
+| `stores/tasks.ts` | Task 列表 + push_event map |
+| `stores/stats.ts` | 今日统计 |
+| `stores/positions.ts` | 持仓 |
+| `stores/view.ts` | **当前 tab：dashboard / whop** |
+| `components/Login.tsx` | Token 登录页（首次访问） |
+| `components/TopBar.tsx` | 品牌 + tab 切换 + 连接灯 + 账户 pill + 退出登录 |
+| `components/RightRail.tsx` | 今日 / 正股持仓 / 期权持仓 |
+| `components/Card/` | Card 全家桶（Compact · Expanded · PushChain · PushDetail · OrderSubmit） |
+| `components/WhopPanel/WhopPanel.tsx` | **Whop 管理 tab：cookie 状态 · 添加 · 列表 · 重启 · 移除** |
+| `hooks/useStickyTop.ts` | 右栏粘顶动态 offset |
 
 ---
 
-## Quick Start
+## 快速开始
 
-### Prerequisites
+### 前置依赖
 
 - Python 3.11+
 - Node 18+
-- [uv](https://github.com/astral-sh/uv) Python package manager (`curl -LsSf https://astral.sh/uv/install.sh | sh`)
-- A [LongPort](https://longportapp.com) account with API credentials
-- Access to the Whop forum channel(s) you want to monitor
+- [`uv`](https://github.com/astral-sh/uv) Python 包管理器：`curl -LsSf https://astral.sh/uv/install.sh | sh`
+- 长桥（LongPort）账号 + API key（可选 — 没填会进监控-only 模式）
+- 你订阅的 Whop 频道 URL（可选 — 启动后从 UI 添加）
 
-### 1. Clone
+### 1. 克隆 + 安装
 
 ```bash
 git clone <repo-url> signal-station
 cd signal-station
-```
-
-### 2. Install dependencies
-
-```bash
 make install
 ```
 
-This runs:
-- `uv venv && uv pip install -e ".[dev]"` in `backend/`
-- `uv run playwright install chromium` for Whop scraping
-- `npm install` in `frontend/`
+`make install` 跑：
+- `backend/`：`uv venv && uv pip install -e ".[dev]"` + `playwright install chromium`
+- `frontend/`：`npm install`
 
-### 3. Configure
-
-Copy the example env file and fill in your credentials:
+### 2. 配置 `.env`
 
 ```bash
-cp .env.example .env   # create from template if it exists, otherwise:
-touch .env
+cp .env.example .env
 ```
 
-Edit `.env` at the project root (see Configuration section below for all keys).
-
-Minimum required keys to start:
+最小可跑配置（其他都用默认值）：
 
 ```env
-APP_TOKEN=your-random-secret-token
+# 必填：前端登录用的访问令牌（随便 32 字符随机串）
+APP_TOKEN=put-your-32-char-secret-here
+```
+
+LongPort + Whop URL **都可以暂时不填** —— 系统会以监控-only 模式启动，登录后从 UI 加 Whop 监听。
+
+填上 LongPort 凭据后才会真正下单：
+
+```env
+LONGPORT_MODE=paper
 LONGPORT_PAPER_APP_KEY=...
 LONGPORT_PAPER_APP_SECRET=...
 LONGPORT_PAPER_ACCESS_TOKEN=...
+LONGPORT_AUTO_TRADE=true
+LONGPORT_DRY_RUN=true     # 安全起见先开，确认行为正确再关
 ```
 
-### 4. Run (production — single command)
+### 3. 启动
+
+**生产模式**（前端打包后挂载到 FastAPI 静态目录，单端口）：
 
 ```bash
 make run
-# or: cd frontend && npm run build && cd ../backend && uv run uvicorn app.main:app --host 127.0.0.1 --port 8000
+# 后端 + 前端 dist 都从 :8000 提供
+# 浏览器: http://localhost:8000
 ```
 
-Open `http://localhost:8000?token=<APP_TOKEN>` in your browser.
-
-The token is stored in `localStorage` on first load; subsequent visits don't need the query param.
-
----
-
-## Configuration
-
-All settings are read from a `.env` file at the **project root** (one level above `backend/`).
-
-| Key | Default | Description |
-|-----|---------|-------------|
-| `APP_TOKEN` | `change-me-...` | Auth token for REST + WebSocket endpoints. Set to a strong random string. |
-| `WHOP_STOCK_URL` | `""` | Full URL of the Whop stock channel page |
-| `WHOP_OPTION_URL` | `""` | Full URL of the Whop option channel page |
-| `WHOP_POLL_INTERVAL` | `2.0` | Seconds between DOM polls |
-| `WHOP_HEADLESS` | `false` | `true` = run Playwright in headless mode (no browser window) |
-| `LONGPORT_MODE` | `paper` | `paper` or `real` — selects which credentials to use |
-| `LONGPORT_PAPER_APP_KEY` | `""` | Paper trading app key |
-| `LONGPORT_PAPER_APP_SECRET` | `""` | Paper trading app secret |
-| `LONGPORT_PAPER_ACCESS_TOKEN` | `""` | Paper trading access token |
-| `LONGPORT_REAL_APP_KEY` | `""` | Real trading app key (only used when MODE=real) |
-| `LONGPORT_REAL_APP_SECRET` | `""` | Real trading app secret |
-| `LONGPORT_REAL_ACCESS_TOKEN` | `""` | Real trading access token |
-| `LONGPORT_REGION` | `cn` | LongPort region: `cn` or `us` |
-| `LONGPORT_AUTO_TRADE` | `true` | `false` = parse signals but never submit orders |
-| `LONGPORT_DRY_RUN` | `true` | `true` = compute orders but log instead of submitting |
-| `MAX_OPTION_TOTAL_PRICE` | `500.0` | Maximum total notional for a single option order (USD) |
-| `MAX_OPTION_QUANTITY` | `3` | Maximum option contracts per order |
-| `PRICE_DEVIATION_TOLERANCE` | `5.0` | Reject if market price deviates > N% from signal price |
-| `STOCK_PRICE_DEVIATION_TOLERANCE` | `1.0` | Same for stocks |
-| `DATABASE_URL` | `sqlite+aiosqlite:///./data/signals.db` | SQLAlchemy async database URL |
-| `HTTP_HOST` | `127.0.0.1` | Host to bind the uvicorn server |
-| `HTTP_PORT` | `8000` | Port to bind the uvicorn server |
-| `LOG_LEVEL` | `INFO` | Python logging level |
-
-### Watched stocks
-
-The parser uses `config/watched_stocks.json` to prioritise signal matching. Add or remove tickers there; no restart needed (loaded at startup).
-
----
-
-## Development Guide
-
-### Run in dev mode (hot reload on both sides)
+**开发模式**（热重载，前后端分离）：
 
 ```bash
-make dev
-# starts backend on :8000 (uvicorn --reload) and frontend on :5173 (Vite dev server)
+# 终端 1
+make backend-dev   # uvicorn --reload :8000
+
+# 终端 2
+make frontend-dev  # vite dev :5173（代理 /api 和 /ws 到 :8000）
+
+# 浏览器
+open http://localhost:5173
 ```
 
-The Vite dev server proxies `/api` and `/ws` to `localhost:8000`, so you don't need to build the frontend in dev.
+### 4. 浏览器登录
 
-### Backend tests
+第一次访问会跳到登录页（dark 主题卡片，要求输入 APP TOKEN）：
+
+1. 输入 `.env` 里设的 `APP_TOKEN`
+2. 点"进入"
+3. Token 自动保存到浏览器 localStorage，之后无需重输
+
+也可以一次性带 token 进入：`http://localhost:8000?token=<APP_TOKEN>`，之后清掉 query 也保留 localStorage 里的。
+
+退出：顶栏角落 ⎋ 按钮。
+
+### 5. 添加 Whop 监听
+
+进入后默认是空看板。顶栏点 **"Whop 管理"** 切到 Whop tab。详见下面 [Whop 监听 UI 工作流](#whop-监听-ui-工作流)。
+
+---
+
+## 日常使用
+
+```bash
+# 启动
+make backend-dev      # 终端 1
+make frontend-dev     # 终端 2
+
+# 关闭（任何模式都用这个）
+make stop             # 关 :8000 + :5173
+make stop-all         # 同上 + 清 Playwright 留下的孤儿 chromium
+
+# 看后端测试
+make test             # 后端 + 前端
+cd backend && uv run pytest -v   # 仅后端
+cd frontend && npm test          # 仅前端
+
+# Lint / typecheck
+make lint
+make typecheck
+
+# 重置 SQLite 数据库
+make db-reset
+```
+
+---
+
+## 配置（.env）
+
+所有配置都从项目**根目录**的 `.env` 读取（不在 `backend/.env`）。
+
+| Key | 默认 | 说明 |
+|-----|------|------|
+| `APP_TOKEN` | `change-me-...` | 前端登录 + REST/WS 的访问令牌。强烈建议改成强随机串 |
+| `WHOP_STOCK_URL` | `""` | （可选）启动时 seed 一个正股监听。**留空时只能从 UI 添加** |
+| `WHOP_OPTION_URL` | `""` | （可选）启动时 seed 一个期权监听 |
+| `WHOP_POLL_INTERVAL` | `2.0` | DOM 轮询间隔（秒） |
+| `WHOP_HEADLESS` | `false` | `true` = 无头模式；调试时设 `false` 能看到浏览器 |
+| `LONGPORT_MODE` | `paper` | `paper` 或 `real` —— 选用哪一组凭据 |
+| `LONGPORT_PAPER_APP_KEY` | `""` | 模拟账户 |
+| `LONGPORT_PAPER_APP_SECRET` | `""` | |
+| `LONGPORT_PAPER_ACCESS_TOKEN` | `""` | |
+| `LONGPORT_REAL_*` | `""` | 真实账户（仅 `MODE=real` 时使用） |
+| `LONGPORT_REGION` | `cn` | `cn` / `us` |
+| `LONGPORT_AUTO_TRADE` | `true` | `false` = 仅解析不下单 |
+| `LONGPORT_DRY_RUN` | `true` | `true` = 计算订单但不真正提交，仅日志 |
+| `MAX_OPTION_TOTAL_PRICE` | `500.0` | 单笔期权总名义额上限（USD） |
+| `MAX_OPTION_QUANTITY` | `3` | 单笔期权合约数上限 |
+| `PRICE_DEVIATION_TOLERANCE` | `5.0` | 期权：市价偏离信号价超过 N% 拒下 |
+| `STOCK_PRICE_DEVIATION_TOLERANCE` | `1.0` | 正股偏差容忍度 |
+| `DATABASE_URL` | `sqlite+aiosqlite:///./data/signals.db` | 相对路径会**自动锚定到项目根**，不会因 CWD 变化失效 |
+| `HTTP_HOST` | `127.0.0.1` | 后端绑定 host |
+| `HTTP_PORT` | `8000` | 后端端口 |
+| `LOG_LEVEL` | `INFO` | Python logging 级别 |
+
+### 关注股配置
+
+`config/watched_stocks.json` 给解析器优先匹配的 ticker 列表 + 别名（中文昵称）。改完不需要重启，启动时加载。
+
+---
+
+## Whop 监听 UI 工作流
+
+进入 **Whop 管理** tab 后，看到三块卡：
+
+### Cookie 状态卡
+
+| 状态 | 含义 |
+|------|------|
+| ✅ 有效（绿） | `.auth/whop_cookie.json` 存在且 < 14 天 |
+| ⚠️ 过期可能（黄） | 文件存在但 > 14 天，建议刷新 |
+| ❌ 缺失（红） | 文件不存在，必须先登录 |
+
+按钮：
+- **刷新**：重新拉一遍状态
+- **复制登录命令**：把 `uv run --project backend python scripts/whop_login.py` 拷到剪贴板
+
+#### 第一次登录抓 cookie
+
+1. 点"复制登录命令" → 粘贴到终端运行
+2. 自动弹 chromium 窗口，打开 `https://whop.com/login/`
+3. **你在浏览器里手动**输邮箱 / 密码 / 2FA → 跳转主页确认登录成功
+4. **回到终端按回车**
+5. 脚本调用 `context.storage_state(path=...)` 把 cookie + localStorage 一起 dump 到 `.auth/whop_cookie.json`
+6. 浏览器关闭；回到前端 Whop 页面点"刷新" → 状态变 ✅ 有效
+
+> 💡 后端启动时会自动加载这个 cookie，cookie 失效后正常情况下不会自动续期。重新跑登录脚本即可覆盖。
+
+### 添加监听卡
+
+填三项 → 点"添加监听"：
+- **URL**：完整频道 URL，例如 `https://whop.com/joined/stock-and-option/<channel-id>/app/`
+- **来源类型**：正股 / 期权（决定走哪个 parser）
+- **显示名**（可选）：UI 列表里看到的标签，留空就用 URL
+
+后端立即起 Playwright 监听该页面，列表出现新行。**重复 URL** / **占位符 URL（含 xxx/yyy）** 会被前端报错拒绝。
+
+### 监听列表卡
+
+| 列 | 含义 |
+|---|---|
+| 类型 | 正股青绿 / 期权紫色 徽章 |
+| 名称 | 添加时填的显示名 |
+| URL | 完整 URL（鼠标悬停看全） |
+| 状态 | 运行中 / 错误（hover 看错误信息） / 未运行 |
+| 最后轮询 | "5s 前" / "2m 前" / "1.3h 前" |
+| 已发消息 | 累计推送到 event_bus 的新消息数 |
+| 操作 | **重启** / **移除** |
+
+数据持久化：列表存在 `data/whop_pages.json`，重启后端自动恢复并起 listener。
+
+---
+
+## 开发模式
+
+### 前后端分离开发
+
+```bash
+make backend-dev      # uvicorn --reload :8000
+make frontend-dev     # vite :5173 → 自动代理 /api 和 /ws
+```
+
+Vite 改前端代码秒热重载，uvicorn `--reload` 改后端代码自动重启。
+
+### Backend 测试
 
 ```bash
 cd backend
-uv run pytest            # all 231 tests
-uv run pytest -v -x      # stop on first failure
-uv run pytest tests/integration/test_acceptance.py  # acceptance tests only
+uv run pytest                    # 全部 262 + 2 skip
+uv run pytest -v -x              # 第一个失败就停
+uv run pytest tests/integration/test_acceptance.py  # 仅 acceptance
+uv run pytest tests/whop/        # 仅 whop 模块
 ```
 
-### Frontend tests
+### Frontend 测试
 
 ```bash
 cd frontend
-npm test                 # vitest (70 tests)
+npm test                         # vitest 全部 91
 npm test -- --reporter verbose
 ```
 
-### Type checking
+### 类型检查
 
 ```bash
-# Backend
-cd backend && uv run mypy app
-
-# Frontend
-cd frontend && npm run typecheck
+cd backend && uv run mypy app                  # mypy strict
+cd frontend && npm run typecheck               # tsc --noEmit
 ```
 
-### Linting
+### Lint
 
 ```bash
-cd backend && uv run ruff check .
-cd backend && uv run ruff format --check .
+cd backend && uv run ruff check . && uv run ruff format --check .
 ```
 
-### Build frontend (production bundle)
+### 前端打包
 
 ```bash
-make build
-# or: cd frontend && npm run build
-# output: frontend/dist/
+make build           # frontend/dist/ 用于 make run 单端口部署
 ```
 
-### Database
-
-SQLite database lives at `data/signals.db` (created automatically on first run).
+### 数据库
 
 ```bash
-make db-reset    # delete DB and recreate empty schema
+make db-migrate      # alembic upgrade head
+make db-reset        # 删 DB 重建
+```
+
+### OpenAPI 类型同步
+
+每次后端 schema 变了，前端要重新生成类型：
+
+```bash
+# 生成 frontend/openapi.json + 重写 frontend/src/api/types.ts
+cd frontend && npm run gen:types
 ```
 
 ---
 
-## REST API Reference
+## REST API 参考
 
-All endpoints require authentication. Pass the token as:
-- Query param: `?token=<APP_TOKEN>`
-- Header: `Authorization: Bearer <APP_TOKEN>`
-- Header: `X-App-Token: <APP_TOKEN>`
+所有端点要 token，通过以下任一方式：
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/health` | Broker connectivity, mode, dry_run flag |
-| GET | `/api/tasks` | Paginated task list. Params: `limit`, `cursor`, `status` |
-| GET | `/api/tasks/{id}` | Single task with full push_events list |
-| POST | `/api/tasks/{id}/cancel` | Cancel a pending brokerage order |
-| GET | `/api/stats/today` | Today's task counts grouped by status |
-| GET | `/api/positions` | Current portfolio positions |
-| GET/WS | `/ws` | WebSocket stream. Params: `token`, `since` (event_id for replay) |
+- Query：`?token=<APP_TOKEN>`
+- Header：`Authorization: Bearer <APP_TOKEN>`
+- Header：`X-App-Token: <APP_TOKEN>`
+
+### 监控 / 任务
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/health` | 连接状态 + 模式 + dry_run |
+| GET | `/api/tasks?limit=50&cursor=&status=&type=&symbol=` | 任务列表分页（倒序） |
+| GET | `/api/tasks/{id}` | 单 Task 详情（含 push_events） |
+| POST | `/api/tasks/{id}/cancel` | 撤单（broker.cancel_order） |
+| GET | `/api/stats/today` | 今日统计 |
+| GET | `/api/positions` | 持仓快照 |
+
+### Whop 监听管理（**新**）
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/whop/pages` | 列出当前监听 + 状态 |
+| POST | `/api/whop/pages` | 添加监听，body `{url, source, name?}` |
+| DELETE | `/api/whop/pages/{id}` | 移除监听（停 listener + 删 entry） |
+| POST | `/api/whop/pages/{id}/restart` | 重启某条监听 |
+| GET | `/api/whop/cookie` | Cookie 文件状态（exists / age_seconds / mtime） |
+
+### WebSocket
+
+| 路径 | 说明 |
+|------|------|
+| `/ws?token=&since=<event_id>` | 全事件推送 + ring buffer 续传 |
+
+详见下一节。
 
 ---
 
-## WebSocket Protocol
+## WebSocket 协议
 
-Connect to `ws://localhost:8000/ws?token=<APP_TOKEN>`.
+```
+ws://localhost:8000/ws?token=<APP_TOKEN>
+```
 
-Each message is a JSON object:
+每条消息：
 
 ```json
 {
   "event_id": 42,
   "type": "task.created",
-  "payload": { "task": { ... } }
+  "payload": { "task": {...} }
 }
 ```
 
-Event types mirror EventBus topics:
+### 事件类型
+
+镜像 EventBus topic：
+
 - `task.created`
 - `task.instruction_ready`
 - `task.parse_failed`
 - `task.order_submitted`
 - `task.submit_failed`
-- `task.push_event`
+- `task.push_event`（payload 含 push_event 详情）
 - `task.status_changed`
 - `system.connection_changed`
 
-### Reconnect / replay
+### 重连续传
 
-On reconnect, pass `?since=<last_event_id>` to replay all buffered events after that ID.
-The hub keeps the last 500 events in memory. This prevents missing events during brief disconnects.
+断线重连时带上 `?since=<last_event_id>`，hub 从 ring buffer 把之后的事件按序回放。Buffer 容量 500；超出时前端需要重新拉 `/api/tasks` 全量同步。
 
 ### Heartbeat
 
-Send `{"type": "ping"}` at any time; the server responds with `{"type": "pong"}`.
+客户端每 25 秒发 `{"type":"ping"}`，服务端回 `{"type":"pong"}`。
 
 ---
 
-## Troubleshooting
+## 运维 cheatsheet
 
-### Whop login fails or shows blank page
-
-The Playwright browser session needs to be logged in. On first run, `WHOP_HEADLESS=false` (default) shows a real browser window. Log into Whop manually; the session cookie is saved to `.auth/state.json` and reused on subsequent runs. Set `WHOP_HEADLESS=true` only after a successful manual login.
-
-### LongPort connection error on startup
-
-Check that the correct credential set is used for your `LONGPORT_MODE`. Paper and real accounts use separate key sets. Verify the access token hasn't expired (LongPort tokens require renewal).
-
-### "frontend/dist not found — running in API-only mode"
-
-You need to build the frontend before using the production single-command mode:
 ```bash
-make build    # or: cd frontend && npm run build
+# 启停
+make backend-dev   # 后端
+make frontend-dev  # 前端
+make run           # 单端口生产模式
+make stop          # 一键停 :8000 + :5173（带进程信息输出）
+make stop-all      # 同上 + 清 Playwright chromium 残留
+
+# 测试 / lint / typecheck
+make test
+make lint
+make typecheck
+
+# 数据库
+make db-migrate
+make db-reset
+
+# 清理
+make clean         # __pycache__ + dist/
+
+# Whop cookie
+uv run --project backend python scripts/whop_login.py           # 首次登录
+uv run --project backend python scripts/whop_login.py --test    # 测试 cookie 有效性
 ```
-The backend will then serve the frontend automatically from the same port.
 
-### Token auth in browser
+---
 
-Open `http://localhost:8000?token=<APP_TOKEN>`. The token is saved to `localStorage` automatically. Future page loads work without the query param. To change the token, clear `localStorage["APP_TOKEN"]` in browser DevTools.
+## 故障排查
 
-### High memory usage / Playwright overhead
+### 后端启动失败：`unable to open database file`
 
-Playwright runs a full Chromium browser process. Memory usage is typically 150–250 MB. The spec target is < 300 MB total. If you exceed this, check that only one `WhopListener` per channel is running (check the startup logs).
+**已修**。如果还遇到，是因为 SQLite URL 指向了不存在的目录。`db.py::_resolve_sqlite_url` 会把相对路径锚到项目根并 `mkdir -p` 父目录。检查 `.env` 的 `DATABASE_URL` 是不是指向了什么诡异的路径。
+
+### 后端启动报 `LONGPORT_PAPER_APP_KEY is empty but mode='paper'`
+
+**这不是错误，是降级**。日志里会接着说：
+
+```
+Falling back to monitoring-only mode (NoopBrokerClient).
+No orders will be submitted. Set LONGPORT_* env vars in .env to enable real trading.
+```
+
+系统进监控-only 模式：消息能被解析、Task 状态能被持续推到前端，但**不会真下单**。要启用下单，把 `LONGPORT_PAPER_*` 凭据填上。
+
+### 后端启动卡 30 秒无响应
+
+旧 bug。如果 `.env` 里 `WHOP_*_URL` 是 `https://whop.com/joined/stock-and-option/xxx/app/` 这种**占位符**，listener 会试着 navigate 这个假 URL → Playwright timeout 挂住。**已修**：`_is_placeholder_url()` 自动跳过 `xxx`/`yyy`/`example.com`/`your-page-here`。如果还卡，确认 `.env.example` 是最新版，把 `WHOP_*_URL` 留空。
+
+### 所有 API 端点返回 422 `_kwargs missing`
+
+**已修**。如果还遇到，是 `get_settings()` 函数签名带了 `**_kwargs`，FastAPI 在 `Depends(get_settings)` 时会把 `_kwargs` 当成 query 参。把签名改回 `def get_settings() -> Settings`。
+
+### Whop 登录后立即跳回 `/login`
+
+Cookie 失效或被 Whop 主动登出。重跑：
+
+```bash
+uv run --project backend python scripts/whop_login.py
+```
+
+### 浏览器打开 `localhost:8000` 是 404
+
+后端未跑或前端没 build：
+
+```bash
+make build && make run
+```
+
+或开发模式直接打开 `http://localhost:5173`。
+
+### 浏览器登录页输 token 后还是跳回登录页
+
+Token 不匹配。打开 DevTools Console：
+
+```js
+localStorage.getItem("APP_TOKEN")  // 看保存了什么
+localStorage.removeItem("APP_TOKEN")  // 清掉重输
+```
+
+或带 query 强制重置：`http://localhost:8000?token=<对的-token>`
+
+### 高内存 / Playwright chromium 占用
+
+正常 1 个 chromium 进程约 150-250 MB。如果你看到多个 chromium 在跑：
+
+```bash
+make stop-all   # 包含 Playwright 孤儿清理
+```
+
+如果不停加，是 listener 重启逻辑漏了，开 issue 给我（或检查 `WhopListener.stop()` 是否调到了）。
 
 ### SQLite "database is locked"
 
-Only one process should have the database open. Kill any stray uvicorn/pytest processes before restarting.
+SQLite 单写。不要同时跑两个 uvicorn 占同一个 DB。`make stop` 先确认所有进程退干净。
 
-### Tests fail with "LongPortClient init failed"
+### 测试 import `app.main` 失败
 
-Tests use `FakeBrokerClient` and `broker_override=`. The module-level `app = create_app()` at the bottom of `app/main.py` runs at import time and requires real LongPort credentials. In test, always import `create_app` directly — never import `app` from `app.main`.
-
----
-
-## Acceptance Criteria (spec §11)
-
-All 4 e2e acceptance tests pass in `backend/tests/integration/test_acceptance.py`:
-
-| # | Criterion | Test |
-|---|-----------|------|
-| §11.1 | Whop message → SQLite full-cycle pipeline | `test_acceptance_e2e_full_cycle` |
-| §11.3 | WebSocket disconnect: buffered + cursor replay | `test_acceptance_websocket_broadcast_and_replay` |
-| §11.4 | Browser refresh: first screen restores from /api/tasks | `test_acceptance_browser_refresh_recovers_via_initial_list` |
-| §11.6 | `python -m app.main` single-command startup + mode observable | `test_acceptance_health_endpoint_exposes_mode` |
-
-§11.2 (all status visible on Card), §11.5 (unit + integration tests), and §11.7 (< 300 MB) are verified manually / by the full test suite.
+`app/main.py` 末尾有 `app = create_app()`，模块导入时执行；如果你在 test 里 `from app.main import app`，会在导入时失败（凭据缺）。**测试请用 `from app.main import create_app; app = create_app(broker_override=FakeBrokerClient(), skip_whop=True)`**。
 
 ---
 
-## Project Structure
+## 验收标准 §11
+
+`backend/tests/integration/test_acceptance.py` 4 个测试全过：
+
+| # | 标准 | 测试名 |
+|---|------|--------|
+| §11.1 | Whop 消息 → SQLite 全链路可跑 | `test_acceptance_e2e_full_cycle` |
+| §11.3 | WS 断线 buffered + cursor replay | `test_acceptance_websocket_broadcast_and_replay` |
+| §11.4 | 浏览器刷新首屏从 /api/tasks 恢复 | `test_acceptance_browser_refresh_recovers_via_initial_list` |
+| §11.6 | 单命令启动 + mode 可观察 | `test_acceptance_health_endpoint_exposes_mode` |
+
+§11.2（所有 Status 在 Card 上可观察）、§11.5（单测覆盖）、§11.7（< 300 MB）由全套测试集 + 手动确认。
+
+---
+
+## 项目结构
 
 ```
 signal-station/
-├── .env                        # credentials (git-ignored)
-├── Makefile                    # install / dev / build / run / test / lint
+├── .env                          # 凭据 / token（git-ignored）
+├── Makefile                      # install / dev / build / run / stop / test / ...
 ├── README.md
 ├── config/
-│   └── watched_stocks.json     # tickers the parser prioritises
+│   ├── watched_stocks.json       # 关注股 + 中文别名
+│   └── ticker_aliases.json
 ├── data/
-│   └── signals.db              # SQLite database (git-ignored)
-├── docs/                       # design docs + domain notes
-│   └── superpowers/specs/
-│       └── 2026-04-25-signal-station-design.md
+│   ├── signals.db                # SQLite（git-ignored）
+│   └── whop_pages.json           # Whop 监听列表（持久化）
+├── docs/
+│   └── superpowers/
+│       ├── specs/2026-04-25-signal-station-design.md
+│       └── plans/2026-04-25-signal-station-implementation.md
+├── scripts/
+│   ├── whop_login.py             # Whop 交互式登录抓 cookie
+│   ├── stop.sh                   # 一键关闭脚本
+│   └── dump_openapi.py           # 生成 frontend/openapi.json 给 ts 类型用
 ├── backend/
 │   ├── pyproject.toml
+│   ├── alembic/                  # DB migrations
 │   ├── app/
-│   │   ├── main.py             # FastAPI app factory + static mount
-│   │   ├── api/                # REST + WebSocket routers
-│   │   ├── broker/             # LongPort client + trader + push listener
-│   │   ├── core/               # EventBus + config + typed events
-│   │   ├── domain/             # Pure domain model (Task, Message, …)
-│   │   ├── parser/             # Signal parsing (stock + option)
-│   │   ├── storage/            # SQLAlchemy DB + repo + listeners
-│   │   └── whop/               # Playwright scraper + extractor
+│   │   ├── main.py               # FastAPI 工厂 + lifespan + 静态挂载
+│   │   ├── api/                  # REST + WS routers + auth + schemas
+│   │   ├── broker/               # LongPort + Trader + PushListener + NoopBroker
+│   │   ├── core/                 # config + EventBus + events
+│   │   ├── domain/               # Task / Message / Instruction / PushEvent / Status
+│   │   ├── parser/               # 正股 + 期权 + context resolver + service
+│   │   ├── storage/              # SQLAlchemy + repo + listeners
+│   │   └── whop/                 # browser + extractor + listener + registry + login
 │   └── tests/
-│       ├── api/                # HTTP + WS e2e tests
-│       ├── broker/             # Trader + push listener tests
-│       ├── core/               # EventBus tests
-│       ├── domain/             # Domain model tests
-│       ├── integration/        # Full-stack acceptance tests (spec §11)
-│       ├── parser/             # Parser unit tests
-│       ├── storage/            # DB repo tests
-│       └── whop/               # Extractor + listener tests
+│       ├── api/                  # HTTP + WS + e2e + Whop 端点
+│       ├── broker/
+│       ├── core/
+│       ├── domain/
+│       ├── integration/          # acceptance §11
+│       ├── parser/               # 含 snapshot 回归
+│       ├── storage/
+│       └── whop/                 # registry + listener + extractor
 └── frontend/
     ├── package.json
     ├── vite.config.ts
-    ├── dist/                   # Production build output (git-ignored)
+    ├── dist/                     # 生产打包产物（git-ignored）
     └── src/
-        ├── App.tsx             # Root component
-        ├── api/                # HTTP + WS client
-        ├── components/         # Card, TopBar, RightRail
-        ├── hooks/
-        └── stores/             # Zustand state
+        ├── App.tsx
+        ├── api/                  # http + ws + types + domain-types
+        ├── components/
+        │   ├── Card/             # Card · CardCompact · CardExpanded · PushChain · PushDetail · OrderSubmit
+        │   ├── WhopPanel/        # Whop 监听管理 tab
+        │   ├── Login.tsx + .css  # token 登录页
+        │   ├── TopBar.tsx + .css # 顶栏 + tab 切换 + logout
+        │   └── RightRail.tsx + .css
+        ├── hooks/useStickyTop.ts
+        ├── stores/               # conn / tasks / stats / positions / view
+        └── styles/               # tokens.css + fonts.css
 ```
 
 ---
 
-## Design Notes
+## 设计说明
 
-### Why in-process EventBus?
+### 为什么不用消息队列？
 
-Signal Station processes one signal at a time per channel (2 channels max). An in-process async pub/sub bus is sufficient, has zero infrastructure dependencies, and is trivially testable with `wait_idle`. A message queue (Redis/RabbitMQ) would be premature for this workload.
+每个 channel 一份信号流，2 channel 上限，每天几十条 message。进程内 asyncio EventBus 完全够用，零依赖，`wait_idle()` 让测试可断言"事件已 flush"。Redis/RabbitMQ 是过度设计。
 
-### Why SQLite?
+### 为什么 SQLite？
 
-The workload is write-once (task events are immutable), low volume (tens of signals per day), and single-process. SQLite via SQLAlchemy async is production-grade for this scale with zero operational overhead.
+写入是只追加（每个 task event 不可变），数据量低（每天几十信号），单进程访问。SQLite + SQLAlchemy async 在这个量级是生产级的，零运维。多用户后再迁 Postgres，schema 已经兼容。
 
-### Parser confidence and watchlist
+### 为什么 Task.id = Message.id = whop domID？
 
-The stock parser achieves ~89.6% parse rate on observed traffic. The watchlist (`config/watched_stocks.json`) + ticker alias table boosts hit rate for common tickers. Unknown tickers fall back to a looser pattern; signals that can't be parsed are recorded with status `PARSE_FAILED` and visible on the dashboard.
+避免维护两个 id 空间。Whop 自己保证同一个 channel 内 domID 唯一，重复抓取（轮询 + 历史滚动）天然去重。前端、后端、DB、日志、WS 事件全部用 domID 串起来，溯源直接 grep。
 
-### Token security
+### Cookie 风险
 
-`APP_TOKEN` is a shared secret between the backend and the operator's browser. It is never embedded in built JS — the frontend reads it from a URL query param on first visit and stores it in `localStorage`. This avoids shipping credentials in the build artifact while keeping the single-binary deployment model simple.
+`.auth/whop_cookie.json` 包含你的 Whop session。**不要**分享给朋友。朋友远程查看用的是你的 `APP_TOKEN`（前端登录 token），他们用各自的浏览器 + 你给的 APP_TOKEN 就能看到你抓的数据，但拿不到你的 Whop session。
+
+### 凭据缺失降级策略
+
+设计上不强求全套凭据齐全才能启动 —— 监控、UI、解析、入库这些核心能力都不依赖 broker。LongPort 凭据缺失 → `NoopBrokerClient`，会日志记录"假装下单了一笔"但实际不发请求。这也意味着 dry-run 流程里你能看见全套 Card 状态流转，只是订单永远停在 SUBMITTING（因为 NoopBroker 不发 push 事件）。
+
+### Whop URL 占位符防呆
+
+`.env.example` 模板里如果留 `xxx/yyy` 之类占位符，listener 会去 navigate 一个假 URL 然后 Playwright timeout，体验很糟。`_is_placeholder_url()` 主动检测并跳过：包含 `/xxx/`、`/yyy/`、`example.com`、`your-page-here` 的 URL 都会被识别为占位符，启动时 log info 跳过，不阻塞主流程。
+
+### Token 前端策略
+
+`APP_TOKEN` 是后端和操作者浏览器之间的共享秘密。**不嵌入打包产物** —— 前端首次访问时从 URL query 取，存到 localStorage，之后从本地读。这样既支持 "URL 一次性分享给朋友"，也避免在 JS bundle 里暴露 token。
 
 ---
 
 ## License / Notes
 
-Internal tool. Not for public distribution. LongPort SDK and Whop credentials are operator-supplied.
+内部工具，不公开发行。LongPort SDK + Whop 凭据由用户自备。
 
-For full design rationale, see `docs/superpowers/specs/2026-04-25-signal-station-design.md`.
+完整设计文档：`docs/superpowers/specs/2026-04-25-signal-station-design.md`
+完整实施计划：`docs/superpowers/plans/2026-04-25-signal-station-implementation.md`
