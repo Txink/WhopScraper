@@ -9,11 +9,9 @@ Five test cases covering the three resolution tiers:
 """
 from __future__ import annotations
 
-import dataclasses
 from datetime import UTC, date, datetime
 
 import pytest
-import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.domain.instruction import InstructionType, OptionInstruction, StockInstruction
