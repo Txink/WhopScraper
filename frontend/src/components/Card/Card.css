@@ -236,27 +236,40 @@
   letter-spacing: 0.08em;
 }
 
-/* ===== Chips ===== */
-.chips {
+/* ===== Inline parse info (under 解析指令 stage) ===== */
+.parse-inline {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 10px;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+  font-size: 12px;
 }
-.chip {
-  padding: 2px 8px;
-  border-radius: 3px;
-  background: var(--bg-1);
-  border: 1px solid var(--line);
-  color: var(--fg-2);
-  font-size: 11px;
+.parse-inline .parse-ticker {
   font-family: var(--font-mono);
+  color: var(--fg-1);
+  font-weight: 500;
 }
-.chip .k { color: var(--fg-3); margin-right: 4px; }
-.chip-ctx {
-  color: var(--info);
-  border-color: rgba(90, 160, 255, 0.25);
-  background: rgba(90, 160, 255, 0.06);
+.parse-inline .parse-price {
+  font-family: var(--font-mono);
+  color: var(--fg-1);
+}
+.parse-inline .parse-qty {
+  font-family: var(--font-mono);
+  color: var(--fg-2);
+}
+.parse-inline .parse-extra {
+  font-family: var(--font-mono);
+  color: var(--fg-3);
+  font-size: 11px;
+}
+.parse-inline .parse-ctx {
+  color: var(--fg-3);
+  font-size: 11px;
+  padding: 1px 6px;
+  background: var(--bg-2);
+  border-radius: var(--radius-chip);
+  font-family: var(--font-mono);
 }
 
 /* ===== Local stages ===== */

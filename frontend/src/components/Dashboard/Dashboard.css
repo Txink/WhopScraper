@@ -11,9 +11,18 @@
 .tab-source-dot.option { background: #8b6fcf; }
 .tab-count { font-size: 11px; opacity: 0.6; padding-left: 4px; }
 
+.page-meta-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--line);
+}
+
 .page-info-bar {
-  display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+  display: flex; align-items: center; gap: 8px;
   font-size: 12px; color: var(--fg-2);
+  flex: 1; min-width: 0;
 }
 .page-info-bar .badge { padding: 2px 8px; border-radius: 4px; font-weight: 500; font-size: 11px; }
 .page-info-bar .badge.stock { background: rgba(95,191,139,0.15); color: #5fbf8b; }
@@ -25,16 +34,36 @@
 .page-info-bar .sep { opacity: 0.4; }
 .page-info-bar .url-hover { cursor: help; opacity: 0.6; }
 
-.page-action-bar { display: flex; gap: 6px; padding: 0 12px 8px; }
-.page-action-bar .action-btn {
-  background: var(--bg-2); border: 1px solid var(--line); color: var(--fg-1);
-  padding: 4px 10px; cursor: pointer; border-radius: 4px; font: inherit; font-size: 12px;
+.page-action-bar {
+  display: flex; gap: 6px;
+  flex-shrink: 0;
 }
-.page-action-bar .action-btn:hover:not(:disabled) { background: var(--bg-3); }
-.page-action-bar .action-btn.active { background: var(--brand); color: white; border-color: var(--brand); }
-.page-action-bar .action-btn.link { background: transparent; border: none; color: var(--fg-3); }
+.page-action-bar .action-btn {
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  color: var(--fg-2);
+  padding: 4px 10px;
+  cursor: pointer;
+  border-radius: var(--radius-chip);
+  font: inherit;
+  font-size: 12px;
+  transition: color var(--dur) var(--ease),
+              background var(--dur) var(--ease),
+              border-color var(--dur) var(--ease);
+}
+.page-action-bar .action-btn:hover:not(:disabled) {
+  color: var(--fg-1);
+  border-color: var(--fg-3);
+}
+.page-action-bar .action-btn.engaged {
+  background: var(--bg-3);
+  color: var(--fg-1);
+  border-color: var(--line-strong);
+}
+.page-action-bar .action-btn.engaged:hover:not(:disabled) {
+  border-color: var(--brand);
+}
 .page-action-bar .action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.page-action-bar .spacer { flex: 1; }
 
 .dashboard-empty { padding: 60px 20px; text-align: center; color: var(--fg-2); }
 .dashboard-empty .link-btn { background: none; border: none; color: var(--brand); cursor: pointer; text-decoration: underline; padding: 0; font: inherit; }

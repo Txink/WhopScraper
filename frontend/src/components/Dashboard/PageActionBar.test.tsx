@@ -18,11 +18,34 @@ describe("<PageActionBar>", () => {
     expect(screen.getByText(/设置/)).toBeDisabled();
   });
 
-  it("toggle expand mode persists in store", () => {
+  it("expand mode button cycles smart → all-open → all-closed → smart", () => {
     render(<PageActionBar page={stockPage} onOpenSettings={vi.fn()} />);
-    fireEvent.click(screen.getByText("⤓ 全展开"));
+    // Initial: smart
+    const initialBtn = screen.getByText(/智能展开/);
+    expect(initialBtn).toBeInTheDocument();
+
+    // Click 1: smart → all-open
+    fireEvent.click(initialBtn);
     expect(usePageTabsStore.getState().expandModeByTab["a"]).toBe("all-open");
-    fireEvent.click(screen.getByText("⤒ 全收缩"));
+    expect(screen.getByText(/全部展开/)).toBeInTheDocument();
+
+    // Click 2: all-open → all-closed
+    fireEvent.click(screen.getByText(/全部展开/));
     expect(usePageTabsStore.getState().expandModeByTab["a"]).toBe("all-closed");
+    expect(screen.getByText(/全部收起/)).toBeInTheDocument();
+
+    // Click 3: all-closed → smart
+    fireEvent.click(screen.getByText(/全部收起/));
+    expect(usePageTabsStore.getState().expandModeByTab["a"]).toBe("smart");
+    expect(screen.getByText(/智能展开/)).toBeInTheDocument();
+  });
+
+  it("expand button gets engaged class when not in smart mode", () => {
+    const { container } = render(<PageActionBar page={stockPage} onOpenSettings={vi.fn()} />);
+    // Initial state: smart, no engaged class
+    expect(container.querySelector(".action-btn.engaged")).not.toBeInTheDocument();
+    // Cycle once → all-open → engaged
+    fireEvent.click(screen.getByText(/智能展开/));
+    expect(container.querySelector(".action-btn.engaged")).toBeInTheDocument();
   });
 });

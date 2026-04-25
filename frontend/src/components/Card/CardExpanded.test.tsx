@@ -92,14 +92,20 @@ describe("CardExpanded", () => {
     expect(screen.getByText(/TSLL 26.5 附近加一半/)).toBeInTheDocument();
   });
 
-  it("renders chips for price, qty, stop", () => {
+  it("renders inline parse info on 解析指令 stage (ticker / price / qty / stop)", () => {
     const { container } = render(
       <CardExpanded task={task} pushEvents={[]} onCollapse={vi.fn()} />
     );
-    expect(container.querySelector(".chips")).toBeInTheDocument();
-    expect(screen.getByText("price")).toBeInTheDocument();
-    expect(screen.getByText("qty")).toBeInTheDocument();
-    expect(screen.getByText("stop")).toBeInTheDocument();
+    // The old chips block should be gone
+    expect(container.querySelector(".chips")).not.toBeInTheDocument();
+    // The new inline block sits beneath the 解析指令 label
+    const parseInline = container.querySelector(".parse-inline");
+    expect(parseInline).toBeInTheDocument();
+    expect(parseInline?.querySelector(".parse-ticker")?.textContent).toBe("TSLL");
+    expect(parseInline?.querySelector(".parse-price")?.textContent).toBe("$26.50");
+    expect(parseInline?.querySelector(".parse-qty")?.textContent).toBe("× 500");
+    // stop_loss_price is rendered as a parse-extra
+    expect(parseInline?.textContent).toContain("stop $25.80");
   });
 
   it("renders local stages", () => {

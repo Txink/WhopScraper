@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { api } from "../../api/http";
 import { usePageTabsStore } from "../../stores/pageTabs";
+import type { ExpandMode } from "../../stores/pageTabs";
 import type { WhopPage } from "../../api/domain-types";
 
 interface Props {
@@ -24,6 +25,24 @@ export function PageActionBar({ page, onOpenSettings }: Props) {
     finally { setRestarting(false); }
   };
 
+  const cycleExpandMode = () => {
+    const next: ExpandMode =
+      expandMode === "smart" ? "all-open"
+      : expandMode === "all-open" ? "all-closed"
+      : "smart";
+    setExpand(tabId, next);
+  };
+
+  const expandLabel =
+    expandMode === "smart" ? "◐ 智能展开"
+    : expandMode === "all-open" ? "▽ 全部展开"
+    : "△ 全部收起";
+
+  const expandTitle =
+    expandMode === "smart" ? "智能展开 — 点击切换为全部展开"
+    : expandMode === "all-open" ? "全部展开 — 点击切换为全部收起"
+    : "全部收起 — 点击回到智能模式";
+
   return (
     <div className="page-action-bar">
       <button onClick={handleRestart} disabled={isOrphan || restarting} className="action-btn">
@@ -32,20 +51,13 @@ export function PageActionBar({ page, onOpenSettings }: Props) {
       <button onClick={onOpenSettings} disabled={isOrphan} className="action-btn">
         ⚙ 设置
       </button>
-      <span className="spacer" />
       <button
-        onClick={() => setExpand(tabId, "all-open")}
-        className={expandMode === "all-open" ? "action-btn active" : "action-btn"}
-      >⤓ 全展开</button>
-      <button
-        onClick={() => setExpand(tabId, "all-closed")}
-        className={expandMode === "all-closed" ? "action-btn active" : "action-btn"}
-      >⤒ 全收缩</button>
-      {expandMode !== "smart" && (
-        <button onClick={() => setExpand(tabId, "smart")} className="action-btn link">
-          回 smart
-        </button>
-      )}
+        onClick={cycleExpandMode}
+        className={expandMode === "smart" ? "action-btn" : "action-btn engaged"}
+        title={expandTitle}
+      >
+        {expandLabel}
+      </button>
     </div>
   );
 }

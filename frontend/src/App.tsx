@@ -188,8 +188,10 @@ function Dashboard({ token }: { token: string }) {
     <main className="main">
       <section className="stream">
         <PageTabs />
-        <PageInfoBar page={activePage} orphanCount={orphanCount} />
-        <PageActionBar page={activePage} onOpenSettings={() => setSettingsOpen(true)} />
+        <div className="page-meta-row">
+          <PageInfoBar page={activePage} orphanCount={orphanCount} />
+          <PageActionBar page={activePage} onOpenSettings={() => setSettingsOpen(true)} />
+        </div>
         {activeTabId === "orphan" && <OrphanCleanupBar orphanTasks={filteredTasks} />}
         {filteredTasks.length === 0 ? (
           <div className="empty-state"><p>该监听页暂无任务。</p></div>

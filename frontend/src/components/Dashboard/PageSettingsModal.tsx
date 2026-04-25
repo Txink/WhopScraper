@@ -105,7 +105,7 @@ export function PageSettingsModal({ page, onClose }: Props) {
               <span>避免重复解析消息（启动 / 重启时跳过 DB 中已存在的 domID）</span>
             </label>
             {dedupeChanged && (
-              <p className="hint">⚠ 下次重启监听才生效（点上面操作行的"重启"按钮）</p>
+              <p className="hint warn">△ 下次重启监听才生效（点上面操作行的"重启"按钮）</p>
             )}
           </section>
 
@@ -134,10 +134,10 @@ export function PageSettingsModal({ page, onClose }: Props) {
                     <tr key={row.rowId}>
                       <td>
                         <input
+                          className="ticker-input"
                           placeholder="输入 ticker"
                           value={row.ticker}
                           onChange={e => handleEditTickerName(row.rowId, e.target.value)}
-                          style={{ textTransform: "uppercase" }}
                         />
                       </td>
                       <td>

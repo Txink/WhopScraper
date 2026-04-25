@@ -117,4 +117,35 @@ describe("CardCompact", () => {
     const { container } = render(<CardCompact task={stockTask} onExpand={vi.fn()} />);
     expect(container.querySelector(".card.compact")).toBeInTheDocument();
   });
+
+  it("renders price alone when qty is null", () => {
+    const priceOnly: TaskSummary = {
+      ...stockTask,
+      instruction: { ...stockTask.instruction!, quantity: null },
+    };
+    render(<CardCompact task={priceOnly} onExpand={vi.fn()} />);
+    expect(screen.getByText("$26.50")).toBeInTheDocument();
+    // No "×" separator should appear
+    expect(screen.queryByText(/×/)).not.toBeInTheDocument();
+  });
+
+  it("renders qty alone when price is null", () => {
+    const qtyOnly: TaskSummary = {
+      ...stockTask,
+      instruction: { ...stockTask.instruction!, price: null },
+    };
+    const { container } = render(<CardCompact task={qtyOnly} onExpand={vi.fn()} />);
+    const details = container.querySelector(".details");
+    expect(details?.textContent).toContain("500");
+    expect(details?.textContent).not.toContain("$");
+    expect(details?.textContent).not.toContain("×");
+  });
+
+  it("renders price × qty when both exist", () => {
+    const { container } = render(<CardCompact task={stockTask} onExpand={vi.fn()} />);
+    const details = container.querySelector(".details");
+    expect(details?.textContent).toContain("$26.50");
+    expect(details?.textContent).toContain("×");
+    expect(details?.textContent).toContain("500");
+  });
 });

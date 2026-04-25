@@ -32,17 +32,18 @@ export function CardCompact({ task, onExpand }: CardCompactProps) {
       ? fmtElapsed(elapsedMs(message.posted_at, task.updated_at))
       : "—";
 
-  // Build details line — only used when we have a parsed instruction
+  // Build details line — only used when we have a parsed instruction.
+  // Show price-only / qty-only / both, whichever the parser produced.
   let detailContent: React.ReactNode = null;
   if (parsedSymbol && instruction) {
     const price = instruction.price != null ? `$${instruction.price.toFixed(2)}` : null;
     const qty = instruction.quantity != null ? String(instruction.quantity) : null;
-    if (price && qty) {
+    if (price || qty) {
       detailContent = (
         <>
-          <span className="v">{price}</span>
-          {" × "}
-          <span className="v">{qty}</span>
+          {price && <span className="v">{price}</span>}
+          {price && qty && " × "}
+          {qty && <span className="v">{qty}</span>}
         </>
       );
     } else if (task.reject_reason) {

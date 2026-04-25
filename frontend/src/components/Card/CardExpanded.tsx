@@ -76,39 +76,6 @@ export function CardExpanded({ task, pushEvents, onCollapse }: CardExpandedProps
         {message.content}
       </div>
 
-      {/* Chips */}
-      <div className="chips">
-        {instruction?.price != null && (
-          <span className="chip">
-            <span className="k">price</span>{instruction.price.toFixed(2)}
-          </span>
-        )}
-        {instruction?.quantity != null && (
-          <span className="chip">
-            <span className="k">qty</span>{instruction.quantity}
-          </span>
-        )}
-        {instruction?.stop_loss_price != null && (
-          <span className="chip">
-            <span className="k">stop</span>{instruction.stop_loss_price.toFixed(2)}
-          </span>
-        )}
-        {instruction?.strike != null && (
-          <span className="chip">
-            <span className="k">strike</span>{instruction.strike}
-          </span>
-        )}
-        {instruction?.expiry != null && (
-          <span className="chip">
-            <span className="k">expiry</span>
-            {instruction.expiry.replace(/-/g, "")}
-          </span>
-        )}
-        {instruction?.context_source && (
-          <span className="chip chip-ctx">ctx={instruction.context_source}</span>
-        )}
-      </div>
-
       {/* Local stages */}
       <div className="stages">
         {/* Stage 1: 原始消息 */}
@@ -133,12 +100,28 @@ export function CardExpanded({ task, pushEvents, onCollapse }: CardExpandedProps
             <div className="stage-body">
               <strong>解析指令</strong>
               {instruction && (
-                <div className="stage-meta">
-                  <span className="k">context</span>
-                  <span className="v">{instruction.context_source ?? "—"}</span>
-                  {" · "}
-                  <span className="k">watched</span>
-                  <span className="v">✓</span>
+                <div className="parse-inline">
+                  {(instruction.ticker || instruction.symbol) && (
+                    <span className="parse-ticker">{instruction.ticker ?? instruction.symbol}</span>
+                  )}
+                  {instruction.price != null && (
+                    <span className="parse-price">${instruction.price.toFixed(2)}</span>
+                  )}
+                  {instruction.quantity != null && (
+                    <span className="parse-qty">× {instruction.quantity}</span>
+                  )}
+                  {instruction.strike != null && (
+                    <span className="parse-extra">strike {instruction.strike}</span>
+                  )}
+                  {instruction.expiry && (
+                    <span className="parse-extra">{instruction.expiry.replace(/-/g, "")}</span>
+                  )}
+                  {instruction.stop_loss_price != null && (
+                    <span className="parse-extra">stop ${instruction.stop_loss_price.toFixed(2)}</span>
+                  )}
+                  {instruction.context_source && (
+                    <span className="parse-ctx">ctx={instruction.context_source}</span>
+                  )}
                 </div>
               )}
               {status === "PARSE_ERROR" && reject_reason && (
