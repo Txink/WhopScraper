@@ -1,0 +1,302 @@
+"""Tests for app.broker.trader — Task lifecycle + order submission."""
+from __future__ import annotations
+
+from datetime import UTC, date, datetime
+
+import pytest
+
+from app.broker.config import LongPortConfig
+from app.broker.trader import register_trader
+from app.core.event_bus import Event, EventBus
+from app.core.events import TaskPayload, Topics
+from app.domain.instruction import InstructionType, OptionInstruction, StockInstruction
+from app.domain.message import Message
+from app.domain.status import Status
+from app.domain.task import Task
+from tests.broker._fakes import FakeBrokerClient
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _msg(*, source: str = "stock") -> Message:
+    return Message(
+        id="msg-test-001",
+        content="test message",
+        raw_content="test message",
+        author="test-user",
+        posted_at=datetime(2026, 4, 24, 10, 0, 0, tzinfo=UTC),
+        received_at=datetime(2026, 4, 24, 10, 0, 0, 1000, tzinfo=UTC),
+        source=source,  # type: ignore[arg-type]
+    )
+
+
+def _stock_task(
+    symbol: str = "TSLA.US",
+    instruction_type: InstructionType = InstructionType.BUY,
+) -> Task:
+    task = Task.new_from_message(_msg(source="stock"))
+    task.mark_parsing()
+    inst = StockInstruction(
+        instruction_type=instruction_type,
+        price=25.0,
+        price_range=None,
+        quantity=100,
+        position_size=None,
+        stop_loss_price=None,
+        take_profit_price=None,
+        context_source="group",
+        parser_notes=[],
+        ticker="TSLA",
+        symbol=symbol,
+        sell_quantity=None,
+    )
+    task.attach_instruction(inst)
+    return task
+
+
+def _option_task(
+    symbol: str = "AAPL260117C150000.US",
+    quantity: int = 1,
+    price: float = 3.0,
+    instruction_type: InstructionType = InstructionType.BUY,
+) -> Task:
+    task = Task.new_from_message(_msg(source="option"))
+    task.mark_parsing()
+    inst = OptionInstruction(
+        instruction_type=instruction_type,
+        price=price,
+        price_range=None,
+        quantity=quantity,
+        position_size=None,
+        stop_loss_price=None,
+        take_profit_price=None,
+        context_source="group",
+        parser_notes=[],
+        ticker="AAPL",
+        option_type="CALL",
+        strike=150.0,
+        expiry=date(2026, 1, 17),
+        symbol=symbol,
+    )
+    task.attach_instruction(inst)
+    return task
+
+
+def _config(**overrides: object) -> LongPortConfig:
+    defaults: dict = dict(
+        mode="paper",
+        app_key="k",
+        app_secret="s",
+        access_token="t",
+        auto_trade=True,
+        dry_run=False,
+        max_option_total_price=500.0,
+        max_option_quantity=3,
+    )
+    defaults.update(overrides)
+    return LongPortConfig(**defaults)  # type: ignore[arg-type]
+
+
+# ---------------------------------------------------------------------------
+# Tests
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_stock_buy_happy_path() -> None:
+    """Stock BUY task → broker receives stock order, TASK_ORDER_SUBMITTED emitted."""
+    bus = EventBus()
+    fake = FakeBrokerClient(next_order_id="ORDER-STK-001")
+    register_trader(bus, fake, _config())
+
+    received_events: list[Event] = []
+
+    async def capture(event: Event) -> None:
+        received_events.append(event)
+
+    bus.subscribe(Topics.TASK_ORDER_SUBMITTED, capture)
+
+    task = _stock_task()
+    await bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
+    await bus.wait_idle(timeout=2.0)
+
+    assert len(fake.submitted_orders) == 1
+    order = fake.submitted_orders[0]
+    assert order["kind"] == "stock"
+    assert order["side"] == "BUY"
+    assert order["symbol"] == "TSLA.US"
+    assert order["price"] == 25.0
+    assert order["order_type"] == "LIMIT"
+
+    assert len(received_events) == 1
+    submitted_task: Task = received_events[0].payload.task
+    assert submitted_task.status == Status.PENDING
+    assert submitted_task.order_id == "ORDER-STK-001"
+    assert "submit" in submitted_task.stage_timings
+
+
+@pytest.mark.asyncio
+async def test_option_buy_happy_path() -> None:
+    """Option BUY task → broker receives option order, TASK_ORDER_SUBMITTED emitted."""
+    bus = EventBus()
+    fake = FakeBrokerClient(next_order_id="ORDER-OPT-001")
+    register_trader(bus, fake, _config())
+
+    received_events: list[Event] = []
+
+    async def capture(event: Event) -> None:
+        received_events.append(event)
+
+    bus.subscribe(Topics.TASK_ORDER_SUBMITTED, capture)
+
+    task = _option_task(quantity=1, price=3.0)
+    await bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
+    await bus.wait_idle(timeout=2.0)
+
+    assert len(fake.submitted_orders) == 1
+    order = fake.submitted_orders[0]
+    assert order["kind"] == "option"
+    assert order["side"] == "BUY"
+    assert order["symbol"] == "AAPL260117C150000.US"
+    assert order["price"] == 3.0
+    assert order["order_type"] == "LIMIT"
+
+    assert len(received_events) == 1
+    submitted_task: Task = received_events[0].payload.task
+    assert submitted_task.status == Status.PENDING
+    assert submitted_task.order_id == "ORDER-OPT-001"
+
+
+@pytest.mark.asyncio
+async def test_auto_trade_disabled_skips() -> None:
+    """auto_trade=False → TASK_STATUS_CHANGED with SKIPPED, no submit call."""
+    bus = EventBus()
+    fake = FakeBrokerClient()
+    register_trader(bus, fake, _config(auto_trade=False))
+
+    status_events: list[Event] = []
+    submitted_events: list[Event] = []
+
+    async def capture_status(event: Event) -> None:
+        status_events.append(event)
+
+    async def capture_submitted(event: Event) -> None:
+        submitted_events.append(event)
+
+    bus.subscribe(Topics.TASK_STATUS_CHANGED, capture_status)
+    bus.subscribe(Topics.TASK_ORDER_SUBMITTED, capture_submitted)
+
+    task = _stock_task()
+    await bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
+    await bus.wait_idle(timeout=2.0)
+
+    assert len(fake.submitted_orders) == 0
+    assert len(submitted_events) == 0
+    assert len(status_events) == 1
+    skipped_task: Task = status_events[0].payload.task
+    assert skipped_task.status == Status.SKIPPED
+    assert skipped_task.reject_reason is not None
+    assert "auto_trade" in skipped_task.reject_reason
+
+
+@pytest.mark.asyncio
+async def test_option_exceeds_total_price_limit_skips() -> None:
+    """Option qty=2, price=5.0 → total 2*5.0*100=$1000 > max_option_total_price=500 → SKIPPED."""
+    bus = EventBus()
+    fake = FakeBrokerClient()
+    register_trader(bus, fake, _config(max_option_total_price=500.0))
+
+    status_events: list[Event] = []
+
+    async def capture_status(event: Event) -> None:
+        status_events.append(event)
+
+    bus.subscribe(Topics.TASK_STATUS_CHANGED, capture_status)
+
+    task = _option_task(quantity=2, price=5.0)
+    await bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
+    await bus.wait_idle(timeout=2.0)
+
+    assert len(fake.submitted_orders) == 0
+    assert len(status_events) == 1
+    skipped_task: Task = status_events[0].payload.task
+    assert skipped_task.status == Status.SKIPPED
+    reason = skipped_task.reject_reason or ""
+    assert "1000" in reason or "total" in reason
+
+
+@pytest.mark.asyncio
+async def test_option_exceeds_quantity_limit_skips() -> None:
+    """Option qty=10 > max_option_quantity=3 → SKIPPED."""
+    bus = EventBus()
+    fake = FakeBrokerClient()
+    # qty=10, price=1.0 → total=$1000; set max_total=5000 so total passes, qty>3 fails.
+    register_trader(bus, fake, _config(max_option_total_price=5000.0, max_option_quantity=3))
+
+    status_events: list[Event] = []
+
+    async def capture_status(event: Event) -> None:
+        status_events.append(event)
+
+    bus.subscribe(Topics.TASK_STATUS_CHANGED, capture_status)
+
+    task = _option_task(quantity=10, price=1.0)
+    await bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
+    await bus.wait_idle(timeout=2.0)
+
+    assert len(fake.submitted_orders) == 0
+    assert len(status_events) == 1
+    skipped_task: Task = status_events[0].payload.task
+    assert skipped_task.status == Status.SKIPPED
+    reason = skipped_task.reject_reason or ""
+    assert "10" in reason or "quantity" in reason
+
+
+@pytest.mark.asyncio
+async def test_broker_exception_marks_submit_failed() -> None:
+    """Broker raises RuntimeError → TASK_SUBMIT_FAILED, task.reject_reason has error text."""
+    bus = EventBus()
+    fake = FakeBrokerClient(raise_on_submit=RuntimeError("connection timeout"))
+    register_trader(bus, fake, _config())
+
+    failed_events: list[Event] = []
+
+    async def capture_failed(event: Event) -> None:
+        failed_events.append(event)
+
+    bus.subscribe(Topics.TASK_SUBMIT_FAILED, capture_failed)
+
+    task = _stock_task()
+    await bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
+    await bus.wait_idle(timeout=2.0)
+
+    assert len(failed_events) == 1
+    failed_task: Task = failed_events[0].payload.task
+    assert failed_task.status == Status.SUBMIT_FAILED
+    assert "connection timeout" in (failed_task.reject_reason or "")
+
+
+@pytest.mark.asyncio
+async def test_missing_symbol_skips() -> None:
+    """Instruction with empty symbol → SKIPPED, no broker call."""
+    bus = EventBus()
+    fake = FakeBrokerClient()
+    register_trader(bus, fake, _config())
+
+    status_events: list[Event] = []
+
+    async def capture_status(event: Event) -> None:
+        status_events.append(event)
+
+    bus.subscribe(Topics.TASK_STATUS_CHANGED, capture_status)
+
+    # Build a stock task with empty symbol
+    task = _stock_task(symbol="")
+    await bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
+    await bus.wait_idle(timeout=2.0)
+
+    assert len(fake.submitted_orders) == 0
+    assert len(status_events) == 1
+    skipped_task: Task = status_events[0].payload.task
+    assert skipped_task.status == Status.SKIPPED
+    assert "symbol" in (skipped_task.reject_reason or "")
