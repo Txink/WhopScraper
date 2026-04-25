@@ -1,0 +1,145 @@
+.topbar {
+  height: 48px;
+  background: var(--bg-1);
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  padding: 0 16px;
+  gap: 24px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+/* Brand mark */
+.brand-mark {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+.brand-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--brand);
+  flex-shrink: 0;
+}
+
+.brand-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--fg-1);
+}
+
+.brand-sep {
+  width: 1px;
+  height: 14px;
+  background: var(--line-strong);
+  flex-shrink: 0;
+}
+
+.brand-sub {
+  font-size: 10px;
+  color: var(--fg-3);
+  letter-spacing: 0.04em;
+}
+
+/* Filters */
+.filters {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.filter-chip {
+  padding: 3px 10px;
+  border-radius: var(--radius-chip);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--fg-3);
+  font-size: 12px;
+  cursor: pointer;
+  transition: color var(--dur) var(--ease), background var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+
+.filter-chip:hover {
+  color: var(--fg-2);
+  background: var(--bg-hover);
+}
+
+.filter-chip.active {
+  color: var(--fg-1);
+  background: var(--bg-3);
+  border-color: var(--line-strong);
+}
+
+/* Right cluster */
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.conn-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.conn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.conn-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.conn-dot.ok {
+  background: var(--ok);
+  box-shadow: 0 0 4px var(--ok);
+}
+
+.conn-dot.down {
+  background: var(--err);
+  box-shadow: 0 0 4px var(--err);
+}
+
+.conn-dot.unknown {
+  background: var(--fg-3);
+}
+
+.conn-label {
+  font-size: 11px;
+  color: var(--fg-3);
+}
+
+/* Account pill */
+.acct-pill {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: var(--radius-chip);
+  border: 1px solid transparent;
+}
+
+.acct-pill.paper {
+  color: var(--warn);
+  background: rgba(231, 167, 61, 0.1);
+  border-color: rgba(231, 167, 61, 0.25);
+}
+
+.acct-pill.real {
+  color: var(--err);
+  background: rgba(239, 91, 91, 0.1);
+  border-color: rgba(239, 91, 91, 0.25);
+}
