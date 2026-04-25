@@ -45,8 +45,10 @@ const ACTIVE_STATUSES = new Set([
   "SUBMITTING", "PENDING", "PARTIAL",
 ]);
 
-/** Smart mode: decide whether a history task renders expanded by default. */
+/** Smart mode: decide whether a task renders expanded by default. */
 function isActiveExpanded(task: TaskSummary): boolean {
+  // Active statuses always expand
+  if (ACTIVE_STATUSES.has(task.status)) return true;
   // Recently-FILLED (<30s) stays expanded
   if (task.status === "FILLED") {
     const updatedAt = new Date(task.updated_at).getTime();
@@ -78,38 +80,52 @@ interface TaskGroupsProps {
   pushEventsByTask: Record<string, PushEvent[]>;
 }
 
-function TaskGroups({ tasks, pushEventsByTask }: TaskGroupsProps) {
-  const active = tasks.filter((t) => ACTIVE_STATUSES.has(t.status));
-  const history = tasks.filter((t) => !ACTIVE_STATUSES.has(t.status));
+function formatDateLabel(dateKey: string): string {
+  const today = new Date().toISOString().slice(0, 10);
+  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  if (dateKey === today) return `今天 ${dateKey}`;
+  if (dateKey === yesterday) return `昨天 ${dateKey}`;
+  return dateKey;
+}
+
+function DateGroups({ tasks, pushEventsByTask }: TaskGroupsProps) {
+  // Sort tasks by message.posted_at desc (newest first)
+  const sorted = [...tasks].sort((a, b) => {
+    const aTime = a.message?.posted_at ?? a.created_at;
+    const bTime = b.message?.posted_at ?? b.created_at;
+    return bTime.localeCompare(aTime);
+  });
+
+  // Group by date string (YYYY-MM-DD) of posted_at
+  const groups = new Map<string, TaskSummary[]>();
+  for (const t of sorted) {
+    const ts = t.message?.posted_at ?? t.created_at;
+    const dateKey = ts.slice(0, 10); // "2026-04-25"
+    if (!groups.has(dateKey)) groups.set(dateKey, []);
+    groups.get(dateKey)!.push(t);
+  }
+
+  // Iterate in insertion order (desc due to sort above)
+  const dateKeys = Array.from(groups.keys());
 
   return (
     <>
-      {active.length > 0 && (
-        <>
-          <div className="stream-divider">进行中 · {active.length}</div>
-          {active.map((t) => (
-            <Card
-              key={t.id}
-              task={t}
-              pushEvents={pushEventsByTask[t.id] ?? []}
-              defaultExpanded={true}
-            />
-          ))}
-        </>
-      )}
-      {history.length > 0 && (
-        <>
-          <div className="stream-divider">已完成 · {history.length}</div>
-          {history.map((t) => (
-            <Card
-              key={t.id}
-              task={t}
-              pushEvents={pushEventsByTask[t.id] ?? []}
-              defaultExpanded={isActiveExpanded(t)}
-            />
-          ))}
-        </>
-      )}
+      {dateKeys.map((dateKey) => {
+        const dayTasks = groups.get(dateKey)!;
+        return (
+          <div key={dateKey}>
+            <div className="stream-divider">{formatDateLabel(dateKey)} · {dayTasks.length}</div>
+            {dayTasks.map((t) => (
+              <Card
+                key={t.id}
+                task={t}
+                pushEvents={pushEventsByTask[t.id] ?? []}
+                defaultExpanded={isActiveExpanded(t)}
+              />
+            ))}
+          </div>
+        );
+      })}
     </>
   );
 }
@@ -200,7 +216,7 @@ function Dashboard({ token }: { token: string }) {
             </p>
           </div>
         ) : (
-          <TaskGroups tasks={tasks} pushEventsByTask={pushEventsByTask} />
+          <DateGroups tasks={tasks} pushEventsByTask={pushEventsByTask} />
         )}
       </section>
       <RightRail />

@@ -28,7 +28,8 @@ DOM structure (from docs/dom_structure_guide.md):
 from __future__ import annotations
 
 import re
-from datetime import UTC, datetime
+from dataclasses import replace
+from datetime import UTC, date, datetime, time, timedelta
 from typing import Literal
 
 from bs4 import BeautifulSoup, Tag
@@ -97,63 +98,114 @@ _MONTH_MAP = {
     "Jul": 7, "Aug": 8, "Sep": 9, "Oct": 10, "Nov": 11, "Dec": 12,
 }
 
+_WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+_MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"]
+
+# Whop timestamp patterns (all case-insensitive)
+_TIME_RE = r"(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)"
+_TODAY_RE = re.compile(rf"^Today(?:\s+at)?\s+{_TIME_RE}$", re.IGNORECASE)
+_YESTERDAY_RE = re.compile(rf"^Yesterday(?:\s+at)?\s+{_TIME_RE}$", re.IGNORECASE)
+_WEEKDAY_RE = re.compile(rf"^(\w+)(?:\s+at)?\s+{_TIME_RE}$", re.IGNORECASE)
+_FULL_DATE_RE = re.compile(rf"^(\w{{3}})\s+(\d{{1,2}})(?:,\s*(\d{{4}}))?\s+{_TIME_RE}$", re.IGNORECASE)
+
+
+def parse_whop_timestamp(text: str, *, now: datetime | None = None) -> datetime | None:
+    """Parse a Whop timestamp string into an aware UTC datetime.
+
+    Handles all 6 formats shown in Whop chat:
+      - "Today at 2:30 PM"         → today at that time
+      - "Yesterday at 11:24 PM"    → yesterday at that time
+      - "Thursday at 11:35 AM"     → most recent Thursday strictly before today
+      - "Thursday 11:35 AM"        → same (variant without "at")
+      - "Apr 13, 2026 5:43 PM"     → explicit date with year
+      - "Apr 13 5:43 PM"           → explicit date (current year)
+
+    Returns datetime with second=0, microsecond=0.
+    Returns None if no pattern matches.
+
+    ``now`` defaults to ``datetime.now(UTC)``; pass it for deterministic tests.
+    """
+    if not text:
+        return None
+    text = text.strip()
+    if now is None:
+        now = datetime.now(UTC)
+    today = now.date()
+
+    def _build(d: date, h: int, m: int, ampm: str) -> datetime:
+        h24 = (h % 12) + (12 if ampm.upper() == "PM" else 0)
+        return datetime.combine(d, time(h24, m), tzinfo=UTC)
+
+    # Today at H:MM AM/PM
+    if (m := _TODAY_RE.match(text)):
+        return _build(today, int(m.group(1)), int(m.group(2)), m.group(3))
+
+    # Yesterday at H:MM AM/PM
+    if (m := _YESTERDAY_RE.match(text)):
+        return _build(today - timedelta(days=1), int(m.group(1)), int(m.group(2)), m.group(3))
+
+    # <Mon> D[, YYYY] H:MM AM/PM  — try full date before weekday to avoid false match
+    if (m := _FULL_DATE_RE.match(text)):
+        mon = m.group(1).lower()[:3]
+        if mon in _MONTHS:
+            month_num = _MONTHS.index(mon) + 1
+            day = int(m.group(2))
+            year = int(m.group(3)) if m.group(3) else today.year
+            try:
+                d = date(year, month_num, day)
+                return _build(d, int(m.group(4)), int(m.group(5)), m.group(6))
+            except ValueError:
+                pass
+
+    # <Weekday>[at] H:MM AM/PM  — most recent occurrence strictly before today
+    if (m := _WEEKDAY_RE.match(text)):
+        wd_name = m.group(1).lower()
+        if wd_name in _WEEKDAYS:
+            target_wd = _WEEKDAYS.index(wd_name)
+            today_wd = today.weekday()
+            # days_back must be at least 1 (strictly before today).
+            # If today is Thursday and text says "Thursday", that's last Thursday (7 days back).
+            days_back = (today_wd - target_wd) % 7
+            if days_back == 0:
+                days_back = 7
+            d = today - timedelta(days=days_back)
+            return _build(d, int(m.group(2)), int(m.group(3)), m.group(4))
+
+    return None
+
+
+def _assign_subminute_seconds(messages_in_dom_order: list[Message]) -> list[Message]:
+    """For each consecutive run of messages with the same (date, hour, minute),
+    set second=0, 1, 2, ... in DOM order.  Microsecond is always 0.
+
+    Returns a NEW list of Message objects (Message is frozen/dataclass).
+    Messages with posted_at=None are passed through unchanged.
+    """
+    out: list[Message] = []
+    last_minute_key: datetime | None = None
+    seq = 0
+    for msg in messages_in_dom_order:
+        if msg.posted_at is None:
+            out.append(msg)
+            continue
+        minute_key = msg.posted_at.replace(second=0, microsecond=0)
+        if minute_key == last_minute_key:
+            seq += 1
+        else:
+            seq = 0
+            last_minute_key = minute_key
+        new_posted_at = msg.posted_at.replace(second=seq, microsecond=0)
+        out.append(replace(msg, posted_at=new_posted_at))
+    return out
+
 
 def _parse_timestamp(raw: str, received_at: datetime) -> datetime:
-    """Convert a Whop timestamp string to a UTC-aware datetime.
+    """Convert a Whop timestamp string to a UTC-aware datetime (legacy wrapper).
 
-    Handles:
-      - "Jan 23, 2026 12:51 AM"  (absolute)
-      - "Yesterday at 11:51 PM"  (relative – treated as received_at.date() - 1d)
-      - "Today 10:45 PM"         (relative – treated as received_at.date())
-      - "Wednesday 10:45 PM"     (relative – not recoverable; return received_at)
-      - "10:49 PM"               (time-only – today)
+    Delegates to parse_whop_timestamp; falls back to received_at on failure.
     """
-    if not raw:
-        return received_at
-
-    # Absolute: "Jan 23, 2026 12:51 AM"
-    m = _TS_ABSOLUTE.search(raw)
-    if m:
-        try:
-            return _parse_absolute(m.group(0))
-        except (ValueError, KeyError):
-            pass
-
-    # Relative: "Today 10:45 PM" / "Yesterday at 11:51 PM"
-    raw_lower = raw.strip().lower()
-    time_part = re.search(r"(\d{1,2}:\d{2}\s+[AP]M)", raw, re.IGNORECASE)
-    if time_part:
-        t = _parse_time_part(time_part.group(1))
-        base = received_at.date()
-        if raw_lower.startswith("yesterday"):
-            from datetime import timedelta
-            base = base - timedelta(days=1)
-        # weekday names or "today" → use base (received_at.date())
-        return datetime(base.year, base.month, base.day, t[0], t[1], tzinfo=UTC)
-
-    return received_at
-
-
-def _parse_absolute(raw: str) -> datetime:
-    """Parse "Jan 23, 2026 12:51 AM" → datetime (UTC assumed)."""
-    # "Jan 23, 2026 12:51 AM"
-    pat = re.compile(
-        r"([A-Z][a-z]{2})\s+(\d{1,2}),\s+(\d{4})\s+(\d{1,2}):(\d{2})\s+([AP]M)"
-    )
-    m = pat.search(raw)
-    if not m:
-        raise ValueError(f"cannot parse absolute timestamp: {raw!r}")
-    month = _MONTH_MAP[m.group(1)]
-    day = int(m.group(2))
-    year = int(m.group(3))
-    hour = int(m.group(4))
-    minute = int(m.group(5))
-    ampm = m.group(6)
-    if ampm == "PM" and hour != 12:
-        hour += 12
-    elif ampm == "AM" and hour == 12:
-        hour = 0
-    return datetime(year, month, day, hour, minute, tzinfo=UTC)
+    parsed = parse_whop_timestamp(raw, now=received_at)
+    return parsed if parsed is not None else received_at
 
 
 def _parse_time_part(raw: str) -> tuple[int, int]:
@@ -481,4 +533,4 @@ def extract_messages(
             # Never let a single malformed element crash the whole extraction
             continue
 
-    return messages
+    return _assign_subminute_seconds(messages)

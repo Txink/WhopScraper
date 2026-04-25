@@ -9,20 +9,36 @@ export interface CardCompactProps {
   onExpand: () => void;
 }
 
+function truncate(text: string, maxLen: number): string {
+  if (text.length <= maxLen) return text;
+  return text.slice(0, maxLen) + "…";
+}
+
 export function CardCompact({ task, onExpand }: CardCompactProps) {
   const { type, status, instruction, message } = task;
   const badgeType = type === "option" ? "option" : "stock";
-  const title = formatTitle(instruction);
-  const ts = fmtTime(message.received_at);
+  const isParseError = status === "PARSE_ERROR";
+
+  // Symbol: "未识别" in yellow for PARSE_ERROR, otherwise formatted title
+  const symbolText = isParseError ? "未识别" : (formatTitle(instruction) || task.id);
+  const symbolClass = isParseError ? "card-symbol unidentified" : "card-symbol";
+
+  // Time: use posted_at
+  const ts = fmtTime(message.posted_at);
 
   const elapsed =
-    task.updated_at && message.received_at
-      ? fmtElapsed(elapsedMs(message.received_at, task.updated_at))
+    task.updated_at && message.posted_at
+      ? fmtElapsed(elapsedMs(message.posted_at, task.updated_at))
       : "—";
 
   // Build details line
   let detailContent: React.ReactNode = null;
-  if (instruction) {
+  if (isParseError) {
+    // Show truncated original message content for PARSE_ERROR
+    detailContent = (
+      <span className="msg-preview">{truncate(message.content, 60)}</span>
+    );
+  } else if (instruction) {
     const price = instruction.price != null ? `$${instruction.price.toFixed(2)}` : null;
     const qty = instruction.quantity != null ? String(instruction.quantity) : null;
     if (price && qty) {
@@ -48,7 +64,7 @@ export function CardCompact({ task, onExpand }: CardCompactProps) {
     <div className="card compact" onClick={onExpand} role="button" tabIndex={0}
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onExpand(); }}>
       <TypeBadge type={badgeType} />
-      <span className="card-symbol">{title}</span>
+      <span className={symbolClass}>{symbolText}</span>
       {sideLabel ? (
         <span className={`card-side ${sideClass}`}>{sideLabel}</span>
       ) : (

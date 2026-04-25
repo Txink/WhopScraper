@@ -132,6 +132,15 @@
   font-weight: 500;
   color: var(--fg-1);
 }
+.card-symbol.unidentified {
+  color: var(--warn);
+}
+
+/* ===== Message preview (PARSE_ERROR compact details) ===== */
+.msg-preview {
+  color: var(--fg-2);
+  font-style: italic;
+}
 
 /* ===== Side pill ===== */
 .card-side {

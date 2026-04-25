@@ -25,9 +25,9 @@ export function CardExpanded({ task, pushEvents, onCollapse }: CardExpandedProps
   const sideClass = side?.toLowerCase().includes("sell") ? "side-sell" : "side-buy";
   const sideLabel = side?.toLowerCase().includes("sell") ? "SELL" : (side ? "BUY" : null);
 
-  // Compute total elapsed
-  const totalMs = task.updated_at && message.received_at
-    ? elapsedMs(message.received_at, task.updated_at)
+  // Compute total elapsed (from when the message was posted, not received)
+  const totalMs = task.updated_at && message.posted_at
+    ? elapsedMs(message.posted_at, task.updated_at)
     : null;
 
   // Stage: 解析指令 — present if instruction exists
@@ -118,7 +118,7 @@ export function CardExpanded({ task, pushEvents, onCollapse }: CardExpandedProps
             <strong>原始消息</strong>
             <div className="msg-meta">
               <span className="k">ts</span>
-              <span className="v">{message.received_at.replace("T", " ").replace("Z", "")}</span>
+              <span className="v">{message.posted_at.replace("T", " ").replace("Z", "")}</span>
               <span className="k">domID</span>
               <span className="v">{message.id}</span>
             </div>
