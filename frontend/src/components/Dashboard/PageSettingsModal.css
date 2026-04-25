@@ -1,0 +1,44 @@
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100;
+  display: flex; align-items: center; justify-content: center;
+}
+.modal {
+  background: var(--bg-1); border: 1px solid var(--line); border-radius: 8px;
+  width: 600px; max-width: 90vw; max-height: 80vh; display: flex; flex-direction: column;
+  color: var(--fg-1);
+}
+.modal header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 16px; border-bottom: 1px solid var(--line);
+}
+.modal header h3 { margin: 0; font-size: 14px; }
+.modal .close {
+  background: none; border: none; color: var(--fg-2); cursor: pointer; font-size: 16px;
+}
+.modal-body { padding: 16px; overflow-y: auto; flex: 1; }
+.modal-body section { margin-bottom: 18px; }
+.modal-body section h4 { margin: 0 0 8px; font-size: 13px; }
+.modal-body label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.modal-body input[type="number"] { width: 100px; padding: 4px 6px; }
+.modal-body .hint { font-size: 11px; color: var(--fg-3); margin: 4px 0 0; }
+.modal-body .hint.small { margin-top: 2px; }
+.modal-body .tickers-table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+.modal-body .tickers-table th, .modal-body .tickers-table td { padding: 4px; text-align: left; }
+.modal-body .tickers-table input { width: 100%; padding: 4px 6px; }
+.modal-body .tickers-table .del {
+  background: transparent; border: none; color: var(--fg-3); cursor: pointer;
+}
+.modal-body .add-link {
+  background: none; border: 1px dashed var(--line); color: var(--fg-2);
+  padding: 6px 12px; cursor: pointer; border-radius: 4px;
+}
+.modal-body .error {
+  color: #cf6f6f; padding: 8px; background: rgba(207,111,111,0.1);
+  border-radius: 4px; margin-top: 8px; font-size: 12px;
+}
+.modal footer {
+  display: flex; justify-content: flex-end; gap: 8px; padding: 12px 16px;
+  border-top: 1px solid var(--line);
+}
+.modal footer button { padding: 6px 14px; cursor: pointer; }
+.modal footer button.primary { background: var(--brand); color: white; border: none; }

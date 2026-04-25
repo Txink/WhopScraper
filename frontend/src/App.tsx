@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { ReactElement } from "react";
 import { configureHttp, api, HttpError } from "./api/http";
 import { createWsClient } from "./api/ws";
 import { useConnStore } from "./stores/conn";
@@ -15,6 +14,7 @@ import { WhopPanel } from "./components/WhopPanel/WhopPanel";
 import { PageTabs } from "./components/Dashboard/PageTabs";
 import { PageInfoBar } from "./components/Dashboard/PageInfoBar";
 import { PageActionBar } from "./components/Dashboard/PageActionBar";
+import { PageSettingsModal } from "./components/Dashboard/PageSettingsModal";
 import { TaskStream } from "./components/Dashboard/TaskStream";
 import { EmptyState } from "./components/Dashboard/EmptyState";
 import { useStickyTop } from "./hooks/useStickyTop";
@@ -67,12 +67,6 @@ async function refreshPositions() {
 function handleLogout() {
   localStorage.removeItem("APP_TOKEN");
   window.location.reload();
-}
-
-// Stub — replaced by real component in Task N.
-// Kept here so the conditional render in Dashboard typechecks today.
-function PageSettingsModal(_: { page: unknown; onClose: () => void }): ReactElement | null {
-  return null;
 }
 
 function Dashboard({ token }: { token: string }) {
