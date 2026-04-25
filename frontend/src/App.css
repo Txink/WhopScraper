@@ -47,3 +47,23 @@
   border-radius: 3px;
   color: var(--fg-2);
 }
+
+.task-stream-placeholder {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.task-row-stub {
+  display: grid;
+  grid-template-columns: 220px 60px 100px 1fr;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  font-size: 12px;
+  font-family: var(--font-mono);
+}
+.task-row-stub code { color: var(--fg-3); }
+.task-row-stub span:nth-child(2) { color: var(--brand); }
+.task-row-stub span:nth-child(3) { color: var(--warn); }
