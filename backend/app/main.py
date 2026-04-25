@@ -150,7 +150,11 @@ def create_app(
         await state.hub.register_listeners()
 
         # 6. Whop registry (manages all Whop page listeners)
-        state.whop_registry = WhopRegistry(bus=bus, settings=settings)
+        state.whop_registry = WhopRegistry(
+            bus=bus,
+            settings=settings,
+            session_factory=state.session_factory,
+        )
         if not skip_whop:
             try:
                 await state.whop_registry.load_and_start_all()

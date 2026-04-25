@@ -15,6 +15,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
 from app.core.config import Settings
 from app.core.event_bus import Event, EventBus
 from app.core.events import Topics, WhopPagePayload
@@ -87,10 +89,12 @@ class WhopRegistry:
         *,
         bus: EventBus,
         settings: Settings,
+        session_factory: async_sessionmaker[AsyncSession] | None = None,
         pages_file: Path | None = None,
     ) -> None:
         self._bus = bus
         self._settings = settings
+        self._session_factory = session_factory
         self._pages_file = pages_file or _DEFAULT_PAGES_FILE
         self._lock = asyncio.Lock()
         self._entries: dict[str, WhopPageEntry] = {}
@@ -323,6 +327,8 @@ class WhopRegistry:
             poll_interval=self._settings.whop_poll_interval,
             headless=self._settings.whop_headless,
             skip_initial=skip_initial,
+            dedupe_processed_messages=entry.settings.dedupe_processed_messages,
+            session_factory=self._session_factory,
         )
         await listener.start()
         self._listeners[entry.id] = listener
