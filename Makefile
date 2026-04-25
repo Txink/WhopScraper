@@ -6,9 +6,11 @@ install:
 	cd frontend && npm install
 
 dev:
-	@echo "Starting backend + frontend in parallel..."
-	@(cd backend && uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000) & \
-	 (cd frontend && npm run dev) & wait
+	@echo "Starting backend (:8000) + frontend (:5173) — Ctrl+C 同时停两个"
+	@bash -c 'trap "kill 0" EXIT INT TERM; \
+		(cd backend && uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000 2>&1 | sed "s/^/[backend] /") & \
+		(cd frontend && npm run dev 2>&1 | sed "s/^/[frontend] /") & \
+		wait'
 
 backend-dev:
 	cd backend && uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
