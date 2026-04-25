@@ -243,7 +243,7 @@ class WhopCookieStatusOut(BaseModel):
 
 
 class OrphanCleanupRequest(BaseModel):
-    url: str
+    url: str | None = None  # None → 清理 legacy NULL-url tasks
 
 
 class OrphanCleanupResponse(BaseModel):

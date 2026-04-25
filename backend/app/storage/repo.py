@@ -552,16 +552,21 @@ async def load_seen_ids_for_url(session: AsyncSession, url: str) -> set[str]:
     return {row[0] for row in result.all()}
 
 
-async def delete_tasks_by_url(session: AsyncSession, url: str) -> int:
+async def delete_tasks_by_url(session: AsyncSession, url: str | None) -> int:
     """Delete all tasks (and linked instructions/push_events/messages) for a given url.
 
     Returns the count of tasks deleted.
+
+    url=None matches legacy rows where messages.url is NULL (pre-migration data).
+    SQL `=` never matches NULL, so callers wanting to clean those up must pass
+    None and we translate that into ``WHERE url IS NULL``.
 
     messages cascades on delete via ON DELETE CASCADE on the FK; instructions and
     push_events have no cascade so we must delete them explicitly first.
     """
     # Find affected task ids (task.id == message.id)
-    result = await session.execute(select(MessageRow.id).where(MessageRow.url == url))
+    where_clause = MessageRow.url.is_(None) if url is None else MessageRow.url == url
+    result = await session.execute(select(MessageRow.id).where(where_clause))
     task_ids = [r[0] for r in result.all()]
     if not task_ids:
         return 0

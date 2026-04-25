@@ -64,6 +64,25 @@ async def test_delete_tasks_by_url_unknown_url_returns_zero(
 
 
 @pytest.mark.asyncio
+async def test_delete_tasks_by_url_handles_null_url(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """url=None should delete tasks where messages.url is NULL (legacy data)."""
+    async with session_factory() as session:
+        await repo.save_task(session, _make_task("legacy1", None))
+        await repo.save_task(session, _make_task("legacy2", None))
+        await repo.save_task(session, _make_task("normal", "https://whop.com/x/"))
+
+    async with session_factory() as session:
+        deleted = await repo.delete_tasks_by_url(session, None)
+    assert deleted == 2
+
+    async with session_factory() as session:
+        ids = {r[0] for r in (await session.execute(select(TaskRow.id))).all()}
+    assert ids == {"normal"}
+
+
+@pytest.mark.asyncio
 async def test_delete_tasks_by_url_cascades_push_events_and_instructions(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:

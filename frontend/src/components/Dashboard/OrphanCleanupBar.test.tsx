@@ -62,11 +62,21 @@ describe("<OrphanCleanupBar>", () => {
     });
   });
 
-  it("disables button when only url-null tasks exist", () => {
+  it("clicking cleanup with null-url tasks calls API with null", async () => {
+    const spy = vi.spyOn(httpModule.api, "cleanupOrphanByUrl")
+      .mockResolvedValue({ deleted_count: 2 });
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+
     const orphanTasks = [makeTask("legacy1", null), makeTask("legacy2", null)];
+    useTasksStore.setState({ tasks: orphanTasks, pushEventsByTask: {} });
     render(<OrphanCleanupBar orphanTasks={orphanTasks} />);
-    expect(screen.getByText(/清理全部/)).toBeDisabled();
-    expect(screen.getByText(/2 条 url 缺失/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText(/清理全部/));
+
+    await waitFor(() => expect(spy).toHaveBeenCalledWith(null));
+    await waitFor(() => {
+      expect(useTasksStore.getState().tasks).toEqual([]);
+    });
   });
 
   it("partial failure shows error with failed urls", async () => {

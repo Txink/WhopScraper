@@ -12,12 +12,16 @@ export function OrphanCleanupBar({ orphanTasks }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const distinctUrls = useMemo(() => {
-    const s = new Set<string>();
+    const urls: (string | null)[] = [];
+    const seen = new Set<string | null>();
     for (const t of orphanTasks) {
-      const u = t.message?.url;
-      if (u) s.add(u);
+      const u = t.message?.url ?? null;
+      if (!seen.has(u)) {
+        seen.add(u);
+        urls.push(u);
+      }
     }
-    return Array.from(s);
+    return urls;
   }, [orphanTasks]);
 
   const total = orphanTasks.length;
@@ -27,12 +31,9 @@ export function OrphanCleanupBar({ orphanTasks }: Props) {
   if (total === 0) return null;
 
   const handleCleanupAll = async () => {
-    if (cleanableUrlCount === 0) {
-      alert("所有已停用任务的 url 都缺失（migration 前数据），无法按 url 清理。");
-      return;
-    }
-    const msg = nullUrlCount > 0
-      ? `确认从数据库删除 ${total - nullUrlCount} 条已停用任务？\n（另有 ${nullUrlCount} 条 url 缺失的旧数据无法清理。）\n此操作不可逆。`
+    // null url is now a valid cleanup target — no early disable.
+    const msg = nullUrlCount > 0 && cleanableUrlCount > 1
+      ? `确认从数据库删除全部 ${total} 条已停用任务？\n（其中 ${nullUrlCount} 条为 url 缺失的旧数据。）\n此操作不可逆。`
       : `确认从数据库删除全部 ${total} 条已停用任务？\n此操作不可逆。`;
     if (!confirm(msg)) return;
 
@@ -47,13 +48,14 @@ export function OrphanCleanupBar({ orphanTasks }: Props) {
           deletedTotal += r.deleted_count;
           useTasksStore.getState().removeTasksByUrl(url);
         } catch (e) {
-          failed.push(url);
-          console.warn("cleanup failed for", url, e);
+          const label = url ?? "(legacy null url)";
+          failed.push(label);
+          console.warn("cleanup failed for", label, e);
         }
       }
       if (failed.length > 0) {
         const detail = failed.slice(0, 3).join(", ") + (failed.length > 3 ? "…" : "");
-        setError(`已清理 ${deletedTotal} 条；${failed.length} 个 url 失败：${detail}`);
+        setError(`已清理 ${deletedTotal} 条；${failed.length} 个分组失败：${detail}`);
       }
     } catch (e) {
       setError(e instanceof HttpError ? e.message : (e instanceof Error ? e.message : String(e)));
@@ -66,14 +68,15 @@ export function OrphanCleanupBar({ orphanTasks }: Props) {
     <div className="orphan-cleanup-bar">
       <div className="orphan-cleanup-summary">
         <span>已停用任务共 {total} 条</span>
-        {cleanableUrlCount > 0 && <span className="dim">（{cleanableUrlCount} 个 url 来源）</span>}
-        {nullUrlCount > 0 && (
-          <span className="dim">· {nullUrlCount} 条 url 缺失（旧数据，无法清理）</span>
+        {cleanableUrlCount > 0 && (
+          <span className="dim">
+            （{cleanableUrlCount} 个 url 来源{nullUrlCount > 0 ? "，含旧数据" : ""}）
+          </span>
         )}
       </div>
       <button
         onClick={handleCleanupAll}
-        disabled={busy || cleanableUrlCount === 0}
+        disabled={busy}
         className="orphan-cleanup-btn"
       >
         {busy ? "清理中…" : "🗑 清理全部"}

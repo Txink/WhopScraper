@@ -367,7 +367,7 @@ export interface components {
         /** OrphanCleanupRequest */
         OrphanCleanupRequest: {
             /** Url */
-            url: string;
+            url?: string | null;
         };
         /** OrphanCleanupResponse */
         OrphanCleanupResponse: {

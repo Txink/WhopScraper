@@ -333,7 +333,7 @@ def build_http_router(
             listener from immediately re-creating tasks for the same url.
             """
             active_urls = {entry.url for entry, _ in whop_registry.list_pages()}
-            if body.url in active_urls:
+            if body.url is not None and body.url in active_urls:
                 raise HTTPException(
                     400,
                     detail="url is currently registered to an active page; remove the page first",

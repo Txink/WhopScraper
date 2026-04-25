@@ -131,7 +131,7 @@ def app_and_factory(
         asyncio.set_event_loop(None)
 
 
-def _make_orphan_task(id_: str, url: str) -> Task:
+def _make_orphan_task(id_: str, url: str | None) -> Task:
     msg = Message(
         id=id_,
         content="x",
@@ -198,3 +198,23 @@ def test_cleanup_rejects_active_page_url(app_and_factory) -> None:  # noqa: ANN0
     )
     assert resp.status_code == 400
     assert "active page" in resp.json()["detail"]
+
+
+def test_cleanup_null_url_deletes_legacy(app_and_factory) -> None:  # noqa: ANN001
+    """url=null in request body should delete legacy rows where messages.url IS NULL."""
+    client, factory, _registry, loop = app_and_factory
+
+    async def _seed() -> None:
+        async with factory() as session:
+            for i in range(3):
+                await repo.save_task(session, _make_orphan_task(f"legacy-{i}", None))
+
+    loop.run_until_complete(_seed())
+
+    resp = client.post(
+        "/api/whop/orphan/cleanup",
+        json={"url": None},
+        params={"token": _TOKEN},
+    )
+    assert resp.status_code == 200
+    assert resp.json() == {"deleted_count": 3}
