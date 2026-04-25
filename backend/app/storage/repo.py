@@ -389,6 +389,20 @@ async def load_task(session: AsyncSession, task_id: str) -> Task | None:
     return _rows_to_task(task_row, msg_row, inst_row, push_rows)
 
 
+async def load_task_by_order_id(session: AsyncSession, order_id: str) -> Task | None:
+    """Load Task by order_id (denormalized column on tasks table).
+
+    Returns None if no Task with the given order_id exists.
+    """
+    result = await session.execute(
+        select(TaskRow).where(TaskRow.order_id == order_id)
+    )
+    task_row = result.scalar_one_or_none()
+    if task_row is None:
+        return None
+    return await load_task(session, task_row.id)
+
+
 async def list_tasks(
     session: AsyncSession,
     *,

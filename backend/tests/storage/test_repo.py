@@ -24,7 +24,13 @@ from app.domain.message import Message
 from app.domain.push_event import PushEvent, PushState
 from app.domain.status import Status
 from app.domain.task import Task
-from app.storage.repo import append_push_event, list_tasks, load_task, save_task
+from app.storage.repo import (
+    append_push_event,
+    list_tasks,
+    load_task,
+    load_task_by_order_id,
+    save_task,
+)
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -397,4 +403,40 @@ async def test_load_task_returns_none_when_missing(
 ) -> None:
     async with session_factory() as session:
         result = await load_task(session, "nonexistent-id-xyz")
+    assert result is None
+
+
+# ---------------------------------------------------------------------------
+# 10. load_task_by_order_id — found
+# ---------------------------------------------------------------------------
+
+
+async def test_load_task_by_order_id_found(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    task = _make_task("msg-oid-001", status=Status.PENDING)
+    task.order_id = "ORD-XYZ-001"
+
+    async with session_factory() as session:
+        await save_task(session, task)
+
+    async with session_factory() as session:
+        loaded = await load_task_by_order_id(session, "ORD-XYZ-001")
+
+    assert loaded is not None
+    assert loaded.id == "msg-oid-001"
+    assert loaded.order_id == "ORD-XYZ-001"
+    assert loaded.status == Status.PENDING
+
+
+# ---------------------------------------------------------------------------
+# 11. load_task_by_order_id — not found returns None
+# ---------------------------------------------------------------------------
+
+
+async def test_load_task_by_order_id_not_found_returns_none(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    async with session_factory() as session:
+        result = await load_task_by_order_id(session, "does-not-exist-ord")
     assert result is None
