@@ -9,11 +9,13 @@ Provides six endpoints:
   GET  /api/health               — broker + mode liveness status
 
 Whop monitoring endpoints (when whop_registry is provided):
-  GET    /api/whop/pages                   — list monitored pages
-  POST   /api/whop/pages                   — add a page
-  DELETE /api/whop/pages/{page_id}         — remove a page
-  POST   /api/whop/pages/{page_id}/restart — restart listener
-  GET    /api/whop/cookie                  — cookie file status
+  GET    /api/whop/pages                       — list monitored pages
+  POST   /api/whop/pages                       — add a page
+  DELETE /api/whop/pages/{page_id}             — remove a page
+  POST   /api/whop/pages/{page_id}/restart     — restart listener
+  PATCH  /api/whop/pages/{page_id}/settings    — partially update settings
+  GET    /api/whop/pages/defaults              — default settings template
+  GET    /api/whop/cookie                      — cookie file status
 
 All routes are gated by ``require_app_token`` applied at the router level.
 
@@ -44,9 +46,12 @@ from app.api.schemas import (
     StatsTodayOut,
     TaskListOut,
     TaskOut,
+    TickerConfigOut,
     WhopCookieStatusOut,
     WhopPageCreate,
     WhopPageOut,
+    WhopPageSettingsOut,
+    WhopPageSettingsPatch,
     WhopPagesOut,
     task_to_out,
     task_to_summary,
@@ -267,6 +272,56 @@ def build_http_router(
                 if e.id == page_id:
                     return whop_page_to_out(e, ll)
             raise HTTPException(500, detail="restart succeeded but lost track")
+
+        @router.get(
+            "/api/whop/pages/defaults", response_model=WhopPageSettingsOut
+        )
+        async def whop_settings_defaults(source: str) -> WhopPageSettingsOut:
+            from app.whop.page_settings import default_settings_for
+
+            try:
+                s = default_settings_for(source)  # type: ignore[arg-type]
+            except ValueError as exc:
+                raise HTTPException(400, detail=str(exc)) from exc
+            return WhopPageSettingsOut(
+                dedupe_processed_messages=s.dedupe_processed_messages,
+                price_deviation_tolerance=s.price_deviation_tolerance,
+                tickers=(
+                    {
+                        k: TickerConfigOut(trade_quantity=v.trade_quantity)
+                        for k, v in s.tickers.items()
+                    }
+                    if s.tickers is not None
+                    else None
+                ),
+            )
+
+        @router.patch(
+            "/api/whop/pages/{page_id}/settings", response_model=WhopPageOut
+        )
+        async def patch_whop_page_settings(
+            page_id: str, body: WhopPageSettingsPatch
+        ) -> WhopPageOut:
+            patch_dict: dict[str, object] = {}
+            if body.dedupe_processed_messages is not None:
+                patch_dict["dedupe_processed_messages"] = body.dedupe_processed_messages
+            if body.price_deviation_tolerance is not None:
+                patch_dict["price_deviation_tolerance"] = body.price_deviation_tolerance
+            if body.tickers is not None:
+                patch_dict["tickers"] = {
+                    k: {"trade_quantity": v.trade_quantity}
+                    for k, v in body.tickers.items()
+                }
+            try:
+                entry = await whop_registry.update_settings(page_id, patch_dict)
+            except KeyError as exc:
+                raise HTTPException(404, detail=str(exc)) from exc
+            except ValueError as exc:
+                raise HTTPException(400, detail=str(exc)) from exc
+            for e, ll in whop_registry.list_pages():
+                if e.id == entry.id:
+                    return whop_page_to_out(e, ll)
+            raise HTTPException(500, detail="updated but lost track")
 
         @router.get("/api/whop/cookie", response_model=WhopCookieStatusOut)
         async def whop_cookie_status() -> WhopCookieStatusOut:

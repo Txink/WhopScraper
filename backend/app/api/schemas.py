@@ -6,7 +6,7 @@ Converter functions translate app.domain.* dataclasses → Pydantic models.
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Literal
 
 from pydantic import BaseModel, Field
 
@@ -32,6 +32,7 @@ class MessageOut(BaseModel):
     source: str
     posted_at: datetime
     received_at: datetime
+    url: str | None = None
     quoted_message_id: str | None
 
 
@@ -181,6 +182,29 @@ class CancelOk(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Per-page Whop settings
+# ---------------------------------------------------------------------------
+
+
+class TickerConfigOut(BaseModel):
+    trade_quantity: int
+
+
+class WhopPageSettingsOut(BaseModel):
+    dedupe_processed_messages: bool
+    price_deviation_tolerance: float
+    tickers: dict[str, TickerConfigOut] | None = None  # None = option page
+
+
+class WhopPageSettingsPatch(BaseModel):
+    """Local update; any unspecified field = unchanged."""
+
+    dedupe_processed_messages: bool | None = None
+    price_deviation_tolerance: float | None = Field(default=None, ge=0)
+    tickers: dict[str, TickerConfigOut] | None = None
+
+
+# ---------------------------------------------------------------------------
 # Whop monitoring management
 # ---------------------------------------------------------------------------
 
@@ -191,14 +215,13 @@ class WhopPageOut(BaseModel):
     source: str
     name: str
     added_at: datetime
+    settings: WhopPageSettingsOut
     # Live status (None when listener absent)
     running: bool
     started_at: datetime | None
     last_poll_at: datetime | None
     messages_published: int
     last_error: str | None
-    # Per-page listener settings (Task D stub: dict; Task H replaces with WhopPageSettingsOut).
-    settings: dict[str, Any] | None = None
 
 
 class WhopPagesOut(BaseModel):
@@ -233,6 +256,7 @@ def message_to_out(msg: Message) -> MessageOut:
         source=msg.source,
         posted_at=msg.posted_at,
         received_at=msg.received_at,
+        url=msg.url,
         quoted_message_id=msg.quoted.id if msg.quoted is not None else None,
     )
 
@@ -352,9 +376,18 @@ def whop_page_to_out(
     listener: WhopListener | None,
 ) -> WhopPageOut:
     """Build WhopPageOut from a (entry, listener) pair from registry.list_pages()."""
-    from app.whop.page_settings import page_settings_to_dict
-
-    settings_dict = page_settings_to_dict(entry.settings)
+    settings_out = WhopPageSettingsOut(
+        dedupe_processed_messages=entry.settings.dedupe_processed_messages,
+        price_deviation_tolerance=entry.settings.price_deviation_tolerance,
+        tickers=(
+            {
+                k: TickerConfigOut(trade_quantity=v.trade_quantity)
+                for k, v in entry.settings.tickers.items()
+            }
+            if entry.settings.tickers is not None
+            else None
+        ),
+    )
     if listener is not None:
         return WhopPageOut(
             id=entry.id,
@@ -362,12 +395,12 @@ def whop_page_to_out(
             source=entry.source,
             name=entry.name,
             added_at=entry.added_at,
+            settings=settings_out,
             running=listener.running,
             started_at=listener.started_at,
             last_poll_at=listener.last_poll_at,
             messages_published=listener.messages_published,
             last_error=listener.last_error,
-            settings=settings_dict,
         )
     return WhopPageOut(
         id=entry.id,
@@ -375,10 +408,10 @@ def whop_page_to_out(
         source=entry.source,
         name=entry.name,
         added_at=entry.added_at,
+        settings=settings_out,
         running=False,
         started_at=None,
         last_poll_at=None,
         messages_published=0,
         last_error=None,
-        settings=settings_dict,
     )
