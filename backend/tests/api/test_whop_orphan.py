@@ -225,6 +225,35 @@ def test_cleanup_force_allows_active_page_url(app_and_factory) -> None:  # noqa:
     assert resp.json() == {"deleted_count": 2}
 
 
+def test_cleanup_force_also_clears_listener_seen_cache(app_and_factory) -> None:  # noqa: ANN001
+    client, factory, registry, loop = app_and_factory
+    entry = loop.run_until_complete(
+        registry.add_page(
+            url="https://whop.com/force-seen/app",
+            source="stock",
+            name="force-seen",
+        )
+    )
+    loop.run_until_complete(registry.start_page(entry.id))
+    listener = registry.list_pages()[0][1]
+    assert listener is not None
+    listener._seen.update({"dom-a", "dom-b"})  # test-only state injection
+
+    async def _seed() -> None:
+        async with factory() as session:
+            await repo.save_task(session, _make_orphan_task("fs-1", entry.url))
+
+    loop.run_until_complete(_seed())
+
+    resp = client.post(
+        "/api/whop/orphan/cleanup",
+        json={"url": entry.url, "force": True},
+        params={"token": _TOKEN},
+    )
+    assert resp.status_code == 200
+    assert listener._seen == set()
+
+
 def test_cleanup_null_url_deletes_legacy(app_and_factory) -> None:  # noqa: ANN001
     """url=null in request body should delete legacy rows where messages.url IS NULL."""
     client, factory, _registry, loop = app_and_factory

@@ -105,6 +105,10 @@ class WhopListener:
     def source(self) -> str:
         return self._source
 
+    def reset_seen_cache(self) -> None:
+        """Clear in-memory dedupe ids (used after cleanup)."""
+        self._seen.clear()
+
     async def _prime_dedupe(self) -> None:
         """Seed _seen from DB so restart-time message replays are filtered.
 

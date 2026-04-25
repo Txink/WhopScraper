@@ -14,6 +14,7 @@ from app.core.event_bus import Event, EventBus
 from app.core.events import TaskPayload, Topics
 from app.domain.instruction import (
     InstructionType,
+    OptionInstruction,
     StockInstruction,
 )
 from app.domain.message import Message
@@ -50,6 +51,43 @@ def _stock_task(
         context_source=None,
         ticker=ticker,
         symbol=f"{ticker}.US",
+    )
+    task.mark_parsing()
+    task.attach_instruction(inst)
+    return task
+
+
+def _option_task(
+    ticker: str = "NVDA",
+    qty: int | None = None,
+    url: str | None = "https://whop.com/o/app/",
+    price: float = 2.0,
+) -> Task:
+    msg = Message(
+        id="o-" + ticker,
+        content="x",
+        raw_content="x",
+        author=None,
+        posted_at=datetime.now(UTC),
+        received_at=datetime.now(UTC),
+        source="option",
+        url=url,
+    )
+    task = Task.new_from_message(msg)
+    inst = OptionInstruction(
+        instruction_type=InstructionType.BUY,
+        price=price,
+        price_range=None,
+        quantity=qty,
+        position_size=None,
+        stop_loss_price=None,
+        take_profit_price=None,
+        context_source=None,
+        ticker=ticker,
+        symbol=f"{ticker}260426C100000.US",
+        option_type="CALL",
+        strike=100.0,
+        expiry=datetime.now(UTC).date(),
     )
     task.mark_parsing()
     task.attach_instruction(inst)
@@ -330,3 +368,92 @@ async def test_block_non_today_default_off_allows_old():
     await bus.wait_idle()
 
     assert len(broker.submitted) == 1  # not blocked
+
+
+@pytest.mark.asyncio
+async def test_option_skips_when_no_option_rules_enabled():
+    bus = EventBus()
+    broker = _RecordingBroker()
+    page_settings = PageSettings(
+        dedupe_processed_messages=True,
+        price_deviation_tolerance=5.0,
+        tickers=None,
+        option_buy_quantity_enabled=False,
+        option_total_price_limit_enabled=False,
+    )
+    register_trader(bus, broker, _config(), registry=_registry_with(page_settings))
+
+    task = _option_task()
+    await bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
+    await bus.wait_idle()
+
+    assert broker.submitted == []
+    assert task.status.value == "SKIPPED"
+    assert "disabled" in (task.reject_reason or "")
+
+
+@pytest.mark.asyncio
+async def test_option_uses_quantity_rule_when_enabled():
+    bus = EventBus()
+    broker = _RecordingBroker()
+    page_settings = PageSettings(
+        dedupe_processed_messages=True,
+        price_deviation_tolerance=5.0,
+        tickers=None,
+        option_buy_quantity_enabled=True,
+        option_buy_quantity=3,
+        option_total_price_limit_enabled=False,
+    )
+    register_trader(bus, broker, _config(), registry=_registry_with(page_settings))
+
+    task = _option_task(price=2.0)
+    await bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
+    await bus.wait_idle()
+
+    assert len(broker.submitted) == 1
+    assert broker.submitted[0]["quantity"] == 3
+
+
+@pytest.mark.asyncio
+async def test_option_uses_total_limit_rule_when_enabled():
+    bus = EventBus()
+    broker = _RecordingBroker()
+    page_settings = PageSettings(
+        dedupe_processed_messages=True,
+        price_deviation_tolerance=5.0,
+        tickers=None,
+        option_buy_quantity_enabled=False,
+        option_total_price_limit_enabled=True,
+        option_total_price_limit=450.0,
+    )
+    register_trader(bus, broker, _config(), registry=_registry_with(page_settings))
+
+    task = _option_task(price=2.0)
+    await bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
+    await bus.wait_idle()
+
+    assert len(broker.submitted) == 1
+    assert broker.submitted[0]["quantity"] == 2  # floor(450 / (2.0 * 100))
+
+
+@pytest.mark.asyncio
+async def test_option_uses_both_rules_with_min_quantity():
+    bus = EventBus()
+    broker = _RecordingBroker()
+    page_settings = PageSettings(
+        dedupe_processed_messages=True,
+        price_deviation_tolerance=5.0,
+        tickers=None,
+        option_buy_quantity_enabled=True,
+        option_buy_quantity=5,
+        option_total_price_limit_enabled=True,
+        option_total_price_limit=450.0,
+    )
+    register_trader(bus, broker, _config(), registry=_registry_with(page_settings))
+
+    task = _option_task(price=2.0)
+    await bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
+    await bus.wait_idle()
+
+    assert len(broker.submitted) == 1
+    assert broker.submitted[0]["quantity"] == 2

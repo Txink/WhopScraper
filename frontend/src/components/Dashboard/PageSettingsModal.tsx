@@ -15,10 +15,30 @@ interface TickerRow {
   trade_quantity: number;
 }
 
+function fmtTs(ts: string | null): string {
+  if (!ts) return "—";
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return ts;
+  return d.toLocaleString();
+}
+
 export function PageSettingsModal({ page, onClose }: Props) {
   const [dedupe, setDedupe] = useState(page.settings.dedupe_processed_messages);
   const [tolerance, setTolerance] = useState(String(page.settings.price_deviation_tolerance));
   const [blockNonToday, setBlockNonToday] = useState(page.settings.block_non_today_messages);
+  const [launchHeadless, setLaunchHeadless] = useState(Boolean(page.settings.launch_headless));
+  const [optionBuyQtyEnabled, setOptionBuyQtyEnabled] = useState(
+    Boolean(page.settings.option_buy_quantity_enabled)
+  );
+  const [optionBuyQty, setOptionBuyQty] = useState(
+    page.settings.option_buy_quantity != null ? String(page.settings.option_buy_quantity) : ""
+  );
+  const [optionTotalLimitEnabled, setOptionTotalLimitEnabled] = useState(
+    Boolean(page.settings.option_total_price_limit_enabled)
+  );
+  const [optionTotalLimit, setOptionTotalLimit] = useState(
+    page.settings.option_total_price_limit != null ? String(page.settings.option_total_price_limit) : ""
+  );
 
   const initialTickers = page.settings.tickers ?? {};
   const nextRowId = useRef(Object.keys(initialTickers).length);
@@ -88,6 +108,21 @@ export function PageSettingsModal({ page, onClose }: Props) {
           return;
         }
       }
+    } else if (page.source === "option") {
+      if (optionBuyQtyEnabled) {
+        const optionQtyNum = Number(optionBuyQty);
+        if (Number.isNaN(optionQtyNum) || optionQtyNum <= 0 || !Number.isInteger(optionQtyNum)) {
+          setError("期权购买张数必须是 > 0 的整数");
+          return;
+        }
+      }
+      if (optionTotalLimitEnabled) {
+        const optionTotalNum = Number(optionTotalLimit);
+        if (Number.isNaN(optionTotalNum) || optionTotalNum <= 0) {
+          setError("期权总价上限必须 > 0");
+          return;
+        }
+      }
     }
     setSaving(true);
     try {
@@ -95,11 +130,17 @@ export function PageSettingsModal({ page, onClose }: Props) {
         dedupe_processed_messages: dedupe,
         price_deviation_tolerance: tolNum,
         block_non_today_messages: blockNonToday,
+        launch_headless: launchHeadless,
       };
       if (page.source === "stock") {
         patch.tickers = Object.fromEntries(
           tickerRows.map(r => [r.ticker.toUpperCase(), { trade_quantity: r.trade_quantity }])
         );
+      } else if (page.source === "option") {
+        patch.option_buy_quantity_enabled = optionBuyQtyEnabled;
+        patch.option_buy_quantity = optionBuyQtyEnabled ? Number(optionBuyQty) : null;
+        patch.option_total_price_limit_enabled = optionTotalLimitEnabled;
+        patch.option_total_price_limit = optionTotalLimitEnabled ? Number(optionTotalLimit) : null;
       }
       await api.updateWhopPageSettings(page.id, patch as WhopPageSettings);
       onClose();
@@ -161,6 +202,20 @@ export function PageSettingsModal({ page, onClose }: Props) {
             </p>
           </section>
 
+          <section>
+            <label>
+              <input
+                type="checkbox"
+                checked={launchHeadless}
+                onChange={e => setLaunchHeadless(e.target.checked)}
+              />
+              <span>用无头模式启动网页（Headless）</span>
+            </label>
+            <p className="hint small">
+              重启监听后生效；关闭后会以可见浏览器窗口启动该页面监听。
+            </p>
+          </section>
+
           {page.source === "stock" && (
             <section>
               <h4>股票配置</h4>
@@ -197,6 +252,87 @@ export function PageSettingsModal({ page, onClose }: Props) {
               <button onClick={handleAddTicker} className="add-link">+ 添加 ticker</button>
             </section>
           )}
+
+          {page.source === "option" && (
+            <section>
+              <h4>期权购买数量配置</h4>
+
+              <div className="option-rule-row">
+                <label className="option-rule-toggle">
+                  <input
+                    type="checkbox"
+                    checked={optionBuyQtyEnabled}
+                    onChange={e => setOptionBuyQtyEnabled(e.target.checked)}
+                  />
+                  <span>启用期权购买张数</span>
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  placeholder="期权购买张数"
+                  className="option-rule-input"
+                  value={optionBuyQty}
+                  disabled={!optionBuyQtyEnabled}
+                  onChange={e => setOptionBuyQty(e.target.value)}
+                />
+                <p className="hint small option-rule-desc">固定按该张数下单</p>
+              </div>
+
+              <div className="option-rule-row">
+                <label className="option-rule-toggle">
+                  <input
+                    type="checkbox"
+                    checked={optionTotalLimitEnabled}
+                    onChange={e => setOptionTotalLimitEnabled(e.target.checked)}
+                  />
+                  <span>启用期权总价上限（USD）</span>
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="期权总价上限（USD）"
+                  className="option-rule-input"
+                  value={optionTotalLimit}
+                  disabled={!optionTotalLimitEnabled}
+                  onChange={e => setOptionTotalLimit(e.target.value)}
+                />
+                <p className="hint small option-rule-desc">按总价可覆盖的最大张数</p>
+              </div>
+
+              <p className="hint small">
+                两项都不启用时，trader 会跳过下单并标记 SKIPPED；启用一项按该规则计算，启用两项按同时满足（取更小张数）计算。
+              </p>
+            </section>
+          )}
+
+          <section>
+            <h4>监听诊断</h4>
+            <div className="diag-grid">
+              <span className="k">当前状态</span>
+              <span className={`v ${page.running ? "ok" : "muted"}`}>
+                {page.running ? "运行中" : "已停止"}
+              </span>
+
+              <span className="k">启动时间</span>
+              <span className="v">{fmtTs(page.started_at)}</span>
+
+              <span className="k">最近轮询</span>
+              <span className="v">{fmtTs(page.last_poll_at)}</span>
+
+              <span className="k">抓到消息数</span>
+              <span className="v">{page.messages_published}</span>
+
+              <span className="k">最近错误</span>
+              <span className={`v ${page.last_error ? "err" : "muted"}`}>
+                {page.last_error ?? "无"}
+              </span>
+            </div>
+            <p className="hint small">
+              若“运行中”但“最近轮询/抓到消息数”长期不变，可先关闭去重后重启监听，再观察该区块是否更新。
+            </p>
+          </section>
 
           <section className="danger-zone">
             <h4>危险操作</h4>

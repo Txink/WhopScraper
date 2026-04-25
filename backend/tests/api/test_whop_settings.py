@@ -127,6 +127,7 @@ def test_get_pages_includes_settings(
     assert s["dedupe_processed_messages"] is True
     assert s["price_deviation_tolerance"] == 1.0
     assert s["block_non_today_messages"] is False
+    assert s["launch_headless"] is False
     assert s["tickers"] == {}
 
 
@@ -272,6 +273,10 @@ def test_get_settings_defaults_stock(
     assert s["price_deviation_tolerance"] == 1.0
     assert s["block_non_today_messages"] is False
     assert s["tickers"] == {}
+    assert s["option_buy_quantity_enabled"] is False
+    assert s["option_buy_quantity"] is None
+    assert s["option_total_price_limit_enabled"] is False
+    assert s["option_total_price_limit"] is None
 
 
 def test_get_settings_defaults_option(
@@ -285,7 +290,35 @@ def test_get_settings_defaults_option(
     assert s["dedupe_processed_messages"] is True
     assert s["price_deviation_tolerance"] == 5.0
     assert s["block_non_today_messages"] is False
+    assert s["launch_headless"] is False
     assert s["tickers"] is None
+    assert s["option_buy_quantity_enabled"] is False
+    assert s["option_buy_quantity"] is None
+    assert s["option_total_price_limit_enabled"] is False
+    assert s["option_total_price_limit"] is None
+
+
+def test_patch_settings_option_rules(
+    registry_and_client: tuple[WhopRegistry, TestClient, WhopPageEntry, WhopPageEntry],
+) -> None:
+    """Option page patch accepts local option quantity/total rules."""
+    _, client, _, opt = registry_and_client
+    resp = client.patch(
+        f"/api/whop/pages/{opt.id}/settings",
+        json={
+            "option_buy_quantity_enabled": True,
+            "option_buy_quantity": 4,
+            "option_total_price_limit_enabled": True,
+            "option_total_price_limit": 1200.0,
+        },
+        params={"token": _TOKEN},
+    )
+    assert resp.status_code == 200
+    s = resp.json()["settings"]
+    assert s["option_buy_quantity_enabled"] is True
+    assert s["option_buy_quantity"] == 4
+    assert s["option_total_price_limit_enabled"] is True
+    assert s["option_total_price_limit"] == 1200.0
 
 
 def test_get_settings_defaults_invalid_source(

@@ -637,6 +637,16 @@ export interface components {
             price_deviation_tolerance: number;
             /** Block Non Today Messages */
             block_non_today_messages: boolean;
+            /** Launch Headless */
+            launch_headless?: boolean | null;
+            /** Option Buy Quantity Enabled */
+            option_buy_quantity_enabled?: boolean | null;
+            /** Option Buy Quantity */
+            option_buy_quantity?: number | null;
+            /** Option Total Price Limit Enabled */
+            option_total_price_limit_enabled?: boolean | null;
+            /** Option Total Price Limit */
+            option_total_price_limit?: number | null;
             /** Tickers */
             tickers?: {
                 [key: string]: components["schemas"]["TickerConfigOut"];
@@ -653,6 +663,16 @@ export interface components {
             price_deviation_tolerance?: number | null;
             /** Block Non Today Messages */
             block_non_today_messages?: boolean | null;
+            /** Launch Headless */
+            launch_headless?: boolean | null;
+            /** Option Buy Quantity Enabled */
+            option_buy_quantity_enabled?: boolean | null;
+            /** Option Buy Quantity */
+            option_buy_quantity?: number | null;
+            /** Option Total Price Limit Enabled */
+            option_total_price_limit_enabled?: boolean | null;
+            /** Option Total Price Limit */
+            option_total_price_limit?: number | null;
             /** Tickers */
             tickers?: {
                 [key: string]: components["schemas"]["TickerConfigOut"];

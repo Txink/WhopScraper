@@ -6,8 +6,9 @@ Behavior (Task G):
 - Stock whitelist gate: if page settings has tickers, ticker must be in whitelist
   or task is SKIPPED with a clear reason.
 - Stock qty: ``max(int(trade_quantity * position_size_to_fraction(position_size)), 1)``.
-- Option qty: unchanged from previous behavior + max_option_total_price /
-  max_option_quantity guards.
+- Option qty: derived from per-page option settings (quantity rule / total-limit
+  rule, independently switchable). If both are disabled, task is SKIPPED.
+  Global max_option_total_price / max_option_quantity guards still apply.
 - Order type decision based on ``deviation = abs(market - signal) / signal * 100``.
   ≤ tolerance → MARKET; > tolerance → LIMIT @ signal_price.
   First-pass: market_price = signal_price (deviation always 0 → always MARKET).
@@ -128,12 +129,58 @@ def register_trader(
                     await _publish_skip(task, "orphan stock task missing instruction.quantity")
                     return
         elif isinstance(inst, OptionInstruction):
-            computed_qty = inst.quantity or 1
             price_for_check = (
                 inst.price
                 if inst.price is not None
                 else (inst.price_range[0] if inst.price_range else 0.0)
             )
+            option_qty_enabled = (
+                page_settings.option_buy_quantity_enabled if page_settings is not None else False
+            )
+            option_total_enabled = (
+                page_settings.option_total_price_limit_enabled if page_settings is not None else False
+            )
+            if page_settings is not None and not option_qty_enabled and not option_total_enabled:
+                await _publish_skip(
+                    task,
+                    "option settings: both quantity and total-limit rules are disabled",
+                )
+                return
+
+            qty_by_config: int | None = None
+            if option_qty_enabled:
+                qty_by_config = page_settings.option_buy_quantity if page_settings is not None else None
+                if qty_by_config is None or qty_by_config <= 0:
+                    await _publish_skip(task, "option settings: invalid option_buy_quantity")
+                    return
+
+            qty_by_total: int | None = None
+            if option_total_enabled:
+                if page_settings is None or page_settings.option_total_price_limit is None:
+                    await _publish_skip(task, "option settings: missing option_total_price_limit")
+                    return
+                if price_for_check <= 0:
+                    await _publish_skip(task, "option settings: no valid option price for total-limit")
+                    return
+                per_contract_total = price_for_check * 100
+                qty_by_total = int(page_settings.option_total_price_limit // per_contract_total)
+                if qty_by_total <= 0:
+                    await _publish_skip(
+                        task,
+                        "option settings: total-limit too small for even one contract",
+                    )
+                    return
+
+            if qty_by_config is not None and qty_by_total is not None:
+                computed_qty = min(qty_by_config, qty_by_total)
+            elif qty_by_config is not None:
+                computed_qty = qty_by_config
+            elif qty_by_total is not None:
+                computed_qty = qty_by_total
+            else:
+                # Orphan option task or legacy page without local option controls.
+                computed_qty = inst.quantity or 1
+
             # One option contract = 100 shares equivalent (matches old auto_trader.py)
             total = price_for_check * computed_qty * 100
             if total > config.max_option_total_price:

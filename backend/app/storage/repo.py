@@ -22,6 +22,7 @@ from __future__ import annotations
 
 from datetime import UTC, date, datetime, time
 from typing import Any
+from urllib.parse import urlsplit, urlunsplit
 
 from sqlalchemy import delete as sa_delete
 from sqlalchemy import func, select
@@ -551,13 +552,31 @@ async def list_positions(session: AsyncSession) -> list[PositionRow]:
     return list(result.scalars())
 
 
+def _canonicalize_url(url: str | None) -> str | None:
+    if url is None:
+        return None
+    s = str(url).strip()
+    if not s:
+        return None
+    p = urlsplit(s)
+    path = p.path.rstrip("/") or "/"
+    return urlunsplit((p.scheme.lower(), p.netloc.lower(), path, "", ""))
+
+
 async def load_seen_ids_for_url(session: AsyncSession, url: str) -> set[str]:
     """SELECT id FROM messages WHERE url=? — 用于 listener 启动时去重灌 _seen。
 
     返回该 url 对应所有已落库的 message id 集合（即 task id，因为 task.id = message.id）。
     """
-    result = await session.execute(select(MessageRow.id).where(MessageRow.url == url))
-    return {row[0] for row in result.all()}
+    canonical = _canonicalize_url(url)
+    if canonical is None:
+        return set()
+    result = await session.execute(select(MessageRow.id, MessageRow.url).where(MessageRow.url.is_not(None)))
+    return {
+        msg_id
+        for msg_id, raw_url in result.all()
+        if _canonicalize_url(raw_url) == canonical
+    }
 
 
 async def delete_tasks_by_url(session: AsyncSession, url: str | None) -> int:
@@ -569,13 +588,24 @@ async def delete_tasks_by_url(session: AsyncSession, url: str | None) -> int:
     SQL `=` never matches NULL, so callers wanting to clean those up must pass
     None and we translate that into ``WHERE url IS NULL``.
 
-    messages cascades on delete via ON DELETE CASCADE on the FK; instructions and
-    push_events have no cascade so we must delete them explicitly first.
+    We intentionally delete ``messages`` explicitly (instead of relying solely on
+    FK cascade) so cleanup remains correct even if SQLite FK enforcement is off.
+    instructions and push_events also require explicit deletion.
     """
     # Find affected task ids (task.id == message.id)
-    where_clause = MessageRow.url.is_(None) if url is None else MessageRow.url == url
-    result = await session.execute(select(MessageRow.id).where(where_clause))
-    task_ids = [r[0] for r in result.all()]
+    if url is None:
+        result = await session.execute(select(MessageRow.id).where(MessageRow.url.is_(None)))
+        task_ids = [r[0] for r in result.all()]
+    else:
+        canonical = _canonicalize_url(url)
+        if canonical is None:
+            return 0
+        result = await session.execute(select(MessageRow.id, MessageRow.url).where(MessageRow.url.is_not(None)))
+        task_ids = [
+            msg_id
+            for msg_id, raw_url in result.all()
+            if _canonicalize_url(raw_url) == canonical
+        ]
     if not task_ids:
         return 0
 
@@ -587,7 +617,9 @@ async def delete_tasks_by_url(session: AsyncSession, url: str | None) -> int:
     await session.execute(
         sa_delete(InstructionRow).where(InstructionRow.task_id.in_(task_ids))
     )
-    # Delete tasks — messages cascades via FK ON DELETE CASCADE
+    # Delete tasks
     await session.execute(sa_delete(TaskRow).where(TaskRow.id.in_(task_ids)))
+    # Delete messages explicitly (defensive against FK pragma being disabled).
+    await session.execute(sa_delete(MessageRow).where(MessageRow.id.in_(task_ids)))
     await session.commit()
     return len(task_ids)

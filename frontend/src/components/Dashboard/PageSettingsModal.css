@@ -146,6 +146,53 @@
   color: var(--warn);
 }
 
+.modal-body .diag-grid {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  gap: 6px 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-chip);
+  background: var(--bg-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+.modal-body .diag-grid .k {
+  color: var(--fg-3);
+}
+.modal-body .diag-grid .v {
+  color: var(--fg-1);
+  word-break: break-word;
+}
+.modal-body .diag-grid .v.ok {
+  color: var(--ok);
+}
+.modal-body .diag-grid .v.err {
+  color: var(--err);
+}
+.modal-body .diag-grid .v.muted {
+  color: var(--fg-3);
+}
+
+/* Option rules: checkbox + input + hint on one row */
+.modal-body .option-rule-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) 170px minmax(180px, 1fr);
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+.modal-body .option-rule-toggle {
+  margin: 0;
+}
+.modal-body .option-rule-input {
+  width: 100%;
+  min-width: 150px;
+}
+.modal-body .option-rule-desc {
+  margin: 0;
+}
+
 /* ========== Tickers table ========== */
 .modal-body .tickers-table {
   width: 100%;
@@ -196,6 +243,16 @@
 }
 .modal-body .tickers-table .del:hover {
   background: rgba(239, 91, 91, 0.10);
+}
+
+@media (max-width: 720px) {
+  .modal-body .option-rule-row {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+  .modal-body .option-rule-input {
+    max-width: 220px;
+  }
 }
 
 /* ========== Add ticker (dashed link) ========== */

@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.domain.message import Message
@@ -125,3 +125,50 @@ async def test_delete_tasks_by_url_cascades_push_events_and_instructions(
     assert push_count == 0
     assert msg_count == 0
     assert task_count == 0
+
+
+@pytest.mark.asyncio
+async def test_delete_tasks_by_url_matches_canonical_equivalent(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    stored_url = "https://whop.com/Joined/stock-and-option/app"
+    request_url = "https://WHOP.com/joined/stock-and-option/app/"
+    async with session_factory() as session:
+        await repo.save_task(session, _make_task("canon-1", stored_url))
+        await repo.save_task(session, _make_task("canon-keep", "https://whop.com/other/app/"))
+
+    async with session_factory() as session:
+        deleted = await repo.delete_tasks_by_url(session, request_url)
+    assert deleted == 1
+
+    async with session_factory() as session:
+        ids = {r[0] for r in (await session.execute(select(TaskRow.id))).all()}
+    assert ids == {"canon-keep"}
+
+
+@pytest.mark.asyncio
+async def test_delete_tasks_by_url_removes_dangling_messages_when_fk_off(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    url = "https://whop.com/dangling/app/"
+    async with session_factory() as session:
+        # Simulate production-era bad state: messages row exists while task row is gone.
+        await session.execute(text("PRAGMA foreign_keys=OFF"))
+        await session.execute(
+            text(
+                "INSERT INTO messages "
+                "(id, content, raw_content, author, source, posted_at, received_at, quoted_message_id, url) "
+                "VALUES (:id, 'x', 'x', NULL, 'stock', :ts, :ts, NULL, :url)"
+            ),
+            {"id": "dang-1", "ts": datetime.now(UTC), "url": url},
+        )
+        await session.execute(text("PRAGMA foreign_keys=ON"))
+        await session.commit()
+
+    async with session_factory() as session:
+        deleted = await repo.delete_tasks_by_url(session, url)
+    assert deleted == 1
+
+    async with session_factory() as session:
+        msg_ids = {r[0] for r in (await session.execute(select(MessageRow.id))).all()}
+    assert "dang-1" not in msg_ids

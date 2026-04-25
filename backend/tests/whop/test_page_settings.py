@@ -16,7 +16,12 @@ def test_default_stock_settings_shape():
     assert s.dedupe_processed_messages is True
     assert s.price_deviation_tolerance == 1.0
     assert s.block_non_today_messages is False
+    assert s.launch_headless is False
     assert s.tickers == {}
+    assert s.option_buy_quantity_enabled is False
+    assert s.option_buy_quantity is None
+    assert s.option_total_price_limit_enabled is False
+    assert s.option_total_price_limit is None
 
 
 def test_default_option_settings_shape():
@@ -24,7 +29,12 @@ def test_default_option_settings_shape():
     assert s.dedupe_processed_messages is True
     assert s.price_deviation_tolerance == 5.0
     assert s.block_non_today_messages is False
+    assert s.launch_headless is False
     assert s.tickers is None
+    assert s.option_buy_quantity_enabled is False
+    assert s.option_buy_quantity is None
+    assert s.option_total_price_limit_enabled is False
+    assert s.option_total_price_limit is None
 
 
 def test_round_trip_stock():
@@ -32,6 +42,7 @@ def test_round_trip_stock():
         dedupe_processed_messages=False,
         price_deviation_tolerance=0.7,
         block_non_today_messages=True,
+        launch_headless=True,
         tickers={"TSLL": TickerConfig(trade_quantity=2000)},
     )
     out = page_settings_from_dict(page_settings_to_dict(src), source="stock")
@@ -44,6 +55,10 @@ def test_round_trip_option_drops_tickers():
         price_deviation_tolerance=8.0,
         block_non_today_messages=True,
         tickers=None,
+        option_buy_quantity_enabled=True,
+        option_buy_quantity=3,
+        option_total_price_limit_enabled=True,
+        option_total_price_limit=1200.0,
     )
     d = page_settings_to_dict(src)
     assert "tickers" not in d

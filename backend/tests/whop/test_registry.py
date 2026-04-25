@@ -507,6 +507,38 @@ async def test_get_settings_for_url_orphan(patch_browser, settings_test, tmp_pat
 
 
 @pytest.mark.asyncio
+async def test_get_settings_for_url_matches_canonical_equivalent(
+    patch_browser, settings_test, tmp_path
+):
+    bus = EventBus()
+    reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=tmp_path / "pages.json")
+    await reg.load_entries()
+    entry = await reg.add_page(url="https://whop.com/Joined/stock-and-option/app", source="stock")
+    s = reg.get_settings_for_url("https://WHOP.com/joined/stock-and-option/app/")
+    assert s is not None
+    assert s is entry.settings
+
+
+@pytest.mark.asyncio
+async def test_clear_seen_for_url_resets_listener_cache(
+    patch_browser, settings_test, tmp_path
+):
+    bus = EventBus()
+    reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=tmp_path / "pages.json")
+    await reg.load_entries()
+    entry = await reg.add_page(url="https://whop.com/clear/app", source="stock")
+    await reg.start_page(entry.id)
+    listener = reg.list_pages()[0][1]
+    assert listener is not None
+    listener._seen.update({"a", "b"})  # test-only internal state injection
+
+    cleared = await reg.clear_seen_for_url("https://WHOP.com/clear/app/")
+    assert cleared == 1
+    assert listener._seen == set()
+    await reg.shutdown_all()
+
+
+@pytest.mark.asyncio
 async def test_legacy_entry_without_settings_loads_default(patch_browser, settings_test, tmp_path):
     """A pages.json file written before settings existed should load with default settings."""
     pages_file = tmp_path / "pages.json"

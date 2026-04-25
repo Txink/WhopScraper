@@ -15,6 +15,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal, cast
+from urllib.parse import urlsplit, urlunsplit
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -38,6 +39,17 @@ _SourceLiteral = Literal["stock", "option"]
 # Project root (backend/app/whop/registry.py → parents[3] = project root)
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]
 _DEFAULT_PAGES_FILE = _PROJECT_ROOT / "data" / "whop_pages.json"
+
+
+def _canonicalize_url(url: str | None) -> str | None:
+    if url is None:
+        return None
+    s = str(url).strip()
+    if not s:
+        return None
+    p = urlsplit(s)
+    path = p.path.rstrip("/") or "/"
+    return urlunsplit((p.scheme.lower(), p.netloc.lower(), path, "", ""))
 
 
 @dataclass
@@ -153,8 +165,9 @@ class WhopRegistry:
         async with self._lock:
             # Authoritative duplicate-URL guard (only check; runs under lock to
             # avoid TOCTOU between two concurrent add_page calls).
+            new_canon = _canonicalize_url(url)
             for existing in self._entries.values():
-                if existing.url == url:
+                if _canonicalize_url(existing.url) == new_canon:
                     raise ValueError(f"URL already monitored (id={existing.id})")
 
             entry = WhopPageEntry(
@@ -321,18 +334,38 @@ class WhopRegistry:
         Used by the trader/parser pipeline to pick up per-page tolerances and
         ticker whitelists when handed a Message that knows only its source url.
         """
-        if not url:
+        canon = _canonicalize_url(url)
+        if canon is None:
             return None
-        eid = self._url_index.get(url)
+        eid = self._url_index.get(canon)
         if eid is None:
             return None
         return self._entries[eid].settings
+
+    async def clear_seen_for_url(self, url: str | None) -> int:
+        """Clear in-memory dedupe cache for listeners matching the url."""
+        canon = _canonicalize_url(url)
+        if canon is None:
+            return 0
+        cleared = 0
+        async with self._lock:
+            for listener in self._listeners.values():
+                if listener is None:
+                    continue
+                if _canonicalize_url(listener.url) == canon:
+                    listener.reset_seen_cache()
+                    cleared += 1
+        return cleared
 
     # ---- internal ----
 
     def _rebuild_url_index(self) -> None:
         """Recompute url → entry_id mapping from current entries dict."""
-        self._url_index = {e.url: e.id for e in self._entries.values()}
+        self._url_index = {}
+        for entry in self._entries.values():
+            canon = _canonicalize_url(entry.url)
+            if canon is not None:
+                self._url_index[canon] = entry.id
 
     def _build_page_dict(self, entry: WhopPageEntry) -> dict[str, Any]:
         """Build serialized page dict. MUST be called while holding self._lock.
@@ -377,7 +410,7 @@ class WhopRegistry:
             url=entry.url,
             source=entry.source,
             poll_interval=self._settings.whop_poll_interval,
-            headless=self._settings.whop_headless,
+            headless=entry.settings.launch_headless,
             skip_initial=skip_initial,
             dedupe_processed_messages=entry.settings.dedupe_processed_messages,
             session_factory=self._session_factory,

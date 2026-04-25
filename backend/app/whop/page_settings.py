@@ -22,13 +22,20 @@ class PageSettings:
     dedupe_processed_messages: bool = True
     price_deviation_tolerance: float = 1.0  # 单位：百分比（1.0 = 1%）
     block_non_today_messages: bool = False  # 拦截非当天消息下单（仅解析，不下单）
+    launch_headless: bool = False  # 该页面监听是否以无头模式启动浏览器
     tickers: dict[str, TickerConfig] | None = field(default_factory=dict)
+    # Option-page local risk controls (both optional and independently switchable).
+    option_buy_quantity_enabled: bool = False
+    option_buy_quantity: int | None = None
+    option_total_price_limit_enabled: bool = False
+    option_total_price_limit: float | None = None
 
 
 DEFAULT_STOCK_SETTINGS = PageSettings(
     dedupe_processed_messages=True,
     price_deviation_tolerance=1.0,
     block_non_today_messages=False,
+    launch_headless=False,
     tickers={},
 )
 
@@ -36,7 +43,12 @@ DEFAULT_OPTION_SETTINGS = PageSettings(
     dedupe_processed_messages=True,
     price_deviation_tolerance=5.0,
     block_non_today_messages=False,
+    launch_headless=False,
     tickers=None,
+    option_buy_quantity_enabled=False,
+    option_buy_quantity=None,
+    option_total_price_limit_enabled=False,
+    option_total_price_limit=None,
 )
 
 
@@ -46,6 +58,7 @@ def default_settings_for(source: Literal["stock", "option"]) -> PageSettings:
             dedupe_processed_messages=DEFAULT_STOCK_SETTINGS.dedupe_processed_messages,
             price_deviation_tolerance=DEFAULT_STOCK_SETTINGS.price_deviation_tolerance,
             block_non_today_messages=DEFAULT_STOCK_SETTINGS.block_non_today_messages,
+            launch_headless=DEFAULT_STOCK_SETTINGS.launch_headless,
             tickers={},
         )
     if source == "option":
@@ -53,7 +66,12 @@ def default_settings_for(source: Literal["stock", "option"]) -> PageSettings:
             dedupe_processed_messages=DEFAULT_OPTION_SETTINGS.dedupe_processed_messages,
             price_deviation_tolerance=DEFAULT_OPTION_SETTINGS.price_deviation_tolerance,
             block_non_today_messages=DEFAULT_OPTION_SETTINGS.block_non_today_messages,
+            launch_headless=DEFAULT_OPTION_SETTINGS.launch_headless,
             tickers=None,
+            option_buy_quantity_enabled=DEFAULT_OPTION_SETTINGS.option_buy_quantity_enabled,
+            option_buy_quantity=DEFAULT_OPTION_SETTINGS.option_buy_quantity,
+            option_total_price_limit_enabled=DEFAULT_OPTION_SETTINGS.option_total_price_limit_enabled,
+            option_total_price_limit=DEFAULT_OPTION_SETTINGS.option_total_price_limit,
         )
     raise ValueError(f"unknown source: {source!r}")
 
@@ -63,6 +81,11 @@ def page_settings_to_dict(s: PageSettings) -> dict[str, Any]:
         "dedupe_processed_messages": s.dedupe_processed_messages,
         "price_deviation_tolerance": s.price_deviation_tolerance,
         "block_non_today_messages": s.block_non_today_messages,
+        "launch_headless": s.launch_headless,
+        "option_buy_quantity_enabled": s.option_buy_quantity_enabled,
+        "option_buy_quantity": s.option_buy_quantity,
+        "option_total_price_limit_enabled": s.option_total_price_limit_enabled,
+        "option_total_price_limit": s.option_total_price_limit,
     }
     if s.tickers is not None:
         out["tickers"] = {k: {"trade_quantity": v.trade_quantity} for k, v in s.tickers.items()}
@@ -79,6 +102,17 @@ def page_settings_from_dict(
     dedupe = bool(d.get("dedupe_processed_messages", base.dedupe_processed_messages))
     tol = float(d.get("price_deviation_tolerance", base.price_deviation_tolerance))
     block = bool(d.get("block_non_today_messages", base.block_non_today_messages))
+    launch_headless = bool(d.get("launch_headless", base.launch_headless))
+    option_qty_enabled = bool(
+        d.get("option_buy_quantity_enabled", base.option_buy_quantity_enabled)
+    )
+    option_qty_raw = d.get("option_buy_quantity", base.option_buy_quantity)
+    option_qty = int(option_qty_raw) if option_qty_raw is not None else None
+    option_total_enabled = bool(
+        d.get("option_total_price_limit_enabled", base.option_total_price_limit_enabled)
+    )
+    option_total_raw = d.get("option_total_price_limit", base.option_total_price_limit)
+    option_total = float(option_total_raw) if option_total_raw is not None else None
     tickers: dict[str, TickerConfig] | None
     if source == "option":
         tickers = None
@@ -92,7 +126,12 @@ def page_settings_from_dict(
         dedupe_processed_messages=dedupe,
         price_deviation_tolerance=tol,
         block_non_today_messages=block,
+        launch_headless=launch_headless,
         tickers=tickers,
+        option_buy_quantity_enabled=option_qty_enabled,
+        option_buy_quantity=option_qty,
+        option_total_price_limit_enabled=option_total_enabled,
+        option_total_price_limit=option_total,
     )
 
 

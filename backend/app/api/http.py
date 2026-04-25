@@ -319,6 +319,11 @@ def build_http_router(
                 dedupe_processed_messages=s.dedupe_processed_messages,
                 price_deviation_tolerance=s.price_deviation_tolerance,
                 block_non_today_messages=s.block_non_today_messages,
+                launch_headless=s.launch_headless,
+                option_buy_quantity_enabled=s.option_buy_quantity_enabled,
+                option_buy_quantity=s.option_buy_quantity,
+                option_total_price_limit_enabled=s.option_total_price_limit_enabled,
+                option_total_price_limit=s.option_total_price_limit,
                 tickers=(
                     {
                         k: TickerConfigOut(trade_quantity=v.trade_quantity)
@@ -340,10 +345,20 @@ def build_http_router(
                 patch_dict["price_deviation_tolerance"] = body.price_deviation_tolerance
             if body.block_non_today_messages is not None:
                 patch_dict["block_non_today_messages"] = body.block_non_today_messages
+            if body.launch_headless is not None:
+                patch_dict["launch_headless"] = body.launch_headless
             if body.tickers is not None:
                 patch_dict["tickers"] = {
                     k: {"trade_quantity": v.trade_quantity} for k, v in body.tickers.items()
                 }
+            if body.option_buy_quantity_enabled is not None:
+                patch_dict["option_buy_quantity_enabled"] = body.option_buy_quantity_enabled
+            if body.option_buy_quantity is not None:
+                patch_dict["option_buy_quantity"] = body.option_buy_quantity
+            if body.option_total_price_limit_enabled is not None:
+                patch_dict["option_total_price_limit_enabled"] = body.option_total_price_limit_enabled
+            if body.option_total_price_limit is not None:
+                patch_dict["option_total_price_limit"] = body.option_total_price_limit
             if not patch_dict:
                 raise HTTPException(
                     400,
@@ -378,6 +393,8 @@ def build_http_router(
                     )
             async with session_scope(session_factory) as session:
                 count = await repo.delete_tasks_by_url(session, body.url)
+            # Keep runtime dedupe cache in sync with DB cleanup.
+            await whop_registry.clear_seen_for_url(body.url)
             return OrphanCleanupResponse(deleted_count=count)
 
         @router.get("/api/whop/cookie", response_model=WhopCookieStatusOut)

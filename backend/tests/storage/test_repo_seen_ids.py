@@ -45,3 +45,26 @@ async def test_load_seen_ids_for_url_empty(session_factory):
     async with session_factory() as session:
         ids = await repo.load_seen_ids_for_url(session, "https://whop.com/none/app/")
     assert ids == set()
+
+
+@pytest.mark.asyncio
+async def test_load_seen_ids_for_url_matches_canonical_equivalent(session_factory):
+    async with session_factory() as session:
+        msg = Message(
+            id="dom-canon",
+            content="x",
+            raw_content="x",
+            author=None,
+            posted_at=datetime.now(UTC),
+            received_at=datetime.now(UTC),
+            source="stock",
+            url="https://whop.com/Joined/stock-and-option/app",
+        )
+        await repo.save_task(session, Task.new_from_message(msg))
+
+    async with session_factory() as session:
+        ids = await repo.load_seen_ids_for_url(
+            session,
+            "https://WHOP.com/joined/stock-and-option/app/",
+        )
+    assert ids == {"dom-canon"}
