@@ -16,17 +16,11 @@ Concurrency note
 ----------------
 ``EventBus.publish()`` schedules handlers as concurrent ``asyncio.Task``s.
 When ``TASK_INSTRUCTION_READY`` is published, the storage listener fires
-concurrently with the Trader handler; the Trader immediately publishes
-``TASK_STATUS_CHANGED`` (SUBMITTING) and ``TASK_ORDER_SUBMITTED``, whose
-storage handlers also fire concurrently.  If the initial INSERT hasn't
-committed by the time these secondary handlers run they all race to INSERT
-the same task_id, causing a UNIQUE constraint failure.
-
-Fix: pre-save the fully-built task to the DB *before* publishing
-``TASK_INSTRUCTION_READY``.  That way the storage listener receives an
-already-committed row and uses the UPDATE path for all subsequent events.
-This mirrors real-world usage where an upstream scanner pipeline (Tasks 22–25)
-saves the task before emitting the event.
+concurrently with the Trader handler.  Previously this caused a UNIQUE
+constraint failure when both handlers raced to INSERT the same task_id.
+``save_task`` now uses SQLite UPSERT (INSERT … ON CONFLICT DO UPDATE) so
+concurrent callers with the same ``Task.id`` always succeed — no pre-save
+workaround needed.
 """
 from __future__ import annotations
 
@@ -48,7 +42,7 @@ from app.domain.status import Status
 from app.domain.task import Task
 from app.storage.db import session_scope
 from app.storage.listeners import register_storage_listeners
-from app.storage.repo import load_task, save_task
+from app.storage.repo import load_task
 from tests.broker._fakes import FakeBrokerClient
 
 # ---------------------------------------------------------------------------
@@ -159,11 +153,6 @@ async def test_full_lifecycle_new_partial_filled(
 
     try:
         task = _make_stock_task()
-
-        # Pre-save task so concurrent storage handlers use the UPDATE path.
-        # (See module docstring for full explanation of the concurrency constraint.)
-        async with session_scope(session_factory) as session:
-            await save_task(session, task)
 
         # ── Step 1: publish TASK_INSTRUCTION_READY ───────────────────────────
         await bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
@@ -291,10 +280,6 @@ async def test_rejected_before_fill_marks_rejected(
                 sell_quantity=None,
             )
         )
-
-        # Pre-save task before publishing so concurrent storage handlers use UPDATE path.
-        async with session_scope(session_factory) as session:
-            await save_task(session, task)
 
         await bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
         await bus.wait_idle(timeout=2)

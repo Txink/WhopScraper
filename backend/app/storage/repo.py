@@ -12,7 +12,8 @@ Design notes
 - Domain classes NEVER import from app.storage.*; this module is the boundary.
 - Instruction serialization is handled by private helpers _instruction_to_json /
   _instruction_from_json.
-- SQLite is single-writer; no explicit locking needed for upsert.
+- save_task uses SQLite UPSERT (INSERT … ON CONFLICT DO UPDATE) so concurrent
+  handlers for the same Task.id never race to INSERT the same row.
 - list_tasks returns Tasks without push_events (empty list) for performance.
   Use load_task to get push_events for a specific Task.
 """
@@ -22,6 +23,7 @@ from datetime import UTC, date, datetime
 from typing import Any
 
 from sqlalchemy import select
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.instruction import (
@@ -266,89 +268,109 @@ def _ensure_utc(dt: datetime) -> datetime:
 # ---------------------------------------------------------------------------
 
 
+_TASK_UPDATE_COLS = (
+    "type",
+    "status",
+    "order_id",
+    "ticker",
+    "symbol",
+    "side",
+    "price",
+    "quantity",
+    "reject_reason",
+    "stage_timings_json",
+    "updated_at",
+)
+
+_INSTRUCTION_UPDATE_COLS = (
+    "instruction_type",
+    "context_source",
+    "payload_json",
+)
+
+
 async def save_task(session: AsyncSession, task: Task) -> None:
     """Upsert a Task and its linked Message / Instruction rows.
 
-    Insert semantics (new task_id):
-      - Insert tasks row
-      - Insert messages row (FK to tasks.id)
-      - Insert instructions row if task.instruction is not None
+    Uses SQLite's ``INSERT … ON CONFLICT DO UPDATE`` (UPSERT) for all three
+    tables so concurrent callers with the same ``Task.id`` never race to INSERT
+    the same primary key.
 
-    Update semantics (existing task_id):
-      - Update tasks row (status, order_id, reject_reason, stage_timings,
-        updated_at, and denormalized ticker/symbol/side/price/quantity)
-      - Leave messages row untouched (immutable after first write)
-      - Insert instructions row if missing, update if present
+    tasks:        ON CONFLICT → overwrite all mutable columns (last-writer-wins)
+    messages:     ON CONFLICT → DO NOTHING  (messages are immutable after first write)
+    instructions: ON CONFLICT → overwrite all columns (re-parse may change the instruction)
     """
-    existing_task = await session.get(TaskRow, task.id)
+    inst = task.instruction
+    ticker: str | None = None
+    symbol: str | None = None
+    side: str | None = None
+    price: float | None = None
+    quantity: int | None = None
 
-    if existing_task is None:
-        # --- INSERT path ---
-        task_row = _task_to_row(task)
-        session.add(task_row)
-        await session.flush()  # ensure task row in DB before FK deps
+    if isinstance(inst, (StockInstruction, OptionInstruction)):
+        ticker = inst.ticker
+        symbol = inst.symbol
+        side = inst.instruction_type.value
+        price = inst.price
+        quantity = inst.quantity
 
-        msg_row = _message_to_row(task.message)
-        session.add(msg_row)
+    task_values: dict[str, Any] = {
+        "id": task.id,
+        "type": task.type,
+        "status": task.status.value,
+        "order_id": task.order_id,
+        "ticker": ticker,
+        "symbol": symbol,
+        "side": side,
+        "price": price,
+        "quantity": quantity,
+        "reject_reason": task.reject_reason,
+        "stage_timings_json": dict(task.stage_timings) if task.stage_timings else None,
+        "created_at": task.created_at,
+        "updated_at": task.updated_at,
+    }
 
-        if task.instruction is not None:
-            inst_row = InstructionRow(
-                task_id=task.id,
-                instruction_type=task.instruction.instruction_type.value,
-                context_source=task.instruction.context_source,
-                payload_json=_instruction_to_json(task.instruction),
-            )
-            session.add(inst_row)
+    # --- tasks UPSERT ---
+    task_stmt = sqlite_insert(TaskRow).values(**task_values)
+    task_stmt = task_stmt.on_conflict_do_update(
+        index_elements=["id"],
+        set_={col: task_stmt.excluded[col] for col in _TASK_UPDATE_COLS},
+    )
+    await session.execute(task_stmt)
+    await session.flush()
 
-        await session.flush()
-    else:
-        # --- UPDATE path ---
-        inst = task.instruction
-        ticker: str | None = None
-        symbol: str | None = None
-        side: str | None = None
-        price: float | None = None
-        quantity: int | None = None
+    # --- messages UPSERT (DO NOTHING on conflict — messages are immutable) ---
+    msg = task.message
+    msg_values: dict[str, Any] = {
+        "id": msg.id,
+        "content": msg.content,
+        "raw_content": msg.raw_content,
+        "author": msg.author,
+        "source": msg.source,
+        "posted_at": msg.posted_at,
+        "received_at": msg.received_at,
+        "quoted_message_id": msg.quoted.id if msg.quoted is not None else None,
+    }
+    msg_stmt = sqlite_insert(MessageRow).values(**msg_values)
+    msg_stmt = msg_stmt.on_conflict_do_nothing(index_elements=["id"])
+    await session.execute(msg_stmt)
 
-        if isinstance(inst, (StockInstruction, OptionInstruction)):
-            ticker = inst.ticker
-            symbol = inst.symbol
-            side = inst.instruction_type.value
-            price = inst.price
-            quantity = inst.quantity
+    # --- instructions UPSERT (overwrite on conflict — re-parse changes content) ---
+    if task.instruction is not None:
+        inst_values: dict[str, Any] = {
+            "task_id": task.id,
+            "instruction_type": task.instruction.instruction_type.value,
+            "context_source": task.instruction.context_source,
+            "payload_json": _instruction_to_json(task.instruction),
+        }
+        inst_stmt = sqlite_insert(InstructionRow).values(**inst_values)
+        inst_stmt = inst_stmt.on_conflict_do_update(
+            index_elements=["task_id"],
+            set_={col: inst_stmt.excluded[col] for col in _INSTRUCTION_UPDATE_COLS},
+        )
+        await session.execute(inst_stmt)
 
-        existing_task.status = task.status.value
-        existing_task.order_id = task.order_id
-        existing_task.reject_reason = task.reject_reason
-        existing_task.stage_timings_json = dict(task.stage_timings) if task.stage_timings else None
-        existing_task.updated_at = task.updated_at
-        existing_task.type = task.type
-        existing_task.ticker = ticker
-        existing_task.symbol = symbol
-        existing_task.side = side
-        existing_task.price = price
-        existing_task.quantity = quantity
-
-        await session.flush()
-
-        # Instructions: insert if missing, update if present
-        if task.instruction is not None:
-            existing_inst = await session.get(InstructionRow, task.id)
-            if existing_inst is None:
-                inst_row = InstructionRow(
-                    task_id=task.id,
-                    instruction_type=task.instruction.instruction_type.value,
-                    context_source=task.instruction.context_source,
-                    payload_json=_instruction_to_json(task.instruction),
-                )
-                session.add(inst_row)
-            else:
-                existing_inst.instruction_type = task.instruction.instruction_type.value
-                existing_inst.context_source = task.instruction.context_source
-                existing_inst.payload_json = _instruction_to_json(task.instruction)
-
-            await session.flush()
-
+    await session.flush()
     await session.commit()
 
 

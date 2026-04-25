@@ -440,3 +440,34 @@ async def test_load_task_by_order_id_not_found_returns_none(
     async with session_factory() as session:
         result = await load_task_by_order_id(session, "does-not-exist-ord")
     assert result is None
+
+
+# ---------------------------------------------------------------------------
+# 12. Concurrent save_task calls for the same Task.id must not raise UNIQUE conflict
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_save_task_concurrent_same_id_no_conflict(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """Two concurrent save_task calls for the same Task.id must not raise UNIQUE conflict."""
+    import asyncio
+
+    from app.storage.db import session_scope
+
+    task = _make_task()  # status=RECEIVED initially
+    task.mark_parsing()
+
+    async def _save_once() -> None:
+        async with session_scope(session_factory) as session:
+            await save_task(session, task)
+
+    # Launch 5 concurrent saves of the same task
+    await asyncio.gather(*(_save_once() for _ in range(5)))
+
+    # Should still be loadable
+    async with session_scope(session_factory) as session:
+        loaded = await load_task(session, task.id)
+    assert loaded is not None
+    assert loaded.id == task.id
