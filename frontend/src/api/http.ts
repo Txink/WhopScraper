@@ -1,6 +1,7 @@
 import type {
   Task, TaskList, Positions, StatsToday, Health,
   WhopPage, WhopPages, WhopPageCreate, WhopCookieStatus,
+  WhopPageSettings, WhopPageSettingsPatch,
 } from "./domain-types";
 
 
@@ -129,6 +130,22 @@ export const api = {
     return request<WhopPage>(`/api/whop/pages/${encodeURIComponent(id)}/restart`, {
       method: "POST",
     });
+  },
+
+  async updateWhopPageSettings(
+    id: string,
+    patch: WhopPageSettingsPatch,
+  ): Promise<WhopPage> {
+    return request<WhopPage>(
+      `/api/whop/pages/${encodeURIComponent(id)}/settings`,
+      { method: "PATCH", body: JSON.stringify(patch) },
+    );
+  },
+
+  async whopPageSettingsDefaults(source: "stock" | "option"): Promise<WhopPageSettings> {
+    return request<WhopPageSettings>(
+      `/api/whop/pages/defaults?source=${encodeURIComponent(source)}`,
+    );
   },
 
   async whopCookieStatus(): Promise<WhopCookieStatus> {

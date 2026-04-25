@@ -190,6 +190,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/whop/pages/defaults": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Whop Settings Defaults */
+        get: operations["whop_settings_defaults_api_whop_pages_defaults_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/whop/pages/{page_id}/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Patch Whop Page Settings */
+        patch: operations["patch_whop_page_settings_api_whop_pages__page_id__settings_patch"];
+        trace?: never;
+    };
     "/api/whop/cookie": {
         parameters: {
             query?: never;
@@ -301,6 +335,8 @@ export interface components {
              * Format: date-time
              */
             received_at: string;
+            /** Url */
+            url?: string | null;
             /** Quoted Message Id */
             quoted_message_id: string | null;
         };
@@ -438,6 +474,11 @@ export interface components {
             message: components["schemas"]["MessageOut"];
             instruction: components["schemas"]["InstructionOut"] | null;
         };
+        /** TickerConfigOut */
+        TickerConfigOut: {
+            /** Trade Quantity */
+            trade_quantity: number;
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -489,6 +530,7 @@ export interface components {
              * Format: date-time
              */
             added_at: string;
+            settings: components["schemas"]["WhopPageSettingsOut"];
             /** Running */
             running: boolean;
             /** Started At */
@@ -499,6 +541,31 @@ export interface components {
             messages_published: number;
             /** Last Error */
             last_error: string | null;
+        };
+        /** WhopPageSettingsOut */
+        WhopPageSettingsOut: {
+            /** Dedupe Processed Messages */
+            dedupe_processed_messages: boolean;
+            /** Price Deviation Tolerance */
+            price_deviation_tolerance: number;
+            /** Tickers */
+            tickers?: {
+                [key: string]: components["schemas"]["TickerConfigOut"];
+            } | null;
+        };
+        /**
+         * WhopPageSettingsPatch
+         * @description Local update; any unspecified field = unchanged.
+         */
+        WhopPageSettingsPatch: {
+            /** Dedupe Processed Messages */
+            dedupe_processed_messages?: boolean | null;
+            /** Price Deviation Tolerance */
+            price_deviation_tolerance?: number | null;
+            /** Tickers */
+            tickers?: {
+                [key: string]: components["schemas"]["TickerConfigOut"];
+            } | null;
         };
         /** WhopPagesOut */
         WhopPagesOut: {
@@ -818,6 +885,75 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WhopPageOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    whop_settings_defaults_api_whop_pages_defaults_get: {
+        parameters: {
+            query: {
+                source: string;
+                token?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WhopPageSettingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_whop_page_settings_api_whop_pages__page_id__settings_patch: {
+        parameters: {
+            query?: {
+                token?: string | null;
+            };
+            header?: never;
+            path: {
+                page_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WhopPageSettingsPatch"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

@@ -18,3 +18,6 @@ export type WhopPage = components["schemas"]["WhopPageOut"];
 export type WhopPages = components["schemas"]["WhopPagesOut"];
 export type WhopPageCreate = components["schemas"]["WhopPageCreate"];
 export type WhopCookieStatus = components["schemas"]["WhopCookieStatusOut"];
+export type WhopPageSettings = components["schemas"]["WhopPageSettingsOut"];
+export type WhopPageSettingsPatch = components["schemas"]["WhopPageSettingsPatch"];
+export type TickerConfig = components["schemas"]["TickerConfigOut"];
