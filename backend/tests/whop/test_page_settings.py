@@ -67,6 +67,7 @@ def test_position_size_to_fraction_keywords():
     assert position_size_to_fraction("小仓位") == 0.5
     assert position_size_to_fraction("中仓位") == 1.0
     assert position_size_to_fraction("大仓位") == 1.5
+    assert position_size_to_fraction("重仓") == 1.5
     assert position_size_to_fraction("轻仓") == 0.5
     assert position_size_to_fraction("满仓") == 2.0
 
