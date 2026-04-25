@@ -1,5 +1,6 @@
 import { describe, expect, it, beforeEach } from "vitest";
-import { useTasksStore } from "./tasks";
+import { useTasksStore, selectTasksByUrl } from "./tasks";
+import type { TaskSummary } from "../api/domain-types";
 
 describe("tasks store", () => {
   beforeEach(() => {
@@ -81,3 +82,38 @@ function _mkPush(id: string, task_id: string) {
     note: null,
   };
 }
+
+const makeTask = (id: string, url: string | null): TaskSummary => ({
+  id, type: "stock", status: "RECEIVED", order_id: null, stage_timings: {},
+  created_at: "2026-04-25T00:00:00Z", updated_at: "2026-04-25T00:00:00Z",
+  reject_reason: null,
+  message: {
+    id, content: "x", raw_content: "x", author: null,
+    source: "stock", posted_at: "2026-04-25T00:00:00Z",
+    received_at: "2026-04-25T00:00:00Z",
+    url, quoted_message_id: null,
+  },
+  instruction: null,
+});
+
+describe("selectTasksByUrl", () => {
+  const tasks: TaskSummary[] = [
+    makeTask("a", "u1"),
+    makeTask("b", "u2"),
+    makeTask("c", null),
+    makeTask("d", "u3-removed"),
+  ];
+  const pageUrls = new Set(["u1", "u2"]);
+
+  it("filters by exact url", () => {
+    expect(selectTasksByUrl(tasks, "u1", pageUrls).map(t => t.id)).toEqual(["a"]);
+  });
+
+  it("orphan returns null-url and unknown-url tasks", () => {
+    expect(selectTasksByUrl(tasks, null, pageUrls).map(t => t.id)).toEqual(["c", "d"]);
+  });
+
+  it("returns empty for unknown url", () => {
+    expect(selectTasksByUrl(tasks, "nope", pageUrls)).toEqual([]);
+  });
+});

@@ -54,3 +54,18 @@ export const useTasksStore = create<TaskState>((set, get) => ({
     }
   },
 }));
+
+/**
+ * Filter tasks by url (membership in pageUrls). null = orphan filter:
+ *   includes tasks with url=null OR url not in pageUrls.
+ */
+export function selectTasksByUrl(
+  tasks: TaskSummary[],
+  url: string | null,
+  pageUrls: Set<string>,
+): TaskSummary[] {
+  if (url === null) {
+    return tasks.filter(t => t.message?.url == null || !pageUrls.has(t.message.url));
+  }
+  return tasks.filter(t => t.message?.url === url);
+}
