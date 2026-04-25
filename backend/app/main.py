@@ -23,6 +23,8 @@ from app.parser.context_resolver import load_watched_tickers
 from app.parser.service import register_parser_service
 from app.storage.db import Base, create_engine, make_session_factory
 from app.storage.listeners import register_storage_listeners
+from app.whop.listener import _is_placeholder_url
+from app.whop.registry import WhopRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +40,7 @@ class AppState:
     hub: WebSocketHub
     unsubs: list[Callable[[], None]]
     push_listener: PushListener | None
-    whop_listeners: list[Any]
+    whop_registry: WhopRegistry
 
 
 def create_app(
@@ -64,7 +66,6 @@ def create_app(
     state.settings = settings
     state.unsubs = []
     state.push_listener = None
-    state.whop_listeners = []
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -148,20 +149,36 @@ def create_app(
         state.hub = WebSocketHub(bus)
         await state.hub.register_listeners()
 
-        # 6. Whop listeners (best-effort; only when URLs configured and not skipped)
-        if not skip_whop and (settings.whop_stock_url or settings.whop_option_url):
+        # 6. Whop registry (manages all Whop page listeners)
+        state.whop_registry = WhopRegistry(bus=bus, settings=settings)
+        if not skip_whop:
             try:
-                from app.whop.listener import register_whop_listeners
-
-                whop_listeners = register_whop_listeners(bus, settings)
-                for wl in whop_listeners:
-                    try:
-                        await wl.start()
-                        state.whop_listeners.append(wl)
-                    except Exception as exc:  # noqa: BLE001
-                        logger.warning("WhopListener failed to start: %s", exc)
+                await state.whop_registry.load_and_start_all()
             except Exception as exc:  # noqa: BLE001
-                logger.warning("Whop listener setup error: %s", exc)
+                logger.warning("whop registry startup failed: %s", exc)
+
+            # Seed from .env on first run if pages file empty AND env URLs present
+            if len(state.whop_registry._entries) == 0:
+                if settings.whop_stock_url and not _is_placeholder_url(settings.whop_stock_url):
+                    try:
+                        await state.whop_registry.add_page(
+                            url=settings.whop_stock_url,
+                            source="stock",
+                            name="Stock (from .env)",
+                        )
+                    except Exception as exc:  # noqa: BLE001
+                        logger.warning("seed stock from .env failed: %s", exc)
+                if settings.whop_option_url and not _is_placeholder_url(
+                    settings.whop_option_url
+                ):
+                    try:
+                        await state.whop_registry.add_page(
+                            url=settings.whop_option_url,
+                            source="option",
+                            name="Option (from .env)",
+                        )
+                    except Exception as exc:  # noqa: BLE001
+                        logger.warning("seed option from .env failed: %s", exc)
 
         # Include routers now that all dependencies are ready.
         # FastAPI supports include_router inside lifespan; routes work for all
@@ -171,6 +188,7 @@ def create_app(
                 session_factory=state.session_factory,
                 broker=state.broker,
                 settings=state.settings,
+                whop_registry=state.whop_registry,
             )
         )
         app.include_router(build_ws_router(state.hub, state.settings))
@@ -216,11 +234,11 @@ def create_app(
         # ------------------------------------------------------------------ #
         logger.info("shutting down signal-station backend...")
 
-        for wl in getattr(state, "whop_listeners", []):
+        if hasattr(state, "whop_registry"):
             try:
-                await wl.stop()
+                await state.whop_registry.shutdown_all()
             except Exception as exc:  # noqa: BLE001
-                logger.warning("WhopListener stop error: %s", exc)
+                logger.warning("whop registry shutdown error: %s", exc)
 
         await state.hub.close()
 

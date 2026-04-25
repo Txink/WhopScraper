@@ -56,6 +56,44 @@ class WhopListener:
         self._seen: set[str] = set()
         self._stop_event = asyncio.Event()
 
+        # Status fields (read via properties)
+        self._messages_published: int = 0
+        self._last_poll_at: datetime | None = None
+        self._last_error: str | None = None
+        self._started_at: datetime | None = None
+
+    # ------------------------------------------------------------------ #
+    # Read-only status properties                                          #
+    # ------------------------------------------------------------------ #
+
+    @property
+    def messages_published(self) -> int:
+        return self._messages_published
+
+    @property
+    def last_poll_at(self) -> datetime | None:
+        return self._last_poll_at
+
+    @property
+    def last_error(self) -> str | None:
+        return self._last_error
+
+    @property
+    def started_at(self) -> datetime | None:
+        return self._started_at
+
+    @property
+    def running(self) -> bool:
+        return self._task is not None and not self._task.done()
+
+    @property
+    def url(self) -> str:
+        return self._url
+
+    @property
+    def source(self) -> str:
+        return self._source
+
     async def start(self) -> None:
         """Launch browser, navigate, prime seen set (skip_initial=True), start polling task."""
         self._browser = WhopBrowser(headless=self._headless, cookie_path=self._cookie_path)
@@ -77,6 +115,7 @@ class WhopListener:
                 len(initial),
             )
 
+        self._started_at = datetime.now(UTC)
         self._task = asyncio.create_task(self._loop())
         logger.info(
             "WhopListener[%s] started polling %s every %.1fs",
@@ -117,6 +156,7 @@ class WhopListener:
             except asyncio.CancelledError:
                 raise
             except Exception as e:
+                self._last_error = str(e)
                 logger.exception("WhopListener[%s] scan error: %s", self._source, e)
                 # Exponential backoff
                 await asyncio.sleep(backoff)
@@ -138,7 +178,11 @@ class WhopListener:
             await self._bus.publish(Event(Topics.MESSAGE_RECEIVED, MessagePayload(message=msg)))
             new_count += 1
 
+        self._last_poll_at = datetime.now(UTC)
+        self._last_error = None
+
         if new_count > 0:
+            self._messages_published += new_count
             logger.debug(
                 "WhopListener[%s] published %d new (total seen %d)",
                 self._source,

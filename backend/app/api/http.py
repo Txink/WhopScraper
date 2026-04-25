@@ -8,6 +8,13 @@ Provides six endpoints:
   GET  /api/positions            — positions from DB (positions table)
   GET  /api/health               — broker + mode liveness status
 
+Whop monitoring endpoints (when whop_registry is provided):
+  GET    /api/whop/pages                   — list monitored pages
+  POST   /api/whop/pages                   — add a page
+  DELETE /api/whop/pages/{page_id}         — remove a page
+  POST   /api/whop/pages/{page_id}/restart — restart listener
+  GET    /api/whop/cookie                  — cookie file status
+
 All routes are gated by ``require_app_token`` applied at the router level.
 
 Usage::
@@ -16,13 +23,14 @@ Usage::
         session_factory=_factory,
         broker=_broker,
         settings=_settings,
+        whop_registry=registry,   # optional
     )
     app.include_router(router)
 """
 from __future__ import annotations
 
-from datetime import datetime
-from typing import Annotated
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -36,8 +44,13 @@ from app.api.schemas import (
     StatsTodayOut,
     TaskListOut,
     TaskOut,
+    WhopCookieStatusOut,
+    WhopPageCreate,
+    WhopPageOut,
+    WhopPagesOut,
     task_to_out,
     task_to_summary,
+    whop_page_to_out,
 )
 from app.broker.broker_client import BrokerClient
 from app.core.config import Settings
@@ -45,12 +58,16 @@ from app.domain.status import Status
 from app.storage import repo
 from app.storage.db import session_scope
 
+if TYPE_CHECKING:
+    from app.whop.registry import WhopRegistry
+
 
 def build_http_router(
     *,
     session_factory: async_sessionmaker[AsyncSession],
     broker: BrokerClient,
     settings: Settings,
+    whop_registry: WhopRegistry | None = None,
 ) -> APIRouter:
     """Factory — injects session_factory, broker, and settings at app assembly.
 
@@ -207,5 +224,66 @@ def build_http_router(
 
     # Satisfy Settings reference so mypy knows it's consumed.
     _ = settings
+
+    # ------------------------------------------------------------------ #
+    # Whop monitoring management (only when registry provided)             #
+    # ------------------------------------------------------------------ #
+
+    if whop_registry is not None:
+
+        @router.get("/api/whop/pages", response_model=WhopPagesOut)
+        async def list_whop_pages() -> WhopPagesOut:
+            pages = whop_registry.list_pages()
+            return WhopPagesOut(pages=[whop_page_to_out(e, ll) for e, ll in pages])
+
+        @router.post("/api/whop/pages", response_model=WhopPageOut, status_code=201)
+        async def create_whop_page(body: WhopPageCreate) -> WhopPageOut:
+            try:
+                entry = await whop_registry.add_page(
+                    url=body.url, source=body.source, name=body.name
+                )
+            except ValueError as exc:
+                raise HTTPException(400, detail=str(exc)) from exc
+            # Re-read to include listener status
+            for e, ll in whop_registry.list_pages():
+                if e.id == entry.id:
+                    return whop_page_to_out(e, ll)
+            raise HTTPException(500, detail="added but lost track")
+
+        @router.delete("/api/whop/pages/{page_id}", status_code=204)
+        async def delete_whop_page(page_id: str) -> None:
+            ok = await whop_registry.remove_page(page_id)
+            if not ok:
+                raise HTTPException(404, detail="page not found")
+
+        @router.post(
+            "/api/whop/pages/{page_id}/restart", response_model=WhopPageOut
+        )
+        async def restart_whop_page(page_id: str) -> WhopPageOut:
+            ok = await whop_registry.restart_page(page_id)
+            if not ok:
+                raise HTTPException(404, detail="page not found or restart failed")
+            for e, ll in whop_registry.list_pages():
+                if e.id == page_id:
+                    return whop_page_to_out(e, ll)
+            raise HTTPException(500, detail="restart succeeded but lost track")
+
+        @router.get("/api/whop/cookie", response_model=WhopCookieStatusOut)
+        async def whop_cookie_status() -> WhopCookieStatusOut:
+            from app.whop.login import cookie_path
+
+            p = cookie_path()
+            if not p.is_file():
+                return WhopCookieStatusOut(exists=False, path=str(p))
+            stat = p.stat()
+            mtime = datetime.fromtimestamp(stat.st_mtime, tz=UTC)
+            now = datetime.now(UTC)
+            age = (now - mtime).total_seconds()
+            return WhopCookieStatusOut(
+                exists=True,
+                path=str(p),
+                last_modified=mtime,
+                age_seconds=age,
+            )
 
     return router

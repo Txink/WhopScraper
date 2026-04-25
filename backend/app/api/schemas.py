@@ -6,7 +6,7 @@ Converter functions translate app.domain.* dataclasses → Pydantic models.
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from pydantic import BaseModel, Field
 
@@ -15,6 +15,8 @@ if TYPE_CHECKING:
     from app.domain.message import Message
     from app.domain.push_event import PushEvent
     from app.domain.task import Task
+    from app.whop.listener import WhopListener
+    from app.whop.registry import WhopPageEntry
 
 
 # ---------------------------------------------------------------------------
@@ -179,6 +181,42 @@ class CancelOk(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Whop monitoring management
+# ---------------------------------------------------------------------------
+
+
+class WhopPageOut(BaseModel):
+    id: str
+    url: str
+    source: str
+    name: str
+    added_at: datetime
+    # Live status (None when listener absent)
+    running: bool
+    started_at: datetime | None
+    last_poll_at: datetime | None
+    messages_published: int
+    last_error: str | None
+
+
+class WhopPagesOut(BaseModel):
+    pages: list[WhopPageOut]
+
+
+class WhopPageCreate(BaseModel):
+    url: str
+    source: Literal["stock", "option"]
+    name: str | None = None
+
+
+class WhopCookieStatusOut(BaseModel):
+    exists: bool
+    path: str
+    last_modified: datetime | None = None
+    age_seconds: float | None = None
+
+
+# ---------------------------------------------------------------------------
 # Converters: domain dataclasses → Pydantic Out models
 # ---------------------------------------------------------------------------
 
@@ -304,4 +342,36 @@ def task_to_summary(task: Task) -> TaskSummaryOut:
         reject_reason=task.reject_reason,
         message=message_to_out(task.message),
         instruction=instruction_to_out(task.instruction) if task.instruction is not None else None,
+    )
+
+
+def whop_page_to_out(
+    entry: WhopPageEntry,
+    listener: WhopListener | None,
+) -> WhopPageOut:
+    """Build WhopPageOut from a (entry, listener) pair from registry.list_pages()."""
+    if listener is not None:
+        return WhopPageOut(
+            id=entry.id,
+            url=entry.url,
+            source=entry.source,
+            name=entry.name,
+            added_at=entry.added_at,
+            running=listener.running,
+            started_at=listener.started_at,
+            last_poll_at=listener.last_poll_at,
+            messages_published=listener.messages_published,
+            last_error=listener.last_error,
+        )
+    return WhopPageOut(
+        id=entry.id,
+        url=entry.url,
+        source=entry.source,
+        name=entry.name,
+        added_at=entry.added_at,
+        running=False,
+        started_at=None,
+        last_poll_at=None,
+        messages_published=0,
+        last_error=None,
     )
