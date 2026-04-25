@@ -126,6 +126,7 @@ def test_get_pages_includes_settings(
     s = next(p["settings"] for p in pages if p["id"] == stock.id)
     assert s["dedupe_processed_messages"] is True
     assert s["price_deviation_tolerance"] == 1.0
+    assert s["block_non_today_messages"] is False
     assert s["tickers"] == {}
 
 
@@ -269,6 +270,7 @@ def test_get_settings_defaults_stock(
     s = resp.json()
     assert s["dedupe_processed_messages"] is True
     assert s["price_deviation_tolerance"] == 1.0
+    assert s["block_non_today_messages"] is False
     assert s["tickers"] == {}
 
 
@@ -282,6 +284,7 @@ def test_get_settings_defaults_option(
     s = resp.json()
     assert s["dedupe_processed_messages"] is True
     assert s["price_deviation_tolerance"] == 5.0
+    assert s["block_non_today_messages"] is False
     assert s["tickers"] is None
 
 

@@ -194,6 +194,7 @@ class TickerConfigOut(BaseModel):
 class WhopPageSettingsOut(BaseModel):
     dedupe_processed_messages: bool
     price_deviation_tolerance: float
+    block_non_today_messages: bool
     tickers: dict[str, TickerConfigOut] | None = None  # None = option page
 
 
@@ -202,6 +203,7 @@ class WhopPageSettingsPatch(BaseModel):
 
     dedupe_processed_messages: bool | None = None
     price_deviation_tolerance: float | None = Field(default=None, ge=0)
+    block_non_today_messages: bool | None = None
     tickers: dict[str, TickerConfigOut] | None = None
 
 
@@ -388,6 +390,7 @@ def whop_page_to_out(
     settings_out = WhopPageSettingsOut(
         dedupe_processed_messages=entry.settings.dedupe_processed_messages,
         price_deviation_tolerance=entry.settings.price_deviation_tolerance,
+        block_non_today_messages=entry.settings.block_non_today_messages,
         tickers=(
             {
                 k: TickerConfigOut(trade_quantity=v.trade_quantity)

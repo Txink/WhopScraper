@@ -629,6 +629,8 @@ export interface components {
             dedupe_processed_messages: boolean;
             /** Price Deviation Tolerance */
             price_deviation_tolerance: number;
+            /** Block Non Today Messages */
+            block_non_today_messages: boolean;
             /** Tickers */
             tickers?: {
                 [key: string]: components["schemas"]["TickerConfigOut"];
@@ -643,6 +645,8 @@ export interface components {
             dedupe_processed_messages?: boolean | null;
             /** Price Deviation Tolerance */
             price_deviation_tolerance?: number | null;
+            /** Block Non Today Messages */
+            block_non_today_messages?: boolean | null;
             /** Tickers */
             tickers?: {
                 [key: string]: components["schemas"]["TickerConfigOut"];

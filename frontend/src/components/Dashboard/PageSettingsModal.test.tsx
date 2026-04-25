@@ -9,6 +9,7 @@ const stockPage: WhopPage = {
   settings: {
     dedupe_processed_messages: true,
     price_deviation_tolerance: 1.0,
+    block_non_today_messages: false,
     tickers: { TSLL: { trade_quantity: 2000 } },
   },
   running: true, started_at: null, last_poll_at: null, messages_published: 0, last_error: null,
@@ -16,7 +17,12 @@ const stockPage: WhopPage = {
 
 const optionPage: WhopPage = {
   ...stockPage, id: "b", source: "option",
-  settings: { dedupe_processed_messages: true, price_deviation_tolerance: 5.0, tickers: null },
+  settings: {
+    dedupe_processed_messages: true,
+    price_deviation_tolerance: 5.0,
+    block_non_today_messages: false,
+    tickers: null,
+  },
 };
 
 describe("<PageSettingsModal>", () => {
@@ -59,5 +65,16 @@ describe("<PageSettingsModal>", () => {
     fireEvent.click(screen.getByText(/^保存/));
     await waitFor(() => expect(screen.getByText(/必须 ≥ 0/)).toBeInTheDocument());
     expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("toggling block_non_today_messages saves it", async () => {
+    const spy = vi.spyOn(httpModule.api, "updateWhopPageSettings").mockResolvedValue(stockPage);
+    render(<PageSettingsModal page={stockPage} onClose={vi.fn()} />);
+    const checkbox = screen.getByLabelText(/禁止下单非当天/);
+    fireEvent.click(checkbox);
+    fireEvent.click(screen.getByText(/^保存/));
+    await waitFor(() => expect(spy).toHaveBeenCalled());
+    const arg = spy.mock.calls[0][1];
+    expect(arg.block_non_today_messages).toBe(true);
   });
 });

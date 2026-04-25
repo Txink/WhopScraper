@@ -17,6 +17,7 @@ interface TickerRow {
 export function PageSettingsModal({ page, onClose }: Props) {
   const [dedupe, setDedupe] = useState(page.settings.dedupe_processed_messages);
   const [tolerance, setTolerance] = useState(String(page.settings.price_deviation_tolerance));
+  const [blockNonToday, setBlockNonToday] = useState(page.settings.block_non_today_messages);
 
   const initialTickers = page.settings.tickers ?? {};
   const nextRowId = useRef(Object.keys(initialTickers).length);
@@ -69,6 +70,7 @@ export function PageSettingsModal({ page, onClose }: Props) {
       const patch: Partial<WhopPageSettings> = {
         dedupe_processed_messages: dedupe,
         price_deviation_tolerance: tolNum,
+        block_non_today_messages: blockNonToday,
       };
       if (page.source === "stock") {
         patch.tickers = Object.fromEntries(
@@ -118,6 +120,20 @@ export function PageSettingsModal({ page, onClose }: Props) {
             />
             <p className="hint small">
               市价偏离信号价 ≤ 此值 → 直接市价单；&gt; 此值 → 限价单 @ 信号价
+            </p>
+          </section>
+
+          <section>
+            <label>
+              <input
+                type="checkbox"
+                checked={blockNonToday}
+                onChange={e => setBlockNonToday(e.target.checked)}
+              />
+              <span>禁止下单非当天消息（仅解析指令，不发送订单）</span>
+            </label>
+            <p className="hint small">
+              当消息的发布日期与服务器今日不同时，trader 跳过下单（任务标记 SKIPPED）。
             </p>
           </section>
 

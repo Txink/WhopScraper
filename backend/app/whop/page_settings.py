@@ -21,18 +21,21 @@ class TickerConfig:
 class PageSettings:
     dedupe_processed_messages: bool = True
     price_deviation_tolerance: float = 1.0  # 单位：百分比（1.0 = 1%）
+    block_non_today_messages: bool = False  # 拦截非当天消息下单（仅解析，不下单）
     tickers: dict[str, TickerConfig] | None = field(default_factory=dict)
 
 
 DEFAULT_STOCK_SETTINGS = PageSettings(
     dedupe_processed_messages=True,
     price_deviation_tolerance=1.0,
+    block_non_today_messages=False,
     tickers={},
 )
 
 DEFAULT_OPTION_SETTINGS = PageSettings(
     dedupe_processed_messages=True,
     price_deviation_tolerance=5.0,
+    block_non_today_messages=False,
     tickers=None,
 )
 
@@ -42,12 +45,14 @@ def default_settings_for(source: Literal["stock", "option"]) -> PageSettings:
         return PageSettings(
             dedupe_processed_messages=DEFAULT_STOCK_SETTINGS.dedupe_processed_messages,
             price_deviation_tolerance=DEFAULT_STOCK_SETTINGS.price_deviation_tolerance,
+            block_non_today_messages=DEFAULT_STOCK_SETTINGS.block_non_today_messages,
             tickers={},
         )
     if source == "option":
         return PageSettings(
             dedupe_processed_messages=DEFAULT_OPTION_SETTINGS.dedupe_processed_messages,
             price_deviation_tolerance=DEFAULT_OPTION_SETTINGS.price_deviation_tolerance,
+            block_non_today_messages=DEFAULT_OPTION_SETTINGS.block_non_today_messages,
             tickers=None,
         )
     raise ValueError(f"unknown source: {source!r}")
@@ -57,6 +62,7 @@ def page_settings_to_dict(s: PageSettings) -> dict[str, Any]:
     out: dict[str, Any] = {
         "dedupe_processed_messages": s.dedupe_processed_messages,
         "price_deviation_tolerance": s.price_deviation_tolerance,
+        "block_non_today_messages": s.block_non_today_messages,
     }
     if s.tickers is not None:
         out["tickers"] = {k: {"trade_quantity": v.trade_quantity} for k, v in s.tickers.items()}
@@ -72,6 +78,7 @@ def page_settings_from_dict(
     base = default_settings_for(source)
     dedupe = bool(d.get("dedupe_processed_messages", base.dedupe_processed_messages))
     tol = float(d.get("price_deviation_tolerance", base.price_deviation_tolerance))
+    block = bool(d.get("block_non_today_messages", base.block_non_today_messages))
     tickers: dict[str, TickerConfig] | None
     if source == "option":
         tickers = None
@@ -84,6 +91,7 @@ def page_settings_from_dict(
     return PageSettings(
         dedupe_processed_messages=dedupe,
         price_deviation_tolerance=tol,
+        block_non_today_messages=block,
         tickers=tickers,
     )
 

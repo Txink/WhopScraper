@@ -15,6 +15,7 @@ def test_default_stock_settings_shape():
     s = DEFAULT_STOCK_SETTINGS
     assert s.dedupe_processed_messages is True
     assert s.price_deviation_tolerance == 1.0
+    assert s.block_non_today_messages is False
     assert s.tickers == {}
 
 
@@ -22,6 +23,7 @@ def test_default_option_settings_shape():
     s = DEFAULT_OPTION_SETTINGS
     assert s.dedupe_processed_messages is True
     assert s.price_deviation_tolerance == 5.0
+    assert s.block_non_today_messages is False
     assert s.tickers is None
 
 
@@ -29,6 +31,7 @@ def test_round_trip_stock():
     src = PageSettings(
         dedupe_processed_messages=False,
         price_deviation_tolerance=0.7,
+        block_non_today_messages=True,
         tickers={"TSLL": TickerConfig(trade_quantity=2000)},
     )
     out = page_settings_from_dict(page_settings_to_dict(src), source="stock")
@@ -39,12 +42,26 @@ def test_round_trip_option_drops_tickers():
     src = PageSettings(
         dedupe_processed_messages=True,
         price_deviation_tolerance=8.0,
+        block_non_today_messages=True,
         tickers=None,
     )
     d = page_settings_to_dict(src)
     assert "tickers" not in d
+    assert d["block_non_today_messages"] is True
     out = page_settings_from_dict(d, source="option")
     assert out.tickers is None
+    assert out.block_non_today_messages is True
+
+
+def test_block_non_today_default_false_when_missing():
+    """page_settings_from_dict tolerates missing block_non_today_messages key."""
+    raw = {
+        "dedupe_processed_messages": True,
+        "price_deviation_tolerance": 1.0,
+        "tickers": {},
+    }
+    out = page_settings_from_dict(raw, source="stock")
+    assert out.block_non_today_messages is False
 
 
 def test_position_size_to_fraction_known():

@@ -151,6 +151,19 @@ def register_trader(
         else:
             computed_qty = inst.quantity or 1
 
+        # ---- Block non-today messages if configured (per-page setting) ----
+        if page_settings is not None and page_settings.block_non_today_messages:
+            from datetime import datetime
+
+            posted_local = task.message.posted_at.astimezone().date()
+            today_local = datetime.now().date()
+            if posted_local != today_local:
+                await _publish_skip(
+                    task,
+                    f"非当天消息（posted={posted_local}, today={today_local}），已拦截下单",
+                )
+                return
+
         # ---- Deviation → order_type decision ----
         signal_price = (
             inst.price

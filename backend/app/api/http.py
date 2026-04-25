@@ -318,6 +318,7 @@ def build_http_router(
             return WhopPageSettingsOut(
                 dedupe_processed_messages=s.dedupe_processed_messages,
                 price_deviation_tolerance=s.price_deviation_tolerance,
+                block_non_today_messages=s.block_non_today_messages,
                 tickers=(
                     {
                         k: TickerConfigOut(trade_quantity=v.trade_quantity)
@@ -337,6 +338,8 @@ def build_http_router(
                 patch_dict["dedupe_processed_messages"] = body.dedupe_processed_messages
             if body.price_deviation_tolerance is not None:
                 patch_dict["price_deviation_tolerance"] = body.price_deviation_tolerance
+            if body.block_non_today_messages is not None:
+                patch_dict["block_non_today_messages"] = body.block_non_today_messages
             if body.tickers is not None:
                 patch_dict["tickers"] = {
                     k: {"trade_quantity": v.trade_quantity} for k, v in body.tickers.items()
