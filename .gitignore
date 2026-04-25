@@ -38,3 +38,5 @@ test-results/
 # Frontend build artifacts (regeneratable)
 frontend/openapi.json
 frontend/dist/
+frontend/vite.config.d.ts
+frontend/vite.config.js
