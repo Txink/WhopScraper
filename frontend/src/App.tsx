@@ -6,6 +6,7 @@ import { useTasksStore } from "./stores/tasks";
 import { useStatsStore } from "./stores/stats";
 import { usePositionsStore } from "./stores/positions";
 import { useViewStore } from "./stores/view";
+import { usePageTabsStore } from "./stores/pageTabs";
 import { TopBar } from "./components/TopBar";
 import { RightRail } from "./components/RightRail";
 import { Card } from "./components/Card/Card";
@@ -188,7 +189,11 @@ function Dashboard({ token }: { token: string }) {
       baseUrl: BASE_URL,
       token,
       onEvent: (evt) => {
-        applyWs(evt);
+        if (evt.type === "whop.page_changed") {
+          usePageTabsStore.getState().applyPageChanged(evt);
+        } else {
+          applyWs(evt);
+        }
         useConnStore.getState().setLastEventId(evt.event_id);
       },
       onStatus: (s) => useConnStore.getState().setWs(s),
