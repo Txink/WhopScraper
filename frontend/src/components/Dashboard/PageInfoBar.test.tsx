@@ -11,7 +11,7 @@ const stockPage = {
 
 describe("<PageInfoBar>", () => {
   it("renders page with url link and basic info", () => {
-    render(<PageInfoBar page={stockPage} />);
+    render(<PageInfoBar page={stockPage} mode="page" />);
     expect(screen.getByText("正股")).toBeInTheDocument();
     expect(screen.getByText("Hello")).toBeInTheDocument();
     // Status moved to the power button — should be absent here.
@@ -23,7 +23,7 @@ describe("<PageInfoBar>", () => {
   });
 
   it("renders orphan view", () => {
-    render(<PageInfoBar page={null} orphanCount={5} />);
+    render(<PageInfoBar page={null} mode="orphan" orphanCount={5} />);
     expect(screen.getByText("已停用")).toBeInTheDocument();
     expect(screen.getByText(/5 条历史/)).toBeInTheDocument();
   });

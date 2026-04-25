@@ -6,14 +6,15 @@ import type { WhopPage } from "../../api/domain-types";
 import { PowerIcon, SettingsIcon } from "./icons";
 
 interface Props {
-  page: WhopPage | null;            // null = orphan
+  page: WhopPage | null;
+  mode: "page" | "orphan";
   onOpenSettings: () => void;
 }
 
-export function PageActionBar({ page, onOpenSettings }: Props) {
+export function PageActionBar({ page, mode, onOpenSettings }: Props) {
   const [busy, setBusy] = useState(false);
-  const isOrphan = page === null;
-  const tabId = isOrphan ? "orphan" : page!.id;
+  const isReadonlyTab = mode !== "page" || page === null;
+  const tabId = mode === "orphan" ? "orphan" : (page?.id ?? "orphan");
   const expandMode = usePageTabsStore(s => s.expandModeByTab[tabId] ?? "smart");
   const setExpand = usePageTabsStore(s => s.setExpandMode);
 
@@ -21,7 +22,7 @@ export function PageActionBar({ page, onOpenSettings }: Props) {
   // is restart-style (stop existing + fresh start with skip_initial=False), so
   // it's safe to call even on a "stuck" listener.
   const handleToggle = async () => {
-    if (isOrphan || !page) return;
+    if (isReadonlyTab || !page) return;
     setBusy(true);
     try {
       if (page.running) {
@@ -77,7 +78,7 @@ export function PageActionBar({ page, onOpenSettings }: Props) {
     <div className="page-action-bar">
       <button
         onClick={handleToggle}
-        disabled={isOrphan || busy}
+        disabled={isReadonlyTab || busy}
         className={powerClass}
         title={powerTitle}
         aria-label={powerAria}
@@ -86,7 +87,7 @@ export function PageActionBar({ page, onOpenSettings }: Props) {
       </button>
       <button
         onClick={onOpenSettings}
-        disabled={isOrphan}
+        disabled={isReadonlyTab}
         className="action-btn icon-only"
         title="设置"
         aria-label="设置"

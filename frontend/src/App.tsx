@@ -17,6 +17,7 @@ import { PageActionBar } from "./components/Dashboard/PageActionBar";
 import { PageSettingsModal } from "./components/Dashboard/PageSettingsModal";
 import { TaskStream } from "./components/Dashboard/TaskStream";
 import { OrphanCleanupBar } from "./components/Dashboard/OrphanCleanupBar";
+import { DatabaseRecordsPanel } from "./components/Dashboard/DatabaseRecordsPanel";
 import { EmptyState } from "./components/Dashboard/EmptyState";
 import { useStickyTop } from "./hooks/useStickyTop";
 import "./App.css";
@@ -173,12 +174,13 @@ function Dashboard({ token }: { token: string }) {
     return <main className="main"><EmptyState /></main>;
   }
 
+  const isOrphanTab = activeTabId === "orphan";
   const activePage =
-    activeTabId === "orphan" || activeTabId === null
+    isOrphanTab || activeTabId === null
       ? null
       : pages.find((p) => p.id === activeTabId) ?? null;
   const filteredTasks =
-    activeTabId === "orphan"
+    isOrphanTab
       ? selectTasksByUrl(tasks, null, pageUrls)
       : activePage
         ? selectTasksByUrl(tasks, activePage.url, pageUrls)
@@ -189,10 +191,18 @@ function Dashboard({ token }: { token: string }) {
       <section className="stream">
         <PageTabs />
         <div className="page-meta-row">
-          <PageInfoBar page={activePage} orphanCount={orphanCount} />
-          <PageActionBar page={activePage} onOpenSettings={() => setSettingsOpen(true)} />
+          <PageInfoBar
+            page={activePage}
+            orphanCount={orphanCount}
+            mode={isOrphanTab ? "orphan" : "page"}
+          />
+          <PageActionBar
+            page={activePage}
+            mode={isOrphanTab ? "orphan" : "page"}
+            onOpenSettings={() => setSettingsOpen(true)}
+          />
         </div>
-        {activeTabId === "orphan" && <OrphanCleanupBar orphanTasks={filteredTasks} />}
+        {isOrphanTab && <OrphanCleanupBar orphanTasks={filteredTasks} />}
         {filteredTasks.length === 0 ? (
           <div className="empty-state"><p>该监听页暂无任务。</p></div>
         ) : (
@@ -207,9 +217,40 @@ function Dashboard({ token }: { token: string }) {
   );
 }
 
+function DatabaseView() {
+  const [pageNameByUrl, setPageNameByUrl] = useState<Map<string, string>>(new Map());
+
+  useEffect(() => {
+    let alive = true;
+    api
+      .listWhopPages()
+      .then((r) => {
+        if (!alive) return;
+        setPageNameByUrl(new Map(r.pages.map((p) => [p.url, p.name])));
+      })
+      .catch(() => {
+        if (!alive) return;
+        setPageNameByUrl(new Map());
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  return (
+    <main className="main">
+      <section className="stream">
+        <DatabaseRecordsPanel pageNameByUrl={pageNameByUrl} />
+      </section>
+      <RightRail />
+    </main>
+  );
+}
+
 function ContentRouter({ token }: { token: string }) {
   const view = useViewStore((s) => s.view);
   if (view === "whop") return <WhopPanel />;
+  if (view === "database") return <DatabaseView />;
   return <Dashboard token={token} />;
 }
 

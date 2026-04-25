@@ -10,6 +10,7 @@ export interface TopBarProps {
 }
 
 export function TopBar({ connWhop, connLongport, mode, dryRun, onLogout }: TopBarProps) {
+  void connWhop;
   const view = useViewStore((s) => s.view);
   const setView = useViewStore((s) => s.setView);
 
@@ -28,6 +29,12 @@ export function TopBar({ connWhop, connLongport, mode, dryRun, onLogout }: TopBa
       {/* View switcher */}
       <nav className="topbar-views">
         <button
+          className={view === "database" ? "view-btn active" : "view-btn"}
+          onClick={() => setView("database")}
+        >
+          数据库
+        </button>
+        <button
           className={view === "dashboard" ? "view-btn active" : "view-btn"}
           onClick={() => setView("dashboard")}
         >
@@ -44,10 +51,6 @@ export function TopBar({ connWhop, connLongport, mode, dryRun, onLogout }: TopBa
       {/* Right cluster: conn indicators + account pill */}
       <div className="topbar-right">
         <div className="conn-group">
-          <div className="conn">
-            <span className={`conn-dot ${connWhop}`} />
-            <span className="conn-label">whop</span>
-          </div>
           <div className="conn">
             <span className={`conn-dot ${connLongport}`} />
             <span className="conn-label">longport</span>

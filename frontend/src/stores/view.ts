@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export type View = "dashboard" | "whop";
+export type View = "dashboard" | "whop" | "database";
 
 interface ViewState {
   view: View;

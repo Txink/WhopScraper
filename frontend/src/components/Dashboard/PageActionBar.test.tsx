@@ -14,7 +14,13 @@ describe("<PageActionBar>", () => {
   beforeEach(() => { usePageTabsStore.getState().reset(); });
 
   it("disables power/settings when orphan", () => {
-    render(<PageActionBar page={null} onOpenSettings={vi.fn()} />);
+    render(<PageActionBar page={null} mode="orphan" onOpenSettings={vi.fn()} />);
+    expect(screen.getByLabelText("开机")).toBeDisabled();
+    expect(screen.getByLabelText("设置")).toBeDisabled();
+  });
+
+  it("does not crash when mode=page but page is null", () => {
+    render(<PageActionBar page={null} mode="page" onOpenSettings={vi.fn()} />);
     expect(screen.getByLabelText("开机")).toBeDisabled();
     expect(screen.getByLabelText("设置")).toBeDisabled();
   });
@@ -22,7 +28,7 @@ describe("<PageActionBar>", () => {
   it("clicks start when page is off", async () => {
     const stockPageOff = { ...stockPage, running: false, last_error: null };
     const startSpy = vi.spyOn(httpModule.api, "startWhopPage").mockResolvedValue(stockPageOff);
-    render(<PageActionBar page={stockPageOff} onOpenSettings={vi.fn()} />);
+    render(<PageActionBar page={stockPageOff} mode="page" onOpenSettings={vi.fn()} />);
     fireEvent.click(screen.getByLabelText("开机"));
     await waitFor(() => expect(startSpy).toHaveBeenCalledWith("a"));
   });
@@ -30,20 +36,20 @@ describe("<PageActionBar>", () => {
   it("clicks stop when page is on", async () => {
     const stockPageOn = { ...stockPage, running: true, last_error: null };
     const stopSpy = vi.spyOn(httpModule.api, "stopWhopPage").mockResolvedValue(stockPageOn);
-    render(<PageActionBar page={stockPageOn} onOpenSettings={vi.fn()} />);
+    render(<PageActionBar page={stockPageOn} mode="page" onOpenSettings={vi.fn()} />);
     fireEvent.click(screen.getByLabelText("关机"));
     await waitFor(() => expect(stopSpy).toHaveBeenCalledWith("a"));
   });
 
   it("error state shows red icon with last_error tooltip", () => {
     const errPage = { ...stockPage, running: false, last_error: "navigate failed" };
-    render(<PageActionBar page={errPage} onOpenSettings={vi.fn()} />);
+    render(<PageActionBar page={errPage} mode="page" onOpenSettings={vi.fn()} />);
     const btn = screen.getByLabelText("错误，点击重试");
     expect(btn).toHaveAttribute("title", "错误：navigate failed");
   });
 
   it("expand mode button cycles smart → all-open → all-closed → smart", () => {
-    render(<PageActionBar page={stockPage} onOpenSettings={vi.fn()} />);
+    render(<PageActionBar page={stockPage} mode="page" onOpenSettings={vi.fn()} />);
     // Initial: smart
     const initialBtn = screen.getByText(/智能展开/);
     expect(initialBtn).toBeInTheDocument();
@@ -65,7 +71,7 @@ describe("<PageActionBar>", () => {
   });
 
   it("expand button gets engaged class when not in smart mode", () => {
-    const { container } = render(<PageActionBar page={stockPage} onOpenSettings={vi.fn()} />);
+    const { container } = render(<PageActionBar page={stockPage} mode="page" onOpenSettings={vi.fn()} />);
     // Initial state: smart, no engaged class
     expect(container.querySelector(".action-btn.engaged")).not.toBeInTheDocument();
     // Cycle once → all-open → engaged

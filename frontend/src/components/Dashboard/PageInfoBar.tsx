@@ -1,7 +1,8 @@
 import type { WhopPage } from "../../api/domain-types";
 
 interface Props {
-  page: WhopPage | null;   // null = orphan
+  page: WhopPage | null;
+  mode: "page" | "orphan";
   orphanCount?: number;
 }
 
@@ -16,8 +17,8 @@ function formatRelative(iso: string | null): string {
   return `${(s / 86400).toFixed(1)}d 前`;
 }
 
-export function PageInfoBar({ page, orphanCount = 0 }: Props) {
-  if (page === null) {
+export function PageInfoBar({ page, mode, orphanCount = 0 }: Props) {
+  if (mode === "orphan") {
     return (
       <div className="page-info-bar orphan">
         <span className="badge gray">已停用</span>
@@ -25,6 +26,7 @@ export function PageInfoBar({ page, orphanCount = 0 }: Props) {
       </div>
     );
   }
+  if (!page) return null;
   // Note: running/stopped/error status moved to the power-button in PageActionBar.
   // URL goes on its own line below the meta row so long urls show fully (wrap on long).
   return (
