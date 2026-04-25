@@ -474,3 +474,30 @@ async def test_page_change_event_published_on_remove(patch_browser, settings_tes
     await bus.wait_idle()
     assert len(received) == 1
     assert received[0].action == "removed"
+
+
+@pytest.mark.asyncio
+async def test_page_change_event_published_on_restart(
+    patch_browser, settings_test, tmp_path
+):
+    bus = EventBus()
+    received: list = []
+    from app.core.events import Topics
+
+    async def _handler(evt):
+        received.append(evt.payload)
+
+    bus.subscribe(Topics.WHOP_PAGE_CHANGED, _handler)
+    reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=tmp_path / "pages.json")
+    await reg.load_and_start_all()
+    entry = await reg.add_page(url="https://whop.com/rst/app/", source="stock", name="rst")
+    await bus.wait_idle()
+    received.clear()
+    ok = await reg.restart_page(entry.id)
+    await bus.wait_idle()
+    assert ok is True
+    assert len(received) == 1
+    assert received[0].action == "restarted"
+    assert received[0].page_dict["id"] == entry.id
+
+    await reg.shutdown_all()

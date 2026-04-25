@@ -142,13 +142,10 @@ class WhopRegistry:
             raise ValueError(f"source must be stock|option, got {source!r}")
         if not url or _is_placeholder_url(url):
             raise ValueError(f"invalid or placeholder URL: {url!r}")
-        # Reject duplicate URLs (check outside lock first for early exit)
-        for existing in self._entries.values():
-            if existing.url == url:
-                raise ValueError(f"URL already monitored (id={existing.id})")
 
         async with self._lock:
-            # Re-check inside lock to avoid TOCTOU
+            # Authoritative duplicate-URL guard (only check; runs under lock to
+            # avoid TOCTOU between two concurrent add_page calls).
             for existing in self._entries.values():
                 if existing.url == url:
                     raise ValueError(f"URL already monitored (id={existing.id})")
@@ -170,7 +167,8 @@ class WhopRegistry:
                     "listener for new page %s failed to start: %s", entry.id, e
                 )
             self._rebuild_url_index()
-        await self._publish_change("added", entry)
+            page_dict = self._build_page_dict(entry)
+        await self._publish_page_event("added", page_dict)
         return entry
 
     async def remove_page(self, page_id: str) -> bool:
@@ -187,7 +185,8 @@ class WhopRegistry:
                     logger.warning("error stopping removed listener: %s", e)
             self._save_entries()
             self._rebuild_url_index()
-        await self._publish_change("removed", entry)
+            page_dict = self._build_page_dict(entry)
+        await self._publish_page_event("removed", page_dict)
         return True
 
     async def restart_page(self, page_id: str) -> bool:
@@ -217,22 +216,25 @@ class WhopRegistry:
             except Exception as e:  # noqa: BLE001
                 logger.warning("restart: start failed: %s", e)
                 return False
-        await self._publish_change("restarted", entry)
+            page_dict = self._build_page_dict(entry)
+        await self._publish_page_event("restarted", page_dict)
         return True
 
     async def update_settings(
         self, page_id: str, patch: dict[str, Any]
     ) -> WhopPageEntry:
-        """PATCH-style settings update.
+        """Local update — merges patch into existing settings, persists, publishes event.
 
-        ``patch`` is merged on top of the current page_settings_to_dict(entry.settings)
-        before re-validating via ``page_settings_from_dict``. Keys not present in
-        ``patch`` are preserved (so the frontend can send only the fields it changed).
+        Merge semantics: shallow at top level only.
+        - ``dedupe_processed_messages`` / ``price_deviation_tolerance``: replaced if
+          present in patch.
+        - ``tickers``: ENTIRE dict replaced if present (not per-ticker merge). To add
+          one ticker without affecting others, the caller must read existing settings +
+          send the merged dict.
 
         Raises:
-            KeyError: if the page_id does not exist.
-            ValueError: if ``patch`` violates source-specific rules (e.g. setting
-                tickers on an option page).
+            KeyError: page_id not found
+            ValueError: option page received ``tickers`` in patch
         """
         async with self._lock:
             entry = self._entries.get(page_id)
@@ -245,7 +247,8 @@ class WhopRegistry:
             new_settings = page_settings_from_dict(current_dict, source=entry.source)
             entry.settings = new_settings
             self._save_entries()
-        await self._publish_change("settings_updated", entry)
+            page_dict = self._build_page_dict(entry)
+        await self._publish_page_event("settings_updated", page_dict)
         return entry
 
     # ---- read ops ----
@@ -273,8 +276,12 @@ class WhopRegistry:
         """Recompute url → entry_id mapping from current entries dict."""
         self._url_index = {e.url: e.id for e in self._entries.values()}
 
-    async def _publish_change(self, action: str, entry: WhopPageEntry) -> None:
-        """Build a JSON-ready page dict + publish a whop.page_changed event.
+    def _build_page_dict(self, entry: WhopPageEntry) -> dict[str, Any]:
+        """Build serialized page dict. MUST be called while holding self._lock.
+
+        Snapshots both the entry state and the current listener so the resulting
+        dict is consistent with the moment of mutation, even if another task
+        removes/restarts the same entry before the event is published.
 
         ``whop_page_to_out`` is imported lazily to avoid an app.api → app.whop
         import-cycle (schemas itself only references WhopPageEntry under
@@ -283,7 +290,10 @@ class WhopRegistry:
         from app.api.schemas import whop_page_to_out
 
         listener = self._listeners.get(entry.id)
-        page_dict = whop_page_to_out(entry, listener).model_dump(mode="json")
+        return whop_page_to_out(entry, listener).model_dump(mode="json")
+
+    async def _publish_page_event(self, action: str, page_dict: dict[str, Any]) -> None:
+        """Publish a whop.page_changed event. Safe to call without holding the lock."""
         await self._bus.publish(
             Event(
                 Topics.WHOP_PAGE_CHANGED,
