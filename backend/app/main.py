@@ -142,7 +142,9 @@ def create_app(
                 price_deviation_tolerance=settings.price_deviation_tolerance,
                 stock_price_deviation_tolerance=settings.stock_price_deviation_tolerance,
             )
-        state.unsubs.append(register_trader(bus, state.broker, trader_cfg))
+        state.unsubs.append(
+            register_trader(bus, state.broker, trader_cfg, registry=state.whop_registry)
+        )
 
         # 3. Storage listeners: all task.* topics → DB persistence
         state.unsubs.extend(register_storage_listeners(bus, session_factory))
