@@ -69,6 +69,9 @@ class MessageRow(Base):
     """ORM mapping for the ``messages`` table."""
 
     __tablename__ = "messages"
+    __table_args__ = (
+        Index("idx_messages_url", "url"),
+    )
 
     # id is both PK and FK → tasks.id; ON DELETE CASCADE propagates task deletion.
     id: Mapped[str] = mapped_column(
@@ -82,6 +85,7 @@ class MessageRow(Base):
     source: Mapped[str] = mapped_column(String, nullable=False)
     posted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    url: Mapped[str | None] = mapped_column(String, nullable=True)
     quoted_message_id: Mapped[str | None] = mapped_column(String, nullable=True)
 
 

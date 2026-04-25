@@ -443,7 +443,62 @@ async def test_load_task_by_order_id_not_found_returns_none(
 
 
 # ---------------------------------------------------------------------------
-# 12. Concurrent save_task calls for the same Task.id must not raise UNIQUE conflict
+# 12. messages.url round-trip — value persists through save → load
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_message_url_persists_through_save_and_load(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    msg = Message(
+        id="domid-with-url",
+        content="x",
+        raw_content="x",
+        author="a",
+        posted_at=datetime.now(UTC),
+        received_at=datetime.now(UTC),
+        source="stock",
+        url="https://whop.com/joined/test/app/",
+    )
+    task = Task.new_from_message(msg)
+    async with session_factory() as session:
+        await save_task(session, task)
+    async with session_factory() as session:
+        loaded = await load_task(session, "domid-with-url")
+    assert loaded is not None
+    assert loaded.message.url == "https://whop.com/joined/test/app/"
+
+
+# ---------------------------------------------------------------------------
+# 13. messages.url defaults to None when not supplied
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_message_url_default_none(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    msg = Message(
+        id="domid-no-url",
+        content="x",
+        raw_content="x",
+        author="a",
+        posted_at=datetime.now(UTC),
+        received_at=datetime.now(UTC),
+        source="stock",
+    )
+    task = Task.new_from_message(msg)
+    async with session_factory() as session:
+        await save_task(session, task)
+    async with session_factory() as session:
+        loaded = await load_task(session, "domid-no-url")
+    assert loaded is not None
+    assert loaded.message.url is None
+
+
+# ---------------------------------------------------------------------------
+# 14. Concurrent save_task calls for the same Task.id must not raise UNIQUE conflict
 # ---------------------------------------------------------------------------
 
 

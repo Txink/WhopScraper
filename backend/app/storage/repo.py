@@ -169,6 +169,7 @@ def _message_to_row(msg: Message) -> MessageRow:
         source=msg.source,
         posted_at=msg.posted_at,
         received_at=msg.received_at,
+        url=msg.url,
         quoted_message_id=msg.quoted.id if msg.quoted is not None else None,
     )
 
@@ -204,6 +205,7 @@ def _row_to_message(row: MessageRow) -> Message:
         posted_at=_ensure_utc(row.posted_at),
         received_at=_ensure_utc(row.received_at),
         source=row.source,  # type: ignore[arg-type]
+        url=row.url,
         quoted=None,
         history_hint=[],
     )
@@ -349,6 +351,7 @@ async def save_task(session: AsyncSession, task: Task) -> None:
         "source": msg.source,
         "posted_at": msg.posted_at,
         "received_at": msg.received_at,
+        "url": msg.url,
         "quoted_message_id": msg.quoted.id if msg.quoted is not None else None,
     }
     msg_stmt = sqlite_insert(MessageRow).values(**msg_values)

@@ -17,6 +17,7 @@ class Message:
     posted_at: datetime
     received_at: datetime
     source: Source
+    url: str | None = None         # 新增：来源页 url；None 表示孤儿（migration 前数据）
     quoted: Message | None = None
     history_hint: list[Message] = field(default_factory=list)
 
