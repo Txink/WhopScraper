@@ -14,7 +14,7 @@ class InstructionType(StrEnum):
     MODIFY = "MODIFY"
 
 
-ContextSource = Literal["group", "refer", "recent", "positions"]
+ContextSource = Literal["group", "refer", "recent", "positions", "watchlist"]
 OptionSide = Literal["CALL", "PUT"]
 
 
