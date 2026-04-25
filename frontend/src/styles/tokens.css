@@ -1,0 +1,92 @@
+:root {
+  /* Surfaces */
+  --bg-0: #0b0f14;
+  --bg-1: #121821;
+  --bg-2: #171f2a;
+  --bg-3: #1c2635;
+  --bg-hover: #202b3d;
+
+  /* Lines */
+  --line: rgba(255, 255, 255, 0.06);
+  --line-strong: rgba(255, 255, 255, 0.10);
+
+  /* Text */
+  --fg-1: #e4e8ef;
+  --fg-2: #8a93a1;
+  --fg-3: #566071;
+
+  /* Brand + Status */
+  --brand: #3fb5c5;
+  --ok: #3dd68c;
+  --err: #ef5b5b;
+  --warn: #e7a73d;
+  --info: #5aa0ff;
+  --neutral: #8a93a1;
+
+  /* Type badges */
+  --type-stock-bg: rgba(63, 181, 197, 0.14);
+  --type-stock-fg: #6cd5e3;
+  --type-stock-bd: rgba(63, 181, 197, 0.32);
+  --type-option-bg: rgba(198, 136, 255, 0.14);
+  --type-option-fg: #c688ff;
+  --type-option-bd: rgba(198, 136, 255, 0.34);
+
+  /* Typography */
+  --font-sans: "IBM Plex Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+
+  /* Spacing (4px base) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* Radius */
+  --radius-chip: 3px;
+  --radius-card: 6px;
+
+  /* Motion */
+  --ease: cubic-bezier(0.2, 0.6, 0.2, 1);
+  --dur: 150ms;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  background: var(--bg-0);
+  color: var(--fg-1);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.5;
+  font-feature-settings: "tnum" on, "lnum" on;
+  min-height: 100vh;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 0; transform: scale(1.15); }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(231, 167, 61, 0.5); }
+  50% { box-shadow: 0 0 0 4px rgba(231, 167, 61, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
