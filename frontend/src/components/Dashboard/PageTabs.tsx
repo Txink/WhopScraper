@@ -6,7 +6,8 @@ export function PageTabs() {
   const setActive = usePageTabsStore(s => s.setActiveTab);
   const orphanCount = usePageTabsStore(s => s.orphanCount);
 
-  if (pages.length === 0) return null;
+  // Render the nav if any page exists OR there are orphan tasks to expose.
+  if (pages.length === 0 && orphanCount === 0) return null;
 
   return (
     <nav className="page-tabs" role="tablist">

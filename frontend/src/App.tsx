@@ -161,6 +161,13 @@ function Dashboard({ token }: { token: string }) {
     setOrphanCount(orphans.length);
   }, [tasks, pageUrls, setOrphanCount]);
 
+  // Auto-select orphan tab when no pages exist but orphans do (so user isn't stuck)
+  useEffect(() => {
+    if (pages.length === 0 && orphanCount > 0 && activeTabId !== "orphan") {
+      usePageTabsStore.getState().setActiveTab("orphan");
+    }
+  }, [pages.length, orphanCount, activeTabId]);
+
   if (pages.length === 0 && orphanCount === 0) {
     return <main className="main"><EmptyState /></main>;
   }

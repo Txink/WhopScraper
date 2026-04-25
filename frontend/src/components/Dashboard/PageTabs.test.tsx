@@ -45,4 +45,19 @@ describe("<PageTabs>", () => {
     render(<PageTabs />);
     expect(screen.getByRole("tab", { name: /已停用/ })).toBeInTheDocument();
   });
+
+  it("renders orphan tab even when no pages exist (orphan-only mode)", () => {
+    usePageTabsStore.getState().setPages([]);
+    usePageTabsStore.getState().setOrphanCount(7);
+    render(<PageTabs />);
+    expect(screen.getByRole("tab", { name: /已停用/ })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /已停用/ })).toHaveTextContent("7");
+  });
+
+  it("returns null when no pages AND no orphans", () => {
+    usePageTabsStore.getState().setPages([]);
+    usePageTabsStore.getState().setOrphanCount(0);
+    const { container } = render(<PageTabs />);
+    expect(container.firstChild).toBeNull();
+  });
 });
