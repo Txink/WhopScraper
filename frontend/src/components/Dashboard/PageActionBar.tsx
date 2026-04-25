@@ -3,6 +3,7 @@ import { api } from "../../api/http";
 import { usePageTabsStore } from "../../stores/pageTabs";
 import type { ExpandMode } from "../../stores/pageTabs";
 import type { WhopPage } from "../../api/domain-types";
+import { PowerIcon, SettingsIcon } from "./icons";
 
 interface Props {
   page: WhopPage | null;            // null = orphan
@@ -81,7 +82,7 @@ export function PageActionBar({ page, onOpenSettings }: Props) {
         title={powerTitle}
         aria-label={powerAria}
       >
-        ⏻
+        <PowerIcon size={20} />
       </button>
       <button
         onClick={onOpenSettings}
@@ -90,7 +91,7 @@ export function PageActionBar({ page, onOpenSettings }: Props) {
         title="设置"
         aria-label="设置"
       >
-        ⚙
+        <SettingsIcon size={20} />
       </button>
       <button
         onClick={cycleExpandMode}
