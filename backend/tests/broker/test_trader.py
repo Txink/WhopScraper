@@ -177,8 +177,8 @@ async def test_option_buy_happy_path() -> None:
 
 
 @pytest.mark.asyncio
-async def test_auto_trade_disabled_skips() -> None:
-    """auto_trade=False → TASK_STATUS_CHANGED with SKIPPED, no submit call."""
+async def test_auto_trade_disabled_marks_waiting_manual_confirm() -> None:
+    """auto_trade=False keeps task INSTRUCTION_READY and emits a status update."""
     bus = EventBus()
     fake = FakeBrokerClient()
     register_trader(bus, fake, _config(auto_trade=False))
@@ -202,10 +202,10 @@ async def test_auto_trade_disabled_skips() -> None:
     assert len(fake.submitted_orders) == 0
     assert len(submitted_events) == 0
     assert len(status_events) == 1
-    skipped_task: Task = status_events[0].payload.task
-    assert skipped_task.status == Status.SKIPPED
-    assert skipped_task.reject_reason is not None
-    assert "auto_trade" in skipped_task.reject_reason
+    blocked_task: Task = status_events[0].payload.task
+    assert blocked_task.status == Status.INSTRUCTION_READY
+    assert blocked_task.reject_reason is not None
+    assert "manual" in blocked_task.reject_reason.lower()
 
 
 @pytest.mark.asyncio

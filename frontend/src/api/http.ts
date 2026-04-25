@@ -1,7 +1,7 @@
 import type {
   Task, TaskList, Positions, StatsToday, Health,
   WhopPage, WhopPages, WhopPageCreate, WhopCookieStatus,
-  WhopPageSettings, WhopPageSettingsPatch,
+  WhopPageSettings, WhopPageSettingsPatch, LongportSettings, LongportSettingsPatch,
 } from "./domain-types";
 
 
@@ -105,6 +105,10 @@ export const api = {
     return request(`/api/tasks/${encodeURIComponent(id)}/cancel`, { method: "POST" });
   },
 
+  async confirmTask(id: string): Promise<Task> {
+    return request<Task>(`/api/tasks/${encodeURIComponent(id)}/confirm`, { method: "POST" });
+  },
+
   async stats(): Promise<StatsToday> {
     return request<StatsToday>("/api/stats/today");
   },
@@ -115,6 +119,17 @@ export const api = {
 
   async health(): Promise<Health> {
     return request<Health>("/api/health");
+  },
+
+  async getLongportSettings(): Promise<LongportSettings> {
+    return request<LongportSettings>("/api/longport/settings");
+  },
+
+  async updateLongportSettings(patch: LongportSettingsPatch): Promise<LongportSettings> {
+    return request<LongportSettings>("/api/longport/settings", {
+      method: "PATCH",
+      body: JSON.stringify(patch),
+    });
   },
 
   async listWhopPages(): Promise<WhopPages> {

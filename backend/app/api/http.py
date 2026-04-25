@@ -44,6 +44,9 @@ from app.api.auth import require_app_token
 from app.api.schemas import (
     CancelOk,
     HealthOut,
+    LongPortCredentialSet,
+    LongPortSettingsOut,
+    LongPortSettingsPatch,
     OrphanCleanupRequest,
     OrphanCleanupResponse,
     PositionOut,
@@ -64,12 +67,16 @@ from app.api.schemas import (
     whop_page_to_out,
 )
 from app.broker.broker_client import BrokerClient
+from app.broker.runtime_settings import LongPortRuntimeStore
 from app.core.config import Settings
 from app.domain.status import Status
+from app.core.event_bus import Event
+from app.core.events import TaskPayload, Topics
 from app.storage import repo
 from app.storage.db import session_scope
 
 if TYPE_CHECKING:
+    from app.core.event_bus import EventBus
     from app.whop.registry import WhopRegistry
 
 
@@ -78,6 +85,8 @@ def build_http_router(
     session_factory: async_sessionmaker[AsyncSession],
     broker: BrokerClient,
     settings: Settings,
+    bus: EventBus,
+    longport_runtime: LongPortRuntimeStore | None = None,
     whop_registry: WhopRegistry | None = None,
 ) -> APIRouter:
     """Factory — injects session_factory, broker, and settings at app assembly.
@@ -86,6 +95,26 @@ def build_http_router(
     the router level, so auth is enforced uniformly without per-route boilerplate.
     """
     router = APIRouter(dependencies=[Depends(require_app_token)])
+    runtime_store = longport_runtime or LongPortRuntimeStore.from_settings_defaults(settings)
+
+    def _longport_settings_out() -> LongPortSettingsOut:
+        runtime = runtime_store.get()
+        return LongPortSettingsOut(
+            mode=runtime.mode,
+            paper=LongPortCredentialSet(
+                app_key=runtime.paper.app_key,
+                app_secret=runtime.paper.app_secret,
+                access_token=runtime.paper.access_token,
+            ),
+            real=LongPortCredentialSet(
+                app_key=runtime.real.app_key,
+                app_secret=runtime.real.app_secret,
+                access_token=runtime.real.access_token,
+            ),
+            auto_trade=runtime.auto_trade,
+            region=runtime.region,
+            dry_run=runtime.dry_run,
+        )
 
     # ------------------------------------------------------------------ #
     # GET /api/tasks                                                        #
@@ -252,12 +281,67 @@ def build_http_router(
         return HealthOut(
             whop="down",
             longport="up",
-            mode="paper" if broker.is_paper else "real",
-            dry_run=broker.dry_run,
+            mode=_longport_settings_out().mode,
+            dry_run=_longport_settings_out().dry_run,
         )
 
-    # Satisfy Settings reference so mypy knows it's consumed.
-    _ = settings
+    @router.get("/api/longport/settings", response_model=LongPortSettingsOut)
+    async def get_longport_settings() -> LongPortSettingsOut:
+        return _longport_settings_out()
+
+    @router.patch("/api/longport/settings", response_model=LongPortSettingsOut)
+    async def patch_longport_settings(body: LongPortSettingsPatch) -> LongPortSettingsOut:
+        patch: dict[str, object] = {}
+        if body.mode is not None:
+            patch["mode"] = body.mode
+        if body.paper is not None:
+            patch["paper"] = {
+                "app_key": body.paper.app_key,
+                "app_secret": body.paper.app_secret,
+                "access_token": body.paper.access_token,
+            }
+        if body.real is not None:
+            patch["real"] = {
+                "app_key": body.real.app_key,
+                "app_secret": body.real.app_secret,
+                "access_token": body.real.access_token,
+            }
+        if body.auto_trade is not None:
+            patch["auto_trade"] = body.auto_trade
+        if body.region is not None:
+            patch["region"] = body.region
+        if body.dry_run is not None:
+            patch["dry_run"] = body.dry_run
+        runtime_store.update(patch)
+        return _longport_settings_out()
+
+    @router.post("/api/tasks/{task_id}/confirm", response_model=TaskOut)
+    async def confirm_task_endpoint(task_id: str) -> TaskOut:
+        async with session_scope(session_factory) as session:
+            task = await repo.load_task(session, task_id)
+        if task is None:
+            raise HTTPException(404, detail="task not found")
+        if task.instruction is None:
+            raise HTTPException(400, detail="task has no parsed instruction")
+        if task.status != Status.INSTRUCTION_READY:
+            raise HTTPException(
+                400,
+                detail=f"task status must be INSTRUCTION_READY for confirm, got: {task.status}",
+            )
+
+        prev_runtime = runtime_store.get()
+        runtime_store.update({"auto_trade": True})
+        try:
+            await bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
+        finally:
+            runtime_store.update({"auto_trade": prev_runtime.auto_trade})
+        await bus.wait_idle(timeout=3.0)
+
+        async with session_scope(session_factory) as session:
+            refreshed = await repo.load_task(session, task_id)
+        if refreshed is None:
+            raise HTTPException(500, detail="task missing after confirm")
+        return task_to_out(refreshed)
 
     # ------------------------------------------------------------------ #
     # Whop monitoring management (only when registry provided)             #

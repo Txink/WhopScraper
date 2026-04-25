@@ -76,25 +76,25 @@ const pushEvents: PushEvent[] = [
 describe("CardExpanded", () => {
   it("renders expanded card with header", () => {
     const { container } = render(
-      <CardExpanded task={task} pushEvents={[]} onCollapse={vi.fn()} />
+      <CardExpanded task={task} pushEvents={[]} autoTrade={true} onCollapse={vi.fn()} />
     );
     expect(container.querySelector(".card.expanded")).toBeInTheDocument();
     expect(container.querySelector(".card-header")).toBeInTheDocument();
   });
 
   it("renders symbol in header", () => {
-    render(<CardExpanded task={task} pushEvents={[]} onCollapse={vi.fn()} />);
+    render(<CardExpanded task={task} pushEvents={[]} autoTrade={true} onCollapse={vi.fn()} />);
     expect(screen.getByText("TSLL.US")).toBeInTheDocument();
   });
 
   it("renders raw message content", () => {
-    render(<CardExpanded task={task} pushEvents={[]} onCollapse={vi.fn()} />);
+    render(<CardExpanded task={task} pushEvents={[]} autoTrade={true} onCollapse={vi.fn()} />);
     expect(screen.getByText(/TSLL 26.5 附近加一半/)).toBeInTheDocument();
   });
 
   it("renders inline parse info on 解析指令 stage (ticker / price / qty / stop)", () => {
     const { container } = render(
-      <CardExpanded task={task} pushEvents={[]} onCollapse={vi.fn()} />
+      <CardExpanded task={task} pushEvents={[]} autoTrade={true} onCollapse={vi.fn()} />
     );
     // The old chips block should be gone
     expect(container.querySelector(".chips")).not.toBeInTheDocument();
@@ -110,7 +110,7 @@ describe("CardExpanded", () => {
 
   it("renders local stages", () => {
     const { container } = render(
-      <CardExpanded task={task} pushEvents={[]} onCollapse={vi.fn()} />
+      <CardExpanded task={task} pushEvents={[]} autoTrade={true} onCollapse={vi.fn()} />
     );
     expect(container.querySelector(".stages")).toBeInTheDocument();
     expect(screen.getByText("原始消息")).toBeInTheDocument();
@@ -120,7 +120,7 @@ describe("CardExpanded", () => {
 
   it("renders push block when push events exist", () => {
     const { container } = render(
-      <CardExpanded task={task} pushEvents={pushEvents} onCollapse={vi.fn()} />
+      <CardExpanded task={task} pushEvents={pushEvents} autoTrade={true} onCollapse={vi.fn()} />
     );
     expect(container.querySelector(".push-block")).toBeInTheDocument();
     expect(screen.getByText("订单推送")).toBeInTheDocument();
@@ -128,7 +128,7 @@ describe("CardExpanded", () => {
 
   it("push chain shows push events in compact mode by default", () => {
     const { container } = render(
-      <CardExpanded task={task} pushEvents={pushEvents} onCollapse={vi.fn()} />
+      <CardExpanded task={task} pushEvents={pushEvents} autoTrade={true} onCollapse={vi.fn()} />
     );
     // compact mode shows push-chain
     expect(container.querySelector(".push-chain")).toBeInTheDocument();
@@ -138,7 +138,7 @@ describe("CardExpanded", () => {
 
   it("toggle push-block shows detail list", () => {
     const { container } = render(
-      <CardExpanded task={task} pushEvents={pushEvents} onCollapse={vi.fn()} />
+      <CardExpanded task={task} pushEvents={pushEvents} autoTrade={true} onCollapse={vi.fn()} />
     );
     const toggleBtn = screen.getByText("展开 ▾");
     fireEvent.click(toggleBtn);
@@ -150,13 +150,13 @@ describe("CardExpanded", () => {
 
   it("calls onCollapse when collapse button clicked", () => {
     const onCollapse = vi.fn();
-    render(<CardExpanded task={task} pushEvents={[]} onCollapse={onCollapse} />);
+    render(<CardExpanded task={task} pushEvents={[]} autoTrade={true} onCollapse={onCollapse} />);
     fireEvent.click(screen.getByLabelText("收起"));
     expect(onCollapse).toHaveBeenCalledOnce();
   });
 
   it("renders order_id in submit stage", () => {
-    render(<CardExpanded task={task} pushEvents={[]} onCollapse={vi.fn()} />);
+    render(<CardExpanded task={task} pushEvents={[]} autoTrade={true} onCollapse={vi.fn()} />);
     expect(screen.getByText("729308570398740480")).toBeInTheDocument();
   });
 
@@ -166,7 +166,18 @@ describe("CardExpanded", () => {
       status: "SKIPPED",
       reject_reason: "skip: duplicated message",
     };
-    render(<CardExpanded task={skippedTask} pushEvents={[]} onCollapse={vi.fn()} />);
+    render(<CardExpanded task={skippedTask} pushEvents={[]} autoTrade={true} onCollapse={vi.fn()} />);
     expect(screen.getByText("skip: duplicated message")).toBeInTheDocument();
+  });
+
+  it("shows manual confirm button when autoTrade off and instruction ready", () => {
+    const readyTask: TaskSummary = {
+      ...task,
+      status: "INSTRUCTION_READY",
+      order_id: null,
+      reject_reason: "awaiting manual confirmation",
+    };
+    render(<CardExpanded task={readyTask} pushEvents={[]} autoTrade={false} onCollapse={vi.fn()} />);
+    expect(screen.getByRole("button", { name: "确认下单" })).toBeInTheDocument();
   });
 });

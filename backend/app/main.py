@@ -15,7 +15,8 @@ from fastapi.staticfiles import StaticFiles
 from app.api.http import build_http_router
 from app.api.ws import WebSocketHub, build_ws_router
 from app.broker.broker_client import BrokerClient
-from app.broker.config import LongPortConfig, load_longport_config
+from app.broker.config import LongPortConfig, load_longport_config_from_runtime
+from app.broker.runtime_settings import LongPortRuntimeStore
 from app.broker.push_listener import PushListener, register_push_listener
 from app.broker.trader import register_trader
 from app.core.config import Settings, get_settings
@@ -40,6 +41,7 @@ class AppState:
     unsubs: list[Callable[[], None]]
     push_listener: PushListener | None
     whop_registry: WhopRegistry
+    longport_runtime: LongPortRuntimeStore
 
 
 def create_app(
@@ -83,13 +85,17 @@ def create_app(
 
         bus = EventBus()
         state.bus = bus
+        state.longport_runtime = LongPortRuntimeStore()
 
         # Broker -----------------------------------------------------------
         if broker_override is not None:
             state.broker = broker_override
         else:
             try:
-                broker_cfg = load_longport_config()
+                broker_cfg = load_longport_config_from_runtime(
+                    state.longport_runtime.get(),
+                    settings=settings,
+                )
                 from app.broker.longport_client import LongPortClient
 
                 state.broker = LongPortClient(broker_cfg)
@@ -99,7 +105,7 @@ def create_app(
                 logger.warning(
                     "LongPortClient init failed (%s). Falling back to monitoring-only "
                     "mode (NoopBrokerClient). No orders will be submitted. "
-                    "Set LONGPORT_* env vars in .env to enable real trading.",
+                    "Configure LongPort credentials in the UI settings to enable real trading.",
                     exc,
                 )
                 state.broker = NoopBrokerClient()
@@ -123,26 +129,32 @@ def create_app(
         )
 
         # 2. Trader: TASK_INSTRUCTION_READY → broker order submission
+        runtime = state.longport_runtime.get()
         try:
-            trader_cfg = load_longport_config()
+            trader_cfg = load_longport_config_from_runtime(runtime, settings=settings)
         except ValueError:
-            # No LongPort creds (test or paper monitoring mode) — build a
-            # minimal config from Settings so the trader can still apply
-            # auto_trade / dry_run / risk-limit logic.
+            # No creds yet; trader still uses runtime auto_trade/dry_run gates.
             trader_cfg = LongPortConfig(
-                mode="paper",
+                mode=runtime.mode,
                 app_key="",
                 app_secret="",
                 access_token="",
-                auto_trade=settings.longport_auto_trade,
-                dry_run=settings.longport_dry_run,
+                region=runtime.region,
+                auto_trade=runtime.auto_trade,
+                dry_run=runtime.dry_run,
                 max_option_total_price=settings.max_option_total_price,
                 max_option_quantity=settings.max_option_quantity,
                 price_deviation_tolerance=settings.price_deviation_tolerance,
                 stock_price_deviation_tolerance=settings.stock_price_deviation_tolerance,
             )
         state.unsubs.append(
-            register_trader(bus, state.broker, trader_cfg, registry=state.whop_registry)
+            register_trader(
+                bus,
+                state.broker,
+                trader_cfg,
+                registry=state.whop_registry,
+                auto_trade_getter=lambda: state.longport_runtime.get().auto_trade,
+            )
         )
 
         # 3. Storage listeners: all task.* topics → DB persistence
@@ -196,6 +208,8 @@ def create_app(
                 session_factory=state.session_factory,
                 broker=state.broker,
                 settings=state.settings,
+                bus=state.bus,
+                longport_runtime=state.longport_runtime,
                 whop_registry=state.whop_registry,
             )
         )

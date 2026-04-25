@@ -29,6 +29,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.api.http import build_http_router
 from app.core.config import Settings, get_settings
+from app.core.event_bus import EventBus
 from app.domain.instruction import InstructionType, StockInstruction
 from app.domain.message import Message
 from app.domain.push_event import PushEvent, PushState
@@ -117,6 +118,7 @@ def make_app(session_factory: async_sessionmaker[AsyncSession]) -> tuple[FastAPI
             session_factory=session_factory,
             broker=broker,
             settings=settings,
+            bus=EventBus(),
         )
     )
     # Override the settings dependency so require_app_token uses the same token.
@@ -446,3 +448,67 @@ def test_missing_token_403(client_and_broker: tuple[TestClient, FakeBrokerClient
     client, _ = client_and_broker
     resp = client.get("/api/health")
     assert resp.status_code == 403
+
+
+def test_get_longport_settings(client_and_broker: tuple[TestClient, FakeBrokerClient]) -> None:
+    client, _ = client_and_broker
+    resp = client.get("/api/longport/settings", params={"token": _TOKEN})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["mode"] in ("paper", "real")
+    assert "paper" in body and "real" in body
+    assert "auto_trade" in body and "dry_run" in body and "region" in body
+
+
+def test_patch_longport_settings(client_and_broker: tuple[TestClient, FakeBrokerClient]) -> None:
+    client, _ = client_and_broker
+    resp = client.patch(
+        "/api/longport/settings",
+        params={"token": _TOKEN},
+        json={
+            "mode": "real",
+            "auto_trade": False,
+            "dry_run": False,
+            "region": "hk",
+            "paper": {"app_key": "pk", "app_secret": "ps", "access_token": "pt"},
+            "real": {"app_key": "rk", "app_secret": "rs", "access_token": "rt"},
+        },
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["mode"] == "real"
+    assert body["auto_trade"] is False
+    assert body["dry_run"] is False
+    assert body["region"] == "hk"
+    assert body["real"]["app_key"] == "rk"
+
+
+@pytest_asyncio.fixture
+async def instruction_ready_task(session_factory: async_sessionmaker[AsyncSession]) -> Task:
+    task = _task("confirm-1", Status.RECEIVED, offset_secs=0)
+    task.mark_parsing()
+    task.attach_instruction(_stock_instruction())
+    async with session_factory() as session:
+        await repo.save_task(session, task)
+    return task
+
+
+def test_confirm_task_endpoint_ok(
+    client_and_broker: tuple[TestClient, FakeBrokerClient],
+    instruction_ready_task: Task,
+) -> None:
+    client, _ = client_and_broker
+    resp = client.post("/api/tasks/confirm-1/confirm", params={"token": _TOKEN})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["id"] == "confirm-1"
+    assert body["status"] == "INSTRUCTION_READY"
+
+
+def test_confirm_task_endpoint_rejects_non_instruction_ready(
+    client_and_broker: tuple[TestClient, FakeBrokerClient],
+    received_task_no_order: Task,
+) -> None:
+    client, _ = client_and_broker
+    resp = client.post("/api/tasks/cxl2/confirm", params={"token": _TOKEN})
+    assert resp.status_code == 400

@@ -5,14 +5,25 @@ export interface TopBarProps {
   connLongport: "up" | "down" | "unknown";
   mode: "paper" | "real";
   dryRun: boolean;
+  autoTrade?: boolean;
+  onOpenLongportSettings?: () => void;
   onLogout?: () => void;
 }
 
-export function TopBar({ connLongport, mode, dryRun, onLogout }: TopBarProps) {
+export function TopBar({
+  connLongport,
+  mode,
+  dryRun,
+  autoTrade = false,
+  onOpenLongportSettings,
+  onLogout,
+}: TopBarProps) {
   const view = useViewStore((s) => s.view);
   const setView = useViewStore((s) => s.setView);
 
-  const pillLabel = `${mode === "paper" ? "PAPER" : "REAL"} · ${dryRun ? "DRY" : "LIVE"}`;
+  const pillParts = [mode === "paper" ? "PAPER" : "REAL", dryRun ? "DRY" : "LIVE"];
+  if (autoTrade) pillParts.push("AUTO");
+  const pillLabel = pillParts.join(" · ");
 
   return (
     <header className="topbar">
@@ -52,7 +63,14 @@ export function TopBar({ connLongport, mode, dryRun, onLogout }: TopBarProps) {
             <span className="conn-label">longport</span>
           </div>
         </div>
-        <span className={`acct-pill ${mode}`}>{pillLabel}</span>
+        <button
+          type="button"
+          className={`acct-pill ${mode}`}
+          onClick={onOpenLongportSettings}
+          title="LongPort 设置"
+        >
+          {pillLabel}
+        </button>
         {onLogout && (
           <button
             className="logout-btn"

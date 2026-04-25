@@ -28,9 +28,10 @@ interface Props {
   tasks: TaskSummary[];
   pushEventsByTask: Record<string, PushEvent[]>;
   expandMode: ExpandMode;
+  autoTrade: boolean;
 }
 
-export function TaskStream({ tasks, pushEventsByTask, expandMode }: Props) {
+export function TaskStream({ tasks, pushEventsByTask, expandMode, autoTrade }: Props) {
   const sorted = [...tasks].sort((a, b) => {
     const aTime = a.message?.posted_at ?? a.created_at;
     const bTime = b.message?.posted_at ?? b.created_at;
@@ -65,6 +66,7 @@ export function TaskStream({ tasks, pushEventsByTask, expandMode }: Props) {
                   task={t}
                   pushEvents={pushEventsByTask[t.id] ?? []}
                   defaultExpanded={expanded}
+                  autoTrade={autoTrade}
                 />
               );
             })}

@@ -5,7 +5,7 @@ describe("conn store", () => {
   beforeEach(() => {
     useConnStore.setState({
       ws: "closed", whop: "unknown", longport: "unknown",
-      mode: "paper", dryRun: true, lastEventId: null,
+      mode: "paper", dryRun: true, autoTrade: true, lastEventId: null,
     });
   });
 
@@ -27,5 +27,17 @@ describe("conn store", () => {
   it("setLastEventId updates cursor", () => {
     useConnStore.getState().setLastEventId(42);
     expect(useConnStore.getState().lastEventId).toBe(42);
+  });
+
+  it("setRuntimeSettings updates mode/dry/autoTrade", () => {
+    useConnStore.getState().setRuntimeSettings({
+      mode: "real",
+      dry_run: false,
+      auto_trade: false,
+    });
+    const s = useConnStore.getState();
+    expect(s.mode).toBe("real");
+    expect(s.dryRun).toBe(false);
+    expect(s.autoTrade).toBe(false);
   });
 });

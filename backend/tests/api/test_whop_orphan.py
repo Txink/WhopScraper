@@ -115,6 +115,7 @@ def app_and_factory(
                 session_factory=factory,
                 broker=NoopBrokerClient(),
                 settings=settings_test,
+                bus=bus,
                 whop_registry=registry,
             )
         )

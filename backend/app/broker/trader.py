@@ -53,6 +53,7 @@ def register_trader(
     config: LongPortConfig,
     *,
     registry: Any | None = None,
+    auto_trade_getter: Callable[[], bool] | None = None,
 ) -> Callable[[], None]:
     """Subscribe trader handler to TASK_INSTRUCTION_READY.
 
@@ -98,8 +99,11 @@ def register_trader(
             return
 
         # ---- Top-level validation ----
-        if not config.auto_trade:
-            await _publish_skip(task, "auto_trade disabled in config")
+        auto_trade_enabled = auto_trade_getter() if auto_trade_getter is not None else config.auto_trade
+        if not auto_trade_enabled:
+            # Keep task at INSTRUCTION_READY so the UI can trigger manual confirmation.
+            task.reject_reason = "auto_trade disabled in config; awaiting manual confirmation"
+            await bus.publish(Event(Topics.TASK_STATUS_CHANGED, TaskPayload(task)))
             return
         if not getattr(inst, "symbol", None):
             await _publish_skip(task, "instruction missing symbol")

@@ -324,6 +324,32 @@
 .stage-meta .k { color: var(--fg-3); margin-right: 4px; }
 .stage-meta .v { color: var(--fg-2); }
 
+.manual-confirm-row {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.manual-confirm-btn {
+  border: 1px solid var(--brand);
+  background: rgba(63, 181, 197, 0.08);
+  color: var(--fg-1);
+  border-radius: var(--radius-chip);
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.manual-confirm-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.manual-confirm-err {
+  color: var(--err);
+  font-size: 11px;
+}
+
 .stage-delta {
   font-family: var(--font-mono);
   font-size: 11px;

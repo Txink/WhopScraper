@@ -21,3 +21,27 @@ export type WhopCookieStatus = components["schemas"]["WhopCookieStatusOut"];
 export type WhopPageSettings = components["schemas"]["WhopPageSettingsOut"];
 export type WhopPageSettingsPatch = components["schemas"]["WhopPageSettingsPatch"];
 export type TickerConfig = components["schemas"]["TickerConfigOut"];
+
+export interface LongportCredentialSet {
+  app_key: string;
+  app_secret: string;
+  access_token: string;
+}
+
+export interface LongportSettings {
+  mode: "paper" | "real";
+  paper: LongportCredentialSet;
+  real: LongportCredentialSet;
+  auto_trade: boolean;
+  region: string;
+  dry_run: boolean;
+}
+
+export interface LongportSettingsPatch {
+  mode?: "paper" | "real";
+  paper?: LongportCredentialSet;
+  real?: LongportCredentialSet;
+  auto_trade?: boolean;
+  region?: string;
+  dry_run?: boolean;
+}

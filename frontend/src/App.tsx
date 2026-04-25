@@ -19,6 +19,7 @@ import { TaskStream } from "./components/Dashboard/TaskStream";
 import { OrphanCleanupBar } from "./components/Dashboard/OrphanCleanupBar";
 import { DatabaseRecordsPanel } from "./components/Dashboard/DatabaseRecordsPanel";
 import { EmptyState } from "./components/Dashboard/EmptyState";
+import { LongportSettingsModal } from "./components/Dashboard/LongportSettingsModal";
 import { useStickyTop } from "./hooks/useStickyTop";
 import "./App.css";
 import "./components/Dashboard/Dashboard.css";
@@ -74,6 +75,7 @@ function handleLogout() {
 function Dashboard({ token }: { token: string }) {
   useStickyTop();
   const conn = useConnStore();
+  const autoTrade = useConnStore((s) => s.autoTrade);
   const tasks = useTasksStore((s) => s.tasks);
   const pushEventsByTask = useTasksStore((s) => s.pushEventsByTask);
   const applyWs = useTasksStore((s) => s.applyWsEvent);
@@ -111,6 +113,18 @@ function Dashboard({ token }: { token: string }) {
         if (alive) conn.setHealth(h);
       } catch (e) {
         console.warn("health fetch failed:", e);
+      }
+      try {
+        const lp = await api.getLongportSettings();
+        if (alive) {
+          useConnStore.getState().setRuntimeSettings({
+            mode: lp.mode,
+            dry_run: lp.dry_run,
+            auto_trade: lp.auto_trade,
+          });
+        }
+      } catch (e) {
+        console.warn("longport settings fetch failed:", e);
       }
       try {
         const r = await api.listTasks({ limit: 100 });
@@ -206,7 +220,12 @@ function Dashboard({ token }: { token: string }) {
         {filteredTasks.length === 0 ? (
           <div className="empty-state"><p>该监听页暂无任务。</p></div>
         ) : (
-          <TaskStream tasks={filteredTasks} pushEventsByTask={pushEventsByTask} expandMode={expandMode} />
+          <TaskStream
+            tasks={filteredTasks}
+            pushEventsByTask={pushEventsByTask}
+            expandMode={expandMode}
+            autoTrade={autoTrade}
+          />
         )}
       </section>
       <RightRail />
@@ -255,6 +274,7 @@ function ContentRouter({ token }: { token: string }) {
 }
 
 export default function App() {
+  const [longportSettingsOpen, setLongportSettingsOpen] = useState(false);
   const [authState, setAuthState] = useState<"checking" | "valid" | "missing" | "invalid">(
     "checking",
   );
@@ -307,9 +327,23 @@ export default function App() {
         connLongport={conn.longport}
         mode={conn.mode}
         dryRun={conn.dryRun}
+        autoTrade={conn.autoTrade}
+        onOpenLongportSettings={() => setLongportSettingsOpen(true)}
         onLogout={handleLogout}
       />
       <ContentRouter token={token} />
+      {longportSettingsOpen && (
+        <LongportSettingsModal
+          onClose={() => setLongportSettingsOpen(false)}
+          onSaved={(saved) => {
+            useConnStore.getState().setRuntimeSettings({
+              mode: saved.mode,
+              dry_run: saved.dry_run,
+              auto_trade: saved.auto_trade,
+            });
+          }}
+        />
+      )}
     </div>
   );
 }

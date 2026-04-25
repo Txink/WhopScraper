@@ -94,6 +94,7 @@ def registry_and_client(
                 session_factory=None,  # type: ignore[arg-type]
                 broker=None,  # type: ignore[arg-type]
                 settings=settings_test,
+                bus=bus,
                 whop_registry=registry,
             )
         )

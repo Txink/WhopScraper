@@ -49,7 +49,7 @@ const filledTask: TaskSummary = {
 describe("Card", () => {
   it("defaultExpanded=false renders compact mode", () => {
     const { container } = render(
-      <Card task={filledTask} pushEvents={[]} defaultExpanded={false} />
+      <Card task={filledTask} pushEvents={[]} defaultExpanded={false} autoTrade={true} />
     );
     expect(container.querySelector(".card.compact")).toBeInTheDocument();
     expect(container.querySelector(".card.expanded")).not.toBeInTheDocument();
@@ -57,7 +57,7 @@ describe("Card", () => {
 
   it("defaultExpanded=true renders expanded mode", () => {
     const { container } = render(
-      <Card task={filledTask} pushEvents={[]} defaultExpanded={true} />
+      <Card task={filledTask} pushEvents={[]} defaultExpanded={true} autoTrade={true} />
     );
     expect(container.querySelector(".card.expanded")).toBeInTheDocument();
     expect(container.querySelector(".card.compact")).not.toBeInTheDocument();
@@ -65,7 +65,7 @@ describe("Card", () => {
 
   it("clicking compact card expands it", () => {
     const { container } = render(
-      <Card task={filledTask} pushEvents={[]} defaultExpanded={false} />
+      <Card task={filledTask} pushEvents={[]} defaultExpanded={false} autoTrade={true} />
     );
     const compactCard = container.querySelector(".card.compact")!;
     fireEvent.click(compactCard);
@@ -75,7 +75,7 @@ describe("Card", () => {
 
   it("clicking collapse button in expanded mode collapses it", () => {
     const { container } = render(
-      <Card task={filledTask} pushEvents={[]} defaultExpanded={true} />
+      <Card task={filledTask} pushEvents={[]} defaultExpanded={true} autoTrade={true} />
     );
     const collapseBtn = container.querySelector(".collapse-btn")!;
     fireEvent.click(collapseBtn);

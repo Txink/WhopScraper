@@ -177,6 +177,30 @@ class HealthOut(BaseModel):
     dry_run: bool
 
 
+class LongPortCredentialSet(BaseModel):
+    app_key: str
+    app_secret: str
+    access_token: str
+
+
+class LongPortSettingsOut(BaseModel):
+    mode: Literal["paper", "real"]
+    paper: LongPortCredentialSet
+    real: LongPortCredentialSet
+    auto_trade: bool
+    region: str
+    dry_run: bool
+
+
+class LongPortSettingsPatch(BaseModel):
+    mode: Literal["paper", "real"] | None = None
+    paper: LongPortCredentialSet | None = None
+    real: LongPortCredentialSet | None = None
+    auto_trade: bool | None = None
+    region: str | None = None
+    dry_run: bool | None = None
+
+
 # ---------------------------------------------------------------------------
 # Cancel
 # ---------------------------------------------------------------------------

@@ -115,6 +115,12 @@
   padding: 3px 8px;
   border-radius: var(--radius-chip);
   border: 1px solid transparent;
+  cursor: pointer;
+  background: transparent;
+}
+
+.acct-pill:hover {
+  filter: brightness(1.05);
 }
 
 .acct-pill.paper {

@@ -26,6 +26,11 @@ describe("TopBar", () => {
     expect(screen.getByText(/LIVE/)).toBeInTheDocument();
   });
 
+  it("shows AUTO in pill when autoTrade enabled", () => {
+    render(<TopBar connLongport="up" mode="paper" dryRun={true} autoTrade={true} />);
+    expect(screen.getByText("PAPER · DRY · AUTO")).toBeInTheDocument();
+  });
+
   it("renders view-switcher buttons", () => {
     render(<TopBar connLongport="up" mode="paper" dryRun={true} />);
     expect(screen.getByRole("button", { name: "监控看板" })).toBeInTheDocument();
@@ -91,5 +96,19 @@ describe("TopBar", () => {
   it("does not render logout button when onLogout absent", () => {
     render(<TopBar connLongport="up" mode="paper" dryRun={true} />);
     expect(screen.queryByRole("button", { name: /退出登录/ })).toBeNull();
+  });
+
+  it("clicking PAPER/DRY pill triggers longport settings callback", () => {
+    const fn = vi.fn();
+    render(
+      <TopBar
+        connLongport="up"
+        mode="paper"
+        dryRun={true}
+        onOpenLongportSettings={fn}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: /PAPER/i }));
+    expect(fn).toHaveBeenCalledOnce();
   });
 });

@@ -1,5 +1,7 @@
 import { useState } from "react";
 import type { TaskSummary, PushEvent } from "../../api/domain-types";
+import { api, HttpError } from "../../api/http";
+import { useTasksStore } from "../../stores/tasks";
 import { TypeBadge } from "../common/TypeBadge";
 import { StatusPill } from "../common/StatusPill";
 import { OrderSubmit } from "./OrderSubmit";
@@ -11,11 +13,14 @@ import "./Card.css";
 export interface CardExpandedProps {
   task: TaskSummary;
   pushEvents: PushEvent[];
+  autoTrade: boolean;
   onCollapse: () => void;
 }
 
-export function CardExpanded({ task, pushEvents, onCollapse }: CardExpandedProps) {
+export function CardExpanded({ task, pushEvents, autoTrade, onCollapse }: CardExpandedProps) {
   const [pushExpanded, setPushExpanded] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [confirmError, setConfirmError] = useState<string | null>(null);
 
   const { type, status, instruction, message, order_id, stage_timings, reject_reason } = task;
   const badgeType = type === "option" ? "option" : "stock";
@@ -34,6 +39,7 @@ export function CardExpanded({ task, pushEvents, onCollapse }: CardExpandedProps
   const hasInstruction = instruction != null;
   const hasOrder = order_id != null;
   const hasSkipReason = status === "SKIPPED" && Boolean(reject_reason);
+  const canManualConfirm = autoTrade === false && status === "INSTRUCTION_READY" && hasInstruction;
 
   // Stage marker class helper
   const isPastStage = (s: string) =>
@@ -51,6 +57,25 @@ export function CardExpanded({ task, pushEvents, onCollapse }: CardExpandedProps
   const lastPartial = [...pushEvents].reverse().find((e) => e.state === "PARTIAL");
   const cumQty = lastPartial?.cumulative_qty;
   const cumAvg = lastPartial?.cumulative_avg_price;
+
+  const handleConfirm = async () => {
+    setConfirming(true);
+    setConfirmError(null);
+    try {
+      const updated = await api.confirmTask(task.id);
+      useTasksStore.getState().upsertTask(updated);
+    } catch (e) {
+      if (e instanceof HttpError) {
+        setConfirmError(typeof e.body === "object" && e.body && "detail" in e.body
+          ? String((e.body as { detail: unknown }).detail)
+          : e.message);
+      } else {
+        setConfirmError(e instanceof Error ? e.message : String(e));
+      }
+    } finally {
+      setConfirming(false);
+    }
+  };
 
   return (
     <article className="card expanded">
@@ -130,6 +155,19 @@ export function CardExpanded({ task, pushEvents, onCollapse }: CardExpandedProps
               )}
               {hasSkipReason && (
                 <div className="stage-meta stage-meta-warn">{reject_reason}</div>
+              )}
+              {canManualConfirm && (
+                <div className="manual-confirm-row">
+                  <button
+                    type="button"
+                    className="manual-confirm-btn"
+                    onClick={handleConfirm}
+                    disabled={confirming}
+                  >
+                    {confirming ? "提交中…" : "确认下单"}
+                  </button>
+                  {confirmError && <span className="manual-confirm-err">{confirmError}</span>}
+                </div>
               )}
             </div>
             <div className="stage-delta">

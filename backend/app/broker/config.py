@@ -9,6 +9,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
+from app.broker.runtime_settings import LongPortRuntimeSettings
+from app.core.config import Settings
+
 
 @dataclass(frozen=True)
 class LongPortConfig:
@@ -78,4 +81,37 @@ def load_longport_config() -> LongPortConfig:
         max_option_quantity=s.max_option_quantity,
         price_deviation_tolerance=s.price_deviation_tolerance,
         stock_price_deviation_tolerance=s.stock_price_deviation_tolerance,
+    )
+
+
+def load_longport_config_from_runtime(
+    runtime: LongPortRuntimeSettings,
+    *,
+    settings: Settings,
+) -> LongPortConfig:
+    """Build LongPortConfig from persisted runtime settings + risk defaults."""
+    mode = runtime.mode
+    creds = runtime.paper if mode == "paper" else runtime.real
+    prefix = "LONGPORT_PAPER" if mode == "paper" else "LONGPORT_REAL"
+    for field_name, value in (
+        (f"{prefix}_APP_KEY", creds.app_key),
+        (f"{prefix}_APP_SECRET", creds.app_secret),
+        (f"{prefix}_ACCESS_TOKEN", creds.access_token),
+    ):
+        if not value:
+            raise ValueError(
+                f"{field_name} is empty for mode={mode!r}. Configure credentials in UI settings."
+            )
+    return LongPortConfig(
+        mode=mode,
+        app_key=creds.app_key,
+        app_secret=creds.app_secret,
+        access_token=creds.access_token,
+        region=runtime.region,
+        auto_trade=runtime.auto_trade,
+        dry_run=runtime.dry_run,
+        max_option_total_price=settings.max_option_total_price,
+        max_option_quantity=settings.max_option_quantity,
+        price_deviation_tolerance=settings.price_deviation_tolerance,
+        stock_price_deviation_tolerance=settings.stock_price_deviation_tolerance,
     )

@@ -7,9 +7,10 @@ export interface CardProps {
   task: TaskSummary;
   pushEvents: PushEvent[];
   defaultExpanded: boolean;
+  autoTrade: boolean;
 }
 
-export function Card({ task, pushEvents, defaultExpanded }: CardProps) {
+export function Card({ task, pushEvents, defaultExpanded, autoTrade }: CardProps) {
   const [expanded, setExpanded] = useState(defaultExpanded);
 
   if (expanded) {
@@ -17,6 +18,7 @@ export function Card({ task, pushEvents, defaultExpanded }: CardProps) {
       <CardExpanded
         task={task}
         pushEvents={pushEvents}
+        autoTrade={autoTrade}
         onCollapse={() => setExpanded(false)}
       />
     );

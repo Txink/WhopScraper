@@ -77,6 +77,7 @@ def registry_and_client(
             session_factory=None,  # type: ignore[arg-type]
             broker=None,  # type: ignore[arg-type]
             settings=settings_test,
+            bus=bus,
             whop_registry=registry,
         )
     )
@@ -362,6 +363,7 @@ def test_whop_endpoints_absent_when_no_registry(
             session_factory=sf,
             broker=broker,
             settings=settings_test,
+            bus=EventBus(),
             # no whop_registry
         )
     )
