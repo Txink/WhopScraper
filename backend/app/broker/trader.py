@@ -151,6 +151,10 @@ def register_trader(
         else:
             computed_qty = inst.quantity or 1
 
+        # Persist the resolved execution quantity back onto instruction so
+        # API task payloads can render QTY/TOTAL consistently in the frontend.
+        inst.quantity = computed_qty
+
         # ---- Block non-today messages if configured (per-page setting) ----
         if page_settings is not None and page_settings.block_non_today_messages:
             from datetime import datetime

@@ -159,6 +159,8 @@ async def test_qty_calc_normal_position():
 
     assert len(broker.submitted) == 1
     assert broker.submitted[0]["quantity"] == 2000
+    assert task.instruction is not None
+    assert task.instruction.quantity == 2000
 
 
 @pytest.mark.asyncio
