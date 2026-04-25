@@ -312,6 +312,11 @@ def build_http_router(
                     k: {"trade_quantity": v.trade_quantity}
                     for k, v in body.tickers.items()
                 }
+            if not patch_dict:
+                raise HTTPException(
+                    400,
+                    detail="patch body is empty — provide at least one settings field",
+                )
             try:
                 entry = await whop_registry.update_settings(page_id, patch_dict)
             except KeyError as exc:

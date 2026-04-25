@@ -243,6 +243,20 @@ def test_patch_settings_negative_tolerance_returns_422(
     assert resp.status_code == 422
 
 
+def test_patch_settings_empty_body_returns_400(
+    registry_and_client: tuple[WhopRegistry, TestClient, WhopPageEntry, WhopPageEntry],
+) -> None:
+    """Empty PATCH body returns 400 — avoids spurious WS event + no-op write."""
+    _, client, stock, _ = registry_and_client
+    resp = client.patch(
+        f"/api/whop/pages/{stock.id}/settings",
+        json={},
+        params={"token": _TOKEN},
+    )
+    assert resp.status_code == 400
+    assert "empty" in resp.json()["detail"].lower()
+
+
 # ---------------------------------------------------------------------------
 # Tests — GET /api/whop/pages/defaults
 # ---------------------------------------------------------------------------
