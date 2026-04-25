@@ -535,3 +535,14 @@ async def list_positions(session: AsyncSession) -> list[PositionRow]:
     """Return all PositionRows ordered by symbol."""
     result = await session.execute(select(PositionRow).order_by(PositionRow.symbol))
     return list(result.scalars())
+
+
+async def load_seen_ids_for_url(session: AsyncSession, url: str) -> set[str]:
+    """SELECT id FROM messages WHERE url=? — 用于 listener 启动时去重灌 _seen。
+
+    返回该 url 对应所有已落库的 message id 集合（即 task id，因为 task.id = message.id）。
+    """
+    result = await session.execute(
+        select(MessageRow.id).where(MessageRow.url == url)
+    )
+    return {row[0] for row in result.all()}
