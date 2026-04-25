@@ -25,12 +25,20 @@ class _Counter(Base):
 # ---------------------------------------------------------------------------
 class TestCreateEngine:
     def test_create_engine_default_uses_settings(self) -> None:
-        """Engine created without an explicit URL must use the settings DATABASE_URL."""
+        """Engine created without an explicit URL must use the settings DATABASE_URL.
+
+        Relative SQLite paths get anchored to project root (not CWD) — verify that
+        the resolved file path matches what `_resolve_sqlite_url` produces.
+        """
         from app.core.config import get_settings
+        from app.storage.db import _resolve_sqlite_url
 
         engine = create_engine()
-        expected = get_settings().database_url
+        expected = _resolve_sqlite_url(get_settings().database_url)
         assert str(engine.url) == expected
+        # Sanity: the resolved URL contains an absolute path (or ":memory:")
+        url_str = str(engine.url)
+        assert ":memory:" in url_str or "/data/signals.db" in url_str
 
     def test_create_engine_in_memory(self) -> None:
         """Passing an in-memory URL must produce a working async engine."""

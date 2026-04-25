@@ -6,7 +6,6 @@ one level above the ``backend/`` directory.
 from __future__ import annotations
 
 import functools
-from typing import Any
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -75,10 +74,14 @@ class Settings(BaseSettings):
 
 
 @functools.lru_cache(maxsize=1)
-def get_settings(**_kwargs: Any) -> Settings:
+def get_settings() -> Settings:
     """Return a cached singleton Settings instance.
 
     Call ``get_settings.cache_clear()`` to force re-loading (useful in tests
     when env vars are patched via ``monkeypatch``).
+
+    Signature must take no params: FastAPI introspects this function when
+    used via ``Depends(get_settings)``, and any extra param (including
+    ``**kwargs``) becomes a required query parameter.
     """
     return Settings()

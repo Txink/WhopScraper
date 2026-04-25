@@ -22,8 +22,10 @@ Usage
 """
 from __future__ import annotations
 
+import re
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -33,12 +35,45 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.orm import DeclarativeBase
 
+# Project root: backend/app/storage/db.py → parents[3] → project root
+_PROJECT_ROOT = Path(__file__).resolve().parents[3]
+
 
 # ---------------------------------------------------------------------------
 # ORM base – all ORM table classes must inherit from this.
 # ---------------------------------------------------------------------------
 class Base(DeclarativeBase):
     """Shared declarative base for all ORM models."""
+
+
+def _resolve_sqlite_url(url: str) -> str:
+    """Anchor relative SQLite paths to the project root, not CWD.
+
+    Accepts URLs like:
+      sqlite+aiosqlite:///./data/signals.db   -> sqlite+aiosqlite:////abs/path/data/signals.db
+      sqlite+aiosqlite:///data/signals.db     -> sqlite+aiosqlite:////abs/path/data/signals.db
+      sqlite+aiosqlite:///:memory:            -> unchanged
+      sqlite+aiosqlite:////abs/path/db.sqlite -> unchanged (already absolute)
+
+    Also creates the parent directory if it doesn't exist (so first-run with
+    no existing data/ folder doesn't error out).
+    """
+    m = re.match(r"^(sqlite(?:\+\w+)?://)(/.*)$", url)
+    if not m:
+        return url
+    scheme, raw_path = m.group(1), m.group(2)
+
+    # Memory DBs and absolute file paths (//// prefix → leading slash retained) pass through
+    if raw_path.startswith("/:memory:") or raw_path == "/:memory:":
+        return url
+    # Strip the leading slash that's part of the URL syntax
+    candidate = raw_path[1:] if raw_path.startswith("/") else raw_path
+    candidate = candidate.removeprefix("./")
+    p = Path(candidate)
+    if not p.is_absolute():
+        p = (_PROJECT_ROOT / p).resolve()
+    p.parent.mkdir(parents=True, exist_ok=True)
+    return f"{scheme}/{p}"
 
 
 # ---------------------------------------------------------------------------
@@ -52,6 +87,8 @@ def create_engine(url: str | None = None) -> AsyncEngine:
     url:
         SQLAlchemy connection URL.  If *None*, the value is read from
         ``Settings.database_url`` (loaded from the environment / ``.env``).
+        Relative SQLite paths are anchored to the project root (not CWD)
+        and the parent directory is auto-created.
 
     Returns
     -------
@@ -62,6 +99,7 @@ def create_engine(url: str | None = None) -> AsyncEngine:
 
         url = get_settings().database_url
 
+    url = _resolve_sqlite_url(url)
     return create_async_engine(url, echo=False)
 
 

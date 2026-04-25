@@ -94,12 +94,15 @@ def create_app(
 
                 state.broker = LongPortClient(broker_cfg)
             except (ValueError, ImportError) as exc:
+                from app.broker.noop_client import NoopBrokerClient
+
                 logger.warning(
-                    "LongPortClient init failed (%s) — startup aborted. "
-                    "Set LONGPORT_* env vars or pass broker_override= for tests.",
+                    "LongPortClient init failed (%s). Falling back to monitoring-only "
+                    "mode (NoopBrokerClient). No orders will be submitted. "
+                    "Set LONGPORT_* env vars in .env to enable real trading.",
                     exc,
                 )
-                raise
+                state.broker = NoopBrokerClient()
 
         # Parser watchlist -------------------------------------------------
         try:
