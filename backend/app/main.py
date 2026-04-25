@@ -23,7 +23,6 @@ from app.core.event_bus import EventBus
 from app.parser.service import register_parser_service
 from app.storage.db import Base, create_engine, make_session_factory
 from app.storage.listeners import register_storage_listeners
-from app.whop.listener import _is_placeholder_url
 from app.whop.registry import WhopRegistry
 
 logger = logging.getLogger(__name__)
@@ -107,8 +106,9 @@ def create_app(
 
         # Whop registry — constructed early (without starting listeners) so the
         # ParserService can hold a reference and look up per-page tickers by url.
-        # WhopRegistry.__init__ is side-effect-free; load_and_start_all() at the end of
-        # this lifespan is what spawns Playwright + reads data/whop_pages.json.
+        # WhopRegistry.__init__ is side-effect-free; load_entries() at the end of
+        # this lifespan reads data/whop_pages.json. Listeners stay OFF until the
+        # user explicitly toggles them on from the dashboard.
         state.whop_registry = WhopRegistry(
             bus=bus,
             settings=settings,
@@ -155,33 +155,38 @@ def create_app(
         state.hub = WebSocketHub(bus)
         await state.hub.register_listeners()
 
-        # 6. Finally: start Whop listeners (this is where Playwright launches)
+        # 6. Load Whop entries from disk (does NOT start any listeners — user
+        #    explicitly toggles each page on via the dashboard).
         if not skip_whop:
             try:
-                await state.whop_registry.load_and_start_all()
+                await state.whop_registry.load_entries()
             except Exception as exc:  # noqa: BLE001
-                logger.warning("whop registry startup failed: %s", exc)
+                logger.warning("whop registry load failed: %s", exc)
 
-            # Seed from .env on first run if pages file empty AND env URLs present
+            # Seed default monitoring pages on first run (when pages file empty).
+            # User can later remove or modify them via the Whop management UI.
+            # Note: WHOP_STOCK_URL / WHOP_OPTION_URL env vars are no longer
+            # consulted here — the seed is hardcoded to the canonical pair.
             if len(state.whop_registry._entries) == 0:
-                if settings.whop_stock_url and not _is_placeholder_url(settings.whop_stock_url):
+                _DEFAULT_PAGES = [
+                    (
+                        "https://whop.com/joined/stock-and-option/-GiWyN1ZTuUjwlG/app/",
+                        "stock",
+                        "正股发布",
+                    ),
+                    (
+                        "https://whop.com/joined/stock-and-option/-gZyq1MzOZAWO98/app/",
+                        "option",
+                        "期权发布",
+                    ),
+                ]
+                for _url, _source, _name in _DEFAULT_PAGES:
                     try:
                         await state.whop_registry.add_page(
-                            url=settings.whop_stock_url,
-                            source="stock",
-                            name="Stock (from .env)",
+                            url=_url, source=_source, name=_name
                         )
                     except Exception as exc:  # noqa: BLE001
-                        logger.warning("seed stock from .env failed: %s", exc)
-                if settings.whop_option_url and not _is_placeholder_url(settings.whop_option_url):
-                    try:
-                        await state.whop_registry.add_page(
-                            url=settings.whop_option_url,
-                            source="option",
-                            name="Option (from .env)",
-                        )
-                    except Exception as exc:  # noqa: BLE001
-                        logger.warning("seed option from .env failed: %s", exc)
+                        logger.warning("default seed %s failed: %s", _name, exc)
 
         # Include routers now that all dependencies are ready.
         # FastAPI supports include_router inside lifespan; routes work for all

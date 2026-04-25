@@ -111,25 +111,17 @@ class WhopRegistry:
         # for the trader's "which page should this message use?" query.
         self._url_index: dict[str, str] = {}
 
-    async def load_and_start_all(self) -> None:
-        """At app startup: load JSON file + start a listener per entry.
+    async def load_entries(self) -> None:
+        """At app startup: load JSON file (entries only — does NOT start listeners).
 
-        Skips placeholder URLs (logs info). Errors on individual listeners
-        don't abort the load — they're logged and the entry stays in the
-        registry but with a None listener (running=False).
+        Listeners are explicitly started via ``start_page()`` so monitoring
+        defaults OFF after restart. The user toggles each page on from the
+        dashboard. This sidesteps any "did the auto-restart pick up my new
+        config" confusion and avoids spinning up Playwright for pages the
+        user hasn't reactivated.
         """
         async with self._lock:
             self._entries = self._load_entries()
-            for entry in self._entries.values():
-                if _is_placeholder_url(entry.url):
-                    logger.info("whop registry: skipping placeholder %s", entry.url)
-                    continue
-                try:
-                    await self._start_listener(entry)
-                except Exception as e:  # noqa: BLE001
-                    logger.warning(
-                        "whop registry: listener for %s failed to start: %s", entry.id, e
-                    )
             self._rebuild_url_index()
 
     async def shutdown_all(self) -> None:
@@ -144,7 +136,12 @@ class WhopRegistry:
     # ---- mutating ops ----
 
     async def add_page(self, *, url: str, source: str, name: str | None = None) -> WhopPageEntry:
-        """Add a new page entry, persist, start its listener.
+        """Add a new page entry + persist (does NOT start listener).
+
+        New behaviour: user must explicitly start the listener via
+        ``start_page()`` (or POST /api/whop/pages/{id}/start). This keeps the
+        "default OFF" semantics consistent — adding a page is just registry
+        bookkeeping, not Playwright startup.
 
         Raises ValueError on validation issues.
         """
@@ -171,10 +168,6 @@ class WhopRegistry:
             )
             self._entries[entry.id] = entry
             self._save_entries()
-            try:
-                await self._start_listener(entry)
-            except Exception as e:  # noqa: BLE001
-                logger.warning("listener for new page %s failed to start: %s", entry.id, e)
             self._rebuild_url_index()
             page_dict = self._build_page_dict(entry)
         await self._publish_page_event("added", page_dict)
@@ -196,6 +189,59 @@ class WhopRegistry:
             self._rebuild_url_index()
             page_dict = self._build_page_dict(entry)
         await self._publish_page_event("removed", page_dict)
+        return True
+
+    async def start_page(self, page_id: str) -> bool:
+        """Start (or restart) the listener for an entry.
+
+        Same semantics as ``restart_page``: stops any existing listener first,
+        then starts a fresh one with ``skip_initial=False`` so the listener
+        re-scans the visible DOM. Storage UPSERT (by domID) dedupes against
+        previously seen messages, so this is safe to call repeatedly.
+
+        Returns False if the entry id is unknown OR if launching Playwright
+        fails (errors are logged).
+        """
+        async with self._lock:
+            entry = self._entries.get(page_id)
+            if entry is None:
+                return False
+            # Stop existing listener if any (idempotent restart). pop() so the
+            # dict stays consistent even if _start_listener below raises.
+            listener = self._listeners.pop(page_id, None)
+            if listener is not None:
+                try:
+                    await listener.stop()
+                except Exception as e:  # noqa: BLE001
+                    logger.warning("start: stop existing failed: %s", e)
+            try:
+                await self._start_listener(entry, skip_initial=False)
+            except Exception as e:  # noqa: BLE001
+                logger.warning("start: launch failed: %s", e)
+                return False
+            page_dict = self._build_page_dict(entry)
+        await self._publish_page_event("started", page_dict)
+        return True
+
+    async def stop_page(self, page_id: str) -> bool:
+        """Stop the listener for an entry but keep the entry in the registry.
+
+        Returns False if the entry id is unknown. Returns True even if no
+        listener was running (idempotent — "stop something that isn't running"
+        is treated as success so the UI can issue stop without checking state).
+        """
+        async with self._lock:
+            entry = self._entries.get(page_id)
+            if entry is None:
+                return False
+            listener = self._listeners.pop(page_id, None)
+            if listener is not None:
+                try:
+                    await listener.stop()
+                except Exception as e:  # noqa: BLE001
+                    logger.warning("stop: failed: %s", e)
+            page_dict = self._build_page_dict(entry)
+        await self._publish_page_event("stopped", page_dict)
         return True
 
     async def restart_page(self, page_id: str) -> bool:

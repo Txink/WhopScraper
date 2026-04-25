@@ -68,10 +68,10 @@ class WhopPagePayload:
     """Payload for ``whop.page_changed`` events.
 
     Emitted whenever the WhopRegistry mutates an entry (add/remove/restart/
-    settings update). ``page_dict`` is the JSON-ready dict produced by
+    start/stop/settings update). ``page_dict`` is the JSON-ready dict produced by
     ``schemas.whop_page_to_out(...).model_dump(mode="json")`` at publish time
     so the downstream WS bridge can forward it verbatim.
     """
 
-    action: str  # "added" | "removed" | "restarted" | "settings_updated"
+    action: str  # "added" | "removed" | "restarted" | "started" | "stopped" | "settings_updated"
     page_dict: dict[str, Any]

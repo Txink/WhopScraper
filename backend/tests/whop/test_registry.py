@@ -1,4 +1,9 @@
-"""WhopRegistry tests — JSON persistence + listener lifecycle (with monkey-patched WhopBrowser)."""
+"""WhopRegistry tests — JSON persistence + listener lifecycle (with monkey-patched WhopBrowser).
+
+Note: as of the explicit-on/off refactor, ``load_entries`` and ``add_page`` no
+longer spin up listeners. Tests that need a running listener must call
+``start_page(entry.id)`` explicitly.
+"""
 
 from __future__ import annotations
 
@@ -64,14 +69,17 @@ def settings_test() -> Settings:
 
 
 @pytest.mark.asyncio
-async def test_add_persists_and_starts(
+async def test_add_persists_entry_only(
     patch_browser: None, settings_test: Settings, tmp_path: Path
 ) -> None:
-    """add_page: persists entry to JSON and starts a listener."""
+    """add_page persists entry to JSON but does NOT start a listener.
+
+    Listener startup is now an explicit user action via start_page().
+    """
     bus = EventBus()
     pages_file = tmp_path / "pages.json"
     reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=pages_file)
-    await reg.load_and_start_all()
+    await reg.load_entries()
 
     entry = await reg.add_page(
         url="https://whop.com/joined/abc/app/", source="stock", name="My Stock"
@@ -84,12 +92,11 @@ async def test_add_persists_and_starts(
     assert len(saved) == 1
     assert saved[0]["url"] == entry.url
 
-    # Listener started?
+    # Listener NOT started — that's the new default
     pages = reg.list_pages()
     assert len(pages) == 1
-    e, ll = pages[0]
-    assert ll is not None
-    assert ll.running
+    _, ll = pages[0]
+    assert ll is None
 
     await reg.shutdown_all()
 
@@ -98,13 +105,14 @@ async def test_add_persists_and_starts(
 async def test_remove_stops_listener_and_persists(
     patch_browser: None, settings_test: Settings, tmp_path: Path
 ) -> None:
-    """remove_page: stops listener, clears entry from JSON."""
+    """remove_page: stops listener (if any) and clears entry from JSON."""
     bus = EventBus()
     pages_file = tmp_path / "pages.json"
     reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=pages_file)
-    await reg.load_and_start_all()
+    await reg.load_entries()
 
     entry = await reg.add_page(url="https://whop.com/joined/abc/app/", source="stock")
+    await reg.start_page(entry.id)
     assert await reg.remove_page(entry.id)
 
     # File reflects removal
@@ -122,7 +130,7 @@ async def test_remove_unknown_returns_false(
     """remove_page with unknown id returns False."""
     bus = EventBus()
     reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=tmp_path / "p.json")
-    await reg.load_and_start_all()
+    await reg.load_entries()
     assert (await reg.remove_page("does-not-exist")) is False
 
 
@@ -133,7 +141,7 @@ async def test_add_rejects_duplicate_url(
     """add_page raises ValueError when URL already monitored."""
     bus = EventBus()
     reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=tmp_path / "p.json")
-    await reg.load_and_start_all()
+    await reg.load_entries()
     await reg.add_page(url="https://whop.com/joined/abc/app/", source="stock")
     with pytest.raises(ValueError, match="already monitored"):
         await reg.add_page(url="https://whop.com/joined/abc/app/", source="option")
@@ -147,7 +155,7 @@ async def test_add_rejects_placeholder_url(
     """add_page raises ValueError for placeholder URLs."""
     bus = EventBus()
     reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=tmp_path / "p.json")
-    await reg.load_and_start_all()
+    await reg.load_entries()
     with pytest.raises(ValueError, match="placeholder"):
         await reg.add_page(url="https://whop.com/joined/xxx/app/", source="stock")
 
@@ -159,26 +167,30 @@ async def test_add_rejects_invalid_source(
     """add_page raises ValueError for invalid source values."""
     bus = EventBus()
     reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=tmp_path / "p.json")
-    await reg.load_and_start_all()
+    await reg.load_entries()
     with pytest.raises(ValueError, match="source must be"):
         await reg.add_page(url="https://whop.com/joined/abc/app/", source="invalid")
 
 
 @pytest.mark.asyncio
-async def test_load_existing_file_starts_listeners(
+async def test_load_entries_does_not_start_listeners(
     patch_browser: None, settings_test: Settings, tmp_path: Path
 ) -> None:
-    """load_and_start_all: reads pre-existing JSON and starts listeners."""
+    """load_entries reads JSON entries but listeners stay offline.
+
+    Replaces the old test_load_existing_file_starts_listeners — load no
+    longer auto-starts.
+    """
     pages_file = tmp_path / "pages.json"
     pages_file.parent.mkdir(parents=True, exist_ok=True)
     pages_file.write_text(
         json.dumps(
             [
                 {
-                    "id": "abc123",
-                    "url": "https://whop.com/joined/real/app/",
+                    "id": "p1",
+                    "url": "https://whop.com/p1/app/",
                     "source": "stock",
-                    "name": "Saved",
+                    "name": "P1",
                     "added_at": "2026-04-25T00:00:00+00:00",
                 }
             ]
@@ -187,25 +199,119 @@ async def test_load_existing_file_starts_listeners(
 
     bus = EventBus()
     reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=pages_file)
-    await reg.load_and_start_all()
+    await reg.load_entries()
 
     pages = reg.list_pages()
     assert len(pages) == 1
-    assert pages[0][1] is not None  # listener exists
+    entry, listener = pages[0]
+    assert entry.id == "p1"
+    assert listener is None  # NOT started by load_entries
+
+
+@pytest.mark.asyncio
+async def test_add_page_does_not_auto_start(
+    patch_browser: None, settings_test: Settings, tmp_path: Path
+) -> None:
+    """add_page leaves the listener None until start_page is called."""
+    bus = EventBus()
+    reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=tmp_path / "pages.json")
+    await reg.load_entries()
+    await reg.add_page(url="https://whop.com/x/app/", source="stock", name="x")
+    pages = reg.list_pages()
+    assert len(pages) == 1
+    assert pages[0][1] is None  # listener is None
+
+
+@pytest.mark.asyncio
+async def test_start_page_starts_listener(
+    patch_browser: None, settings_test: Settings, tmp_path: Path
+) -> None:
+    bus = EventBus()
+    reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=tmp_path / "pages.json")
+    await reg.load_entries()
+    entry = await reg.add_page(url="https://whop.com/x/app/", source="stock", name="x")
+    ok = await reg.start_page(entry.id)
+    assert ok is True
+    pages = reg.list_pages()
+    assert pages[0][1] is not None  # listener now exists
+    assert pages[0][1].running is True
     await reg.shutdown_all()
 
 
 @pytest.mark.asyncio
-async def test_restart_page(patch_browser: None, settings_test: Settings, tmp_path: Path) -> None:
+async def test_start_page_is_idempotent_restart(
+    patch_browser: None, settings_test: Settings, tmp_path: Path
+) -> None:
+    """Calling start_page twice replaces the listener (restart semantics)."""
+    bus = EventBus()
+    reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=tmp_path / "pages.json")
+    await reg.load_entries()
+    entry = await reg.add_page(url="https://whop.com/x/app/", source="stock", name="x")
+
+    await reg.start_page(entry.id)
+    first = reg.list_pages()[0][1]
+    assert first is not None
+
+    await reg.start_page(entry.id)
+    second = reg.list_pages()[0][1]
+    assert second is not None
+    assert second is not first  # fresh listener
+    await reg.shutdown_all()
+
+
+@pytest.mark.asyncio
+async def test_stop_page_stops_listener_keeps_entry(
+    patch_browser: None, settings_test: Settings, tmp_path: Path
+) -> None:
+    bus = EventBus()
+    reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=tmp_path / "pages.json")
+    await reg.load_entries()
+    entry = await reg.add_page(url="https://whop.com/x/app/", source="stock", name="x")
+    await reg.start_page(entry.id)
+    ok = await reg.stop_page(entry.id)
+    assert ok is True
+    pages = reg.list_pages()
+    assert len(pages) == 1
+    assert pages[0][1] is None  # listener gone, entry kept
+
+
+@pytest.mark.asyncio
+async def test_stop_page_idempotent_when_not_running(
+    patch_browser: None, settings_test: Settings, tmp_path: Path
+) -> None:
+    """stop_page returns True even when the listener wasn't running."""
+    bus = EventBus()
+    reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=tmp_path / "pages.json")
+    await reg.load_entries()
+    entry = await reg.add_page(url="https://whop.com/x/app/", source="stock", name="x")
+    # Never started
+    assert await reg.stop_page(entry.id) is True
+
+
+@pytest.mark.asyncio
+async def test_start_stop_unknown_id_returns_false(
+    patch_browser: None, settings_test: Settings, tmp_path: Path
+) -> None:
+    bus = EventBus()
+    reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=tmp_path / "pages.json")
+    await reg.load_entries()
+    assert await reg.start_page("nope") is False
+    assert await reg.stop_page("nope") is False
+
+
+@pytest.mark.asyncio
+async def test_restart_page(
+    patch_browser: None, settings_test: Settings, tmp_path: Path
+) -> None:
     """restart_page stops old listener and starts a new one."""
     bus = EventBus()
     pages_file = tmp_path / "pages.json"
     reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=pages_file)
-    await reg.load_and_start_all()
+    await reg.load_entries()
 
     entry = await reg.add_page(url="https://whop.com/joined/abc/app/", source="stock")
+    await reg.start_page(entry.id)
 
-    # Get the original listener
     pages_before = reg.list_pages()
     assert len(pages_before) == 1
     original_listener = pages_before[0][1]
@@ -231,7 +337,7 @@ async def test_restart_unknown_page_returns_false(
     """restart_page with unknown id returns False."""
     bus = EventBus()
     reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=tmp_path / "p.json")
-    await reg.load_and_start_all()
+    await reg.load_entries()
     assert (await reg.restart_page("no-such-id")) is False
 
 
@@ -243,10 +349,12 @@ async def test_shutdown_all_stops_all_listeners(
     bus = EventBus()
     pages_file = tmp_path / "pages.json"
     reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=pages_file)
-    await reg.load_and_start_all()
+    await reg.load_entries()
 
-    await reg.add_page(url="https://whop.com/joined/abc/app/", source="stock")
-    await reg.add_page(url="https://whop.com/joined/def/app/", source="option")
+    e1 = await reg.add_page(url="https://whop.com/joined/abc/app/", source="stock")
+    e2 = await reg.add_page(url="https://whop.com/joined/def/app/", source="option")
+    await reg.start_page(e1.id)
+    await reg.start_page(e2.id)
 
     pages = reg.list_pages()
     assert len(pages) == 2
@@ -262,7 +370,7 @@ async def test_shutdown_all_stops_all_listeners(
 async def test_load_skips_malformed_entries(
     patch_browser: None, settings_test: Settings, tmp_path: Path
 ) -> None:
-    """load_and_start_all skips malformed entries without raising."""
+    """load_entries skips malformed entries without raising."""
     pages_file = tmp_path / "pages.json"
     pages_file.write_text(
         json.dumps(
@@ -283,7 +391,7 @@ async def test_load_skips_malformed_entries(
 
     bus = EventBus()
     reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=pages_file)
-    await reg.load_and_start_all()
+    await reg.load_entries()
 
     pages = reg.list_pages()
     assert len(pages) == 1
@@ -302,7 +410,7 @@ async def test_add_page_uses_default_settings(patch_browser, settings_test, tmp_
     """add_page without settings → entry.settings = source default."""
     bus = EventBus()
     reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=tmp_path / "pages.json")
-    await reg.load_and_start_all()
+    await reg.load_entries()
     entry = await reg.add_page(url="https://whop.com/x/app/", source="stock", name="X")
     assert entry.settings.dedupe_processed_messages is True
     assert entry.settings.price_deviation_tolerance == 1.0
@@ -313,7 +421,7 @@ async def test_add_page_uses_default_settings(patch_browser, settings_test, tmp_
 async def test_add_page_option_default_settings(patch_browser, settings_test, tmp_path):
     bus = EventBus()
     reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=tmp_path / "pages.json")
-    await reg.load_and_start_all()
+    await reg.load_entries()
     entry = await reg.add_page(url="https://whop.com/o/app/", source="option", name="O")
     assert entry.settings.tickers is None
     assert entry.settings.price_deviation_tolerance == 5.0
@@ -324,7 +432,7 @@ async def test_settings_persisted_in_json(patch_browser, settings_test, tmp_path
     bus = EventBus()
     pages_file = tmp_path / "pages.json"
     reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=pages_file)
-    await reg.load_and_start_all()
+    await reg.load_entries()
     await reg.add_page(url="https://whop.com/p/app/", source="stock", name="P")
 
     raw = json.loads(pages_file.read_text())
@@ -337,7 +445,7 @@ async def test_update_settings_persists_and_returns_entry(patch_browser, setting
     bus = EventBus()
     pages_file = tmp_path / "pages.json"
     reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=pages_file)
-    await reg.load_and_start_all()
+    await reg.load_entries()
     entry = await reg.add_page(url="https://whop.com/upd/app/", source="stock", name="upd")
 
     updated = await reg.update_settings(
@@ -363,7 +471,7 @@ async def test_update_settings_persists_and_returns_entry(patch_browser, setting
 async def test_update_settings_unknown_id_raises(patch_browser, settings_test, tmp_path):
     bus = EventBus()
     reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=tmp_path / "pages.json")
-    await reg.load_and_start_all()
+    await reg.load_entries()
     with pytest.raises(KeyError):
         await reg.update_settings("does-not-exist", {})
 
@@ -372,7 +480,7 @@ async def test_update_settings_unknown_id_raises(patch_browser, settings_test, t
 async def test_update_settings_option_rejects_tickers(patch_browser, settings_test, tmp_path):
     bus = EventBus()
     reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=tmp_path / "pages.json")
-    await reg.load_and_start_all()
+    await reg.load_entries()
     entry = await reg.add_page(url="https://whop.com/optx/app/", source="option", name="optx")
     with pytest.raises(ValueError, match="tickers"):
         await reg.update_settings(entry.id, {"tickers": {"AAPL": {"trade_quantity": 1}}})
@@ -382,7 +490,7 @@ async def test_update_settings_option_rejects_tickers(patch_browser, settings_te
 async def test_get_settings_for_url_match(patch_browser, settings_test, tmp_path):
     bus = EventBus()
     reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=tmp_path / "pages.json")
-    await reg.load_and_start_all()
+    await reg.load_entries()
     entry = await reg.add_page(url="https://whop.com/lookup/app/", source="stock", name="lk")
     s = reg.get_settings_for_url(entry.url)
     assert s is not None
@@ -393,7 +501,7 @@ async def test_get_settings_for_url_match(patch_browser, settings_test, tmp_path
 async def test_get_settings_for_url_orphan(patch_browser, settings_test, tmp_path):
     bus = EventBus()
     reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=tmp_path / "pages.json")
-    await reg.load_and_start_all()
+    await reg.load_entries()
     assert reg.get_settings_for_url("https://whop.com/never/app/") is None
     assert reg.get_settings_for_url(None) is None
 
@@ -417,7 +525,7 @@ async def test_legacy_entry_without_settings_loads_default(patch_browser, settin
     )
     bus = EventBus()
     reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=pages_file)
-    await reg.load_and_start_all()
+    await reg.load_entries()
     s = reg.get_settings_for_url("https://whop.com/legacy/app/")
     assert s is not None
     assert s.tickers == {}
@@ -435,7 +543,7 @@ async def test_page_change_event_published_on_add(patch_browser, settings_test, 
 
     bus.subscribe(Topics.WHOP_PAGE_CHANGED, _handler)
     reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=tmp_path / "pages.json")
-    await reg.load_and_start_all()
+    await reg.load_entries()
     entry = await reg.add_page(url="https://whop.com/evt/app/", source="stock", name="evt")
     await bus.wait_idle()
     assert len(received) == 1
@@ -456,7 +564,7 @@ async def test_page_change_event_published_on_settings_update(
 
     bus.subscribe(Topics.WHOP_PAGE_CHANGED, _handler)
     reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=tmp_path / "pages.json")
-    await reg.load_and_start_all()
+    await reg.load_entries()
     entry = await reg.add_page(url="https://whop.com/evt2/app/", source="stock", name="evt2")
     await bus.wait_idle()
     received.clear()
@@ -477,7 +585,7 @@ async def test_page_change_event_published_on_remove(patch_browser, settings_tes
 
     bus.subscribe(Topics.WHOP_PAGE_CHANGED, _handler)
     reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=tmp_path / "pages.json")
-    await reg.load_and_start_all()
+    await reg.load_entries()
     entry = await reg.add_page(url="https://whop.com/del/app/", source="stock", name="del")
     await bus.wait_idle()
     received.clear()
@@ -498,8 +606,9 @@ async def test_page_change_event_published_on_restart(patch_browser, settings_te
 
     bus.subscribe(Topics.WHOP_PAGE_CHANGED, _handler)
     reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=tmp_path / "pages.json")
-    await reg.load_and_start_all()
+    await reg.load_entries()
     entry = await reg.add_page(url="https://whop.com/rst/app/", source="stock", name="rst")
+    await reg.start_page(entry.id)
     await bus.wait_idle()
     received.clear()
     ok = await reg.restart_page(entry.id)
@@ -510,3 +619,32 @@ async def test_page_change_event_published_on_restart(patch_browser, settings_te
     assert received[0].page_dict["id"] == entry.id
 
     await reg.shutdown_all()
+
+
+@pytest.mark.asyncio
+async def test_page_change_event_published_on_start_and_stop(
+    patch_browser, settings_test, tmp_path
+):
+    """start_page / stop_page each publish a page_changed event with the right action."""
+    bus = EventBus()
+    received: list = []
+    from app.core.events import Topics
+
+    async def _h(evt):
+        received.append(evt.payload)
+
+    bus.subscribe(Topics.WHOP_PAGE_CHANGED, _h)
+    reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=tmp_path / "pages.json")
+    await reg.load_entries()
+    entry = await reg.add_page(url="https://whop.com/evt/app/", source="stock", name="evt")
+    await bus.wait_idle()
+    received.clear()
+
+    await reg.start_page(entry.id)
+    await bus.wait_idle()
+    assert any(p.action == "started" for p in received)
+
+    received.clear()
+    await reg.stop_page(entry.id)
+    await bus.wait_idle()
+    assert any(p.action == "stopped" for p in received)

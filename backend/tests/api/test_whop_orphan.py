@@ -107,7 +107,7 @@ def app_and_factory(
             session_factory=factory,
             pages_file=pages_file,
         )
-        loop.run_until_complete(registry.load_and_start_all())
+        loop.run_until_complete(registry.load_entries())
 
         app = FastAPI()
         app.include_router(

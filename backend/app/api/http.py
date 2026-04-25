@@ -13,6 +13,8 @@ Whop monitoring endpoints (when whop_registry is provided):
   POST   /api/whop/pages                       — add a page
   DELETE /api/whop/pages/{page_id}             — remove a page
   POST   /api/whop/pages/{page_id}/restart     — restart listener
+  POST   /api/whop/pages/{page_id}/start       — start listener (was OFF → ON)
+  POST   /api/whop/pages/{page_id}/stop        — stop listener (entry retained)
   PATCH  /api/whop/pages/{page_id}/settings    — partially update settings
   GET    /api/whop/pages/defaults              — default settings template
   GET    /api/whop/cookie                      — cookie file status
@@ -273,6 +275,37 @@ def build_http_router(
                 if e.id == page_id:
                     return whop_page_to_out(e, ll)
             raise HTTPException(500, detail="restart succeeded but lost track")
+
+        @router.post("/api/whop/pages/{page_id}/start", response_model=WhopPageOut)
+        async def start_whop_page_endpoint(page_id: str) -> WhopPageOut:
+            """Start the Playwright listener for a page.
+
+            Idempotent w.r.t. the entry: if a listener is already running it
+            is stopped and re-started (same semantics as restart). Returns 404
+            if the page id is unknown OR if Playwright launch fails.
+            """
+            ok = await whop_registry.start_page(page_id)
+            if not ok:
+                raise HTTPException(404, detail="page not found or start failed")
+            for e, ll in whop_registry.list_pages():
+                if e.id == page_id:
+                    return whop_page_to_out(e, ll)
+            raise HTTPException(500, detail="started but lost track")
+
+        @router.post("/api/whop/pages/{page_id}/stop", response_model=WhopPageOut)
+        async def stop_whop_page_endpoint(page_id: str) -> WhopPageOut:
+            """Stop the Playwright listener for a page (entry stays).
+
+            Idempotent: returns 200 even if no listener was running. Returns
+            404 only when the entry id is unknown.
+            """
+            ok = await whop_registry.stop_page(page_id)
+            if not ok:
+                raise HTTPException(404, detail="page not found")
+            for e, ll in whop_registry.list_pages():
+                if e.id == page_id:
+                    return whop_page_to_out(e, ll)
+            raise HTTPException(500, detail="stopped but lost track")
 
         @router.get("/api/whop/pages/defaults", response_model=WhopPageSettingsOut)
         async def whop_settings_defaults(source: str) -> WhopPageSettingsOut:

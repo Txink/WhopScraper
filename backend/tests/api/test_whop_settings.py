@@ -80,7 +80,7 @@ def registry_and_client(
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
-        loop.run_until_complete(registry.load_and_start_all())
+        loop.run_until_complete(registry.load_entries())
         stock_entry = loop.run_until_complete(
             registry.add_page(url="https://whop.com/stk/app/", source="stock", name="Stock1")
         )
