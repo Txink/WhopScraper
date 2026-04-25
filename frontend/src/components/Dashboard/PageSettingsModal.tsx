@@ -1,5 +1,5 @@
-import { useState } from "react";
-import type { WhopPage, WhopPageSettings, TickerConfig } from "../../api/domain-types";
+import { useRef, useState } from "react";
+import type { WhopPage, WhopPageSettings } from "../../api/domain-types";
 import { api, HttpError } from "../../api/http";
 import "./PageSettingsModal.css";
 
@@ -8,11 +8,26 @@ interface Props {
   onClose: () => void;
 }
 
+interface TickerRow {
+  rowId: string;
+  ticker: string;
+  trade_quantity: number;
+}
+
 export function PageSettingsModal({ page, onClose }: Props) {
   const [dedupe, setDedupe] = useState(page.settings.dedupe_processed_messages);
   const [tolerance, setTolerance] = useState(String(page.settings.price_deviation_tolerance));
-  const [tickers, setTickers] = useState<Record<string, TickerConfig>>(
-    () => page.settings.tickers ?? {}
+
+  const initialTickers = page.settings.tickers ?? {};
+  const nextRowId = useRef(Object.keys(initialTickers).length);
+  const newRowId = () => `row-${++nextRowId.current}`;
+
+  const [tickerRows, setTickerRows] = useState<TickerRow[]>(() =>
+    Object.entries(initialTickers).map(([ticker, cfg], i) => ({
+      rowId: `row-${i}`,
+      ticker,
+      trade_quantity: cfg.trade_quantity,
+    }))
   );
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -21,26 +36,16 @@ export function PageSettingsModal({ page, onClose }: Props) {
   const dedupeChanged = dedupe !== initialDedupe;
 
   const handleAddTicker = () => {
-    setTickers(prev => ({ ...prev, "": { trade_quantity: 0 } }));
+    setTickerRows(prev => [...prev, { rowId: newRowId(), ticker: "", trade_quantity: 0 }]);
   };
-  const handleRemoveTicker = (key: string) => {
-    setTickers(prev => {
-      const out = { ...prev };
-      delete out[key];
-      return out;
-    });
+  const handleRemoveTicker = (rowId: string) => {
+    setTickerRows(prev => prev.filter(r => r.rowId !== rowId));
   };
-  const handleEditTickerKey = (oldKey: string, newKey: string) => {
-    setTickers(prev => {
-      const out = { ...prev };
-      const v = out[oldKey];
-      delete out[oldKey];
-      out[newKey] = v;
-      return out;
-    });
+  const handleEditTickerName = (rowId: string, name: string) => {
+    setTickerRows(prev => prev.map(r => (r.rowId === rowId ? { ...r, ticker: name } : r)));
   };
-  const handleEditTickerQty = (key: string, qty: number) => {
-    setTickers(prev => ({ ...prev, [key]: { trade_quantity: qty } }));
+  const handleEditTickerQty = (rowId: string, qty: number) => {
+    setTickerRows(prev => prev.map(r => (r.rowId === rowId ? { ...r, trade_quantity: qty } : r)));
   };
 
   const handleSave = async () => {
@@ -51,10 +56,10 @@ export function PageSettingsModal({ page, onClose }: Props) {
       return;
     }
     if (page.source === "stock") {
-      for (const [k, v] of Object.entries(tickers)) {
-        if (!k.trim()) { setError("ticker 不能为空"); return; }
-        if (!v || !Number.isFinite(v.trade_quantity) || v.trade_quantity <= 0) {
-          setError(`${k}: 数量必须 > 0`);
+      for (const r of tickerRows) {
+        if (!r.ticker.trim()) { setError("ticker 不能为空"); return; }
+        if (!Number.isFinite(r.trade_quantity) || r.trade_quantity <= 0) {
+          setError(`${r.ticker}: 数量必须 > 0`);
           return;
         }
       }
@@ -67,7 +72,7 @@ export function PageSettingsModal({ page, onClose }: Props) {
       };
       if (page.source === "stock") {
         patch.tickers = Object.fromEntries(
-          Object.entries(tickers).map(([k, v]) => [k.toUpperCase(), v])
+          tickerRows.map(r => [r.ticker.toUpperCase(), { trade_quantity: r.trade_quantity }])
         );
       }
       await api.updateWhopPageSettings(page.id, patch as WhopPageSettings);
@@ -125,25 +130,25 @@ export function PageSettingsModal({ page, onClose }: Props) {
               <table className="tickers-table">
                 <thead><tr><th>Ticker</th><th>常规仓数量</th><th /></tr></thead>
                 <tbody>
-                  {Object.entries(tickers).map(([key, v]) => (
-                    <tr key={key || "__empty__"}>
+                  {tickerRows.map(row => (
+                    <tr key={row.rowId}>
                       <td>
                         <input
                           placeholder="输入 ticker"
-                          value={key}
-                          onChange={e => handleEditTickerKey(key, e.target.value)}
+                          value={row.ticker}
+                          onChange={e => handleEditTickerName(row.rowId, e.target.value)}
                           style={{ textTransform: "uppercase" }}
                         />
                       </td>
                       <td>
                         <input
                           type="number" min="1" placeholder="数量"
-                          value={v.trade_quantity || ""}
-                          onChange={e => handleEditTickerQty(key, Number(e.target.value))}
+                          value={row.trade_quantity || ""}
+                          onChange={e => handleEditTickerQty(row.rowId, Number(e.target.value))}
                         />
                       </td>
                       <td>
-                        <button onClick={() => handleRemoveTicker(key)} className="del" aria-label="删除">✕</button>
+                        <button onClick={() => handleRemoveTicker(row.rowId)} className="del" aria-label="删除">✕</button>
                       </td>
                     </tr>
                   ))}
