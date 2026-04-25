@@ -72,11 +72,7 @@ def register_trader(
     def _resolve_settings(task: Task):
         if registry is None:
             return None
-        try:
-            return registry.get_settings_for_url(task.message.url)
-        except Exception as exc:  # noqa: BLE001 — defensive: never break trade pipeline on registry hiccups
-            logger.warning("registry.get_settings_for_url failed for %s: %s", task.id, exc)
-            return None
+        return registry.get_settings_for_url(task.message.url)
 
     def _fallback_tolerance_pct(task_type: str) -> float:
         from app.core.config import get_settings  # local import for testability

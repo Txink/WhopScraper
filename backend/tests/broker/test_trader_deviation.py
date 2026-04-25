@@ -57,10 +57,12 @@ def _stock_task(
 class _RecordingBroker:
     is_paper = True
     dry_run = False
-    submitted: list[dict] = []
+
+    def __init__(self):
+        self.submitted: list[dict] = []
 
     def submit_stock_order(self, *, symbol, side, quantity, price, order_type, remark):
-        self.__class__.submitted.append({
+        self.submitted.append({
             "symbol": symbol,
             "side": side,
             "quantity": quantity,
@@ -71,7 +73,7 @@ class _RecordingBroker:
         return f"ord-{symbol}"
 
     def submit_option_order(self, *, symbol, side, quantity, price, order_type, remark):
-        self.__class__.submitted.append({
+        self.submitted.append({
             "symbol": symbol,
             "side": side,
             "quantity": quantity,
@@ -117,7 +119,6 @@ def _registry_with(settings: PageSettings | None) -> MagicMock:
 async def test_skip_when_ticker_not_whitelisted():
     bus = EventBus()
     broker = _RecordingBroker()
-    _RecordingBroker.submitted = []
     page_settings = PageSettings(
         dedupe_processed_messages=True,
         price_deviation_tolerance=1.0,
@@ -139,7 +140,6 @@ async def test_skip_when_ticker_not_whitelisted():
 async def test_qty_calc_normal_position():
     bus = EventBus()
     broker = _RecordingBroker()
-    _RecordingBroker.submitted = []
     page_settings = PageSettings(
         dedupe_processed_messages=True,
         price_deviation_tolerance=1.0,
@@ -159,7 +159,6 @@ async def test_qty_calc_normal_position():
 async def test_qty_calc_half_position():
     bus = EventBus()
     broker = _RecordingBroker()
-    _RecordingBroker.submitted = []
     page_settings = PageSettings(
         dedupe_processed_messages=True,
         price_deviation_tolerance=1.0,
@@ -178,7 +177,6 @@ async def test_qty_calc_half_position():
 async def test_qty_calc_one_third():
     bus = EventBus()
     broker = _RecordingBroker()
-    _RecordingBroker.submitted = []
     page_settings = PageSettings(
         dedupe_processed_messages=True,
         price_deviation_tolerance=1.0,
@@ -197,7 +195,6 @@ async def test_qty_calc_one_third():
 async def test_qty_min_one():
     bus = EventBus()
     broker = _RecordingBroker()
-    _RecordingBroker.submitted = []
     page_settings = PageSettings(
         dedupe_processed_messages=True,
         price_deviation_tolerance=1.0,
@@ -216,7 +213,6 @@ async def test_qty_min_one():
 async def test_orphan_stock_uses_instruction_quantity():
     bus = EventBus()
     broker = _RecordingBroker()
-    _RecordingBroker.submitted = []
     register_trader(bus, broker, _config(), registry=_registry_with(None))  # orphan
 
     task = _stock_task("TSLL", qty=300, position_size=None, url=None)
@@ -230,7 +226,6 @@ async def test_orphan_stock_uses_instruction_quantity():
 async def test_orphan_stock_no_qty_skipped():
     bus = EventBus()
     broker = _RecordingBroker()
-    _RecordingBroker.submitted = []
     register_trader(bus, broker, _config(), registry=_registry_with(None))
 
     task = _stock_task("TSLL", qty=None, position_size=None, url=None)
@@ -246,7 +241,6 @@ async def test_market_when_within_tolerance():
     """First-pass: market_price = signal_price → deviation 0 → always MARKET."""
     bus = EventBus()
     broker = _RecordingBroker()
-    _RecordingBroker.submitted = []
     page_settings = PageSettings(
         dedupe_processed_messages=True,
         price_deviation_tolerance=1.0,
