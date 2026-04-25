@@ -16,6 +16,7 @@ import { PageInfoBar } from "./components/Dashboard/PageInfoBar";
 import { PageActionBar } from "./components/Dashboard/PageActionBar";
 import { PageSettingsModal } from "./components/Dashboard/PageSettingsModal";
 import { TaskStream } from "./components/Dashboard/TaskStream";
+import { OrphanCleanupBar } from "./components/Dashboard/OrphanCleanupBar";
 import { EmptyState } from "./components/Dashboard/EmptyState";
 import { useStickyTop } from "./hooks/useStickyTop";
 import "./App.css";
@@ -183,6 +184,7 @@ function Dashboard({ token }: { token: string }) {
         <PageTabs />
         <PageInfoBar page={activePage} orphanCount={orphanCount} />
         <PageActionBar page={activePage} onOpenSettings={() => setSettingsOpen(true)} />
+        {activeTabId === "orphan" && <OrphanCleanupBar orphanTasks={filteredTasks} />}
         {filteredTasks.length === 0 ? (
           <div className="empty-state"><p>该监听页暂无任务。</p></div>
         ) : (

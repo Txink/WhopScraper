@@ -9,6 +9,7 @@ interface TaskState {
   appendPushEvent(taskId: string, event: PushEvent): void;
   setInitialTasks(tasks: TaskSummary[]): void;
   applyWsEvent(evt: WsEvent): void;
+  removeTasksByUrl(url: string): void;
 }
 
 export const useTasksStore = create<TaskState>((set, get) => ({
@@ -52,6 +53,23 @@ export const useTasksStore = create<TaskState>((set, get) => ({
     if (payload.push_event && payload.task) {
       get().appendPushEvent(payload.task.id, payload.push_event);
     }
+  },
+
+  removeTasksByUrl(url) {
+    set((state) => {
+      const removedIds = new Set(
+        state.tasks.filter((t) => t.message?.url === url).map((t) => t.id),
+      );
+      if (removedIds.size === 0) return state;
+      const remainingPush: Record<string, PushEvent[]> = {};
+      for (const [taskId, events] of Object.entries(state.pushEventsByTask)) {
+        if (!removedIds.has(taskId)) remainingPush[taskId] = events;
+      }
+      return {
+        tasks: state.tasks.filter((t) => !removedIds.has(t.id)),
+        pushEventsByTask: remainingPush,
+      };
+    });
   },
 }));
 

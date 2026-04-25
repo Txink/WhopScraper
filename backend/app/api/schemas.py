@@ -242,6 +242,14 @@ class WhopCookieStatusOut(BaseModel):
     age_seconds: float | None = None
 
 
+class OrphanCleanupRequest(BaseModel):
+    url: str
+
+
+class OrphanCleanupResponse(BaseModel):
+    deleted_count: int
+
+
 # ---------------------------------------------------------------------------
 # Converters: domain dataclasses → Pydantic Out models
 # ---------------------------------------------------------------------------

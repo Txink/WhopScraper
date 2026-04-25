@@ -151,4 +151,11 @@ export const api = {
   async whopCookieStatus(): Promise<WhopCookieStatus> {
     return request<WhopCookieStatus>("/api/whop/cookie");
   },
+
+  async cleanupOrphanByUrl(url: string): Promise<{ deleted_count: number }> {
+    return request<{ deleted_count: number }>(
+      "/api/whop/orphan/cleanup",
+      { method: "POST", body: JSON.stringify({ url }) },
+    );
+  },
 };

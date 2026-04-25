@@ -42,6 +42,8 @@ from app.api.auth import require_app_token
 from app.api.schemas import (
     CancelOk,
     HealthOut,
+    OrphanCleanupRequest,
+    OrphanCleanupResponse,
     PositionOut,
     PositionsOut,
     StatsTodayOut,
@@ -321,6 +323,24 @@ def build_http_router(
                 if e.id == entry.id:
                     return whop_page_to_out(e, ll)
             raise HTTPException(500, detail="updated but lost track")
+
+        @router.post("/api/whop/orphan/cleanup", response_model=OrphanCleanupResponse)
+        async def cleanup_orphan_tasks(body: OrphanCleanupRequest) -> OrphanCleanupResponse:
+            """Delete all tasks (and linked rows) for a given url.
+
+            Defensive: rejects (400) if the url is currently registered to an
+            active page — caller should remove the page first to prevent the
+            listener from immediately re-creating tasks for the same url.
+            """
+            active_urls = {entry.url for entry, _ in whop_registry.list_pages()}
+            if body.url in active_urls:
+                raise HTTPException(
+                    400,
+                    detail="url is currently registered to an active page; remove the page first",
+                )
+            async with session_scope(session_factory) as session:
+                count = await repo.delete_tasks_by_url(session, body.url)
+            return OrphanCleanupResponse(deleted_count=count)
 
         @router.get("/api/whop/cookie", response_model=WhopCookieStatusOut)
         async def whop_cookie_status() -> WhopCookieStatusOut:

@@ -224,6 +224,30 @@ export interface paths {
         patch: operations["patch_whop_page_settings_api_whop_pages__page_id__settings_patch"];
         trace?: never;
     };
+    "/api/whop/orphan/cleanup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cleanup Orphan Tasks
+         * @description Delete all tasks (and linked rows) for a given url.
+         *
+         *     Defensive: rejects (400) if the url is currently registered to an
+         *     active page — caller should remove the page first to prevent the
+         *     listener from immediately re-creating tasks for the same url.
+         */
+        post: operations["cleanup_orphan_tasks_api_whop_orphan_cleanup_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/whop/cookie": {
         parameters: {
             query?: never;
@@ -339,6 +363,16 @@ export interface components {
             url?: string | null;
             /** Quoted Message Id */
             quoted_message_id: string | null;
+        };
+        /** OrphanCleanupRequest */
+        OrphanCleanupRequest: {
+            /** Url */
+            url: string;
+        };
+        /** OrphanCleanupResponse */
+        OrphanCleanupResponse: {
+            /** Deleted Count */
+            deleted_count: number;
         };
         /** PositionOut */
         PositionOut: {
@@ -962,6 +996,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WhopPageOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cleanup_orphan_tasks_api_whop_orphan_cleanup_post: {
+        parameters: {
+            query?: {
+                token?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrphanCleanupRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrphanCleanupResponse"];
                 };
             };
             /** @description Validation Error */

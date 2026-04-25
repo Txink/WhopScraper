@@ -23,6 +23,7 @@ from __future__ import annotations
 from datetime import UTC, date, datetime, time
 from typing import Any
 
+from sqlalchemy import delete as sa_delete
 from sqlalchemy import func, select
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -549,3 +550,31 @@ async def load_seen_ids_for_url(session: AsyncSession, url: str) -> set[str]:
     """
     result = await session.execute(select(MessageRow.id).where(MessageRow.url == url))
     return {row[0] for row in result.all()}
+
+
+async def delete_tasks_by_url(session: AsyncSession, url: str) -> int:
+    """Delete all tasks (and linked instructions/push_events/messages) for a given url.
+
+    Returns the count of tasks deleted.
+
+    messages cascades on delete via ON DELETE CASCADE on the FK; instructions and
+    push_events have no cascade so we must delete them explicitly first.
+    """
+    # Find affected task ids (task.id == message.id)
+    result = await session.execute(select(MessageRow.id).where(MessageRow.url == url))
+    task_ids = [r[0] for r in result.all()]
+    if not task_ids:
+        return 0
+
+    # Delete push_events (no cascade)
+    await session.execute(
+        sa_delete(PushEventRow).where(PushEventRow.task_id.in_(task_ids))
+    )
+    # Delete instructions (no cascade)
+    await session.execute(
+        sa_delete(InstructionRow).where(InstructionRow.task_id.in_(task_ids))
+    )
+    # Delete tasks — messages cascades via FK ON DELETE CASCADE
+    await session.execute(sa_delete(TaskRow).where(TaskRow.id.in_(task_ids)))
+    await session.commit()
+    return len(task_ids)
