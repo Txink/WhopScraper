@@ -106,6 +106,8 @@ def create_app(
 
         # Whop registry — constructed early (without starting listeners) so the
         # ParserService can hold a reference and look up per-page tickers by url.
+        # WhopRegistry.__init__ is side-effect-free; load_and_start_all() at the end of
+        # this lifespan is what spawns Playwright + reads data/whop_pages.json.
         state.whop_registry = WhopRegistry(
             bus=bus,
             settings=settings,

@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# ⚠️ DEAD CODE — pre-refactor-v2 legacy.
+# The active codebase is backend/app/. This module references utils.watched_stocks,
+# which was removed in commit c9ad06b. These files are kept only for archive purposes.
 """
 期权信号抓取器 - 主程序入口
 实时监控 Whop 页面，解析期权和正股交易信号，自动执行交易
