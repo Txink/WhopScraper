@@ -12,9 +12,32 @@ import { useStickyTop } from "./hooks/useStickyTop";
 import type { TaskSummary, PushEvent } from "./api/domain-types";
 import "./App.css";
 
-// Config — hardcoded for dev. Production: set via import.meta.env
+// Config — BASE_URL from env or default; TOKEN resolved at runtime.
 const BASE_URL = import.meta.env.VITE_API_BASE ?? "http://localhost:8000";
-const TOKEN = import.meta.env.VITE_APP_TOKEN ?? "dev-token";
+
+/**
+ * Token resolution priority:
+ *  1. URL query param ?token=   (stores to localStorage for future loads)
+ *  2. localStorage["APP_TOKEN"]
+ *  3. VITE_APP_TOKEN build-time env var
+ *  4. "dev-token" fallback
+ *
+ * Usage: open http://localhost:8000?token=your-token once; subsequent
+ * page loads pick it from localStorage without needing the query param.
+ */
+function getToken(): string {
+  const url = new URL(window.location.href);
+  const fromUrl = url.searchParams.get("token");
+  if (fromUrl) {
+    localStorage.setItem("APP_TOKEN", fromUrl);
+    return fromUrl;
+  }
+  const stored = localStorage.getItem("APP_TOKEN");
+  if (stored) return stored;
+  return import.meta.env.VITE_APP_TOKEN ?? "dev-token";
+}
+
+const TOKEN = getToken();
 
 const ACTIVE_STATUSES = new Set([
   "RECEIVED", "PARSING", "INSTRUCTION_READY",

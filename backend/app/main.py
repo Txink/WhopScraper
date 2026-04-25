@@ -4,9 +4,12 @@ from __future__ import annotations
 import logging
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.api.http import build_http_router
 from app.api.ws import WebSocketHub, build_ws_router
@@ -168,6 +171,34 @@ def create_app(
             )
         )
         app.include_router(build_ws_router(state.hub, state.settings))
+
+        # ── Static frontend mount (after API/WS routers) ──────────────────
+        _DIST_DIR = Path(__file__).resolve().parents[2] / "frontend" / "dist"
+        if _DIST_DIR.is_dir():
+            # Mount /assets as StaticFiles for hashed JS/CSS bundles
+            _assets_dir = _DIST_DIR / "assets"
+            if _assets_dir.is_dir():
+                app.mount(
+                    "/assets",
+                    StaticFiles(directory=_assets_dir),
+                    name="assets",
+                )
+
+            # SPA catch-all: any path not matched by /api or /ws serves index.html.
+            # Real static files (favicon, etc.) are served directly if they exist.
+            @app.get("/{full_path:path}", include_in_schema=False)
+            async def _spa_fallback(full_path: str) -> FileResponse:  # noqa: RUF029
+                target = _DIST_DIR / full_path
+                if target.is_file():
+                    return FileResponse(target)
+                return FileResponse(_DIST_DIR / "index.html")
+
+            logger.info("Static frontend mounted from %s", _DIST_DIR)
+        else:
+            logger.warning(
+                "frontend/dist not found — running in API-only mode "
+                "(build with `cd frontend && npm run build` to enable static UI)",
+            )
 
         logger.info(
             "signal-station backend started (mode=%s, dry_run=%s)",

@@ -1,4 +1,9 @@
-.PHONY: dev backend-dev frontend-dev build test lint typecheck db-migrate db-reset clean
+.PHONY: install dev backend-dev frontend-dev build run test lint typecheck db-migrate db-reset clean
+
+install:
+	cd backend && uv venv && uv pip install -e ".[dev]"
+	cd backend && uv run playwright install chromium
+	cd frontend && npm install
 
 dev:
 	@echo "Starting backend + frontend in parallel..."
@@ -13,6 +18,9 @@ frontend-dev:
 
 build:
 	cd frontend && npm run build
+
+run: build
+	cd backend && uv run uvicorn app.main:app --host 127.0.0.1 --port 8000
 
 test:
 	cd backend && uv run pytest -v

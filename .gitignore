@@ -37,3 +37,4 @@ test-results/
 
 # Frontend build artifacts (regeneratable)
 frontend/openapi.json
+frontend/dist/
