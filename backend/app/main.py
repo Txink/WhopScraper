@@ -35,12 +35,14 @@ class AppState:
     hub: WebSocketHub
     unsubs: list[Callable[[], None]]
     push_listener: PushListener | None
+    whop_listeners: list[Any]
 
 
 def create_app(
     *,
     settings: Settings | None = None,
     broker_override: BrokerClient | None = None,
+    skip_whop: bool = False,
 ) -> FastAPI:
     """App factory.
 
@@ -59,6 +61,7 @@ def create_app(
     state.settings = settings
     state.unsubs = []
     state.push_listener = None
+    state.whop_listeners = []
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -139,6 +142,21 @@ def create_app(
         state.hub = WebSocketHub(bus)
         await state.hub.register_listeners()
 
+        # 6. Whop listeners (best-effort; only when URLs configured and not skipped)
+        if not skip_whop and (settings.whop_stock_url or settings.whop_option_url):
+            try:
+                from app.whop.listener import register_whop_listeners
+
+                whop_listeners = register_whop_listeners(bus, settings)
+                for wl in whop_listeners:
+                    try:
+                        await wl.start()
+                        state.whop_listeners.append(wl)
+                    except Exception as exc:  # noqa: BLE001
+                        logger.warning("WhopListener failed to start: %s", exc)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("Whop listener setup error: %s", exc)
+
         # Include routers now that all dependencies are ready.
         # FastAPI supports include_router inside lifespan; routes work for all
         # subsequent requests.
@@ -163,6 +181,12 @@ def create_app(
         # Shutdown                                                             #
         # ------------------------------------------------------------------ #
         logger.info("shutting down signal-station backend...")
+
+        for wl in getattr(state, "whop_listeners", []):
+            try:
+                await wl.stop()
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("WhopListener stop error: %s", exc)
 
         await state.hub.close()
 

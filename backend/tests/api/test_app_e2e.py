@@ -92,7 +92,7 @@ def test_e2e_rest_tasks_empty_then_populated() -> None:
     """Full round-trip: app starts, /api/health 200, tasks empty, publish event, tasks 1."""
     settings = _make_settings()
     broker = FakeBrokerClient()
-    app = create_app(settings=settings, broker_override=broker)
+    app = create_app(settings=settings, broker_override=broker, skip_whop=True)
     # Override settings dependency so require_app_token uses our token.
     app.dependency_overrides[get_settings] = lambda: settings
 
@@ -137,7 +137,7 @@ def test_e2e_ws_receives_event_from_bus() -> None:
     """WS client connected before bus.publish() receives the event payload."""
     settings = _make_settings("ws-token")
     broker = FakeBrokerClient()
-    app = create_app(settings=settings, broker_override=broker)
+    app = create_app(settings=settings, broker_override=broker, skip_whop=True)
     app.dependency_overrides[get_settings] = lambda: settings
 
     with TestClient(app) as client, client.websocket_connect("/ws?token=ws-token") as ws:
@@ -165,7 +165,7 @@ def test_e2e_auth_denied_without_token() -> None:
     """All REST endpoints return 403 when no token is presented."""
     settings = _make_settings()
     broker = FakeBrokerClient()
-    app = create_app(settings=settings, broker_override=broker)
+    app = create_app(settings=settings, broker_override=broker, skip_whop=True)
     app.dependency_overrides[get_settings] = lambda: settings
 
     with TestClient(app) as client:
@@ -188,7 +188,7 @@ def test_e2e_multiple_tasks_listed() -> None:
     """Publish three tasks via bus; GET /api/tasks returns all three."""
     settings = _make_settings("multi-token")
     broker = FakeBrokerClient()
-    app = create_app(settings=settings, broker_override=broker)
+    app = create_app(settings=settings, broker_override=broker, skip_whop=True)
     app.dependency_overrides[get_settings] = lambda: settings
 
     task_ids = ["msg-e2e-a", "msg-e2e-b", "msg-e2e-c"]
@@ -223,7 +223,7 @@ def test_e2e_get_single_task() -> None:
     """After persisting via bus, GET /api/tasks/{id} returns the full task."""
     settings = _make_settings("single-token")
     broker = FakeBrokerClient()
-    app = create_app(settings=settings, broker_override=broker)
+    app = create_app(settings=settings, broker_override=broker, skip_whop=True)
     app.dependency_overrides[get_settings] = lambda: settings
 
     task = _make_stock_task("msg-e2e-single")
