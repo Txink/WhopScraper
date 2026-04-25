@@ -1,0 +1,104 @@
+import type {
+  Task, TaskList, Positions, StatsToday, Health,
+} from "./domain-types";
+
+
+interface HttpConfig {
+  baseUrl: string;
+  token: string;
+}
+
+let _config: HttpConfig | null = null;
+
+export function configureHttp(config: HttpConfig): void {
+  _config = config;
+}
+
+/** Test-only: reset module singleton so tests are fully isolated. */
+export function __resetForTests(): void {
+  _config = null;
+}
+
+function cfg(): HttpConfig {
+  if (!_config) throw new Error("http not configured (call configureHttp first)");
+  return _config;
+}
+
+
+export class HttpError extends Error {
+  constructor(
+    public status: number,
+    public body: unknown,
+    message: string,
+  ) {
+    super(message);
+    this.name = "HttpError";
+  }
+}
+
+
+async function request<T>(
+  path: string,
+  init: RequestInit = {},
+): Promise<T> {
+  const { baseUrl, token } = cfg();
+  const url = new URL(path, baseUrl);
+  // Token via query param so WS + REST share the same auth surface
+  url.searchParams.set("token", token);
+
+  const resp = await fetch(url.toString(), {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...(init.headers || {}),
+    },
+  });
+
+  if (!resp.ok) {
+    let body: unknown = null;
+    try { body = await resp.json(); } catch { body = await resp.text().catch(() => null); }
+    throw new HttpError(resp.status, body, `HTTP ${resp.status} ${resp.statusText}`);
+  }
+
+  return resp.json() as Promise<T>;
+}
+
+
+export const api = {
+  async listTasks(params: {
+    limit?: number;
+    cursor?: string;
+    status?: string;
+    type?: string;
+    symbol?: string;
+  } = {}): Promise<TaskList> {
+    const qs = new URLSearchParams();
+    if (params.limit !== undefined) qs.set("limit", String(params.limit));
+    if (params.cursor) qs.set("cursor", params.cursor);
+    if (params.status) qs.set("status", params.status);
+    if (params.type) qs.set("type", params.type);
+    if (params.symbol) qs.set("symbol", params.symbol);
+    const suffix = qs.toString() ? `?${qs.toString()}` : "";
+    return request<TaskList>(`/api/tasks${suffix}`);
+  },
+
+  async getTask(id: string): Promise<Task> {
+    return request<Task>(`/api/tasks/${encodeURIComponent(id)}`);
+  },
+
+  async cancelTask(id: string): Promise<{ ok: boolean }> {
+    return request(`/api/tasks/${encodeURIComponent(id)}/cancel`, { method: "POST" });
+  },
+
+  async stats(): Promise<StatsToday> {
+    return request<StatsToday>("/api/stats/today");
+  },
+
+  async positions(): Promise<Positions> {
+    return request<Positions>("/api/positions");
+  },
+
+  async health(): Promise<Health> {
+    return request<Health>("/api/health");
+  },
+};
