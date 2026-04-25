@@ -26,11 +26,17 @@ export function PageInfoBar({ page, orphanCount = 0 }: Props) {
     );
   }
   // Note: running/stopped/error status moved to the power-button in PageActionBar.
-  // The url is now displayed inline (clickable, target=_blank) instead of a hover-icon.
+  // URL goes on its own line below the meta row so long urls show fully (wrap on long).
   return (
     <div className="page-info-bar">
-      <span className={`badge ${page.source}`}>{page.source === "stock" ? "正股" : "期权"}</span>
-      <span className="page-name">{page.name}</span>
+      <div className="page-info-row">
+        <span className={`badge ${page.source}`}>{page.source === "stock" ? "正股" : "期权"}</span>
+        <span className="page-name">{page.name}</span>
+        <span className="sep">·</span>
+        <span>最后轮询 {formatRelative(page.last_poll_at)}</span>
+        <span className="sep">·</span>
+        <span>已发消息 {page.messages_published}</span>
+      </div>
       <a
         className="page-url"
         href={page.url}
@@ -40,10 +46,6 @@ export function PageInfoBar({ page, orphanCount = 0 }: Props) {
       >
         {page.url}
       </a>
-      <span className="sep">·</span>
-      <span>最后轮询 {formatRelative(page.last_poll_at)}</span>
-      <span className="sep">·</span>
-      <span>已发消息 {page.messages_published}</span>
     </div>
   );
 }

@@ -410,16 +410,6 @@
   font-size: 13px;
   font-weight: 500;
   letter-spacing: 0.04em;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.stream-divider::before,
-.stream-divider::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: var(--line-strong);
 }
 
 /* ===== Push block ===== */

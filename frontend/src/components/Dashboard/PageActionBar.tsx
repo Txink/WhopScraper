@@ -39,18 +39,18 @@ export function PageActionBar({ page, onOpenSettings }: Props) {
   // Note: running=true with a stale last_error is treated as "on" — the user
   // can still see the error by stopping and inspecting; we don't want a green
   // listener to show as red.
-  let powerClass = "power-btn off";
-  let powerLabel = "● 关机";
-  let powerTitle = "点击开机 — 启动 Playwright 监听该页面";
+  let powerClass = "power-btn icon-only off";
+  let powerTitle = "开机 — 启动监听";
+  let powerAria = "开机";
   if (page) {
     if (page.running) {
-      powerClass = "power-btn on";
-      powerLabel = "● 运行中";
-      powerTitle = "点击关机 — 停止监听";
+      powerClass = "power-btn icon-only on";
+      powerTitle = "运行中 — 点击关机";
+      powerAria = "关机";
     } else if (page.last_error) {
-      powerClass = "power-btn err";
-      powerLabel = "● 错误";
-      powerTitle = page.last_error;
+      powerClass = "power-btn icon-only err";
+      powerTitle = `错误：${page.last_error}`;
+      powerAria = "错误，点击重试";
     }
   }
 
@@ -79,8 +79,9 @@ export function PageActionBar({ page, onOpenSettings }: Props) {
         disabled={isOrphan || busy}
         className={powerClass}
         title={powerTitle}
+        aria-label={powerAria}
       >
-        {busy ? "● …" : powerLabel}
+        ⏻
       </button>
       <button
         onClick={onOpenSettings}

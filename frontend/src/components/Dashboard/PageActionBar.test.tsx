@@ -15,7 +15,7 @@ describe("<PageActionBar>", () => {
 
   it("disables power/settings when orphan", () => {
     render(<PageActionBar page={null} onOpenSettings={vi.fn()} />);
-    expect(screen.getByText(/关机/)).toBeDisabled();
+    expect(screen.getByLabelText("开机")).toBeDisabled();
     expect(screen.getByLabelText("设置")).toBeDisabled();
   });
 
@@ -23,7 +23,7 @@ describe("<PageActionBar>", () => {
     const stockPageOff = { ...stockPage, running: false, last_error: null };
     const startSpy = vi.spyOn(httpModule.api, "startWhopPage").mockResolvedValue(stockPageOff);
     render(<PageActionBar page={stockPageOff} onOpenSettings={vi.fn()} />);
-    fireEvent.click(screen.getByText(/关机/));
+    fireEvent.click(screen.getByLabelText("开机"));
     await waitFor(() => expect(startSpy).toHaveBeenCalledWith("a"));
   });
 
@@ -31,15 +31,15 @@ describe("<PageActionBar>", () => {
     const stockPageOn = { ...stockPage, running: true, last_error: null };
     const stopSpy = vi.spyOn(httpModule.api, "stopWhopPage").mockResolvedValue(stockPageOn);
     render(<PageActionBar page={stockPageOn} onOpenSettings={vi.fn()} />);
-    fireEvent.click(screen.getByText(/运行中/));
+    fireEvent.click(screen.getByLabelText("关机"));
     await waitFor(() => expect(stopSpy).toHaveBeenCalledWith("a"));
   });
 
-  it("error state shows red label with last_error tooltip", () => {
+  it("error state shows red icon with last_error tooltip", () => {
     const errPage = { ...stockPage, running: false, last_error: "navigate failed" };
     render(<PageActionBar page={errPage} onOpenSettings={vi.fn()} />);
-    const btn = screen.getByText(/错误/);
-    expect(btn).toHaveAttribute("title", "navigate failed");
+    const btn = screen.getByLabelText("错误，点击重试");
+    expect(btn).toHaveAttribute("title", "错误：navigate failed");
   });
 
   it("expand mode button cycles smart → all-open → all-closed → smart", () => {
