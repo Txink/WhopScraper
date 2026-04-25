@@ -246,6 +246,7 @@ class WhopCookieStatusOut(BaseModel):
 
 class OrphanCleanupRequest(BaseModel):
     url: str | None = None  # None → 清理 legacy NULL-url tasks
+    force: bool = False  # True → 允许清理活跃 page 的 url（用于"清空本页历史"）
 
 
 class OrphanCleanupResponse(BaseModel):

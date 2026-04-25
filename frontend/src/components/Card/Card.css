@@ -4,6 +4,10 @@
   border: 1px solid var(--line);
   border-radius: var(--radius-card);
   transition: background 150ms ease-out;
+  margin-bottom: 8px;
+}
+.card:last-child {
+  margin-bottom: 0;
 }
 .card:hover {
   background: var(--bg-hover);

@@ -365,15 +365,17 @@ def build_http_router(
             """Delete all tasks (and linked rows) for a given url.
 
             Defensive: rejects (400) if the url is currently registered to an
-            active page — caller should remove the page first to prevent the
-            listener from immediately re-creating tasks for the same url.
+            active page — unless `force=true`. The orphan-cleanup UI never
+            sets force; the per-page settings modal "清空本页历史" sets
+            force=true since it's an explicit user choice.
             """
-            active_urls = {entry.url for entry, _ in whop_registry.list_pages()}
-            if body.url is not None and body.url in active_urls:
-                raise HTTPException(
-                    400,
-                    detail="url is currently registered to an active page; remove the page first",
-                )
+            if not body.force:
+                active_urls = {entry.url for entry, _ in whop_registry.list_pages()}
+                if body.url is not None and body.url in active_urls:
+                    raise HTTPException(
+                        400,
+                        detail="url is currently registered to an active page; remove the page first or pass force=true",
+                    )
             async with session_scope(session_factory) as session:
                 count = await repo.delete_tasks_by_url(session, body.url)
             return OrphanCleanupResponse(deleted_count=count)

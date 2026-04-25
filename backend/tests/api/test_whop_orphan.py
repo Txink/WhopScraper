@@ -200,6 +200,31 @@ def test_cleanup_rejects_active_page_url(app_and_factory) -> None:  # noqa: ANN0
     assert "active page" in resp.json()["detail"]
 
 
+def test_cleanup_force_allows_active_page_url(app_and_factory) -> None:  # noqa: ANN001
+    """force=true bypasses the active-page guard (used by 设置弹窗 清空本页历史)."""
+    client, factory, registry, loop = app_and_factory
+    entry = loop.run_until_complete(
+        registry.add_page(
+            url="https://whop.com/force/app/", source="stock", name="force"
+        )
+    )
+
+    async def _seed() -> None:
+        async with factory() as session:
+            for i in range(2):
+                await repo.save_task(session, _make_orphan_task(f"f-{i}", entry.url))
+
+    loop.run_until_complete(_seed())
+
+    resp = client.post(
+        "/api/whop/orphan/cleanup",
+        json={"url": entry.url, "force": True},
+        params={"token": _TOKEN},
+    )
+    assert resp.status_code == 200
+    assert resp.json() == {"deleted_count": 2}
+
+
 def test_cleanup_null_url_deletes_legacy(app_and_factory) -> None:  # noqa: ANN001
     """url=null in request body should delete legacy rows where messages.url IS NULL."""
     client, factory, _registry, loop = app_and_factory

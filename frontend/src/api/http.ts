@@ -170,4 +170,12 @@ export const api = {
       { method: "POST", body: JSON.stringify({ url }) },
     );
   },
+
+  /** Force-clean an active page's history (used by 设置弹窗 "清空本页历史"). */
+  async cleanupPageHistory(url: string): Promise<{ deleted_count: number }> {
+    return request<{ deleted_count: number }>(
+      "/api/whop/orphan/cleanup",
+      { method: "POST", body: JSON.stringify({ url, force: true }) },
+    );
+  },
 };

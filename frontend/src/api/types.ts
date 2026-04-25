@@ -285,8 +285,9 @@ export interface paths {
          * @description Delete all tasks (and linked rows) for a given url.
          *
          *     Defensive: rejects (400) if the url is currently registered to an
-         *     active page — caller should remove the page first to prevent the
-         *     listener from immediately re-creating tasks for the same url.
+         *     active page — unless `force=true`. The orphan-cleanup UI never
+         *     sets force; the per-page settings modal "清空本页历史" sets
+         *     force=true since it's an explicit user choice.
          */
         post: operations["cleanup_orphan_tasks_api_whop_orphan_cleanup_post"];
         delete?: never;
@@ -415,6 +416,11 @@ export interface components {
         OrphanCleanupRequest: {
             /** Url */
             url?: string | null;
+            /**
+             * Force
+             * @default false
+             */
+            force: boolean;
         };
         /** OrphanCleanupResponse */
         OrphanCleanupResponse: {

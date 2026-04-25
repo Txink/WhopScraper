@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import type { WhopPage, WhopPageSettings } from "../../api/domain-types";
 import { api, HttpError } from "../../api/http";
+import { useTasksStore } from "../../stores/tasks";
 import "./PageSettingsModal.css";
 
 interface Props {
@@ -32,6 +33,29 @@ export function PageSettingsModal({ page, onClose }: Props) {
   );
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [clearing, setClearing] = useState(false);
+
+  const handleClearHistory = async () => {
+    if (!confirm(`确认从数据库删除 "${page.name}" 的所有历史 task？\n此操作不可逆，监听仍继续抓新消息。`)) return;
+    setClearing(true);
+    setError(null);
+    try {
+      const r = await api.cleanupPageHistory(page.url);
+      useTasksStore.getState().removeTasksByUrl(page.url);
+      alert(`已清理 ${r.deleted_count} 条历史 task`);
+      onClose();
+    } catch (e) {
+      if (e instanceof HttpError) {
+        setError(typeof e.body === "object" && e.body && "detail" in e.body
+          ? String((e.body as { detail: unknown }).detail)
+          : e.message);
+      } else {
+        setError(e instanceof Error ? e.message : String(e));
+      }
+    } finally {
+      setClearing(false);
+    }
+  };
 
   const initialDedupe = page.settings.dedupe_processed_messages;
   const dedupeChanged = dedupe !== initialDedupe;
@@ -174,12 +198,27 @@ export function PageSettingsModal({ page, onClose }: Props) {
             </section>
           )}
 
+          <section className="danger-zone">
+            <h4>危险操作</h4>
+            <p className="hint small">
+              清空本页所有历史 task（任务 + 消息 + 指令 + 推送事件全部从数据库删除）。监听本身不停，会继续抓新消息。
+            </p>
+            <button
+              type="button"
+              onClick={handleClearHistory}
+              disabled={clearing || saving}
+              className="danger-btn"
+            >
+              {clearing ? "清空中…" : "🗑 清空本页历史"}
+            </button>
+          </section>
+
           {error && <div className="error">{error}</div>}
         </div>
 
         <footer>
           <button onClick={onClose}>取消</button>
-          <button onClick={handleSave} disabled={saving} className="primary">
+          <button onClick={handleSave} disabled={saving || clearing} className="primary">
             {saving ? "保存中…" : "保存"}
           </button>
         </footer>
