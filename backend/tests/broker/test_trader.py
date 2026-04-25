@@ -209,56 +209,29 @@ async def test_auto_trade_disabled_skips() -> None:
 
 
 @pytest.mark.asyncio
-async def test_option_exceeds_total_price_limit_skips() -> None:
-    """Option qty=2, price=5.0 → total 2*5.0*100=$1000 > max_option_total_price=500 → SKIPPED."""
+async def test_option_global_env_limits_no_longer_block() -> None:
+    """Option submission should no longer be blocked by global max_option_* config."""
     bus = EventBus()
-    fake = FakeBrokerClient()
-    register_trader(bus, fake, _config(max_option_total_price=500.0))
+    fake = FakeBrokerClient(next_order_id="ORDER-OPT-002")
+    # Intentionally tiny global limits; trader should ignore them.
+    register_trader(bus, fake, _config(max_option_total_price=1.0, max_option_quantity=1))
 
-    status_events: list[Event] = []
+    submitted_events: list[Event] = []
 
-    async def capture_status(event: Event) -> None:
-        status_events.append(event)
+    async def capture_submitted(event: Event) -> None:
+        submitted_events.append(event)
 
-    bus.subscribe(Topics.TASK_STATUS_CHANGED, capture_status)
+    bus.subscribe(Topics.TASK_ORDER_SUBMITTED, capture_submitted)
 
-    task = _option_task(quantity=2, price=5.0)
+    task = _option_task(quantity=10, price=5.0)
     await bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
     await bus.wait_idle(timeout=2.0)
 
-    assert len(fake.submitted_orders) == 0
-    assert len(status_events) == 1
-    skipped_task: Task = status_events[0].payload.task
-    assert skipped_task.status == Status.SKIPPED
-    reason = skipped_task.reject_reason or ""
-    assert "1000" in reason or "total" in reason
-
-
-@pytest.mark.asyncio
-async def test_option_exceeds_quantity_limit_skips() -> None:
-    """Option qty=10 > max_option_quantity=3 → SKIPPED."""
-    bus = EventBus()
-    fake = FakeBrokerClient()
-    # qty=10, price=1.0 → total=$1000; set max_total=5000 so total passes, qty>3 fails.
-    register_trader(bus, fake, _config(max_option_total_price=5000.0, max_option_quantity=3))
-
-    status_events: list[Event] = []
-
-    async def capture_status(event: Event) -> None:
-        status_events.append(event)
-
-    bus.subscribe(Topics.TASK_STATUS_CHANGED, capture_status)
-
-    task = _option_task(quantity=10, price=1.0)
-    await bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
-    await bus.wait_idle(timeout=2.0)
-
-    assert len(fake.submitted_orders) == 0
-    assert len(status_events) == 1
-    skipped_task: Task = status_events[0].payload.task
-    assert skipped_task.status == Status.SKIPPED
-    reason = skipped_task.reject_reason or ""
-    assert "10" in reason or "quantity" in reason
+    assert len(fake.submitted_orders) == 1
+    order = fake.submitted_orders[0]
+    assert order["kind"] == "option"
+    assert order["quantity"] == 10
+    assert len(submitted_events) == 1
 
 
 @pytest.mark.asyncio

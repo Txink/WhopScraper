@@ -8,7 +8,6 @@ Behavior (Task G):
 - Stock qty: ``max(int(trade_quantity * position_size_to_fraction(position_size)), 1)``.
 - Option qty: derived from per-page option settings (quantity rule / total-limit
   rule, independently switchable). If both are disabled, task is SKIPPED.
-  Global max_option_total_price / max_option_quantity guards still apply.
 - Order type decision based on ``deviation = abs(market - signal) / signal * 100``.
   ≤ tolerance → MARKET; > tolerance → LIMIT @ signal_price.
   First-pass: market_price = signal_price (deviation always 0 → always MARKET).
@@ -181,20 +180,6 @@ def register_trader(
                 # Orphan option task or legacy page without local option controls.
                 computed_qty = inst.quantity or 1
 
-            # One option contract = 100 shares equivalent (matches old auto_trader.py)
-            total = price_for_check * computed_qty * 100
-            if total > config.max_option_total_price:
-                await _publish_skip(
-                    task,
-                    f"option total ${total:.2f} exceeds limit ${config.max_option_total_price}",
-                )
-                return
-            if computed_qty > config.max_option_quantity:
-                await _publish_skip(
-                    task,
-                    f"option quantity {computed_qty} exceeds limit {config.max_option_quantity}",
-                )
-                return
         else:
             computed_qty = inst.quantity or 1
 
