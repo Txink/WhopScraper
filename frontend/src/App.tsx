@@ -1,20 +1,25 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { ReactElement } from "react";
 import { configureHttp, api, HttpError } from "./api/http";
 import { createWsClient } from "./api/ws";
 import { useConnStore } from "./stores/conn";
-import { useTasksStore } from "./stores/tasks";
+import { useTasksStore, selectTasksByUrl } from "./stores/tasks";
 import { useStatsStore } from "./stores/stats";
 import { usePositionsStore } from "./stores/positions";
 import { useViewStore } from "./stores/view";
 import { usePageTabsStore } from "./stores/pageTabs";
 import { TopBar } from "./components/TopBar";
 import { RightRail } from "./components/RightRail";
-import { Card } from "./components/Card/Card";
 import { Login } from "./components/Login";
 import { WhopPanel } from "./components/WhopPanel/WhopPanel";
+import { PageTabs } from "./components/Dashboard/PageTabs";
+import { PageInfoBar } from "./components/Dashboard/PageInfoBar";
+import { PageActionBar } from "./components/Dashboard/PageActionBar";
+import { TaskStream } from "./components/Dashboard/TaskStream";
+import { EmptyState } from "./components/Dashboard/EmptyState";
 import { useStickyTop } from "./hooks/useStickyTop";
-import type { TaskSummary, PushEvent } from "./api/domain-types";
 import "./App.css";
+import "./components/Dashboard/Dashboard.css";
 
 // Config — BASE_URL defaults to the page's origin so localhost / 127.0.0.1 /
 // LAN-IP / etc all work without CORS. Override via VITE_API_BASE only when
@@ -41,23 +46,6 @@ function getStoredToken(): string | null {
   return localStorage.getItem("APP_TOKEN");
 }
 
-const ACTIVE_STATUSES = new Set([
-  "RECEIVED", "PARSING", "INSTRUCTION_READY",
-  "SUBMITTING", "PENDING", "PARTIAL",
-]);
-
-/** Smart mode: decide whether a task renders expanded by default. */
-function isActiveExpanded(task: TaskSummary): boolean {
-  // Active statuses always expand
-  if (ACTIVE_STATUSES.has(task.status)) return true;
-  // Recently-FILLED (<30s) stays expanded
-  if (task.status === "FILLED") {
-    const updatedAt = new Date(task.updated_at).getTime();
-    return Date.now() - updatedAt < 30_000;
-  }
-  return false;
-}
-
 async function refreshStats() {
   try {
     const s = await api.stats();
@@ -76,64 +64,15 @@ async function refreshPositions() {
   }
 }
 
-interface TaskGroupsProps {
-  tasks: TaskSummary[];
-  pushEventsByTask: Record<string, PushEvent[]>;
-}
-
-function formatDateLabel(dateKey: string): string {
-  const today = new Date().toISOString().slice(0, 10);
-  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-  if (dateKey === today) return `今天 ${dateKey}`;
-  if (dateKey === yesterday) return `昨天 ${dateKey}`;
-  return dateKey;
-}
-
-function DateGroups({ tasks, pushEventsByTask }: TaskGroupsProps) {
-  // Sort tasks by message.posted_at desc (newest first)
-  const sorted = [...tasks].sort((a, b) => {
-    const aTime = a.message?.posted_at ?? a.created_at;
-    const bTime = b.message?.posted_at ?? b.created_at;
-    return bTime.localeCompare(aTime);
-  });
-
-  // Group by date string (YYYY-MM-DD) of posted_at
-  const groups = new Map<string, TaskSummary[]>();
-  for (const t of sorted) {
-    const ts = t.message?.posted_at ?? t.created_at;
-    const dateKey = ts.slice(0, 10); // "2026-04-25"
-    if (!groups.has(dateKey)) groups.set(dateKey, []);
-    groups.get(dateKey)!.push(t);
-  }
-
-  // Iterate in insertion order (desc due to sort above)
-  const dateKeys = Array.from(groups.keys());
-
-  return (
-    <>
-      {dateKeys.map((dateKey) => {
-        const dayTasks = groups.get(dateKey)!;
-        return (
-          <div key={dateKey}>
-            <div className="stream-divider">{formatDateLabel(dateKey)} · {dayTasks.length}</div>
-            {dayTasks.map((t) => (
-              <Card
-                key={t.id}
-                task={t}
-                pushEvents={pushEventsByTask[t.id] ?? []}
-                defaultExpanded={isActiveExpanded(t)}
-              />
-            ))}
-          </div>
-        );
-      })}
-    </>
-  );
-}
-
 function handleLogout() {
   localStorage.removeItem("APP_TOKEN");
   window.location.reload();
+}
+
+// Stub — replaced by real component in Task N.
+// Kept here so the conditional render in Dashboard typechecks today.
+function PageSettingsModal(_: { page: unknown; onClose: () => void }): ReactElement | null {
+  return null;
 }
 
 function Dashboard({ token }: { token: string }) {
@@ -142,6 +81,17 @@ function Dashboard({ token }: { token: string }) {
   const tasks = useTasksStore((s) => s.tasks);
   const pushEventsByTask = useTasksStore((s) => s.pushEventsByTask);
   const applyWs = useTasksStore((s) => s.applyWsEvent);
+
+  const pages = usePageTabsStore((s) => s.pages);
+  const activeTabId = usePageTabsStore((s) => s.activeTabId);
+  const setPages = usePageTabsStore((s) => s.setPages);
+  const setOrphanCount = usePageTabsStore((s) => s.setOrphanCount);
+  const expandMode = usePageTabsStore((s) =>
+    activeTabId ? (s.expandModeByTab[activeTabId] ?? "smart") : "smart",
+  );
+  const orphanCount = usePageTabsStore((s) => s.orphanCount);
+
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   // Refetch stats + positions on WS reconnect (closed → open)
   const prevWsRef = useRef<typeof conn.ws>("closed");
@@ -154,11 +104,10 @@ function Dashboard({ token }: { token: string }) {
     refreshPositions();
   }, [conn.ws]);
 
-  // On mount: fetch health + initial tasks; open WS; fetch stats + positions
+  // On mount: fetch health + initial tasks + pages; open WS; fetch stats + positions
   useEffect(() => {
     let alive = true;
 
-    // Initial health probe
     (async () => {
       try {
         const h = await api.health();
@@ -166,25 +115,22 @@ function Dashboard({ token }: { token: string }) {
       } catch (e) {
         console.warn("health fetch failed:", e);
       }
-    })();
-
-    // Initial task list
-    (async () => {
       try {
-        const resp = await api.listTasks({ limit: 100 });
-        if (alive) {
-          useTasksStore.getState().setInitialTasks(resp.tasks);
-        }
+        const r = await api.listTasks({ limit: 100 });
+        if (alive) useTasksStore.getState().setInitialTasks(r.tasks);
       } catch (e) {
         console.warn("initial tasks fetch failed:", e);
       }
+      try {
+        const p = await api.listWhopPages();
+        if (alive) setPages(p.pages);
+      } catch (e) {
+        console.warn("initial pages fetch failed:", e);
+      }
+      refreshStats();
+      refreshPositions();
     })();
 
-    // Initial stats + positions
-    refreshStats();
-    refreshPositions();
-
-    // WebSocket
     const client = createWsClient({
       baseUrl: BASE_URL,
       token,
@@ -206,25 +152,46 @@ function Dashboard({ token }: { token: string }) {
     };
   }, []);  // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Compute orphan count whenever tasks or pages change
+  const pageUrls = useMemo(() => new Set(pages.map((p) => p.url)), [pages]);
+  useEffect(() => {
+    const orphans = tasks.filter(
+      (t) => t.message?.url == null || !pageUrls.has(t.message.url),
+    );
+    setOrphanCount(orphans.length);
+  }, [tasks, pageUrls, setOrphanCount]);
+
+  if (pages.length === 0 && orphanCount === 0) {
+    return <main className="main"><EmptyState /></main>;
+  }
+
+  const activePage =
+    activeTabId === "orphan" || activeTabId === null
+      ? null
+      : pages.find((p) => p.id === activeTabId) ?? null;
+  const filteredTasks =
+    activeTabId === "orphan"
+      ? selectTasksByUrl(tasks, null, pageUrls)
+      : activePage
+        ? selectTasksByUrl(tasks, activePage.url, pageUrls)
+        : [];
+
   return (
     <main className="main">
       <section className="stream">
-        <div className="stream-head">
-          <span>今日任务 · {tasks.length} 条</span>
-          <span>最新在上</span>
-        </div>
-        {tasks.length === 0 ? (
-          <div className="empty-state">
-            <p>暂无任务。等待后端推送第一条消息…</p>
-            <p className="hint">
-              WebSocket 状态：<code>{conn.ws}</code>
-            </p>
-          </div>
+        <PageTabs />
+        <PageInfoBar page={activePage} orphanCount={orphanCount} />
+        <PageActionBar page={activePage} onOpenSettings={() => setSettingsOpen(true)} />
+        {filteredTasks.length === 0 ? (
+          <div className="empty-state"><p>该监听页暂无任务。</p></div>
         ) : (
-          <DateGroups tasks={tasks} pushEventsByTask={pushEventsByTask} />
+          <TaskStream tasks={filteredTasks} pushEventsByTask={pushEventsByTask} expandMode={expandMode} />
         )}
       </section>
       <RightRail />
+      {settingsOpen && activePage && (
+        <PageSettingsModal page={activePage} onClose={() => setSettingsOpen(false)} />
+      )}
     </main>
   );
 }

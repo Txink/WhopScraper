@@ -1,0 +1,40 @@
+.page-tabs { display: flex; gap: 4px; padding: 0 12px 8px; border-bottom: 1px solid var(--line); }
+.page-tabs .tab {
+  background: transparent; border: none; color: var(--fg-2);
+  padding: 8px 14px; cursor: pointer; border-bottom: 2px solid transparent;
+  display: flex; align-items: center; gap: 6px; font: inherit;
+}
+.page-tabs .tab.active { color: var(--fg-1); border-bottom-color: var(--brand); }
+.page-tabs .tab.orphan { opacity: 0.7; }
+.tab-source-dot { width: 8px; height: 8px; border-radius: 50%; }
+.tab-source-dot.stock { background: #5fbf8b; }
+.tab-source-dot.option { background: #8b6fcf; }
+.tab-count { font-size: 11px; opacity: 0.6; padding-left: 4px; }
+
+.page-info-bar {
+  display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+  font-size: 12px; color: var(--fg-2);
+}
+.page-info-bar .badge { padding: 2px 8px; border-radius: 4px; font-weight: 500; font-size: 11px; }
+.page-info-bar .badge.stock { background: rgba(95,191,139,0.15); color: #5fbf8b; }
+.page-info-bar .badge.option { background: rgba(139,111,207,0.15); color: #8b6fcf; }
+.page-info-bar .badge.gray { background: rgba(140,140,140,0.15); color: #999; }
+.page-info-bar .status.running { color: #5fbf8b; }
+.page-info-bar .status.error { color: #cf6f6f; cursor: help; }
+.page-info-bar .status.stopped { color: var(--fg-3); }
+.page-info-bar .sep { opacity: 0.4; }
+.page-info-bar .url-hover { cursor: help; opacity: 0.6; }
+
+.page-action-bar { display: flex; gap: 6px; padding: 0 12px 8px; }
+.page-action-bar .action-btn {
+  background: var(--bg-2); border: 1px solid var(--line); color: var(--fg-1);
+  padding: 4px 10px; cursor: pointer; border-radius: 4px; font: inherit; font-size: 12px;
+}
+.page-action-bar .action-btn:hover:not(:disabled) { background: var(--bg-3); }
+.page-action-bar .action-btn.active { background: var(--brand); color: white; border-color: var(--brand); }
+.page-action-bar .action-btn.link { background: transparent; border: none; color: var(--fg-3); }
+.page-action-bar .action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.page-action-bar .spacer { flex: 1; }
+
+.dashboard-empty { padding: 60px 20px; text-align: center; color: var(--fg-2); }
+.dashboard-empty .link-btn { background: none; border: none; color: var(--brand); cursor: pointer; text-decoration: underline; padding: 0; font: inherit; }
