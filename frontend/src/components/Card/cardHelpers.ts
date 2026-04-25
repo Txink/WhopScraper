@@ -28,12 +28,18 @@ export function formatTitle(inst: Instruction | null): string {
 
 /**
  * Format HH:MM:SS from ISO date string.
+ *
+ * Uses UTC methods because backend stores Whop's wall-clock time as
+ * a UTC ISO string (e.g. "Yesterday 11:24 PM" → "2026-04-24T23:24:00Z").
+ * Local timezone conversion would shift the displayed hour by tz offset
+ * and no longer match what the user sees in Whop. CardExpanded does the
+ * same — it strips T/Z without conversion.
  */
 export function fmtTime(iso: string): string {
   const d = new Date(iso);
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mm = String(d.getMinutes()).padStart(2, "0");
-  const ss = String(d.getSeconds()).padStart(2, "0");
+  const hh = String(d.getUTCHours()).padStart(2, "0");
+  const mm = String(d.getUTCMinutes()).padStart(2, "0");
+  const ss = String(d.getUTCSeconds()).padStart(2, "0");
   return `${hh}:${mm}:${ss}`;
 }
 

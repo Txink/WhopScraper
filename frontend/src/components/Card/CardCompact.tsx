@@ -19,9 +19,10 @@ export function CardCompact({ task, onExpand }: CardCompactProps) {
   const badgeType = type === "option" ? "option" : "stock";
   const isParseError = status === "PARSE_ERROR";
 
-  // Symbol: "未识别" in yellow for PARSE_ERROR, otherwise formatted title
-  const symbolText = isParseError ? "未识别" : (formatTitle(instruction) || task.id);
-  const symbolClass = isParseError ? "card-symbol unidentified" : "card-symbol";
+  // Parsed symbol takes priority. When absent (PARSE_ERROR or pre-parse states),
+  // we show the original message preview in the same cell — never the domID.
+  const parsedSymbol = !isParseError ? formatTitle(instruction) : null;
+  const messagePreview = parsedSymbol ? null : truncate(message.content || "", 120);
 
   // Time: use posted_at
   const ts = fmtTime(message.posted_at);
@@ -31,14 +32,9 @@ export function CardCompact({ task, onExpand }: CardCompactProps) {
       ? fmtElapsed(elapsedMs(message.posted_at, task.updated_at))
       : "—";
 
-  // Build details line
+  // Build details line — only used when we have a parsed instruction
   let detailContent: React.ReactNode = null;
-  if (isParseError) {
-    // Show truncated original message content for PARSE_ERROR
-    detailContent = (
-      <span className="msg-preview">{truncate(message.content, 60)}</span>
-    );
-  } else if (instruction) {
+  if (parsedSymbol && instruction) {
     const price = instruction.price != null ? `$${instruction.price.toFixed(2)}` : null;
     const qty = instruction.quantity != null ? String(instruction.quantity) : null;
     if (price && qty) {
@@ -52,7 +48,7 @@ export function CardCompact({ task, onExpand }: CardCompactProps) {
     } else if (task.reject_reason) {
       detailContent = task.reject_reason;
     }
-  } else if (task.reject_reason) {
+  } else if (!isParseError && task.reject_reason) {
     detailContent = task.reject_reason;
   }
 
@@ -60,11 +56,24 @@ export function CardCompact({ task, onExpand }: CardCompactProps) {
   const sideClass = side?.toLowerCase().includes("sell") ? "side-sell" : "side-buy";
   const sideLabel = side?.toLowerCase().includes("sell") ? "SELL" : (side ? "BUY" : "");
 
+  // Symbol cell:
+  //   parsed → "TSLL.US" mono
+  //   PARSE_ERROR → 黄色"未识别" + message preview (wrapped, smaller font)
+  //   pre-parse / no symbol → message preview only (wrapped, smaller font)
+  const symbolCell = parsedSymbol ? (
+    <span className="card-symbol">{parsedSymbol}</span>
+  ) : (
+    <span className="card-symbol has-message">
+      {isParseError && <span className="unidentified-tag">未识别</span>}
+      {messagePreview && <span className="msg-preview-inline">{messagePreview}</span>}
+    </span>
+  );
+
   return (
     <div className="card compact" onClick={onExpand} role="button" tabIndex={0}
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onExpand(); }}>
       <TypeBadge type={badgeType} />
-      <span className={symbolClass}>{symbolText}</span>
+      {symbolCell}
       {sideLabel ? (
         <span className={`card-side ${sideClass}`}>{sideLabel}</span>
       ) : (

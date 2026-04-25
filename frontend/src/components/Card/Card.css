@@ -13,12 +13,12 @@
 .card.compact {
   display: grid;
   grid-template-columns:
-    44px minmax(170px, 220px) 44px 1fr 140px 80px 104px 20px;
+    44px minmax(220px, 280px) 44px 1fr 90px 80px 104px 20px;
   align-items: center;
   gap: 10px;
-  padding: 6px 12px;
+  padding: 8px 12px;
   font-size: 12px;
-  min-height: 32px;
+  min-height: 36px;
   cursor: pointer;
 }
 .card.compact:hover {
@@ -30,6 +30,35 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* When the symbol cell carries the original message preview (no parsed
+   instruction), allow it to wrap to multiple lines; the row grows. */
+.card.compact .card-symbol.has-message {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+.card.compact .unidentified-tag {
+  color: var(--warn);
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  display: inline-block;
+}
+.card.compact .msg-preview-inline {
+  color: var(--fg-2);
+  font-family: var(--font-sans);
+  font-weight: 400;
+  font-size: 11px;
+  font-style: italic;
+  line-height: 1.45;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .card.compact .details {
