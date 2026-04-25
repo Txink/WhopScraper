@@ -1,4 +1,5 @@
 """Tests for core/config.py Settings and get_settings."""
+
 from __future__ import annotations
 
 import pytest

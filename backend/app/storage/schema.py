@@ -9,6 +9,7 @@ Five Row classes (using "Row" suffix to avoid collisions with domain classes):
 
 All classes inherit from ``Base`` in ``app.storage.db``.
 """
+
 from __future__ import annotations
 
 from datetime import date, datetime
@@ -69,9 +70,7 @@ class MessageRow(Base):
     """ORM mapping for the ``messages`` table."""
 
     __tablename__ = "messages"
-    __table_args__ = (
-        Index("idx_messages_url", "url"),
-    )
+    __table_args__ = (Index("idx_messages_url", "url"),)
 
     # id is both PK and FK → tasks.id; ON DELETE CASCADE propagates task deletion.
     id: Mapped[str] = mapped_column(

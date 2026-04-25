@@ -25,6 +25,7 @@ DOM structure (from docs/dom_structure_guide.md):
     </div>
   </div>
 """
+
 from __future__ import annotations
 
 import re
@@ -39,9 +40,7 @@ from app.domain.message import Message
 # ---------------------------------------------------------------------------
 # Timestamp patterns (mirrors JS regexes in message_extractor.py)
 # ---------------------------------------------------------------------------
-_TS_ABSOLUTE = re.compile(
-    r"[A-Z][a-z]{2}\s+\d{1,2},\s+\d{4}\s+\d{1,2}:\d{2}\s+[AP]M"
-)
+_TS_ABSOLUTE = re.compile(r"[A-Z][a-z]{2}\s+\d{1,2},\s+\d{4}\s+\d{1,2}:\d{2}\s+[AP]M")
 _TS_RELATIVE = re.compile(
     r"^(Yesterday at|Today|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)"
     r"\s+(\d{1,2}:\d{2}\s+[AP]M|at\s+\d{1,2}:\d{2}\s+[AP]M)$",
@@ -54,16 +53,22 @@ _TS_TIME_ONLY = re.compile(r"^\d{1,2}:\d{2}\s+[AP]M$", re.IGNORECASE)
 # ---------------------------------------------------------------------------
 _FILTER_FIXED = {"•", "Tail", "X", "Edited", "Reply", "Delete", "已编辑", "回复", "删除"}
 _FILTER_PATTERNS = [
-    re.compile(r"^(由\s*)?\d+\s*阅读$"),           # read count "由 268阅读"
-    re.compile(r"^(已编辑|Edited)$"),              # edit marker
-    re.compile(r"^(回复|Reply|删除|Delete)$"),      # action markers
-    re.compile(r"^•.*\d{1,2}:\d{2}\s+[AP]M$"),   # timestamp line "•Wednesday 11:04 PM"
-    re.compile(r"^[•·]\s*[A-Z]"),                  # bullet + capital (metadata)
+    re.compile(r"^(由\s*)?\d+\s*阅读$"),  # read count "由 268阅读"
+    re.compile(r"^(已编辑|Edited)$"),  # edit marker
+    re.compile(r"^(回复|Reply|删除|Delete)$"),  # action markers
+    re.compile(r"^•.*\d{1,2}:\d{2}\s+[AP]M$"),  # timestamp line "•Wednesday 11:04 PM"
+    re.compile(r"^[•·]\s*[A-Z]"),  # bullet + capital (metadata)
     re.compile(r"^[A-Z][a-z]{2}\s+\d{1,2},\s+\d{4}"),  # date "Jan 22, 2026"
     re.compile(r"^\d{1,2}:\d{2}\s+[AP]M$", re.IGNORECASE),  # bare time "10:49 PM"
 ]
 _WEEKDAYS = {
-    "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
 }
 
 
@@ -94,8 +99,18 @@ def _clean_text(text: str) -> str:
 # Timestamp parsing
 # ---------------------------------------------------------------------------
 _MONTH_MAP = {
-    "Jan": 1, "Feb": 2, "Mar": 3, "Apr": 4, "May": 5, "Jun": 6,
-    "Jul": 7, "Aug": 8, "Sep": 9, "Oct": 10, "Nov": 11, "Dec": 12,
+    "Jan": 1,
+    "Feb": 2,
+    "Mar": 3,
+    "Apr": 4,
+    "May": 5,
+    "Jun": 6,
+    "Jul": 7,
+    "Aug": 8,
+    "Sep": 9,
+    "Oct": 10,
+    "Nov": 11,
+    "Dec": 12,
 }
 
 # Lower-case lookup tables for `parse_whop_timestamp` (separate from the
@@ -142,15 +157,15 @@ def parse_whop_timestamp(text: str, *, now: datetime | None = None) -> datetime 
         return datetime.combine(d, time(h24, m), tzinfo=UTC)
 
     # Today at H:MM AM/PM
-    if (m := _TODAY_RE.match(text)):
+    if m := _TODAY_RE.match(text):
         return _build(today, int(m.group(1)), int(m.group(2)), m.group(3))
 
     # Yesterday at H:MM AM/PM
-    if (m := _YESTERDAY_RE.match(text)):
+    if m := _YESTERDAY_RE.match(text):
         return _build(today - timedelta(days=1), int(m.group(1)), int(m.group(2)), m.group(3))
 
     # <Mon> D[, YYYY] H:MM AM/PM  — try full date before weekday to avoid false match
-    if (m := _FULL_DATE_RE.match(text)):
+    if m := _FULL_DATE_RE.match(text):
         mon = m.group(1).lower()[:3]
         if mon in _MONTHS_LOWER:
             month_num = _MONTHS_LOWER.index(mon) + 1
@@ -163,7 +178,7 @@ def parse_whop_timestamp(text: str, *, now: datetime | None = None) -> datetime 
                 pass
 
     # <Weekday>[at] H:MM AM/PM  — most recent occurrence strictly before today
-    if (m := _WEEKDAY_RE.match(text)):
+    if m := _WEEKDAY_RE.match(text):
         wd_name = m.group(1).lower()
         if wd_name in _WEEKDAYS_LOWER:
             target_wd = _WEEKDAYS_LOWER.index(wd_name)
@@ -232,6 +247,7 @@ def _parse_time_part(raw: str) -> tuple[int, int]:
 # Element helpers (BeautifulSoup)
 # ---------------------------------------------------------------------------
 
+
 def _get_classes(tag: Tag) -> list[str]:
     cls = tag.get("class")
     if cls is None:
@@ -284,10 +300,12 @@ def _extract_timestamp_raw(msg_el: Tag) -> str:
     """Extract raw timestamp string from message element."""
     # Look for .inline-flex.items-center.gap-1 containers
     for container in msg_el.find_all(
-        lambda t: isinstance(t, Tag)
-        and "inline-flex" in _get_classes(t)
-        and "items-center" in _get_classes(t)
-        and "gap-1" in _get_classes(t)
+        lambda t: (
+            isinstance(t, Tag)
+            and "inline-flex" in _get_classes(t)
+            and "items-center" in _get_classes(t)
+            and "gap-1" in _get_classes(t)
+        )
     ):
         for span in container.find_all("span"):
             text = span.get_text(strip=True)
@@ -324,7 +342,8 @@ def _extract_quote_content(msg_el: Tag) -> str:
 
     # Find fui-Text truncate spans (not the author span with fui-r-weight-medium)
     candidate_spans = [
-        s for s in quote_el.find_all(True)
+        s
+        for s in quote_el.find_all(True)
         if isinstance(s, Tag)
         and _has_class_fragment(s, "fui-Text")
         and _has_class_fragment(s, "truncate")
@@ -332,8 +351,7 @@ def _extract_quote_content(msg_el: Tag) -> str:
 
     # Prefer spans WITHOUT fui-r-weight-medium (author name)
     content_spans = [
-        s for s in candidate_spans
-        if not _has_class_fragment(s, "fui-r-weight-medium")
+        s for s in candidate_spans if not _has_class_fragment(s, "fui-r-weight-medium")
     ]
     if content_spans:
         raw = content_spans[0].get_text(strip=True)
@@ -364,7 +382,8 @@ def _extract_content(msg_el: Tag, author: str | None, ts_raw: str) -> tuple[str,
 
     # Strategy 1: look for bg-gray-3 + rounded bubbles
     bubbles = [
-        el for el in msg_el.find_all(True)
+        el
+        for el in msg_el.find_all(True)
         if isinstance(el, Tag)
         and "bg-gray-3" in _get_classes(el)
         and _has_class_fragment(el, "rounded")
@@ -373,9 +392,9 @@ def _extract_content(msg_el: Tag, author: str | None, ts_raw: str) -> tuple[str,
     # Strategy 2: whitespace-pre-wrap containers
     if not bubbles:
         bubbles = [
-            el for el in msg_el.find_all(True)
-            if isinstance(el, Tag)
-            and _has_class_fragment(el, "whitespace-pre-wrap")
+            el
+            for el in msg_el.find_all(True)
+            if isinstance(el, Tag) and _has_class_fragment(el, "whitespace-pre-wrap")
         ]
 
     for el in bubbles:
@@ -386,10 +405,7 @@ def _extract_content(msg_el: Tag, author: str | None, ts_raw: str) -> tuple[str,
         if "hidden" in _get_classes(el):
             continue
         # Skip avatar elements
-        if any(
-            _has_class_fragment(el, frag)
-            for frag in ("fui-Avatar", "avatar")
-        ):
+        if any(_has_class_fragment(el, frag) for frag in ("fui-Avatar", "avatar")):
             continue
         # Skip read-count spans (text-gray-11 text-0)
         if "text-gray-11" in _get_classes(el) and "text-0" in _get_classes(el):
@@ -429,6 +445,7 @@ def _extract_content(msg_el: Tag, author: str | None, ts_raw: str) -> tuple[str,
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 def extract_messages(
     html: str,

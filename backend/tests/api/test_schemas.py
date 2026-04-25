@@ -1,4 +1,5 @@
 """Tests for app.api.schemas — Pydantic models and domain converters."""
+
 from __future__ import annotations
 
 from datetime import UTC, date, datetime

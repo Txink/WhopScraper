@@ -29,6 +29,7 @@ Usage::
     )
     app.include_router(router)
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -261,9 +262,7 @@ def build_http_router(
             if not ok:
                 raise HTTPException(404, detail="page not found")
 
-        @router.post(
-            "/api/whop/pages/{page_id}/restart", response_model=WhopPageOut
-        )
+        @router.post("/api/whop/pages/{page_id}/restart", response_model=WhopPageOut)
         async def restart_whop_page(page_id: str) -> WhopPageOut:
             ok = await whop_registry.restart_page(page_id)
             if not ok:
@@ -273,9 +272,7 @@ def build_http_router(
                     return whop_page_to_out(e, ll)
             raise HTTPException(500, detail="restart succeeded but lost track")
 
-        @router.get(
-            "/api/whop/pages/defaults", response_model=WhopPageSettingsOut
-        )
+        @router.get("/api/whop/pages/defaults", response_model=WhopPageSettingsOut)
         async def whop_settings_defaults(source: str) -> WhopPageSettingsOut:
             from app.whop.page_settings import default_settings_for
 
@@ -296,9 +293,7 @@ def build_http_router(
                 ),
             )
 
-        @router.patch(
-            "/api/whop/pages/{page_id}/settings", response_model=WhopPageOut
-        )
+        @router.patch("/api/whop/pages/{page_id}/settings", response_model=WhopPageOut)
         async def patch_whop_page_settings(
             page_id: str, body: WhopPageSettingsPatch
         ) -> WhopPageOut:
@@ -309,8 +304,7 @@ def build_http_router(
                 patch_dict["price_deviation_tolerance"] = body.price_deviation_tolerance
             if body.tickers is not None:
                 patch_dict["tickers"] = {
-                    k: {"trade_quantity": v.trade_quantity}
-                    for k, v in body.tickers.items()
+                    k: {"trade_quantity": v.trade_quantity} for k, v in body.tickers.items()
                 }
             if not patch_dict:
                 raise HTTPException(

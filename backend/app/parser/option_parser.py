@@ -7,6 +7,7 @@
 expiry 永远是 Python date 对象（而非字符串）。
 symbol 使用 LongPort 格式，如 NVDA260425C135000.US。
 """
+
 from __future__ import annotations
 
 import re
@@ -114,8 +115,18 @@ def _resolve_expiry(text: str, posted_at: datetime) -> date | None:
 
     # English month abbreviation: Jan 15 / MAY 3
     _MONTHS = {
-        "JAN": 1, "FEB": 2, "MAR": 3, "APR": 4, "MAY": 5, "JUN": 6,
-        "JUL": 7, "AUG": 8, "SEP": 9, "OCT": 10, "NOV": 11, "DEC": 12,
+        "JAN": 1,
+        "FEB": 2,
+        "MAR": 3,
+        "APR": 4,
+        "MAY": 5,
+        "JUN": 6,
+        "JUL": 7,
+        "AUG": 8,
+        "SEP": 9,
+        "OCT": 10,
+        "NOV": 11,
+        "DEC": 12,
     }
     m = re.match(r"([A-Za-z]{3})\s*(\d{1,2})", text)
     if m:
@@ -418,9 +429,7 @@ def parse(
 # ---------------------------------------------------------------------------
 
 
-def _try_buy(
-    message: str, *, message_id: str, posted_at: datetime
-) -> OptionInstruction | None:
+def _try_buy(message: str, *, message_id: str, posted_at: datetime) -> OptionInstruction | None:
     """Try all BUY open patterns in priority order."""
 
     # --- Pattern 7: TICKER DATE STRIKE[c/p] PRICE (most explicit) ---
@@ -617,9 +626,7 @@ def _try_buy(
 # ---------------------------------------------------------------------------
 
 
-def _try_modify(
-    message: str, *, message_id: str
-) -> OptionInstruction | None:
+def _try_modify(message: str, *, message_id: str) -> OptionInstruction | None:
     """Parse stop-loss / take-profit modify instructions."""
 
     # Detect any stop-loss pattern

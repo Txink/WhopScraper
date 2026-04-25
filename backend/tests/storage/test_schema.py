@@ -1,4 +1,5 @@
 """Tests for storage/schema.py — 5 ORM table definitions."""
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -140,7 +141,7 @@ async def test_message_row_fk_cascade(
     # Insert task first (flush so FK constraint is satisfiable), then message.
     async with session_factory() as session:
         session.add(_task("T-CASCADE"))
-        await session.flush()          # task row hits DB before message FK is checked
+        await session.flush()  # task row hits DB before message FK is checked
         session.add(_message("T-CASCADE"))
         await session.commit()
 
@@ -174,7 +175,7 @@ async def test_push_event_row_multiple_per_task(
     # Flush task first so FK reference exists before push events are inserted.
     async with session_factory() as session:
         session.add(_task("T-PUSH"))
-        await session.flush()          # task row must exist before push events
+        await session.flush()  # task row must exist before push events
         session.add(_push_event("E3", "T-PUSH", offset_seconds=30))
         session.add(_push_event("E1", "T-PUSH", offset_seconds=0))
         session.add(_push_event("E2", "T-PUSH", offset_seconds=15))
@@ -182,10 +183,7 @@ async def test_push_event_row_multiple_per_task(
 
     async with session_factory() as session:
         result = await session.execute(
-            text(
-                "SELECT id FROM push_events WHERE task_id = 'T-PUSH'"
-                " ORDER BY received_at ASC"
-            )
+            text("SELECT id FROM push_events WHERE task_id = 'T-PUSH' ORDER BY received_at ASC")
         )
         ids = [row[0] for row in result.fetchall()]
 

@@ -1,4 +1,5 @@
 """Tests for Task G — trader 反查 page settings + 偏差→order_type 决策。"""
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -62,25 +63,29 @@ class _RecordingBroker:
         self.submitted: list[dict] = []
 
     def submit_stock_order(self, *, symbol, side, quantity, price, order_type, remark):
-        self.submitted.append({
-            "symbol": symbol,
-            "side": side,
-            "quantity": quantity,
-            "price": price,
-            "order_type": order_type,
-            "remark": remark,
-        })
+        self.submitted.append(
+            {
+                "symbol": symbol,
+                "side": side,
+                "quantity": quantity,
+                "price": price,
+                "order_type": order_type,
+                "remark": remark,
+            }
+        )
         return f"ord-{symbol}"
 
     def submit_option_order(self, *, symbol, side, quantity, price, order_type, remark):
-        self.submitted.append({
-            "symbol": symbol,
-            "side": side,
-            "quantity": quantity,
-            "price": price,
-            "order_type": order_type,
-            "remark": remark,
-        })
+        self.submitted.append(
+            {
+                "symbol": symbol,
+                "side": side,
+                "quantity": quantity,
+                "price": price,
+                "order_type": order_type,
+                "remark": remark,
+            }
+        )
         return f"ord-opt-{symbol}"
 
     def cancel_order(self, oid):

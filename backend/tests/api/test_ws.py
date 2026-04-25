@@ -16,6 +16,7 @@ For the buffer-overflow test (test #7) we monkey-patch ``BUFFER_SIZE`` on the
 module and create a fresh hub with a small buffer so the test completes in
 milliseconds.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -145,6 +146,7 @@ def test_ws_receives_broadcast_event(
     client = TestClient(app)
 
     with client, client.websocket_connect(f"/ws?token={_TOKEN}") as ws:
+
         async def _pub() -> None:
             await bus.publish(_make_task_event())
             await bus.wait_idle(timeout=2.0)
@@ -168,6 +170,7 @@ def test_ws_event_id_increments(ws_app: tuple[FastAPI, EventBus, WebSocketHub, S
     client = TestClient(app)
 
     with client, client.websocket_connect(f"/ws?token={_TOKEN}") as ws:
+
         async def _pub_three() -> None:
             for i in range(3):
                 await bus.publish(_make_task_event(f"msg-{i}"))
@@ -195,6 +198,7 @@ def test_ws_replay_from_since(ws_app: tuple[FastAPI, EventBus, WebSocketHub, Set
 
     # First: publish 5 events (no ws connected — events go to buffer only)
     with client:
+
         async def _pub_five() -> None:
             for i in range(5):
                 await bus.publish(_make_task_event(f"msg-{i}"))
@@ -251,6 +255,7 @@ def test_ws_replay_respects_buffer_overflow(
     client2 = TestClient(app2)
 
     with client2:
+
         async def _pub_many() -> None:
             for i in range(total_events):
                 await bus2.publish(_make_task_event(f"msg-{i}"))
@@ -304,6 +309,7 @@ def test_ws_broadcast_to_multiple_clients(
         ws1 = ws1_ctx.__enter__()
         ws2 = ws2_ctx.__enter__()
         try:
+
             async def _pub() -> None:
                 await bus.publish(_make_task_event())
                 await bus.wait_idle(timeout=2.0)
@@ -394,9 +400,7 @@ def test_whop_page_changed_broadcast(
             await bus.publish(
                 Event(
                     topic=Topics.WHOP_PAGE_CHANGED,
-                    payload=WhopPagePayload(
-                        action="settings_updated", page_dict=page_dict
-                    ),
+                    payload=WhopPagePayload(action="settings_updated", page_dict=page_dict),
                 )
             )
             await bus.wait_idle(timeout=2.0)

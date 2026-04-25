@@ -8,6 +8,7 @@
 5. Unsubscribing stops further persistence
 6. Handler exception isolation — a broken payload doesn't prevent subsequent events from persisting
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -152,9 +153,7 @@ async def test_task_instruction_ready_updates_existing_task(
     # Second publish: INSTRUCTION_READY
     task_v2 = _make_stock_task("msg-upsert-001")
     task_v2.status = Status.INSTRUCTION_READY
-    await bus.publish(
-        Event(topic=Topics.TASK_INSTRUCTION_READY, payload=TaskPayload(task=task_v2))
-    )
+    await bus.publish(Event(topic=Topics.TASK_INSTRUCTION_READY, payload=TaskPayload(task=task_v2)))
     await bus.wait_idle(timeout=1)
 
     async with session_factory() as session:
@@ -246,9 +245,7 @@ async def test_unsubscribe_stops_persistence(
 
     # Verify subscribe works: first publish goes through
     task_before = _make_task("msg-unsub-before", status=Status.RECEIVED)
-    await bus.publish(
-        Event(topic=Topics.TASK_CREATED, payload=TaskPayload(task=task_before))
-    )
+    await bus.publish(Event(topic=Topics.TASK_CREATED, payload=TaskPayload(task=task_before)))
     await bus.wait_idle(timeout=1)
 
     async with session_factory() as session:
@@ -261,9 +258,7 @@ async def test_unsubscribe_stops_persistence(
 
     # Publish after unsubscribe — DB should NOT receive this task
     task_after = _make_task("msg-unsub-after", status=Status.RECEIVED)
-    await bus.publish(
-        Event(topic=Topics.TASK_CREATED, payload=TaskPayload(task=task_after))
-    )
+    await bus.publish(Event(topic=Topics.TASK_CREATED, payload=TaskPayload(task=task_after)))
     await bus.wait_idle(timeout=1)
 
     async with session_factory() as session:
@@ -290,9 +285,7 @@ async def test_handler_exception_isolated(
     register_storage_listeners(bus, session_factory)
 
     call_count = 0
-    original_save_task = __import__(
-        "app.storage.repo", fromlist=["save_task"]
-    ).save_task
+    original_save_task = __import__("app.storage.repo", fromlist=["save_task"]).save_task
 
     async def _flaky_save(session: AsyncSession, task: Task) -> None:
         nonlocal call_count
@@ -309,12 +302,8 @@ async def test_handler_exception_isolated(
         task_bad = _make_task("msg-isolated-bad", status=Status.RECEIVED)
         task_good = _make_task("msg-isolated-good", status=Status.RECEIVED)
 
-        await bus2.publish(
-            Event(topic=Topics.TASK_CREATED, payload=TaskPayload(task=task_bad))
-        )
-        await bus2.publish(
-            Event(topic=Topics.TASK_CREATED, payload=TaskPayload(task=task_good))
-        )
+        await bus2.publish(Event(topic=Topics.TASK_CREATED, payload=TaskPayload(task=task_bad)))
+        await bus2.publish(Event(topic=Topics.TASK_CREATED, payload=TaskPayload(task=task_good)))
         await bus2.wait_idle(timeout=1)
 
     # "good" task should be persisted; "bad" task's handler raised so it won't be

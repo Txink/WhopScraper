@@ -4,6 +4,7 @@ Tests for app.parser.stock_parser — Task 17.
 Each test corresponds to the 8 cases specified in the task, plus an alias test.
 Old-parser behavior is the source of truth.
 """
+
 import pytest
 
 from app.domain.instruction import InstructionType

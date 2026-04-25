@@ -16,6 +16,7 @@
 13. GET /api/positions empty DB → {stocks:[], options:[]}
 14. GET /api/health without token → 403
 """
+
 from __future__ import annotations
 
 from datetime import UTC, date, datetime, timedelta

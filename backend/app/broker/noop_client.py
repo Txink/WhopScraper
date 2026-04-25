@@ -7,6 +7,7 @@ get submitted to a real broker.
 Submitting an order returns a synthetic id like `NOOP-<uuid>` and logs
 a warning. Cancel / push subscribe / quote return empty/no-op.
 """
+
 from __future__ import annotations
 
 import logging
@@ -49,7 +50,12 @@ class NoopBrokerClient:
         logger.warning(
             "noop broker would submit option order: "
             "%s %s %s × %s @ %s (id=%s) — no real submission",
-            side, order_type, symbol, quantity, price, oid,
+            side,
+            order_type,
+            symbol,
+            quantity,
+            price,
+            oid,
         )
         return oid
 
@@ -65,9 +71,13 @@ class NoopBrokerClient:
     ) -> str:
         oid = f"NOOP-{uuid.uuid4().hex[:8]}"
         logger.warning(
-            "noop broker would submit stock order: "
-            "%s %s %s × %s @ %s (id=%s) — no real submission",
-            side, order_type, symbol, quantity, price, oid,
+            "noop broker would submit stock order: %s %s %s × %s @ %s (id=%s) — no real submission",
+            side,
+            order_type,
+            symbol,
+            quantity,
+            price,
+            oid,
         )
         return oid
 

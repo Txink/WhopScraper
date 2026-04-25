@@ -2,6 +2,7 @@
 中文昵称 → ticker 映射。
 配置位于 config/ticker_aliases.json（项目根目录）。
 """
+
 from __future__ import annotations
 
 import json

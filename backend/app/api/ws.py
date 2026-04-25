@@ -13,6 +13,7 @@ build_ws_router(hub, settings):
 - Auth: ?token=<APP_TOKEN>, else closes with code 1008
 - Query params: token, since (optional)
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -138,9 +139,7 @@ class WebSocketHub:
                 for ws in dead:
                     self._connections.discard(ws)
 
-    async def handle_connection(
-        self, websocket: WebSocket, since: int | None = None
-    ) -> None:
+    async def handle_connection(self, websocket: WebSocket, since: int | None = None) -> None:
         """Per-connection handler.
 
         1. Add to connection set

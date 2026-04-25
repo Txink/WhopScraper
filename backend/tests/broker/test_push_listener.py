@@ -25,6 +25,7 @@ is the appropriate pattern — we test the *business logic* of the async handler
 not the threading bridge (which is tested implicitly by test 5 via
 ``emit_push`` + a simple sync subscriber, without DB I/O).
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -228,9 +229,7 @@ async def test_push_for_unknown_order_id_logs_and_skips(
     listener = _make_listener(bus, client, session_factory)
 
     # Call handler directly — order_id has no matching Task
-    await listener._handle_raw_push(
-        FakePushEvent(order_id="does-not-exist", status="NEW")
-    )
+    await listener._handle_raw_push(FakePushEvent(order_id="does-not-exist", status="NEW"))
     await bus.wait_idle(timeout=2.0)
 
     assert len(received_events) == 0

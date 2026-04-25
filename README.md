@@ -8,9 +8,9 @@
 
 | 层 | 测试 | 类型检查 |
 |----|------|---------|
-| Backend | 262 passing + 2 skipped | mypy strict 干净 |
-| Frontend | 91 passing | TypeScript strict 干净 |
-| 集成 | 4 个 e2e acceptance 测试（spec §11） | — |
+| Backend | 338 passing + 2 skipped | mypy strict 干净 |
+| Frontend | 120 passing | TypeScript strict 干净 |
+| 集成 | 6 个 e2e acceptance 测试（spec §11） | — |
 
 `ruff` / `vitest` 全绿；CI baseline：Python 3.11 + Node 18+。
 
@@ -377,7 +377,7 @@ Vite 改前端代码秒热重载，uvicorn `--reload` 改后端代码自动重�
 
 ```bash
 cd backend
-uv run pytest                    # 全部 262 + 2 skip
+uv run pytest                    # 全部 338 + 2 skip
 uv run pytest -v -x              # 第一个失败就停
 uv run pytest tests/integration/test_acceptance.py  # 仅 acceptance
 uv run pytest tests/whop/        # 仅 whop 模块
@@ -387,7 +387,7 @@ uv run pytest tests/whop/        # 仅 whop 模块
 
 ```bash
 cd frontend
-npm test                         # vitest 全部 91
+npm test                         # vitest 全部 120
 npm test -- --reporter verbose
 ```
 
@@ -614,7 +614,7 @@ SQLite 单写。不要同时跑两个 uvicorn 占同一个 DB。`make stop` 先�
 
 ## 验收标准 §11
 
-`backend/tests/integration/test_acceptance.py` 4 个测试全过：
+`backend/tests/integration/test_acceptance.py` 6 个测试全过：
 
 | # | 标准 | 测试名 |
 |---|------|--------|
@@ -622,6 +622,8 @@ SQLite 单写。不要同时跑两个 uvicorn 占同一个 DB。`make stop` 先�
 | §11.3 | WS 断线 buffered + cursor replay | `test_acceptance_websocket_broadcast_and_replay` |
 | §11.4 | 浏览器刷新首屏从 /api/tasks 恢复 | `test_acceptance_browser_refresh_recovers_via_initial_list` |
 | §11.6 | 单命令启动 + mode 可观察 | `test_acceptance_health_endpoint_exposes_mode` |
+| §11 add | 每页设置驱动 trader（tolerance / qty） | `test_acceptance_per_page_settings_drive_trader` |
+| §11 add | 不在白名单的 ticker 被 SKIPPED | `test_acceptance_unknown_ticker_skipped` |
 
 §11.2（所有 Status 在 Card 上可观察）、§11.5（单测覆盖）、§11.7（< 300 MB）由全套测试集 + 手动确认。
 
@@ -635,8 +637,7 @@ signal-station/
 ├── Makefile                      # install / dev / build / run / stop / test / ...
 ├── README.md
 ├── config/
-│   ├── watched_stocks.json       # 关注股 + 中文别名
-│   └── ticker_aliases.json
+│   └── ticker_aliases.json       # 中文别名 → ticker 映射
 ├── data/
 │   ├── signals.db                # SQLite（git-ignored）
 │   └── whop_pages.json           # Whop 监听列表（持久化）

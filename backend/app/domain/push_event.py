@@ -1,4 +1,5 @@
 """PushEvent —— 来自 broker 的订单推送事件流式记录。"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

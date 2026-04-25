@@ -1,4 +1,5 @@
 """Message —— 来自 Whop 的单条消息，id 为 whop domID，也是后续 Task 的唯一标识。"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -17,7 +18,7 @@ class Message:
     posted_at: datetime
     received_at: datetime
     source: Source
-    url: str | None = None         # 新增：来源页 url；None 表示孤儿（migration 前数据）
+    url: str | None = None  # 新增：来源页 url；None 表示孤儿（migration 前数据）
     quoted: Message | None = None
     history_hint: list[Message] = field(default_factory=list)
 

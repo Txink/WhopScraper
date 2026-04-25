@@ -20,6 +20,7 @@ Usage
     async with session_scope() as session:
         ...
 """
+
 from __future__ import annotations
 
 import re

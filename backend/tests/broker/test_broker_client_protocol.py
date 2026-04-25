@@ -5,6 +5,7 @@ provides the required interface satisfies the Protocol at type-check time.
 We also verify LongPortClient satisfies the Protocol at runtime via
 isinstance() with the runtime_checkable guard.
 """
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -18,6 +19,7 @@ from app.broker.longport_client import LongPortClient
 # --------------------------------------------------------------------------- #
 # A minimal fake that satisfies the BrokerClient Protocol                      #
 # --------------------------------------------------------------------------- #
+
 
 class FakeBrokerClient:
     """Test double satisfying BrokerClient — zero network, zero SDK."""
@@ -47,9 +49,15 @@ class FakeBrokerClient:
     ) -> str:
         order_id = f"FAKE-OPT-{len(self.submitted_orders)}"
         self.submitted_orders.append(
-            dict(symbol=symbol, side=side, quantity=quantity,
-                 price=price, order_type=order_type, remark=remark,
-                 order_id=order_id)
+            dict(
+                symbol=symbol,
+                side=side,
+                quantity=quantity,
+                price=price,
+                order_type=order_type,
+                remark=remark,
+                order_id=order_id,
+            )
         )
         return order_id
 
@@ -65,9 +73,15 @@ class FakeBrokerClient:
     ) -> str:
         order_id = f"FAKE-STK-{len(self.submitted_orders)}"
         self.submitted_orders.append(
-            dict(symbol=symbol, side=side, quantity=quantity,
-                 price=price, order_type=order_type, remark=remark,
-                 order_id=order_id)
+            dict(
+                symbol=symbol,
+                side=side,
+                quantity=quantity,
+                price=price,
+                order_type=order_type,
+                remark=remark,
+                order_id=order_id,
+            )
         )
         return order_id
 
@@ -84,6 +98,7 @@ class FakeBrokerClient:
 # --------------------------------------------------------------------------- #
 # Tests                                                                        #
 # --------------------------------------------------------------------------- #
+
 
 class TestFakeBrokerClient:
     """FakeBrokerClient behaves correctly (sanity-check the double)."""

@@ -1,4 +1,5 @@
 """Instruction —— 从 Message 解析出的交易指令。Stock 和 Option 两个具体子类。"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

@@ -1,4 +1,5 @@
 """Tests for core/event_bus.py — asyncio pub/sub with fan-out + failure isolation."""
+
 from __future__ import annotations
 
 import asyncio

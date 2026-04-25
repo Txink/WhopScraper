@@ -1,4 +1,5 @@
 """WhopRegistry tests — JSON persistence + listener lifecycle (with monkey-patched WhopBrowser)."""
+
 from __future__ import annotations
 
 import json
@@ -171,15 +172,17 @@ async def test_load_existing_file_starts_listeners(
     pages_file = tmp_path / "pages.json"
     pages_file.parent.mkdir(parents=True, exist_ok=True)
     pages_file.write_text(
-        json.dumps([
-            {
-                "id": "abc123",
-                "url": "https://whop.com/joined/real/app/",
-                "source": "stock",
-                "name": "Saved",
-                "added_at": "2026-04-25T00:00:00+00:00",
-            }
-        ])
+        json.dumps(
+            [
+                {
+                    "id": "abc123",
+                    "url": "https://whop.com/joined/real/app/",
+                    "source": "stock",
+                    "name": "Saved",
+                    "added_at": "2026-04-25T00:00:00+00:00",
+                }
+            ]
+        )
     )
 
     bus = EventBus()
@@ -193,9 +196,7 @@ async def test_load_existing_file_starts_listeners(
 
 
 @pytest.mark.asyncio
-async def test_restart_page(
-    patch_browser: None, settings_test: Settings, tmp_path: Path
-) -> None:
+async def test_restart_page(patch_browser: None, settings_test: Settings, tmp_path: Path) -> None:
     """restart_page stops old listener and starts a new one."""
     bus = EventBus()
     pages_file = tmp_path / "pages.json"
@@ -264,18 +265,20 @@ async def test_load_skips_malformed_entries(
     """load_and_start_all skips malformed entries without raising."""
     pages_file = tmp_path / "pages.json"
     pages_file.write_text(
-        json.dumps([
-            # malformed: missing required fields
-            {"id": "bad1"},
-            # valid
-            {
-                "id": "good1",
-                "url": "https://whop.com/joined/real/app/",
-                "source": "stock",
-                "name": "Good",
-                "added_at": "2026-04-25T00:00:00+00:00",
-            },
-        ])
+        json.dumps(
+            [
+                # malformed: missing required fields
+                {"id": "bad1"},
+                # valid
+                {
+                    "id": "good1",
+                    "url": "https://whop.com/joined/real/app/",
+                    "source": "stock",
+                    "name": "Good",
+                    "added_at": "2026-04-25T00:00:00+00:00",
+                },
+            ]
+        )
     )
 
     bus = EventBus()
@@ -330,19 +333,20 @@ async def test_settings_persisted_in_json(patch_browser, settings_test, tmp_path
 
 
 @pytest.mark.asyncio
-async def test_update_settings_persists_and_returns_entry(
-    patch_browser, settings_test, tmp_path
-):
+async def test_update_settings_persists_and_returns_entry(patch_browser, settings_test, tmp_path):
     bus = EventBus()
     pages_file = tmp_path / "pages.json"
     reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=pages_file)
     await reg.load_and_start_all()
     entry = await reg.add_page(url="https://whop.com/upd/app/", source="stock", name="upd")
 
-    updated = await reg.update_settings(entry.id, {
-        "tickers": {"NVDA": {"trade_quantity": 500}},
-        "price_deviation_tolerance": 0.7,
-    })
+    updated = await reg.update_settings(
+        entry.id,
+        {
+            "tickers": {"NVDA": {"trade_quantity": 500}},
+            "price_deviation_tolerance": 0.7,
+        },
+    )
     assert updated.settings.tickers == {"NVDA": TickerConfig(trade_quantity=500)}
     assert updated.settings.price_deviation_tolerance == 0.7
     # dedupe was not in patch → preserved
@@ -395,15 +399,22 @@ async def test_get_settings_for_url_orphan(patch_browser, settings_test, tmp_pat
 
 
 @pytest.mark.asyncio
-async def test_legacy_entry_without_settings_loads_default(
-    patch_browser, settings_test, tmp_path
-):
+async def test_legacy_entry_without_settings_loads_default(patch_browser, settings_test, tmp_path):
     """A pages.json file written before settings existed should load with default settings."""
     pages_file = tmp_path / "pages.json"
-    pages_file.write_text(json.dumps([
-        {"id": "legacy1", "url": "https://whop.com/legacy/app/", "source": "stock",
-         "name": "Legacy", "added_at": "2026-04-01T00:00:00+00:00"}
-    ]))
+    pages_file.write_text(
+        json.dumps(
+            [
+                {
+                    "id": "legacy1",
+                    "url": "https://whop.com/legacy/app/",
+                    "source": "stock",
+                    "name": "Legacy",
+                    "added_at": "2026-04-01T00:00:00+00:00",
+                }
+            ]
+        )
+    )
     bus = EventBus()
     reg = WhopRegistry(bus=bus, settings=settings_test, pages_file=pages_file)
     await reg.load_and_start_all()
@@ -477,9 +488,7 @@ async def test_page_change_event_published_on_remove(patch_browser, settings_tes
 
 
 @pytest.mark.asyncio
-async def test_page_change_event_published_on_restart(
-    patch_browser, settings_test, tmp_path
-):
+async def test_page_change_event_published_on_restart(patch_browser, settings_test, tmp_path):
     bus = EventBus()
     received: list = []
     from app.core.events import Topics

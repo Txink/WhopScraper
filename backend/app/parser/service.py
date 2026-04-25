@@ -18,12 +18,13 @@ Subscribes to ``message.received`` and drives the full parse pipeline:
 Any unexpected exception in the handler body sets PARSE_ERROR and publishes
 TASK_PARSE_FAILED so the Task is never left stuck in PARSING.
 """
+
 from __future__ import annotations
 
 import logging
 import time
 from collections.abc import Callable
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -34,14 +35,16 @@ from app.domain.task import Task
 from app.parser import option_parser, stock_parser
 from app.parser.context_resolver import resolve_context
 
+if TYPE_CHECKING:
+    from app.whop.page_settings import PageSettings
+
 logger = logging.getLogger(__name__)
 
 
 class _RegistryLike(Protocol):
     """Minimal interface ParserService needs from WhopRegistry."""
 
-    def get_settings_for_url(self, url: str | None):  # noqa: ANN201
-        ...
+    def get_settings_for_url(self, url: str | None) -> PageSettings | None: ...
 
 
 def register_parser_service(
@@ -63,9 +66,7 @@ def register_parser_service(
     async def _handle_message_received(event: Event) -> None:
         payload = event.payload
         if not isinstance(payload, MessagePayload):
-            logger.warning(
-                "parser.service: unexpected payload type %s", type(payload)
-            )
+            logger.warning("parser.service: unexpected payload type %s", type(payload))
             return
 
         msg = payload.message
@@ -109,9 +110,7 @@ def register_parser_service(
                 resolved = parsed
 
         except Exception as exc:  # noqa: BLE001
-            logger.exception(
-                "parser.service: exception while parsing message %s", msg.id
-            )
+            logger.exception("parser.service: exception while parsing message %s", msg.id)
             elapsed_ms = (time.perf_counter() - started) * 1000
             task.record_parse_timing(elapsed_ms)
             task.mark_parse_failed(f"parser error: {exc}")

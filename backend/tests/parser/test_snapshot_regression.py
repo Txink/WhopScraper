@@ -90,9 +90,7 @@ def test_stock_parser_snapshot_regression() -> None:
 
         # Track instruction_type mismatches separately (informational)
         if old_has and new_has and old_ticker == new_ticker and old_itype != new_itype:
-            itype_divergences.append(
-                {"raw": raw, "old_itype": old_itype, "new_itype": new_itype}
-            )
+            itype_divergences.append({"raw": raw, "old_itype": old_itype, "new_itype": new_itype})
 
     total = len(records)
     print(
@@ -173,9 +171,7 @@ def test_option_parser_snapshot_regression() -> None:
         old_ticker: str | None = parsed.get("ticker")
         old_symbol: str | None = parsed.get("symbol")
 
-        new_inst = option_parser.parse(
-            content, message_id=msg_id, message_posted_at=posted_at
-        )
+        new_inst = option_parser.parse(content, message_id=msg_id, message_posted_at=posted_at)
         new_ticker = new_inst.ticker if new_inst else None
 
         old_has = bool(old_ticker)
@@ -206,8 +202,7 @@ def test_option_parser_snapshot_regression() -> None:
         f"excluded_context_dependent={excluded_context_dependent}"
     )
     print(
-        f"  match={match} regression={regression} "
-        f"improvement={improvement} divergence={divergence}"
+        f"  match={match} regression={regression} improvement={improvement} divergence={divergence}"
     )
 
     if regression_samples:
@@ -215,8 +210,7 @@ def test_option_parser_snapshot_regression() -> None:
         for s in regression_samples:
             content_preview = str(s["content"])[:80]
             print(
-                f"  old_ticker={s['old_ticker']} "
-                f"old_symbol={s['old_symbol']} :: {content_preview}"
+                f"  old_ticker={s['old_ticker']} old_symbol={s['old_symbol']} :: {content_preview}"
             )
 
     # Acceptance threshold: regression rate must not exceed 15 % of BUY-first

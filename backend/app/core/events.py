@@ -17,6 +17,7 @@ Convention:
 - ``task.push_event`` carries a ``TaskPushPayload``.
 - ``whop.page_changed`` carries a ``WhopPagePayload``.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -72,5 +73,5 @@ class WhopPagePayload:
     so the downstream WS bridge can forward it verbatim.
     """
 
-    action: str          # "added" | "removed" | "restarted" | "settings_updated"
+    action: str  # "added" | "removed" | "restarted" | "settings_updated"
     page_dict: dict[str, Any]

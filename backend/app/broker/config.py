@@ -3,6 +3,7 @@
 ``load_longport_config()`` reads from the application ``Settings`` singleton
 (``app.core.config.get_settings()``) and assembles a frozen ``LongPortConfig``.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -42,9 +43,7 @@ def load_longport_config() -> LongPortConfig:
     mode = s.longport_mode.lower()
 
     if mode not in ("paper", "real"):
-        raise ValueError(
-            f"LONGPORT_MODE must be 'paper' or 'real', got: {mode!r}"
-        )
+        raise ValueError(f"LONGPORT_MODE must be 'paper' or 'real', got: {mode!r}")
 
     if mode == "paper":
         app_key = s.longport_paper_app_key
@@ -64,8 +63,7 @@ def load_longport_config() -> LongPortConfig:
     ):
         if not value:
             raise ValueError(
-                f"{field_name} is empty but mode={mode!r}. "
-                "Set the variable in your .env file."
+                f"{field_name} is empty but mode={mode!r}. Set the variable in your .env file."
             )
 
     return LongPortConfig(

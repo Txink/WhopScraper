@@ -4,6 +4,7 @@ Uses a fake browser to avoid launching real Playwright. The WhopBrowser class
 is monkey-patched inside the listener module so no network or browser process
 is needed.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -135,7 +136,7 @@ async def test_listener_publishes_new_messages(patch_browser) -> None:
 async def test_listener_skip_initial_primes_seen_set(patch_browser) -> None:
     """skip_initial=True primes seen IDs from first scrape; only new messages are published."""
     htmls = [
-        _msg_html("post_1") + _msg_html("post_2"),             # initial scrape — skipped
+        _msg_html("post_1") + _msg_html("post_2"),  # initial scrape — skipped
         _msg_html("post_1") + _msg_html("post_2") + _msg_html("post_3"),  # only post_3 is new
     ]
     patch_browser(htmls)

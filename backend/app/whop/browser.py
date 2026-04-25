@@ -1,4 +1,5 @@
 """WhopBrowser — Playwright wrapper for Whop session management."""
+
 from __future__ import annotations
 
 import asyncio

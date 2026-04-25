@@ -1,4 +1,5 @@
 """Tests for storage/db.py: engine factory, session factory, session_scope."""
+
 from __future__ import annotations
 
 import pytest

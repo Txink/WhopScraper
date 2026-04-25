@@ -4,6 +4,7 @@ Wraps sync ``TradeContext`` / ``QuoteContext``.  Push callbacks fan out to
 subscribers on the SDK's own thread — callers needing asyncio should bridge
 via ``loop.call_soon_threadsafe`` in their handler.
 """
+
 from __future__ import annotations
 
 import logging
@@ -90,7 +91,11 @@ class LongPortClient:
             dry_id = f"DRY-{uuid.uuid4()}"
             logger.info(
                 "[DRY RUN] submit_option_order symbol=%s side=%s qty=%d price=%s → %s",
-                symbol, side, quantity, price, dry_id,
+                symbol,
+                side,
+                quantity,
+                price,
+                dry_id,
             )
             return dry_id
 
@@ -118,7 +123,11 @@ class LongPortClient:
             dry_id = f"DRY-{uuid.uuid4()}"
             logger.info(
                 "[DRY RUN] submit_stock_order symbol=%s side=%s qty=%d price=%s → %s",
-                symbol, side, quantity, price, dry_id,
+                symbol,
+                side,
+                quantity,
+                price,
+                dry_id,
             )
             return dry_id
 
@@ -244,9 +253,5 @@ class LongPortClient:
             remark=remark,
         )
 
-        order_id: str = (
-            getattr(resp, "order_id", None)
-            or getattr(resp, "id", None)
-            or str(resp)
-        )
+        order_id: str = getattr(resp, "order_id", None) or getattr(resp, "id", None) or str(resp)
         return order_id

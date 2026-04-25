@@ -36,10 +36,14 @@ async def test_browser_loads_existing_cookie(tmp_path):
 
     cookie_file = tmp_path / "cookie.json"
     cookie_file.parent.mkdir(parents=True, exist_ok=True)
-    cookie_file.write_text(json.dumps({
-        "cookies": [],
-        "origins": [],
-    }))
+    cookie_file.write_text(
+        json.dumps(
+            {
+                "cookies": [],
+                "origins": [],
+            }
+        )
+    )
 
     browser = WhopBrowser(headless=True, cookie_path=str(cookie_file))
     page = await browser.start()

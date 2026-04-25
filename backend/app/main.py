@@ -1,4 +1,5 @@
 """Signal Station backend —— FastAPI app assembly + startup/shutdown lifecycle."""
+
 from __future__ import annotations
 
 import logging
@@ -118,9 +119,7 @@ def create_app(
 
         # 1. Parser service: MESSAGE_RECEIVED → task pipeline
         state.unsubs.append(
-            register_parser_service(
-                bus, session_factory, registry=state.whop_registry
-            )
+            register_parser_service(bus, session_factory, registry=state.whop_registry)
         )
 
         # 2. Trader: TASK_INSTRUCTION_READY → broker order submission
@@ -174,9 +173,7 @@ def create_app(
                         )
                     except Exception as exc:  # noqa: BLE001
                         logger.warning("seed stock from .env failed: %s", exc)
-                if settings.whop_option_url and not _is_placeholder_url(
-                    settings.whop_option_url
-                ):
+                if settings.whop_option_url and not _is_placeholder_url(settings.whop_option_url):
                     try:
                         await state.whop_registry.add_page(
                             url=settings.whop_option_url,

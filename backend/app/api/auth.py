@@ -1,4 +1,5 @@
 """APP_TOKEN authentication middleware for REST and WebSocket endpoints."""
+
 from __future__ import annotations
 
 import hmac

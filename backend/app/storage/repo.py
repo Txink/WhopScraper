@@ -17,6 +17,7 @@ Design notes
 - list_tasks returns Tasks without push_events (empty list) for performance.
   Use load_task to get push_events for a specific Task.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, date, datetime, time
@@ -419,9 +420,7 @@ async def load_task_by_order_id(session: AsyncSession, order_id: str) -> Task | 
 
     Returns None if no Task with the given order_id exists.
     """
-    result = await session.execute(
-        select(TaskRow).where(TaskRow.order_id == order_id)
-    )
+    result = await session.execute(select(TaskRow).where(TaskRow.order_id == order_id))
     task_row = result.scalar_one_or_none()
     if task_row is None:
         return None
@@ -497,29 +496,35 @@ async def stats_today(session: AsyncSession) -> dict[str, int]:
     )
     counts: dict[str, int] = {row[0]: row[1] for row in result.all()}
 
-    _parse_ok_statuses: frozenset[str] = frozenset({
-        Status.INSTRUCTION_READY.value,
-        Status.SUBMITTING.value,
-        Status.PENDING.value,
-        Status.PARTIAL.value,
-        Status.FILLED.value,
-        Status.CANCELLED.value,
-        Status.REJECTED.value,
-        Status.SUBMIT_FAILED.value,
-        Status.SKIPPED.value,
-    })
-    _orders_statuses: frozenset[str] = frozenset({
-        Status.PENDING.value,
-        Status.PARTIAL.value,
-        Status.FILLED.value,
-        Status.CANCELLED.value,
-        Status.REJECTED.value,
-    })
-    _rejected_statuses: frozenset[str] = frozenset({
-        Status.PARSE_ERROR.value,
-        Status.SUBMIT_FAILED.value,
-        Status.REJECTED.value,
-    })
+    _parse_ok_statuses: frozenset[str] = frozenset(
+        {
+            Status.INSTRUCTION_READY.value,
+            Status.SUBMITTING.value,
+            Status.PENDING.value,
+            Status.PARTIAL.value,
+            Status.FILLED.value,
+            Status.CANCELLED.value,
+            Status.REJECTED.value,
+            Status.SUBMIT_FAILED.value,
+            Status.SKIPPED.value,
+        }
+    )
+    _orders_statuses: frozenset[str] = frozenset(
+        {
+            Status.PENDING.value,
+            Status.PARTIAL.value,
+            Status.FILLED.value,
+            Status.CANCELLED.value,
+            Status.REJECTED.value,
+        }
+    )
+    _rejected_statuses: frozenset[str] = frozenset(
+        {
+            Status.PARSE_ERROR.value,
+            Status.SUBMIT_FAILED.value,
+            Status.REJECTED.value,
+        }
+    )
 
     total = sum(counts.values())
     return {
@@ -542,7 +547,5 @@ async def load_seen_ids_for_url(session: AsyncSession, url: str) -> set[str]:
 
     返回该 url 对应所有已落库的 message id 集合（即 task id，因为 task.id = message.id）。
     """
-    result = await session.execute(
-        select(MessageRow.id).where(MessageRow.url == url)
-    )
+    result = await session.execute(select(MessageRow.id).where(MessageRow.url == url))
     return {row[0] for row in result.all()}

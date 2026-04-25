@@ -3,6 +3,7 @@
 Covers Task F: ParserService takes a WhopRegistry and per-message looks up
 page settings.tickers based on message.url instead of a process-wide watchlist.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime

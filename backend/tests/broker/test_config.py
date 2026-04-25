@@ -1,4 +1,5 @@
 """Tests for app.broker.config — LongPortConfig and load_longport_config()."""
+
 from __future__ import annotations
 
 import pytest
@@ -33,9 +34,7 @@ class TestLongPortConfigDataclass:
         assert cfg.dry_run is False
 
     def test_frozen(self) -> None:
-        cfg = LongPortConfig(
-            mode="paper", app_key="k", app_secret="s", access_token="t"
-        )
+        cfg = LongPortConfig(mode="paper", app_key="k", app_secret="s", access_token="t")
         with pytest.raises((AttributeError, TypeError)):
             cfg.app_key = "other"  # type: ignore[misc]
 
@@ -50,6 +49,7 @@ class TestLoadLongportConfig:
         monkeypatch.setenv("LONGPORT_PAPER_ACCESS_TOKEN", "paper-token")
         # Bust the settings cache so our env vars take effect.
         from app.core.config import get_settings
+
         get_settings.cache_clear()
 
         cfg = load_longport_config()
@@ -65,6 +65,7 @@ class TestLoadLongportConfig:
         monkeypatch.setenv("LONGPORT_REAL_APP_SECRET", "real-secret")
         monkeypatch.setenv("LONGPORT_REAL_ACCESS_TOKEN", "real-token")
         from app.core.config import get_settings
+
         get_settings.cache_clear()
 
         cfg = load_longport_config()
@@ -78,6 +79,7 @@ class TestLoadLongportConfig:
         monkeypatch.setenv("LONGPORT_PAPER_APP_SECRET", "s")
         monkeypatch.setenv("LONGPORT_PAPER_ACCESS_TOKEN", "t")
         from app.core.config import get_settings
+
         get_settings.cache_clear()
 
         with pytest.raises(ValueError, match="LONGPORT_PAPER_APP_KEY"):
@@ -89,6 +91,7 @@ class TestLoadLongportConfig:
         monkeypatch.setenv("LONGPORT_REAL_APP_SECRET", "s")
         monkeypatch.setenv("LONGPORT_REAL_ACCESS_TOKEN", "")
         from app.core.config import get_settings
+
         get_settings.cache_clear()
 
         with pytest.raises(ValueError, match="LONGPORT_REAL_ACCESS_TOKEN"):
@@ -97,6 +100,7 @@ class TestLoadLongportConfig:
     def test_invalid_mode_raises_value_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("LONGPORT_MODE", "sandbox")
         from app.core.config import get_settings
+
         get_settings.cache_clear()
 
         with pytest.raises(ValueError, match="LONGPORT_MODE"):

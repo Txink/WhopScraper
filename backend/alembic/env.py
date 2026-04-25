@@ -4,6 +4,7 @@ Reads DATABASE_URL from app.core.config.get_settings().
 Imports app.storage.schema so all Row classes register on Base.metadata
 for autogenerate.
 """
+
 from __future__ import annotations
 
 import asyncio

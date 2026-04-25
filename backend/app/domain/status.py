@@ -1,4 +1,5 @@
 """Status 状态机 —— Task 生命周期，合法转换显式列表维护。"""
+
 from __future__ import annotations
 
 from enum import StrEnum
@@ -37,9 +38,7 @@ _ALLOWED: dict[Status, frozenset[Status]] = {
     Status.PARSING: frozenset({Status.PARSE_ERROR, Status.INSTRUCTION_READY}),
     Status.INSTRUCTION_READY: frozenset({Status.SUBMITTING, Status.SKIPPED}),
     Status.SUBMITTING: frozenset({Status.PENDING, Status.SUBMIT_FAILED, Status.SKIPPED}),
-    Status.PENDING: frozenset(
-        {Status.PARTIAL, Status.FILLED, Status.CANCELLED, Status.REJECTED}
-    ),
+    Status.PENDING: frozenset({Status.PARTIAL, Status.FILLED, Status.CANCELLED, Status.REJECTED}),
     Status.PARTIAL: frozenset({Status.PARTIAL, Status.FILLED, Status.CANCELLED}),
     # 终态不可转出
     Status.PARSE_ERROR: frozenset(),

@@ -5,6 +5,7 @@ and publishes ``message.received`` events to the EventBus for each new message.
 Tracks seen message IDs in-process; on restart, optionally seeds _seen from the
 DB (dedupe_processed_messages=True) so already-persisted messages aren't re-published.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -43,7 +44,7 @@ class WhopListener:
         *,
         bus: EventBus,
         url: str,
-        source: str,            # "stock" | "option"
+        source: str,  # "stock" | "option"
         poll_interval: float = 2.0,
         headless: bool = False,
         cookie_path: str | None = None,
@@ -136,7 +137,9 @@ class WhopListener:
         self._seen.update(ids)
         logger.info(
             "WhopListener[%s] dedupe loaded %d historical ids for %s",
-            self._source, len(ids), self._url,
+            self._source,
+            len(ids),
+            self._url,
         )
 
     async def _prime_skip_initial(self) -> None:
@@ -148,7 +151,8 @@ class WhopListener:
         self._seen.update(m.id for m in initial)
         logger.info(
             "WhopListener[%s] skipped %d initial DOM messages",
-            self._source, len(initial),
+            self._source,
+            len(initial),
         )
 
     async def start(self) -> None:

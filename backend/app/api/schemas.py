@@ -3,6 +3,7 @@
 All *Out models are serializable via .model_dump(mode="json").
 Converter functions translate app.domain.* dataclasses → Pydantic models.
 """
+
 from __future__ import annotations
 
 from datetime import date, datetime

@@ -13,6 +13,7 @@
     context_source
   - 三段均失败 → 返回 None
 """
+
 from __future__ import annotations
 
 import dataclasses
@@ -37,10 +38,30 @@ _TICKER_TOKEN_RE = re.compile(r"\b([A-Z]{2,5})\b")
 # Words that are commonly found in trading messages but are NOT tickers
 _NON_TICKER_WORDS: frozenset[str] = frozenset(
     {
-        "CALL", "PUT", "CALLS", "PUTS",
-        "THE", "AND", "FOR", "ALL", "OUT", "NEW", "ONE", "SEE",
-        "BUY", "SELL", "ETF", "ITM", "OTM", "ATM",
-        "SL", "TP", "STOP", "LOSS", "TAKE", "PROFIT",
+        "CALL",
+        "PUT",
+        "CALLS",
+        "PUTS",
+        "THE",
+        "AND",
+        "FOR",
+        "ALL",
+        "OUT",
+        "NEW",
+        "ONE",
+        "SEE",
+        "BUY",
+        "SELL",
+        "ETF",
+        "ITM",
+        "OTM",
+        "ATM",
+        "SL",
+        "TP",
+        "STOP",
+        "LOSS",
+        "TAKE",
+        "PROFIT",
     }
 )
 

@@ -1,5 +1,6 @@
-import pytest
 from datetime import UTC, datetime
+
+import pytest
 
 from app.domain.message import Message
 from app.domain.task import Task

@@ -1,4 +1,5 @@
 """Alembic migration integration test —— verify head migration produces the expected schema."""
+
 import asyncio
 from pathlib import Path
 

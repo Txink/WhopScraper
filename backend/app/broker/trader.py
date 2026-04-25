@@ -20,12 +20,13 @@ Deferred:
 - Cancel order API.
 - ``asyncio.to_thread`` wrapping for blocking SDK calls.
 """
+
 from __future__ import annotations
 
 import logging
 import time
 from collections.abc import Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 
 from app.broker.broker_client import BrokerClient, OrderSide, OrderType
 from app.broker.config import LongPortConfig
@@ -39,6 +40,9 @@ from app.domain.instruction import (
 )
 from app.domain.task import Task
 from app.whop.page_settings import position_size_to_fraction
+
+if TYPE_CHECKING:
+    from app.whop.page_settings import PageSettings
 
 logger = logging.getLogger(__name__)
 
@@ -69,13 +73,16 @@ def register_trader(
         task.mark_skipped(reason)
         await bus.publish(Event(Topics.TASK_STATUS_CHANGED, TaskPayload(task)))
 
-    def _resolve_settings(task: Task):
+    def _resolve_settings(task: Task) -> PageSettings | None:
         if registry is None:
             return None
-        return registry.get_settings_for_url(task.message.url)
+        # registry is duck-typed (Any) to avoid a circular import; cast back so
+        # the trader has a typed view of its only consumed method.
+        return cast("PageSettings | None", registry.get_settings_for_url(task.message.url))
 
     def _fallback_tolerance_pct(task_type: str) -> float:
         from app.core.config import get_settings  # local import for testability
+
         s = get_settings()
         if task_type == "stock":
             return s.stock_price_deviation_tolerance
@@ -109,9 +116,7 @@ def register_trader(
             if page_settings is not None and page_settings.tickers is not None:
                 # Stock page with explicit whitelist
                 if ticker_upper not in page_settings.tickers:
-                    await _publish_skip(
-                        task, f"ticker {ticker_upper} not in trade whitelist"
-                    )
+                    await _publish_skip(task, f"ticker {ticker_upper} not in trade whitelist")
                     return
                 base_qty = page_settings.tickers[ticker_upper].trade_quantity
                 fraction = position_size_to_fraction(inst.position_size)
@@ -120,14 +125,14 @@ def register_trader(
                 # Orphan stock task — fall back to instruction.quantity
                 computed_qty = inst.quantity or 0
                 if computed_qty <= 0:
-                    await _publish_skip(
-                        task, "orphan stock task missing instruction.quantity"
-                    )
+                    await _publish_skip(task, "orphan stock task missing instruction.quantity")
                     return
         elif isinstance(inst, OptionInstruction):
             computed_qty = inst.quantity or 1
-            price_for_check = inst.price if inst.price is not None else (
-                inst.price_range[0] if inst.price_range else 0.0
+            price_for_check = (
+                inst.price
+                if inst.price is not None
+                else (inst.price_range[0] if inst.price_range else 0.0)
             )
             # One option contract = 100 shares equivalent (matches old auto_trader.py)
             total = price_for_check * computed_qty * 100
@@ -147,8 +152,10 @@ def register_trader(
             computed_qty = inst.quantity or 1
 
         # ---- Deviation → order_type decision ----
-        signal_price = inst.price if inst.price is not None else (
-            inst.price_range[0] if inst.price_range else None
+        signal_price = (
+            inst.price
+            if inst.price is not None
+            else (inst.price_range[0] if inst.price_range else None)
         )
         if signal_price is None:
             await _publish_skip(task, "no price available for submission")
@@ -190,7 +197,9 @@ def register_trader(
             task.mark_submit_failed(f"broker error: {exc}")
             logger.error(
                 "Trader: order submission failed for task %s: %s",
-                task.id, exc, exc_info=True,
+                task.id,
+                exc,
+                exc_info=True,
             )
             await bus.publish(Event(Topics.TASK_SUBMIT_FAILED, TaskPayload(task)))
             return
@@ -199,7 +208,11 @@ def register_trader(
         task.mark_submitted(order_id=order_id, timing_ms=elapsed_ms)
         logger.info(
             "Trader: submitted order %s for task %s in %.1f ms (type=%s, qty=%d)",
-            order_id, task.id, elapsed_ms, order_type, computed_qty,
+            order_id,
+            task.id,
+            elapsed_ms,
+            order_type,
+            computed_qty,
         )
         await bus.publish(Event(Topics.TASK_ORDER_SUBMITTED, TaskPayload(task)))
 

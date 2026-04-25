@@ -1,4 +1,5 @@
 """Test fakes for broker tests."""
+
 from __future__ import annotations
 
 import uuid
@@ -34,9 +35,17 @@ class FakeBrokerClient:
     ) -> str:
         if self.raise_on_submit:
             raise self.raise_on_submit
-        self.submitted_orders.append({"kind": "option", "symbol": symbol, "side": side,
-                                      "quantity": quantity, "price": price,
-                                      "order_type": order_type, "remark": remark})
+        self.submitted_orders.append(
+            {
+                "kind": "option",
+                "symbol": symbol,
+                "side": side,
+                "quantity": quantity,
+                "price": price,
+                "order_type": order_type,
+                "remark": remark,
+            }
+        )
         return self.next_order_id or f"fake-{uuid.uuid4().hex[:8]}"
 
     def submit_stock_order(
@@ -51,9 +60,17 @@ class FakeBrokerClient:
     ) -> str:
         if self.raise_on_submit:
             raise self.raise_on_submit
-        self.submitted_orders.append({"kind": "stock", "symbol": symbol, "side": side,
-                                      "quantity": quantity, "price": price,
-                                      "order_type": order_type, "remark": remark})
+        self.submitted_orders.append(
+            {
+                "kind": "stock",
+                "symbol": symbol,
+                "side": side,
+                "quantity": quantity,
+                "price": price,
+                "order_type": order_type,
+                "remark": remark,
+            }
+        )
         return self.next_order_id or f"fake-{uuid.uuid4().hex[:8]}"
 
     def cancel_order(self, order_id: str) -> None:

@@ -1,4 +1,5 @@
 """Tests for app/whop/extractor.py — pure-function DOM → Message parser."""
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -21,6 +22,7 @@ OPTION_FIXTURE = WORKTREE_ROOT / "tmp" / "option" / "page_html.html"
 # Synthetic HTML that mirrors the real Whop DOM structure.
 # Based on docs/dom_structure_guide.md — production DOM attributes.
 # ---------------------------------------------------------------------------
+
 
 def _whop_page(inner_html: str) -> str:
     """Wrap inner_html in a minimal Whop-like page skeleton."""
@@ -110,6 +112,7 @@ def _continuation_message(
 # Fixture-based tests (skip when HTML file is absent)
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.skipif(not STOCK_FIXTURE.is_file(), reason="stock fixture not present")
 def test_extract_stock_html_produces_messages() -> None:
     html = STOCK_FIXTURE.read_text(encoding="utf-8")
@@ -136,6 +139,7 @@ def test_extract_option_html_produces_messages() -> None:
 # ---------------------------------------------------------------------------
 # Synthetic unit tests
 # ---------------------------------------------------------------------------
+
 
 def test_extract_empty_html_returns_empty() -> None:
     assert extract_messages("<html></html>", source="stock") == []
@@ -198,10 +202,12 @@ def test_extract_message_with_quote() -> None:
 
 
 def test_extract_multiple_messages_unique_ids() -> None:
-    inner = "\n".join([
-        _single_message(f"post_{i}", "author", "Jan 1, 2026 1:00 AM", f"content {i}")
-        for i in range(5)
-    ])
+    inner = "\n".join(
+        [
+            _single_message(f"post_{i}", "author", "Jan 1, 2026 1:00 AM", f"content {i}")
+            for i in range(5)
+        ]
+    )
     html = _whop_page(inner)
     msgs = extract_messages(html, source="stock")
     assert len(msgs) == 5
@@ -266,9 +272,7 @@ def test_extract_source_tagged_correctly() -> None:
 
 
 def test_received_at_defaults_to_now() -> None:
-    html = _whop_page(
-        _single_message("post_now1", "author", "Jan 1, 2026 1:00 AM", "hello")
-    )
+    html = _whop_page(_single_message("post_now1", "author", "Jan 1, 2026 1:00 AM", "hello"))
     before = datetime.now(UTC)
     msgs = extract_messages(html, source="stock")
     after = datetime.now(UTC)
@@ -278,17 +282,13 @@ def test_received_at_defaults_to_now() -> None:
 
 def test_received_at_custom_value_propagated() -> None:
     fixed_ts = datetime(2026, 4, 24, 12, 0, 0, tzinfo=UTC)
-    html = _whop_page(
-        _single_message("post_custom1", "author", "Jan 1, 2026 1:00 AM", "hello")
-    )
+    html = _whop_page(_single_message("post_custom1", "author", "Jan 1, 2026 1:00 AM", "hello"))
     msgs = extract_messages(html, source="stock", received_at=fixed_ts)
     assert msgs[0].received_at == fixed_ts
 
 
 def test_history_hint_always_empty() -> None:
-    html = _whop_page(
-        _single_message("post_h1", "author", "Jan 1, 2026 1:00 AM", "content")
-    )
+    html = _whop_page(_single_message("post_h1", "author", "Jan 1, 2026 1:00 AM", "content"))
     msgs = extract_messages(html, source="stock")
     assert msgs[0].history_hint == []
 
@@ -296,17 +296,13 @@ def test_history_hint_always_empty() -> None:
 def test_absolute_timestamp_pm_parsed_correctly() -> None:
     """12-hour PM timestamps correctly converted to 24-hour UTC."""
     # "Jan 23, 2026 12:51 AM" → midnight → hour=0
-    html_am = _whop_page(
-        _single_message("post_am", "a", "Jan 23, 2026 12:51 AM", "am msg")
-    )
+    html_am = _whop_page(_single_message("post_am", "a", "Jan 23, 2026 12:51 AM", "am msg"))
     msgs_am = extract_messages(html_am, source="stock")
     assert msgs_am[0].posted_at.hour == 0
     assert msgs_am[0].posted_at.minute == 51
 
     # "Jan 23, 2026 12:51 PM" → noon → hour=12
-    html_pm = _whop_page(
-        _single_message("post_pm", "a", "Jan 23, 2026 12:51 PM", "pm msg")
-    )
+    html_pm = _whop_page(_single_message("post_pm", "a", "Jan 23, 2026 12:51 PM", "pm msg"))
     msgs_pm = extract_messages(html_pm, source="stock")
     assert msgs_pm[0].posted_at.hour == 12
     assert msgs_pm[0].posted_at.minute == 51
@@ -405,6 +401,7 @@ def test_parse_garbage_returns_none() -> None:
 # _assign_subminute_seconds unit tests
 # ---------------------------------------------------------------------------
 
+
 def _make_msg(id_: str, posted_at: datetime) -> Message:
     return Message(
         id=id_,
@@ -445,12 +442,11 @@ def test_subminute_seconds_single_message() -> None:
 # Integration: extract_messages with relative timestamps
 # ---------------------------------------------------------------------------
 
+
 def test_extract_today_timestamp() -> None:
     """Messages with 'Today at H:MM AM/PM' get correct posted_at date."""
     received = datetime(2026, 4, 25, 15, 0, 0, tzinfo=UTC)
-    html = _whop_page(
-        _single_message("post_today", "author", "Today at 10:30 AM", "hello today")
-    )
+    html = _whop_page(_single_message("post_today", "author", "Today at 10:30 AM", "hello today"))
     msgs = extract_messages(html, source="stock", received_at=received)
     assert len(msgs) == 1
     assert msgs[0].posted_at == datetime(2026, 4, 25, 10, 30, 0, tzinfo=UTC)
@@ -483,8 +479,9 @@ def test_extract_same_minute_subminute_seconds() -> None:
     """Multiple messages in same minute get sequential seconds."""
     received = datetime(2026, 4, 25, 15, 0, 0, tzinfo=UTC)
     inner = (
-        _single_message("post_1", "author", "Today at 10:30 AM", "msg one",
-                        has_above="false", has_below="true")
+        _single_message(
+            "post_1", "author", "Today at 10:30 AM", "msg one", has_above="false", has_below="true"
+        )
         + "\n"
         + _continuation_message("post_2", "msg two", has_above="true", has_below="true")
         + "\n"

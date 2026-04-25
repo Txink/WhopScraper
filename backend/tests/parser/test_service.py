@@ -7,6 +7,7 @@ Five test cases covering the parser event-bus service:
 4. test_task_created_emitted_before_final_event
 5. test_parse_timing_recorded
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -34,6 +35,7 @@ def _fake_registry(tickers: set[str]) -> MagicMock:
         tickers={t: TickerConfig(trade_quantity=100) for t in tickers},
     )
     return registry
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -114,9 +116,7 @@ async def test_stock_message_resolves_to_instruction_ready(
     msg = _stock_msg("s1", "TSLL 26.5 买一半")
     observed = await _run(bus, msg)
 
-    instruction_ready_events = [
-        e for e in observed if e.topic == Topics.TASK_INSTRUCTION_READY
-    ]
+    instruction_ready_events = [e for e in observed if e.topic == Topics.TASK_INSTRUCTION_READY]
     assert len(instruction_ready_events) >= 1, (
         f"Expected TASK_INSTRUCTION_READY; got topics: {[e.topic for e in observed]}"
     )
@@ -149,9 +149,7 @@ async def test_option_message_resolves(
     msg = _option_msg("o1", "NVDA 135C 本周 2.15 买")
     observed = await _run(bus, msg)
 
-    instruction_ready_events = [
-        e for e in observed if e.topic == Topics.TASK_INSTRUCTION_READY
-    ]
+    instruction_ready_events = [e for e in observed if e.topic == Topics.TASK_INSTRUCTION_READY]
     assert len(instruction_ready_events) >= 1, (
         f"Expected TASK_INSTRUCTION_READY; got topics: {[e.topic for e in observed]}"
     )
@@ -184,9 +182,7 @@ async def test_unparseable_message_emits_parse_failed(
     msg = _stock_msg("s-fail", "盘后信息参考")
     observed = await _run(bus, msg)
 
-    parse_failed_events = [
-        e for e in observed if e.topic == Topics.TASK_PARSE_FAILED
-    ]
+    parse_failed_events = [e for e in observed if e.topic == Topics.TASK_PARSE_FAILED]
     assert len(parse_failed_events) >= 1, (
         f"Expected TASK_PARSE_FAILED; got topics: {[e.topic for e in observed]}"
     )
@@ -248,8 +244,7 @@ async def test_parse_timing_recorded(
 
     # Find any task event that carries the final task
     task_events = [
-        e for e in observed
-        if e.topic in (Topics.TASK_INSTRUCTION_READY, Topics.TASK_PARSE_FAILED)
+        e for e in observed if e.topic in (Topics.TASK_INSTRUCTION_READY, Topics.TASK_PARSE_FAILED)
     ]
     assert len(task_events) >= 1
 

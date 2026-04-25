@@ -1,4 +1,5 @@
 """Tests for app.api.auth — APP_TOKEN dependency."""
+
 from __future__ import annotations
 
 import pytest

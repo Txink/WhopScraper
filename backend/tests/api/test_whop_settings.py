@@ -1,4 +1,5 @@
 """REST endpoint tests for /api/whop/pages/.../settings + /defaults (Task H)."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -81,14 +82,10 @@ def registry_and_client(
     try:
         loop.run_until_complete(registry.load_and_start_all())
         stock_entry = loop.run_until_complete(
-            registry.add_page(
-                url="https://whop.com/stk/app/", source="stock", name="Stock1"
-            )
+            registry.add_page(url="https://whop.com/stk/app/", source="stock", name="Stock1")
         )
         opt_entry = loop.run_until_complete(
-            registry.add_page(
-                url="https://whop.com/opt/app/", source="option", name="Opt1"
-            )
+            registry.add_page(url="https://whop.com/opt/app/", source="option", name="Opt1")
         )
 
         app = FastAPI()
@@ -267,9 +264,7 @@ def test_get_settings_defaults_stock(
 ) -> None:
     """defaults?source=stock returns the stock template."""
     _, client, _, _ = registry_and_client
-    resp = client.get(
-        "/api/whop/pages/defaults", params={"source": "stock", "token": _TOKEN}
-    )
+    resp = client.get("/api/whop/pages/defaults", params={"source": "stock", "token": _TOKEN})
     assert resp.status_code == 200
     s = resp.json()
     assert s["dedupe_processed_messages"] is True
@@ -282,9 +277,7 @@ def test_get_settings_defaults_option(
 ) -> None:
     """defaults?source=option returns the option template (tickers None)."""
     _, client, _, _ = registry_and_client
-    resp = client.get(
-        "/api/whop/pages/defaults", params={"source": "option", "token": _TOKEN}
-    )
+    resp = client.get("/api/whop/pages/defaults", params={"source": "option", "token": _TOKEN})
     assert resp.status_code == 200
     s = resp.json()
     assert s["dedupe_processed_messages"] is True
@@ -297,9 +290,7 @@ def test_get_settings_defaults_invalid_source(
 ) -> None:
     """Unknown source returns 400."""
     _, client, _, _ = registry_and_client
-    resp = client.get(
-        "/api/whop/pages/defaults", params={"source": "weird", "token": _TOKEN}
-    )
+    resp = client.get("/api/whop/pages/defaults", params={"source": "weird", "token": _TOKEN})
     assert resp.status_code == 400
 
 

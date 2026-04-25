@@ -7,6 +7,7 @@ Five test cases covering the three resolution tiers:
 4. test_watchlist_ambiguous_returns_none
 5. test_recent_fills_ticker_when_parser_returned_none
 """
+
 from __future__ import annotations
 
 from datetime import UTC, date, datetime
@@ -130,6 +131,7 @@ def _task_with_stock_inst(
 # Test 1: already has ticker → unchanged
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_already_has_ticker_returns_unchanged(
     session_factory: async_sessionmaker[AsyncSession],
@@ -166,6 +168,7 @@ async def test_already_has_ticker_returns_unchanged(
 # ---------------------------------------------------------------------------
 # Test 2: refer fills ticker from quoted message
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_refer_to_parsed_message_fills_ticker(
@@ -204,6 +207,7 @@ async def test_refer_to_parsed_message_fills_ticker(
 # Test 3: watchlist fills missing ticker on already-parsed stock instruction
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_watchlist_fills_missing_ticker_on_parsed_stock(
     session_factory: async_sessionmaker[AsyncSession],
@@ -228,6 +232,7 @@ async def test_watchlist_fills_missing_ticker_on_parsed_stock(
 # Test 4: ambiguous watchlist → returns None
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_watchlist_ambiguous_returns_none(
     session_factory: async_sessionmaker[AsyncSession],
@@ -250,6 +255,7 @@ async def test_watchlist_ambiguous_returns_none(
 # ---------------------------------------------------------------------------
 # Test 5: recent task fills ticker
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_recent_fills_ticker_when_db_has_recent_task(

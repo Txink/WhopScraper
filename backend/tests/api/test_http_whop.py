@@ -1,4 +1,5 @@
 """REST endpoint tests for /api/whop/* paths."""
+
 from __future__ import annotations
 
 import json
@@ -275,6 +276,7 @@ def test_cookie_status_missing(
     fake_cookie = tmp_path / ".auth" / "whop_cookie.json"
 
     import app.whop.login as login_mod
+
     original = login_mod.cookie_path
 
     def _fake_cookie_path(*args, **kwargs):  # noqa: ANN002 ANN003 ANN202
@@ -305,6 +307,7 @@ def test_cookie_status_present(
     fake_cookie.write_text(json.dumps({"cookies": []}))
 
     import app.whop.login as login_mod
+
     original = login_mod.cookie_path
 
     def _fake_cookie_path(*args, **kwargs):  # noqa: ANN002 ANN003 ANN202

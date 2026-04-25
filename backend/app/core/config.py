@@ -3,6 +3,7 @@
 Uses pydantic-settings; the .env file is expected at the project root,
 one level above the ``backend/`` directory.
 """
+
 from __future__ import annotations
 
 import functools

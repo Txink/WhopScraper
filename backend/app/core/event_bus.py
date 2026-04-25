@@ -1,4 +1,5 @@
 """Asyncio in-process pub/sub event bus with fan-out and failure isolation."""
+
 from __future__ import annotations
 
 import asyncio
@@ -11,7 +12,6 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 Handler = Callable[["Event"], Awaitable[None]]
-
 
 
 @dataclass(frozen=True)

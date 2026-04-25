@@ -2,6 +2,7 @@
 
 option page 的 settings.tickers = None；stock page 的 = {} 起步。
 """
+
 from __future__ import annotations
 
 import logging
@@ -13,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class TickerConfig:
-    trade_quantity: int   # "常规仓" 对应的整股数；半仓 → 一半，1/3 → trade_quantity/3 …
+    trade_quantity: int  # "常规仓" 对应的整股数；半仓 → 一半，1/3 → trade_quantity/3 …
 
 
 @dataclass

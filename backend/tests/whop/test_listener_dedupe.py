@@ -1,9 +1,10 @@
-import pytest
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
-from app.core.event_bus import Event, EventBus
-from app.core.events import MessagePayload, Topics
+import pytest
+
+from app.core.event_bus import EventBus
+from app.core.events import Topics
 from app.domain.message import Message
 from app.whop.listener import WhopListener
 
@@ -27,10 +28,12 @@ async def test_dedupe_on_loads_seen_from_db(monkeypatch):
 
     async def _h(evt):
         received.append(evt.payload.message)
+
     bus.subscribe(Topics.MESSAGE_RECEIVED, _h)
 
     async def fake_load(_session, _url):
         return {"existing-1", "existing-2"}
+
     monkeypatch.setattr("app.whop.listener.load_seen_ids_for_url", fake_load, raising=False)
 
     listener = WhopListener(
@@ -45,7 +48,10 @@ async def test_dedupe_on_loads_seen_from_db(monkeypatch):
     listener._browser.scrape_html = AsyncMock(return_value="<html/>")
     monkeypatch.setattr(
         "app.whop.listener.extract_messages",
-        lambda _h, *, source, received_at=None: [_fake_message("existing-1"), _fake_message("new-1")],
+        lambda _h, *, source, received_at=None: [
+            _fake_message("existing-1"),
+            _fake_message("new-1"),
+        ],
     )
 
     await listener._prime_dedupe()
@@ -62,6 +68,7 @@ async def test_dedupe_off_uses_skip_initial(monkeypatch):
 
     async def _h(evt):
         received.append(evt.payload.message)
+
     bus.subscribe(Topics.MESSAGE_RECEIVED, _h)
 
     listener = WhopListener(
@@ -101,16 +108,20 @@ async def test_start_dispatches_to_dedupe_when_enabled(monkeypatch):
 
     # Stub repo.load_seen_ids_for_url to record the call
     load_calls: list = []
+
     async def fake_load(_session, url):
         load_calls.append(url)
         return {"seeded-id"}
+
     monkeypatch.setattr("app.whop.listener.load_seen_ids_for_url", fake_load, raising=False)
 
     # Stub session_scope to a no-op async context manager
     from contextlib import asynccontextmanager
+
     @asynccontextmanager
     async def fake_scope(_factory):
         yield MagicMock()
+
     monkeypatch.setattr("app.whop.listener.session_scope", fake_scope, raising=False)
 
     listener = WhopListener(
@@ -119,7 +130,9 @@ async def test_start_dispatches_to_dedupe_when_enabled(monkeypatch):
         source="stock",
         dedupe_processed_messages=True,
         session_factory=MagicMock(),
-        skip_initial=True,  # would call _prime_skip_initial if dedupe path were skipped — verify it's NOT called
+        # would call _prime_skip_initial if dedupe path were skipped —
+        # verify it's NOT called below
+        skip_initial=True,
         poll_interval=10.0,
     )
     await listener.start()
@@ -144,9 +157,11 @@ async def test_start_dispatches_to_skip_initial_when_dedupe_off(monkeypatch):
     monkeypatch.setattr("app.whop.listener.WhopBrowser", lambda *a, **kw: fake_browser)
 
     extract_calls: list = []
+
     def fake_extract(html, *, source, received_at=None):
         extract_calls.append(html)
         return [_fake_message("dom-existing")]
+
     monkeypatch.setattr("app.whop.listener.extract_messages", fake_extract)
 
     listener = WhopListener(
@@ -178,9 +193,11 @@ async def test_start_no_priming_when_both_off(monkeypatch):
     fake_browser.close = AsyncMock(return_value=None)
     monkeypatch.setattr("app.whop.listener.WhopBrowser", lambda *a, **kw: fake_browser)
     extract_calls: list = []
+
     def fake_extract(html, *, source, received_at=None):
         extract_calls.append(html)
         return []
+
     monkeypatch.setattr("app.whop.listener.extract_messages", fake_extract)
 
     listener = WhopListener(
@@ -208,6 +225,7 @@ async def test_scan_once_injects_url(monkeypatch):
 
     async def _h(evt):
         captured.append(evt.payload.message)
+
     bus.subscribe(Topics.MESSAGE_RECEIVED, _h)
 
     listener = WhopListener(

@@ -3,6 +3,7 @@
 Higher-level layers (Trader, PushListener) depend on this interface only,
 never on ``LongPortClient`` directly, enabling easy test-time substitution.
 """
+
 from __future__ import annotations
 
 from collections.abc import Callable

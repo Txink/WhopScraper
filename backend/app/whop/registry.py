@@ -4,6 +4,7 @@ Persists page entries to data/whop_pages.json so restarts preserve them.
 The active WhopListener instances are NOT persisted — they're rebuilt
 from the JSON on startup.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -13,7 +14,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal, cast
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -29,6 +30,10 @@ from app.whop.page_settings import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Source literal alias used by the cast() calls below; matches the type signature
+# of default_settings_for / page_settings_from_dict in app.whop.page_settings.
+_SourceLiteral = Literal["stock", "option"]
 
 # Project root (backend/app/whop/registry.py → parents[3] = project root)
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -59,7 +64,10 @@ class WhopPageEntry:
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> WhopPageEntry:
-        source = d["source"]
+        # JSON loaded from disk — d["source"] is a free-form str from the file.
+        # Cast to Literal so downstream typing stays exact; malformed values are
+        # still rejected by default_settings_for / page_settings_from_dict.
+        source = cast(_SourceLiteral, d["source"])
         settings_raw = d.get("settings")
         if settings_raw is None:
             # Legacy entry written before per-page settings existed.
@@ -135,9 +143,7 @@ class WhopRegistry:
 
     # ---- mutating ops ----
 
-    async def add_page(
-        self, *, url: str, source: str, name: str | None = None
-    ) -> WhopPageEntry:
+    async def add_page(self, *, url: str, source: str, name: str | None = None) -> WhopPageEntry:
         """Add a new page entry, persist, start its listener.
 
         Raises ValueError on validation issues.
@@ -160,16 +166,15 @@ class WhopRegistry:
                 source=source,
                 name=(name or url),
                 added_at=datetime.now(UTC),
-                settings=default_settings_for(source),
+                # source was validated against ("stock", "option") above; cast for mypy.
+                settings=default_settings_for(cast(_SourceLiteral, source)),
             )
             self._entries[entry.id] = entry
             self._save_entries()
             try:
                 await self._start_listener(entry)
             except Exception as e:  # noqa: BLE001
-                logger.warning(
-                    "listener for new page %s failed to start: %s", entry.id, e
-                )
+                logger.warning("listener for new page %s failed to start: %s", entry.id, e)
             self._rebuild_url_index()
             page_dict = self._build_page_dict(entry)
         await self._publish_page_event("added", page_dict)
@@ -224,9 +229,7 @@ class WhopRegistry:
         await self._publish_page_event("restarted", page_dict)
         return True
 
-    async def update_settings(
-        self, page_id: str, patch: dict[str, Any]
-    ) -> WhopPageEntry:
+    async def update_settings(self, page_id: str, patch: dict[str, Any]) -> WhopPageEntry:
         """Local update — merges patch into existing settings, persists, publishes event.
 
         Merge semantics: shallow at top level only.
@@ -248,7 +251,12 @@ class WhopRegistry:
                 raise ValueError("option page does not accept 'tickers'")
             current_dict = page_settings_to_dict(entry.settings)
             current_dict.update(patch)
-            new_settings = page_settings_from_dict(current_dict, source=entry.source)
+            # entry.source was validated as "stock"|"option" at construction
+            # (add_page guards + WhopPageEntry.from_dict cast) but the dataclass
+            # field is typed `str`, so cast back to Literal for the call site.
+            new_settings = page_settings_from_dict(
+                current_dict, source=cast(_SourceLiteral, entry.source)
+            )
             entry.settings = new_settings
             self._save_entries()
             page_dict = self._build_page_dict(entry)
@@ -305,9 +313,7 @@ class WhopRegistry:
             )
         )
 
-    async def _start_listener(
-        self, entry: WhopPageEntry, *, skip_initial: bool = True
-    ) -> None:
+    async def _start_listener(self, entry: WhopPageEntry, *, skip_initial: bool = True) -> None:
         """Build + start a listener for an entry. Lock must be held by caller.
 
         skip_initial=True (default for boot + add_page): prime the seen set

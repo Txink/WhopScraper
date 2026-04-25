@@ -15,6 +15,7 @@ or ``.value`` attributes.  We extract the status label via
 When the raw event carries a plain string (test doubles) we use that directly.
 Unknown statuses default to ``PushState.FAILED`` with a note.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -62,9 +63,7 @@ _SDK_STATUS_MAP: dict[str, PushState] = {
 }
 
 # Also support upper-case string variants from test doubles
-_SDK_STATUS_MAP_UPPER: dict[str, PushState] = {
-    k.upper(): v for k, v in _SDK_STATUS_MAP.items()
-}
+_SDK_STATUS_MAP_UPPER: dict[str, PushState] = {k.upper(): v for k, v in _SDK_STATUS_MAP.items()}
 
 # Extra plain-string aliases that test doubles may use
 _PLAIN_STRING_MAP: dict[str, PushState] = {
@@ -281,9 +280,7 @@ class PushListener:
             task: Task | None = await load_task_by_order_id(session, order_id)
 
         if task is None:
-            logger.warning(
-                "PushListener: no Task found for order_id=%r — skipping push", order_id
-            )
+            logger.warning("PushListener: no Task found for order_id=%r — skipping push", order_id)
             return
 
         evt = _build_push_event(raw, task)

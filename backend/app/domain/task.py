@@ -1,4 +1,5 @@
 """Task 聚合根 —— 一条消息 → 一个 Task，贯穿整个处理生命周期。"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

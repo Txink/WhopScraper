@@ -11,6 +11,7 @@ TestClient runs the ASGI app in a background thread via anyio.  We use
 server's event loop, then ``bus.wait_idle(timeout=...)`` to drain handlers
 before checking HTTP responses or WebSocket messages.
 """
+
 from __future__ import annotations
 
 import json
@@ -199,9 +200,7 @@ def test_e2e_multiple_tasks_listed() -> None:
 
         async def _pub_all() -> None:
             for t in tasks:
-                await state.bus.publish(
-                    Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(t))
-                )
+                await state.bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(t)))
             await state.bus.wait_idle(timeout=5.0)
 
         assert client.portal is not None
@@ -232,9 +231,7 @@ def test_e2e_get_single_task() -> None:
         state = app.state.app_state
 
         async def _pub() -> None:
-            await state.bus.publish(
-                Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task))
-            )
+            await state.bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
             await state.bus.wait_idle(timeout=3.0)
 
         assert client.portal is not None

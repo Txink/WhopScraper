@@ -1,4 +1,5 @@
 """Tests for app.broker.trader — Task lifecycle + order submission."""
+
 from __future__ import annotations
 
 from datetime import UTC, date, datetime
@@ -18,6 +19,7 @@ from tests.broker._fakes import FakeBrokerClient
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _msg(*, source: str = "stock") -> Message:
     return Message(
@@ -101,6 +103,7 @@ def _config(**overrides: object) -> LongPortConfig:
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_stock_buy_happy_path() -> None:

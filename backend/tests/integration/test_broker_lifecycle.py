@@ -22,6 +22,7 @@ constraint failure when both handlers raced to INSERT the same task_id.
 concurrent callers with the same ``Task.id`` always succeed — no pre-save
 workaround needed.
 """
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -175,9 +176,7 @@ async def test_full_lifecycle_new_partial_filled(
         assert len(db_task.push_events) == 0
 
         # ── Step 2: broker emits NEW (order accepted, not yet filled) ────────
-        await listener._handle_raw_push(
-            FakePushEvt(order_id="broker-order-42", status="New")
-        )
+        await listener._handle_raw_push(FakePushEvt(order_id="broker-order-42", status="New"))
         await bus.wait_idle(timeout=2)
 
         async with session_scope(session_factory) as session:
@@ -294,9 +293,7 @@ async def test_rejected_before_fill_marks_rejected(
         assert db_task.order_id == "broker-order-rej"
 
         # Broker sends Rejected push
-        await listener._handle_raw_push(
-            FakePushEvt(order_id="broker-order-rej", status="Rejected")
-        )
+        await listener._handle_raw_push(FakePushEvt(order_id="broker-order-rej", status="Rejected"))
         await bus.wait_idle(timeout=2)
 
         async with session_scope(session_factory) as session:
@@ -348,9 +345,7 @@ async def test_push_before_trader_submits_is_ignored(
         bus.subscribe(Topics.TASK_PUSH_EVENT, _cap)
 
         # Fire another push for same unknown order_id
-        await listener._handle_raw_push(
-            FakePushEvt(order_id="does-not-exist-99", status="New")
-        )
+        await listener._handle_raw_push(FakePushEvt(order_id="does-not-exist-99", status="New"))
         await bus.wait_idle(timeout=2)
 
         assert len(events_captured) == 0

@@ -1,4 +1,5 @@
 """Whop cookie management — load/save .auth/whop_cookie.json."""
+
 from __future__ import annotations
 
 import json

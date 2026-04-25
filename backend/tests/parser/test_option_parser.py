@@ -18,6 +18,7 @@ Date reference (verified):
   2026-04-24 is Friday (weekday=4).  This-week Friday = 2026-04-24 (same day).
   Next-week Friday from 2026-04-22 = 2026-05-01.
 """
+
 from __future__ import annotations
 
 from datetime import date, datetime

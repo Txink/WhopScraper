@@ -6,6 +6,7 @@ Covers:
   §11.4  Browser refresh recovers via GET /api/tasks
   §11.6  python -m app.main single command: app starts and exposes mode info
 """
+
 from __future__ import annotations
 
 import json
@@ -66,9 +67,7 @@ def test_acceptance_e2e_full_cycle() -> None:
         msg = _stock_msg("acc-001")
 
         async def _flow() -> None:
-            await state.bus.publish(
-                Event(Topics.MESSAGE_RECEIVED, MessagePayload(message=msg))
-            )
+            await state.bus.publish(Event(Topics.MESSAGE_RECEIVED, MessagePayload(message=msg)))
             # Parser service → TASK_CREATED → storage (chain of async tasks)
             # Two wait_idle passes drain the two-hop chain.
             await state.bus.wait_idle(timeout=2)
@@ -112,11 +111,10 @@ def test_acceptance_websocket_broadcast_and_replay() -> None:
 
         # ── Connect first WS client, publish 3 events, collect them ─────────
         with client.websocket_connect("/ws?token=acceptance-token") as ws:
+
             async def _publish_three() -> None:
                 for i in range(3):
-                    await state.bus.publish(
-                        Event(Topics.TASK_CREATED, _make_task_payload(i))
-                    )
+                    await state.bus.publish(Event(Topics.TASK_CREATED, _make_task_payload(i)))
                 await state.bus.wait_idle(timeout=2)
 
             assert client.portal is not None
@@ -131,9 +129,7 @@ def test_acceptance_websocket_broadcast_and_replay() -> None:
 
         # ── Reconnect with ?since=first_event_id → replay events 1 and 2 ────
         since = event_ids[0]
-        with client.websocket_connect(
-            f"/ws?token=acceptance-token&since={since}"
-        ) as ws2:
+        with client.websocket_connect(f"/ws?token=acceptance-token&since={since}") as ws2:
             replayed = [json.loads(ws2.receive_text()) for _ in range(2)]
 
         assert [m["event_id"] for m in replayed] == event_ids[1:], (
@@ -184,9 +180,7 @@ def test_acceptance_browser_refresh_recovers_via_initial_list() -> None:
         async def _publish_five() -> None:
             for i in range(5):
                 msg = _stock_msg(f"refresh-{i}")
-                await state.bus.publish(
-                    Event(Topics.MESSAGE_RECEIVED, MessagePayload(message=msg))
-                )
+                await state.bus.publish(Event(Topics.MESSAGE_RECEIVED, MessagePayload(message=msg)))
             # Double wait_idle to drain the two-hop pipeline
             await state.bus.wait_idle(timeout=2)
             await state.bus.wait_idle(timeout=2)
@@ -195,9 +189,7 @@ def test_acceptance_browser_refresh_recovers_via_initial_list() -> None:
         client.portal.call(_publish_five)
 
         # "Browser refresh" — fetch /api/tasks
-        r = client.get(
-            "/api/tasks", params={"token": "acceptance-token", "limit": "100"}
-        )
+        r = client.get("/api/tasks", params={"token": "acceptance-token", "limit": "100"})
         assert r.status_code == 200
         ids = {t["id"] for t in r.json()["tasks"]}
         missing = [f"refresh-{i}" for i in range(5) if f"refresh-{i}" not in ids]
@@ -219,6 +211,7 @@ def test_acceptance_per_page_settings_drive_trader(monkeypatch) -> None:
         Trader picks up trade_quantity + tolerance from page settings →
         order submitted with computed qty (700 * 0.5 = 350) + MARKET order_type.
     """
+
     # Patch the registry's listener-launcher so add_page doesn't try to spawn
     # real Playwright. The listener instance is irrelevant — the test only needs
     # the entry to be present in the url-index.
@@ -242,7 +235,9 @@ def test_acceptance_per_page_settings_drive_trader(monkeypatch) -> None:
         async def _flow() -> None:
             # 1. Add stock page + configure tickers via update_settings
             entry = await registry.add_page(
-                url="https://whop.com/acc/app/", source="stock", name="acc",
+                url="https://whop.com/acc/app/",
+                source="stock",
+                name="acc",
             )
             await registry.update_settings(
                 entry.id,
@@ -263,9 +258,7 @@ def test_acceptance_per_page_settings_drive_trader(monkeypatch) -> None:
                 source="stock",
                 url="https://whop.com/acc/app/",
             )
-            await state.bus.publish(
-                Event(Topics.MESSAGE_RECEIVED, MessagePayload(message=msg))
-            )
+            await state.bus.publish(Event(Topics.MESSAGE_RECEIVED, MessagePayload(message=msg)))
             # Drain parser → trader chain (two hops).
             await state.bus.wait_idle(timeout=2)
             await state.bus.wait_idle(timeout=2)
@@ -292,6 +285,7 @@ def test_acceptance_unknown_ticker_skipped(monkeypatch) -> None:
     Page is added with default settings (tickers={} = explicit empty whitelist).
     Trader sees ticker missing from whitelist and skips without submitting.
     """
+
     async def _noop_start(self, entry, *, skip_initial=True):  # noqa: ANN001
         self._listeners[entry.id] = None
 
@@ -310,7 +304,9 @@ def test_acceptance_unknown_ticker_skipped(monkeypatch) -> None:
 
         async def _flow() -> None:
             await registry.add_page(
-                url="https://whop.com/skip/app/", source="stock", name="skip",
+                url="https://whop.com/skip/app/",
+                source="stock",
+                name="skip",
             )
             # Default stock settings ship with tickers={} → explicit empty whitelist.
 
@@ -324,9 +320,7 @@ def test_acceptance_unknown_ticker_skipped(monkeypatch) -> None:
                 source="stock",
                 url="https://whop.com/skip/app/",
             )
-            await state.bus.publish(
-                Event(Topics.MESSAGE_RECEIVED, MessagePayload(message=msg))
-            )
+            await state.bus.publish(Event(Topics.MESSAGE_RECEIVED, MessagePayload(message=msg)))
             await state.bus.wait_idle(timeout=2)
             await state.bus.wait_idle(timeout=2)
 

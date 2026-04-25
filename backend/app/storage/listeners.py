@@ -11,6 +11,7 @@ Design note
 opens its own session via ``session_scope``.  This is intentional for now;
 a future refactor may move commit responsibility up to the listeners.
 """
+
 from __future__ import annotations
 
 import logging
