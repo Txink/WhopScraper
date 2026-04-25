@@ -202,3 +202,139 @@ def test_acceptance_browser_refresh_recovers_via_initial_list() -> None:
         ids = {t["id"] for t in r.json()["tasks"]}
         missing = [f"refresh-{i}" for i in range(5) if f"refresh-{i}" not in ids]
         assert not missing, f"tasks missing after refresh: {missing}; got {ids}"
+
+
+# ---------------------------------------------------------------------------
+# Per-page settings → trader behavior chain (Task O)
+# ---------------------------------------------------------------------------
+
+
+def test_acceptance_per_page_settings_drive_trader(monkeypatch) -> None:
+    """End-to-end: add page → PATCH settings → publish message → trader uses
+    new tickers + tolerance.
+
+    Verifies the full per-page settings chain:
+      add_page → update_settings → MESSAGE_RECEIVED →
+        ParserService picks up watched tickers from page settings →
+        Trader picks up trade_quantity + tolerance from page settings →
+        order submitted with computed qty (700 * 0.5 = 350) + MARKET order_type.
+    """
+    # Patch the registry's listener-launcher so add_page doesn't try to spawn
+    # real Playwright. The listener instance is irrelevant — the test only needs
+    # the entry to be present in the url-index.
+    async def _noop_start(self, entry, *, skip_initial=True):  # noqa: ANN001
+        self._listeners[entry.id] = None
+
+    from app.whop.registry import WhopRegistry
+
+    monkeypatch.setattr(WhopRegistry, "_start_listener", _noop_start)
+
+    settings = _settings_for_test()
+    fake_broker = FakeBrokerClient()
+    # auto_trade defaults true via Settings(); FakeBrokerClient.is_paper=True.
+    app = create_app(settings=settings, broker_override=fake_broker, skip_whop=True)
+    app.dependency_overrides[get_settings] = lambda: settings
+
+    with TestClient(app) as client:
+        state = app.state.app_state
+        registry = state.whop_registry
+
+        async def _flow() -> None:
+            # 1. Add stock page + configure tickers via update_settings
+            entry = await registry.add_page(
+                url="https://whop.com/acc/app/", source="stock", name="acc",
+            )
+            await registry.update_settings(
+                entry.id,
+                {
+                    "tickers": {"TSLL": {"trade_quantity": 700}},
+                    "price_deviation_tolerance": 0.5,
+                },
+            )
+
+            # 2. Inject a stock signal that resolves to 半仓 of TSLL
+            msg = Message(
+                id="acc-1",
+                content="tsll 在16.02附近开个底仓 常规仓的一半",
+                raw_content="tsll 在16.02附近开个底仓 常规仓的一半",
+                author=None,
+                posted_at=datetime.now(UTC),
+                received_at=datetime.now(UTC),
+                source="stock",
+                url="https://whop.com/acc/app/",
+            )
+            await state.bus.publish(
+                Event(Topics.MESSAGE_RECEIVED, MessagePayload(message=msg))
+            )
+            # Drain parser → trader chain (two hops).
+            await state.bus.wait_idle(timeout=2)
+            await state.bus.wait_idle(timeout=2)
+
+        assert client.portal is not None
+        client.portal.call(_flow)
+
+        # Trader should have submitted exactly one stock order with computed qty.
+        stock_orders = [o for o in fake_broker.submitted_orders if o["kind"] == "stock"]
+        assert len(stock_orders) == 1, (
+            f"expected 1 stock order, got {len(stock_orders)}: {fake_broker.submitted_orders}"
+        )
+        order = stock_orders[0]
+        assert order["symbol"] == "TSLL.US"
+        # 700 (trade_quantity) * 0.5 (常规仓的一半) = 350
+        assert order["quantity"] == 350
+        # First-pass policy: market_price = signal_price → deviation = 0 → MARKET
+        assert order["order_type"] == "MARKET"
+
+
+def test_acceptance_unknown_ticker_skipped(monkeypatch) -> None:
+    """End-to-end: ticker not in page whitelist → SKIPPED, no broker call.
+
+    Page is added with default settings (tickers={} = explicit empty whitelist).
+    Trader sees ticker missing from whitelist and skips without submitting.
+    """
+    async def _noop_start(self, entry, *, skip_initial=True):  # noqa: ANN001
+        self._listeners[entry.id] = None
+
+    from app.whop.registry import WhopRegistry
+
+    monkeypatch.setattr(WhopRegistry, "_start_listener", _noop_start)
+
+    settings = _settings_for_test()
+    fake_broker = FakeBrokerClient()
+    app = create_app(settings=settings, broker_override=fake_broker, skip_whop=True)
+    app.dependency_overrides[get_settings] = lambda: settings
+
+    with TestClient(app) as client:
+        state = app.state.app_state
+        registry = state.whop_registry
+
+        async def _flow() -> None:
+            await registry.add_page(
+                url="https://whop.com/skip/app/", source="stock", name="skip",
+            )
+            # Default stock settings ship with tickers={} → explicit empty whitelist.
+
+            msg = Message(
+                id="skip-1",
+                content="tsll 在16.02附近开个底仓",
+                raw_content="tsll 在16.02附近开个底仓",
+                author=None,
+                posted_at=datetime.now(UTC),
+                received_at=datetime.now(UTC),
+                source="stock",
+                url="https://whop.com/skip/app/",
+            )
+            await state.bus.publish(
+                Event(Topics.MESSAGE_RECEIVED, MessagePayload(message=msg))
+            )
+            await state.bus.wait_idle(timeout=2)
+            await state.bus.wait_idle(timeout=2)
+
+        assert client.portal is not None
+        client.portal.call(_flow)
+
+        # No stock order submitted (whitelist empty → ticker SKIPPED).
+        stock_orders = [o for o in fake_broker.submitted_orders if o["kind"] == "stock"]
+        assert len(stock_orders) == 0, (
+            f"expected 0 stock orders, got {fake_broker.submitted_orders}"
+        )

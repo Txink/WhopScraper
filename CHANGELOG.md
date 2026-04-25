@@ -1,5 +1,28 @@
 # CHANGELOG
 
+## Unreleased
+
+### Added
+- 监控看板二级 tab：每个 Whop 监听页独立 tab + 信息行 + 操作行（重启 / 设置 / 全展开 / 全收缩）
+- per-page 设置：去重开关、价格偏差容忍、（stock）ticker 白名单 + 常规仓数量；存 `data/whop_pages.json`
+- 设置弹窗：dashboard 内 ⚙ 设置按钮，可编辑 dedupe / tolerance / tickers 列表
+- 孤儿 task 模式：监听页被移除后历史 task 进"已停用" tab
+- REST: `PATCH /api/whop/pages/{id}/settings`、`GET /api/whop/pages/defaults?source=`
+- WS event: `whop.page_changed`（payload: `{action, page}`，action ∈ added/removed/restarted/settings_updated）
+- DB: `messages.url` 列 + index（alembic migration `947fff1b2fcd`）
+- domain: `Message.url`；listener `_scan_once` 自动注入
+
+### Changed
+- **BREAKING**: trader 价格偏差行为从"超阈拒单"改成"超阈降级到 LIMIT @ 信号价"。永不拒单（除非白名单 / 缺价格）。当前实现 first-pass 用 `market_price = signal_price` → 总是 MARKET，待真实 quote 集成后偏差才生效
+- **BREAKING**: stock ticker 白名单 gate—— 不在 page settings.tickers 中的 ticker SKIPPED 不下单
+- ParserService 接收 `WhopRegistry`，按 `message.url` 反查 page settings 取 ticker 列表（取代全局 watched_stocks）
+- WhopListener 加 `dedupe_processed_messages` ctor 参数；启动时从 DB 灌 `_seen`（重启不再重复触发解析）
+- WhopRegistry CRUD 现在发布 `whop.page_changed` 事件供前端实时同步
+
+### Removed
+- **BREAKING**: `config/watched_stocks.json` 退役 + `parser.context_resolver.load_watched_tickers` 删除。需要在 dashboard 设置里手动配置每个 stock page 的 ticker 列表
+- `utils/watched_stocks.py` 删除（root 仓 parser/broker 仍引用此模块的代码已变 dead code）
+
 ## [2026-03-09] 期权解析支持「$TICKER weekly $STRIKE calls $PRICE」格式
 
 - **parser/option_parser.py**：新增模式 9b，解析「$HOOD weekly $80 calls $1.65」或「HOOD weekly $80 calls $1.65」：HOOD 为股票名，weekly 表示本周内到期（与「本周/这周/this week」一致），并优先于其他模式匹配以避免从 "weekly" 子串误解析出 ticker；相对日期支持增加 `WEEKLY` 与 `weekly` 关键词。

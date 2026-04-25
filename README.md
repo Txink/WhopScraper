@@ -282,16 +282,16 @@ make db-reset
 | `LONGPORT_DRY_RUN` | `true` | `true` = 计算订单但不真正提交，仅日志 |
 | `MAX_OPTION_TOTAL_PRICE` | `500.0` | 单笔期权总名义额上限（USD） |
 | `MAX_OPTION_QUANTITY` | `3` | 单笔期权合约数上限 |
-| `PRICE_DEVIATION_TOLERANCE` | `5.0` | 期权：市价偏离信号价超过 N% 拒下 |
-| `STOCK_PRICE_DEVIATION_TOLERANCE` | `1.0` | 正股偏差容忍度 |
+| `PRICE_DEVIATION_TOLERANCE` | `5.0` | 期权偏差容忍度 — **同上**，per-page 优先 |
+| `STOCK_PRICE_DEVIATION_TOLERANCE` | `1.0` | 正股偏差容忍度 — **仅作孤儿 task（无 page）的 fallback**，per-page 优先 |
 | `DATABASE_URL` | `sqlite+aiosqlite:///./data/signals.db` | 相对路径会**自动锚定到项目根**，不会因 CWD 变化失效 |
 | `HTTP_HOST` | `127.0.0.1` | 后端绑定 host |
 | `HTTP_PORT` | `8000` | 后端端口 |
 | `LOG_LEVEL` | `INFO` | Python logging 级别 |
 
-### 关注股配置
+### 监听页 ticker 白名单
 
-`config/watched_stocks.json` 给解析器优先匹配的 ticker 列表 + 别名（中文昵称）。改完不需要重启，启动时加载。
+不再有全局 ticker 配置文件。每个 stock 监听页独立维护 ticker → trade_quantity 映射，从 dashboard 内 ⚙ 设置编辑，存到 `data/whop_pages.json`。
 
 ---
 
@@ -344,6 +344,21 @@ make db-reset
 | 操作 | **重启** / **移除** |
 
 数据持久化：列表存在 `data/whop_pages.json`，重启后端自动恢复并起 listener。
+
+### 监控看板二级 tab + 设置
+
+进入"监控看板" tab 后，列表上方新增：
+- **二级 tab**：每个监听页一个 tab；tab 内只显示该 page 的 task
+- **信息行**：source 徽章 / 名称 / 运行状态 / 最后轮询 / 已发消息
+- **操作行**：[↻ 重启] [⚙ 设置] [⤓ 全展开] [⤒ 全收缩]
+- **设置弹窗**（点 ⚙）：
+  - **避免重复解析消息**：启动/重启时从 SQLite 拉历史 domID 集合，已处理过的不再触发解析。改动后下次重启生效
+  - **价格偏差容忍**：市价偏离信号价 ≤ 阈值 → MARKET；> 阈值 → LIMIT @ 信号价。立即生效
+  - **股票配置**（仅 stock）：白名单 + "常规仓"数量；不在列表的 ticker 仍解析但 SKIPPED 不下单；半仓/1/3 仓按比例缩放，向下取整、最小 1
+- **已停用 tab**：当前 page 列表外的历史 task 自动归到这里，灰色徽章
+- **空态**：没监听页时整体替换为提示 + 跳转到 Whop 管理
+
+> 注意：`config/watched_stocks.json` 已废弃；老数据中 task 没有 url 字段，会进"已停用" tab。
 
 ---
 
@@ -440,6 +455,8 @@ cd frontend && npm run gen:types
 | POST | `/api/whop/pages` | 添加监听，body `{url, source, name?}` |
 | DELETE | `/api/whop/pages/{id}` | 移除监听（停 listener + 删 entry） |
 | POST | `/api/whop/pages/{id}/restart` | 重启某条监听 |
+| PATCH | `/api/whop/pages/{id}/settings` | 更新该 page 的设置（dedupe / tolerance / tickers） |
+| GET | `/api/whop/pages/defaults?source=stock\|option` | 获取该 source 的默认 PageSettings（前端新建表单用） |
 | GET | `/api/whop/cookie` | Cookie 文件状态（exists / age_seconds / mtime） |
 
 ### WebSocket
@@ -480,6 +497,7 @@ ws://localhost:8000/ws?token=<APP_TOKEN>
 - `task.push_event`（payload 含 push_event 详情）
 - `task.status_changed`
 - `system.connection_changed`
+- `whop.page_changed`（payload `{action, page}`，`action` ∈ `added` / `removed` / `restarted` / `settings_updated`）
 
 ### 重连续传
 
