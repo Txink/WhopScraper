@@ -574,6 +574,11 @@ def _make_stock(
             context_source=None,
             parser_notes=notes,
             ticker=ticker,
+            # LongPort canonical stock symbol format. Old code had a separate
+            # `ensure_symbol()` method that the trader called before submit; the
+            # new model expects symbol to be populated up-front so the trader's
+            # `if not inst.symbol` check doesn't skip valid stock instructions.
+            symbol=f"{ticker}.US",
             sell_quantity=sell_quantity,
         )
     except ValueError:

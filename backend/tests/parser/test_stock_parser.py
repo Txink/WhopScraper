@@ -133,3 +133,25 @@ def test_parse_without_ticker_leaves_blank_but_returns_instruction_if_action_cle
     """
     result = parse("加一半", message_id="t8")
     assert result is None
+
+
+# ---------------------------------------------------------------------------
+# 9. Regression: parser must populate symbol (LongPort canonical "TICKER.US")
+# ---------------------------------------------------------------------------
+def test_parse_populates_symbol_for_longport() -> None:
+    """Stock instructions must have symbol="<TICKER>.US" set, otherwise the
+    Trader's `if not inst.symbol` check skips them.
+
+    Was a real production bug: parser set ticker="TSLL" but left symbol="" so
+    27 valid SKIPPED tasks accumulated in the DB. Old code had `ensure_symbol()`
+    on the model; new code populates symbol up-front.
+    """
+    result = parse("tsll 12.6 把 12.42 的再减一半", message_id="t9")
+    assert result is not None
+    assert result.ticker == "TSLL"
+    assert result.symbol == "TSLL.US"
+
+    result2 = parse("conl 8.6 买了常规仓的一半", message_id="t10")
+    assert result2 is not None
+    assert result2.ticker == "CONL"
+    assert result2.symbol == "CONL.US"

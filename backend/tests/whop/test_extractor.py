@@ -326,8 +326,8 @@ def test_system_notification_no_data_message_id_skipped() -> None:
 # parse_whop_timestamp unit tests
 # ---------------------------------------------------------------------------
 
-from app.whop.extractor import parse_whop_timestamp, _assign_subminute_seconds  # noqa: E402
 from app.domain.message import Message  # noqa: E402
+from app.whop.extractor import _assign_subminute_seconds, parse_whop_timestamp  # noqa: E402
 
 # Pin "now" for deterministic tests — Saturday Apr 25 2026 at 12:00 UTC
 _NOW = datetime(2026, 4, 25, 12, 0, 0, tzinfo=UTC)

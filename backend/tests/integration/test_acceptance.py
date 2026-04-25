@@ -20,7 +20,6 @@ from app.domain.message import Message
 from app.main import create_app
 from tests.broker._fakes import FakeBrokerClient
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

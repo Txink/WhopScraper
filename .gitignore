@@ -27,6 +27,7 @@ dist/
 data/*.db
 data/*.db-shm
 data/*.db-wal
+data/whop_pages.json
 .auth/
 logs/
 *.log

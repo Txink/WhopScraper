@@ -98,15 +98,20 @@ _MONTH_MAP = {
     "Jul": 7, "Aug": 8, "Sep": 9, "Oct": 10, "Nov": 11, "Dec": 12,
 }
 
-_WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
-_MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"]
+# Lower-case lookup tables for `parse_whop_timestamp` (separate from the
+# `_WEEKDAYS` set above used for filtering noise rows).
+_WEEKDAYS_LOWER = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+_MONTHS_LOWER = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"]
 
 # Whop timestamp patterns (all case-insensitive)
 _TIME_RE = r"(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)"
 _TODAY_RE = re.compile(rf"^Today(?:\s+at)?\s+{_TIME_RE}$", re.IGNORECASE)
 _YESTERDAY_RE = re.compile(rf"^Yesterday(?:\s+at)?\s+{_TIME_RE}$", re.IGNORECASE)
 _WEEKDAY_RE = re.compile(rf"^(\w+)(?:\s+at)?\s+{_TIME_RE}$", re.IGNORECASE)
-_FULL_DATE_RE = re.compile(rf"^(\w{{3}})\s+(\d{{1,2}})(?:,\s*(\d{{4}}))?\s+{_TIME_RE}$", re.IGNORECASE)
+_FULL_DATE_RE = re.compile(
+    rf"^(\w{{3}})\s+(\d{{1,2}})(?:,\s*(\d{{4}}))?\s+{_TIME_RE}$",
+    re.IGNORECASE,
+)
 
 
 def parse_whop_timestamp(text: str, *, now: datetime | None = None) -> datetime | None:
@@ -147,8 +152,8 @@ def parse_whop_timestamp(text: str, *, now: datetime | None = None) -> datetime 
     # <Mon> D[, YYYY] H:MM AM/PM  — try full date before weekday to avoid false match
     if (m := _FULL_DATE_RE.match(text)):
         mon = m.group(1).lower()[:3]
-        if mon in _MONTHS:
-            month_num = _MONTHS.index(mon) + 1
+        if mon in _MONTHS_LOWER:
+            month_num = _MONTHS_LOWER.index(mon) + 1
             day = int(m.group(2))
             year = int(m.group(3)) if m.group(3) else today.year
             try:
@@ -160,8 +165,8 @@ def parse_whop_timestamp(text: str, *, now: datetime | None = None) -> datetime 
     # <Weekday>[at] H:MM AM/PM  — most recent occurrence strictly before today
     if (m := _WEEKDAY_RE.match(text)):
         wd_name = m.group(1).lower()
-        if wd_name in _WEEKDAYS:
-            target_wd = _WEEKDAYS.index(wd_name)
+        if wd_name in _WEEKDAYS_LOWER:
+            target_wd = _WEEKDAYS_LOWER.index(wd_name)
             today_wd = today.weekday()
             # days_back must be at least 1 (strictly before today).
             # If today is Thursday and text says "Thursday", that's last Thursday (7 days back).
