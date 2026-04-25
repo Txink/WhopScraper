@@ -1,26 +1,28 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { configureHttp, api } from "./api/http";
 import { createWsClient } from "./api/ws";
 import { useConnStore } from "./stores/conn";
 import { useTasksStore } from "./stores/tasks";
+import { useStatsStore } from "./stores/stats";
+import { usePositionsStore } from "./stores/positions";
 import { TopBar } from "./components/TopBar";
 import { RightRail } from "./components/RightRail";
 import { Card } from "./components/Card/Card";
 import { useStickyTop } from "./hooks/useStickyTop";
-import type { TaskSummary } from "./api/domain-types";
+import type { TaskSummary, PushEvent } from "./api/domain-types";
 import "./App.css";
 
 // Config — hardcoded for dev. Production: set via import.meta.env
 const BASE_URL = import.meta.env.VITE_API_BASE ?? "http://localhost:8000";
 const TOKEN = import.meta.env.VITE_APP_TOKEN ?? "dev-token";
 
-/** Smart mode: decide whether a task renders expanded by default. */
+const ACTIVE_STATUSES = new Set([
+  "RECEIVED", "PARSING", "INSTRUCTION_READY",
+  "SUBMITTING", "PENDING", "PARTIAL",
+]);
+
+/** Smart mode: decide whether a history task renders expanded by default. */
 function isActiveExpanded(task: TaskSummary): boolean {
-  const activeStatus = [
-    "RECEIVED", "PARSING", "INSTRUCTION_READY", "SUBMITTING",
-    "PENDING", "PARTIAL",
-  ];
-  if (activeStatus.includes(task.status)) return true;
   // Recently-FILLED (<30s) stays expanded
   if (task.status === "FILLED") {
     const updatedAt = new Date(task.updated_at).getTime();
@@ -29,7 +31,66 @@ function isActiveExpanded(task: TaskSummary): boolean {
   return false;
 }
 
+async function refreshStats() {
+  try {
+    const s = await api.stats();
+    useStatsStore.getState().setStats(s);
+  } catch (e) {
+    console.warn("stats fetch failed:", e);
+  }
+}
+
+async function refreshPositions() {
+  try {
+    const p = await api.positions();
+    usePositionsStore.getState().setAll(p);
+  } catch (e) {
+    console.warn("positions fetch failed:", e);
+  }
+}
+
 configureHttp({ baseUrl: BASE_URL, token: TOKEN });
+
+interface TaskGroupsProps {
+  tasks: TaskSummary[];
+  pushEventsByTask: Record<string, PushEvent[]>;
+}
+
+function TaskGroups({ tasks, pushEventsByTask }: TaskGroupsProps) {
+  const active = tasks.filter((t) => ACTIVE_STATUSES.has(t.status));
+  const history = tasks.filter((t) => !ACTIVE_STATUSES.has(t.status));
+
+  return (
+    <>
+      {active.length > 0 && (
+        <>
+          <div className="stream-divider">进行中 · {active.length}</div>
+          {active.map((t) => (
+            <Card
+              key={t.id}
+              task={t}
+              pushEvents={pushEventsByTask[t.id] ?? []}
+              defaultExpanded={true}
+            />
+          ))}
+        </>
+      )}
+      {history.length > 0 && (
+        <>
+          <div className="stream-divider">已完成 · {history.length}</div>
+          {history.map((t) => (
+            <Card
+              key={t.id}
+              task={t}
+              pushEvents={pushEventsByTask[t.id] ?? []}
+              defaultExpanded={isActiveExpanded(t)}
+            />
+          ))}
+        </>
+      )}
+    </>
+  );
+}
 
 export default function App() {
   useStickyTop();
@@ -38,7 +99,18 @@ export default function App() {
   const pushEventsByTask = useTasksStore((s) => s.pushEventsByTask);
   const applyWs = useTasksStore((s) => s.applyWsEvent);
 
-  // On mount: fetch health + initial tasks; open WS
+  // Refetch stats + positions on WS reconnect (closed → open)
+  const prevWsRef = useRef<typeof conn.ws>("closed");
+  useEffect(() => {
+    const shouldRefresh =
+      conn.ws === "open" && prevWsRef.current !== "open";
+    prevWsRef.current = conn.ws;
+    if (!shouldRefresh) return;
+    refreshStats();
+    refreshPositions();
+  }, [conn.ws]);
+
+  // On mount: fetch health + initial tasks; open WS; fetch stats + positions
   useEffect(() => {
     let alive = true;
 
@@ -63,6 +135,10 @@ export default function App() {
         console.warn("initial tasks fetch failed:", e);
       }
     })();
+
+    // Initial stats + positions
+    refreshStats();
+    refreshPositions();
 
     // WebSocket
     const client = createWsClient({
@@ -104,16 +180,7 @@ export default function App() {
               </p>
             </div>
           ) : (
-            <>
-              {tasks.map((t) => (
-                <Card
-                  key={t.id}
-                  task={t}
-                  pushEvents={pushEventsByTask[t.id] ?? []}
-                  defaultExpanded={isActiveExpanded(t)}
-                />
-              ))}
-            </>
+            <TaskGroups tasks={tasks} pushEventsByTask={pushEventsByTask} />
           )}
         </section>
         <RightRail />
