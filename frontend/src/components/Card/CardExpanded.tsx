@@ -1,0 +1,215 @@
+import { useState } from "react";
+import type { TaskSummary, PushEvent } from "../../api/domain-types";
+import { TypeBadge } from "../common/TypeBadge";
+import { StatusPill } from "../common/StatusPill";
+import { OrderSubmit } from "./OrderSubmit";
+import { PushChain } from "./PushChain";
+import { PushDetail } from "./PushDetail";
+import { formatTitle, fmtElapsed, elapsedMs } from "./cardHelpers";
+import "./Card.css";
+
+export interface CardExpandedProps {
+  task: TaskSummary;
+  pushEvents: PushEvent[];
+  onCollapse: () => void;
+}
+
+export function CardExpanded({ task, pushEvents, onCollapse }: CardExpandedProps) {
+  const [pushExpanded, setPushExpanded] = useState(false);
+
+  const { type, status, instruction, message, order_id, stage_timings, reject_reason } = task;
+  const badgeType = type === "option" ? "option" : "stock";
+  const title = formatTitle(instruction);
+
+  const side = instruction?.instruction_type;
+  const sideClass = side?.toLowerCase().includes("sell") ? "side-sell" : "side-buy";
+  const sideLabel = side?.toLowerCase().includes("sell") ? "SELL" : (side ? "BUY" : null);
+
+  // Compute total elapsed
+  const totalMs = task.updated_at && message.received_at
+    ? elapsedMs(message.received_at, task.updated_at)
+    : null;
+
+  // Stage: 解析指令 — present if instruction exists
+  const hasInstruction = instruction != null;
+  const hasOrder = order_id != null;
+
+  // Stage marker class helper
+  const isPastStage = (s: string) =>
+    ["FILLED", "PARTIAL", "CANCELLED", "REJECTED", "SUBMIT_FAILED",
+      "INSTRUCTION_READY", "SUBMITTING", "PENDING", "SUBMITTED",
+      "NEW", "MODIFIED"].includes(s);
+
+  const parseMarkerClass =
+    status === "PARSE_ERROR" ? "err"
+    : hasInstruction ? "done"
+    : "active";
+
+  // Push block summary
+  const totalQty = instruction?.quantity;
+  const lastPartial = [...pushEvents].reverse().find((e) => e.state === "PARTIAL");
+  const cumQty = lastPartial?.cumulative_qty;
+  const cumAvg = lastPartial?.cumulative_avg_price;
+
+  return (
+    <article className="card expanded">
+      <div className="card-header">
+        <TypeBadge type={badgeType} />
+        <span className="card-symbol">{title}</span>
+        {sideLabel && (
+          <span className={`card-side ${sideClass}`}>{sideLabel}</span>
+        )}
+        <span className="header-spacer" />
+        <StatusPill status={status} />
+        <button
+          className="collapse-btn"
+          onClick={onCollapse}
+          aria-label="收起"
+        >
+          ▴
+        </button>
+      </div>
+
+      {/* Raw message */}
+      <div className="raw">
+        <span className="src">{message.source}</span>
+        {message.content}
+      </div>
+
+      {/* Chips */}
+      <div className="chips">
+        {instruction?.price != null && (
+          <span className="chip">
+            <span className="k">price</span>{instruction.price.toFixed(2)}
+          </span>
+        )}
+        {instruction?.quantity != null && (
+          <span className="chip">
+            <span className="k">qty</span>{instruction.quantity}
+          </span>
+        )}
+        {instruction?.stop_loss_price != null && (
+          <span className="chip">
+            <span className="k">stop</span>{instruction.stop_loss_price.toFixed(2)}
+          </span>
+        )}
+        {instruction?.strike != null && (
+          <span className="chip">
+            <span className="k">strike</span>{instruction.strike}
+          </span>
+        )}
+        {instruction?.expiry != null && (
+          <span className="chip">
+            <span className="k">expiry</span>
+            {instruction.expiry.replace(/-/g, "")}
+          </span>
+        )}
+        {instruction?.context_source && (
+          <span className="chip chip-ctx">ctx={instruction.context_source}</span>
+        )}
+      </div>
+
+      {/* Local stages */}
+      <div className="stages">
+        {/* Stage 1: 原始消息 */}
+        <div className="stage done">
+          <div className="stage-marker" />
+          <div className="stage-body">
+            <strong>原始消息</strong>
+            <div className="msg-meta">
+              <span className="k">ts</span>
+              <span className="v">{message.received_at.replace("T", " ").replace("Z", "")}</span>
+              <span className="k">domID</span>
+              <span className="v">{message.id}</span>
+            </div>
+          </div>
+          <div className="stage-delta">—</div>
+        </div>
+
+        {/* Stage 2: 解析指令 */}
+        {(hasInstruction || status === "PARSE_ERROR" || isPastStage(status)) && (
+          <div className={`stage ${parseMarkerClass}`}>
+            <div className="stage-marker" />
+            <div className="stage-body">
+              <strong>解析指令</strong>
+              {instruction && (
+                <div className="stage-meta">
+                  <span className="k">context</span>
+                  <span className="v">{instruction.context_source ?? "—"}</span>
+                  {" · "}
+                  <span className="k">watched</span>
+                  <span className="v">✓</span>
+                </div>
+              )}
+              {status === "PARSE_ERROR" && reject_reason && (
+                <div className="stage-meta" style={{ color: "var(--err)" }}>{reject_reason}</div>
+              )}
+            </div>
+            <div className="stage-delta">
+              {stage_timings?.parse != null ? `+${stage_timings.parse}ms` : "—"}
+            </div>
+          </div>
+        )}
+
+        {/* Stage 3: 提交订单 */}
+        {hasOrder && instruction && (
+          <OrderSubmit
+            instruction={instruction}
+            orderId={order_id!}
+            delta={stage_timings?.submit ?? null}
+          />
+        )}
+      </div>
+
+      {/* Push block */}
+      {(pushEvents.length > 0 || hasOrder) && (
+        <div className={`push-block${pushExpanded ? " is-expanded" : ""}`}>
+          <div className="push-block-head">
+            <span className="push-label">
+              订单推送
+              <span className="count">broker · {pushEvents.length} 事件</span>
+              <button
+                className="push-toggle"
+                onClick={() => setPushExpanded((v) => !v)}
+              >
+                {pushExpanded ? "收起 ▴" : "展开 ▾"}
+              </button>
+            </span>
+            {(cumQty != null || cumAvg != null) && (
+              <span className="push-aggregate">
+                {cumQty != null && totalQty != null && (
+                  <>
+                    <span className="k">cum</span>
+                    <span className="v">{cumQty}/{totalQty}</span>
+                    {" · "}
+                  </>
+                )}
+                {cumAvg != null && (
+                  <>
+                    <span className="k">avg</span>
+                    <span className="v">${cumAvg.toFixed(3)}</span>
+                  </>
+                )}
+              </span>
+            )}
+          </div>
+
+          {pushExpanded ? (
+            <PushDetail events={pushEvents} taskStatus={status} totalQty={totalQty} />
+          ) : (
+            <PushChain events={pushEvents} taskStatus={status} totalQty={totalQty} />
+          )}
+        </div>
+      )}
+
+      {/* Card foot */}
+      <div className="card-foot">
+        <span>源 · {type} · {message.source}</span>
+        <span className="total">
+          {totalMs != null ? `总耗时 ${fmtElapsed(totalMs)}` : ""}
+          {" · 状态 "}{status}
+        </span>
+      </div>
+    </article>
+  );
+}
