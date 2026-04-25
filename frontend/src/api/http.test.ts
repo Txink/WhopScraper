@@ -54,6 +54,18 @@ describe("http", () => {
     expect(url).toContain("limit=10");
   });
 
+  it("appends query params for countTasks", async () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: async () => ({ total_count: 42 }),
+    });
+    await api.countTasks({ status: "FILLED" });
+    const call = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const url: string = call[0];
+    expect(url).toContain("/api/tasks/count");
+    expect(url).toContain("status=FILLED");
+  });
+
   it("uses POST method for cancelTask", async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,

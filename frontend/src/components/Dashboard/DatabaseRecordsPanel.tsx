@@ -23,6 +23,7 @@ export function DatabaseRecordsPanel({ pageNameByUrl }: Props) {
   const [pageRows, setPageRows] = useState<Record<number, TaskSummary[]>>({});
   const [pageCursor, setPageCursor] = useState<Record<number, string | null>>({ 1: null });
   const [pageNextCursor, setPageNextCursor] = useState<Record<number, string | null>>({});
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,11 +35,13 @@ export function DatabaseRecordsPanel({ pageNameByUrl }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const r = await api.listTasks(
-        cursor ? { limit: PAGE_SIZE, cursor } : { limit: PAGE_SIZE },
-      );
+      const [r, c] = await Promise.all([
+        api.listTasks(cursor ? { limit: PAGE_SIZE, cursor } : { limit: PAGE_SIZE }),
+        api.countTasks(),
+      ]);
       setPageRows((prev) => ({ ...prev, [page]: r.tasks }));
       setPageNextCursor((prev) => ({ ...prev, [page]: r.next_cursor ?? null }));
+      setTotalCount(c.total_count);
       if (r.next_cursor) {
         setPageCursor((prev) => (prev[page + 1] !== undefined ? prev : { ...prev, [page + 1]: r.next_cursor }));
       }
@@ -64,6 +67,7 @@ export function DatabaseRecordsPanel({ pageNameByUrl }: Props) {
   const records = pageRows[currentPage] ?? [];
   const hasPrev = currentPage > 1;
   const hasNext = pageNextCursor[currentPage] != null;
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   const rows = useMemo(
     () =>
@@ -139,7 +143,7 @@ export function DatabaseRecordsPanel({ pageNameByUrl }: Props) {
         >
           上一页
         </button>
-        <span className="db-page-indicator">第 {currentPage} 页</span>
+        <span className="db-page-indicator">第 {currentPage} 页 / 共 {totalPages} 页</span>
         <button
           className="db-page-btn"
           onClick={() => setCurrentPage((p) => p + 1)}

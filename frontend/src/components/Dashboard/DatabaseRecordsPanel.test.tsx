@@ -32,6 +32,9 @@ describe("<DatabaseRecordsPanel>", () => {
       ],
       next_cursor: null,
     });
+    const countSpy = vi.spyOn(httpModule.api, "countTasks").mockResolvedValue({
+      total_count: 10,
+    });
 
     render(
       <DatabaseRecordsPanel
@@ -44,7 +47,9 @@ describe("<DatabaseRecordsPanel>", () => {
     expect(screen.getByText("Alpha 页面")).toBeInTheDocument();
     expect(screen.queryByText("类型")).toBeNull();
     expect(screen.getByText("FILLED")).toBeInTheDocument();
+    expect(screen.getByText("第 1 页 / 共 1 页")).toBeInTheDocument();
     expect(listSpy).toHaveBeenCalledWith({ limit: 15 });
+    expect(countSpy).toHaveBeenCalled();
   });
 
   it("supports cursor pagination with 15 rows per page", async () => {
@@ -104,6 +109,8 @@ describe("<DatabaseRecordsPanel>", () => {
         ],
         next_cursor: null,
       });
+    const countSpy = vi.spyOn(httpModule.api, "countTasks");
+    countSpy.mockResolvedValueOnce({ total_count: 30 }).mockResolvedValueOnce({ total_count: 30 });
 
     render(
       <DatabaseRecordsPanel
@@ -115,8 +122,9 @@ describe("<DatabaseRecordsPanel>", () => {
     fireEvent.click(screen.getByRole("button", { name: "下一页" }));
     await waitFor(() => expect(screen.getByText("second page")).toBeInTheDocument());
 
-    expect(screen.getByText("第 2 页")).toBeInTheDocument();
+    expect(screen.getByText("第 2 页 / 共 2 页")).toBeInTheDocument();
     expect(listSpy).toHaveBeenNthCalledWith(1, { limit: 15 });
     expect(listSpy).toHaveBeenNthCalledWith(2, { limit: 15, cursor: "cursor-2" });
+    expect(countSpy).toHaveBeenCalledTimes(2);
   });
 });

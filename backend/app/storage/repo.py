@@ -485,6 +485,27 @@ async def list_tasks(
     return tasks
 
 
+async def count_tasks(
+    session: AsyncSession,
+    *,
+    status: Status | None = None,
+    type_: str | None = None,
+    symbol: str | None = None,
+) -> int:
+    """Return total task count for the same filters as list_tasks."""
+    stmt = select(func.count(TaskRow.id))
+
+    if status is not None:
+        stmt = stmt.where(TaskRow.status == status.value)
+    if type_ is not None:
+        stmt = stmt.where(TaskRow.type == type_)
+    if symbol is not None:
+        stmt = stmt.where(TaskRow.symbol == symbol)
+
+    result = await session.execute(stmt)
+    return int(result.scalar_one())
+
+
 async def stats_today(session: AsyncSession) -> dict[str, int]:
     """Return task counts grouped by status for the current UTC calendar day.
 

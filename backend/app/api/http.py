@@ -49,6 +49,7 @@ from app.api.schemas import (
     PositionOut,
     PositionsOut,
     StatsTodayOut,
+    TaskCountOut,
     TaskListOut,
     TaskOut,
     TickerConfigOut,
@@ -123,6 +124,29 @@ def build_http_router(
         summaries = [task_to_summary(t) for t in tasks]
         next_cur: datetime | None = tasks[-1].created_at if len(tasks) == limit else None
         return TaskListOut(tasks=summaries, next_cursor=next_cur)
+
+    @router.get("/api/tasks/count", response_model=TaskCountOut)
+    async def count_tasks_endpoint(
+        status: str | None = None,
+        type: Annotated[str | None, Query(alias="type")] = None,
+        symbol: str | None = None,
+    ) -> TaskCountOut:
+        """Return total task count (supports the same filters as /api/tasks)."""
+        status_enum: Status | None = None
+        if status is not None:
+            try:
+                status_enum = Status(status)
+            except ValueError as exc:
+                raise HTTPException(400, detail=f"unknown status: {status!r}") from exc
+
+        async with session_scope(session_factory) as session:
+            total = await repo.count_tasks(
+                session,
+                status=status_enum,
+                type_=type,
+                symbol=symbol,
+            )
+        return TaskCountOut(total_count=total)
 
     # ------------------------------------------------------------------ #
     # GET /api/tasks/{task_id}                                             #

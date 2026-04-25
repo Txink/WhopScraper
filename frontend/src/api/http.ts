@@ -84,6 +84,19 @@ export const api = {
     return request<TaskList>(`/api/tasks${suffix}`);
   },
 
+  async countTasks(params: {
+    status?: string;
+    type?: string;
+    symbol?: string;
+  } = {}): Promise<{ total_count: number }> {
+    const qs = new URLSearchParams();
+    if (params.status) qs.set("status", params.status);
+    if (params.type) qs.set("type", params.type);
+    if (params.symbol) qs.set("symbol", params.symbol);
+    const suffix = qs.toString() ? `?${qs.toString()}` : "";
+    return request<{ total_count: number }>(`/api/tasks/count${suffix}`);
+  },
+
   async getTask(id: string): Promise<Task> {
     return request<Task>(`/api/tasks/${encodeURIComponent(id)}`);
   },

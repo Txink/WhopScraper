@@ -126,6 +126,10 @@ class TaskListOut(BaseModel):
     next_cursor: datetime | None = None
 
 
+class TaskCountOut(BaseModel):
+    total_count: int
+
+
 # ---------------------------------------------------------------------------
 # Stats
 # ---------------------------------------------------------------------------
