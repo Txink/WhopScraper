@@ -499,6 +499,86 @@ async def test_message_url_default_none(
 
 
 # ---------------------------------------------------------------------------
+# 13b. messages.url is backfilled from NULL when re-saving with a non-null url
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_message_url_backfilled_on_resave_when_null(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """Re-saving a Message with the same id but a non-null url backfills the url."""
+    ts = datetime.now(UTC)
+    # First write: url is None (legacy / pre-listener-injection scenario)
+    msg_no_url = Message(
+        id="dom-backfill",
+        content="x",
+        raw_content="x",
+        author=None,
+        posted_at=ts,
+        received_at=ts,
+        source="stock",
+        url=None,
+    )
+    async with session_factory() as session:
+        await save_task(session, Task.new_from_message(msg_no_url))
+    # Second write: same id, now with url (listener republishing post-fix)
+    msg_with_url = Message(
+        id="dom-backfill",
+        content="x",
+        raw_content="x",
+        author=None,
+        posted_at=ts,
+        received_at=ts,
+        source="stock",
+        url="https://whop.com/x/app/",
+    )
+    async with session_factory() as session:
+        await save_task(session, Task.new_from_message(msg_with_url))
+    async with session_factory() as session:
+        loaded = await load_task(session, "dom-backfill")
+    assert loaded is not None
+    assert loaded.message.url == "https://whop.com/x/app/"
+
+
+@pytest.mark.asyncio
+async def test_message_url_not_overwritten_when_already_set(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """Re-saving with a different url does NOT overwrite an existing non-null url
+    (preserves existing url; protects against accidental cross-listener writes)."""
+    ts = datetime.now(UTC)
+    msg_a = Message(
+        id="dom-protected",
+        content="x",
+        raw_content="x",
+        author=None,
+        posted_at=ts,
+        received_at=ts,
+        source="stock",
+        url="https://whop.com/a/app/",
+    )
+    async with session_factory() as session:
+        await save_task(session, Task.new_from_message(msg_a))
+    msg_b = Message(  # different url, same id (pretend cross-listener mishap)
+        id="dom-protected",
+        content="x",
+        raw_content="x",
+        author=None,
+        posted_at=ts,
+        received_at=ts,
+        source="stock",
+        url="https://whop.com/b/app/",
+    )
+    async with session_factory() as session:
+        await save_task(session, Task.new_from_message(msg_b))
+    async with session_factory() as session:
+        loaded = await load_task(session, "dom-protected")
+    assert loaded is not None
+    assert loaded.message.url == "https://whop.com/a/app/"  # preserved
+
+
+# ---------------------------------------------------------------------------
 # 14. Concurrent save_task calls for the same Task.id must not raise UNIQUE conflict
 # ---------------------------------------------------------------------------
 

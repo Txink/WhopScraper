@@ -343,7 +343,7 @@ async def save_task(session: AsyncSession, task: Task) -> None:
     await session.execute(task_stmt)
     await session.flush()
 
-    # --- messages UPSERT (DO NOTHING on conflict — messages are immutable) ---
+    # --- messages UPSERT ---
     msg = task.message
     msg_values: dict[str, Any] = {
         "id": msg.id,
@@ -356,8 +356,16 @@ async def save_task(session: AsyncSession, task: Task) -> None:
         "url": msg.url,
         "quoted_message_id": msg.quoted.id if msg.quoted is not None else None,
     }
+    # Messages are immutable except for `url`, which we backfill when the existing
+    # row had no url. This handles the case where messages were persisted before the
+    # `messages.url` column was wired up by the listener — when the listener
+    # republishes the same domID with a proper url, we want that url to land.
     msg_stmt = sqlite_insert(MessageRow).values(**msg_values)
-    msg_stmt = msg_stmt.on_conflict_do_nothing(index_elements=["id"])
+    msg_stmt = msg_stmt.on_conflict_do_update(
+        index_elements=["id"],
+        set_={"url": msg_stmt.excluded.url},
+        where=MessageRow.url.is_(None),
+    )
     await session.execute(msg_stmt)
 
     # --- instructions UPSERT (overwrite on conflict — re-parse changes content) ---
