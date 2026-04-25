@@ -40,21 +40,24 @@
 .dashboard-empty .link-btn { background: none; border: none; color: var(--brand); cursor: pointer; text-decoration: underline; padding: 0; font: inherit; }
 
 .orphan-cleanup-bar {
+  display: flex; align-items: center; gap: 12px;
   padding: 8px 12px; border-bottom: 1px solid var(--line);
   background: rgba(140, 140, 140, 0.05);
+  flex-wrap: wrap;
 }
-.orphan-cleanup-hint { font-size: 11px; color: var(--fg-3); margin-bottom: 6px; }
-.orphan-cleanup-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; }
-.orphan-cleanup-list li { display: flex; align-items: center; gap: 8px; font-size: 12px; }
-.orphan-url { flex: 1; color: var(--fg-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60%; }
-.orphan-count { color: var(--fg-3); font-size: 11px; }
-.orphan-remove-btn {
+.orphan-cleanup-summary {
+  flex: 1; display: flex; align-items: center; gap: 8px;
+  font-size: 12px; color: var(--fg-2);
+}
+.orphan-cleanup-summary .dim { color: var(--fg-3); font-size: 11px; }
+.orphan-cleanup-btn {
   background: var(--bg-2); border: 1px solid var(--line); color: #cf6f6f;
-  padding: 2px 10px; cursor: pointer; border-radius: 4px; font: inherit; font-size: 11px;
+  padding: 4px 12px; cursor: pointer; border-radius: 4px; font: inherit; font-size: 12px;
 }
-.orphan-remove-btn:hover:not(:disabled) { background: rgba(207, 111, 111, 0.1); }
-.orphan-remove-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.orphan-cleanup-btn:hover:not(:disabled) { background: rgba(207, 111, 111, 0.1); }
+.orphan-cleanup-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .orphan-cleanup-error {
-  color: #cf6f6f; font-size: 11px; margin-top: 6px;
+  flex-basis: 100%;
+  color: #cf6f6f; font-size: 11px;
   padding: 4px 8px; background: rgba(207, 111, 111, 0.1); border-radius: 4px;
 }
