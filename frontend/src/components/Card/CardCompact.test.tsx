@@ -148,4 +148,14 @@ describe("CardCompact", () => {
     expect(details?.textContent).toContain("×");
     expect(details?.textContent).toContain("500");
   });
+
+  it("shows skip reason in details for SKIPPED tasks", () => {
+    const skippedTask: TaskSummary = {
+      ...stockTask,
+      status: "SKIPPED",
+      reject_reason: "skip: old message from previous day",
+    };
+    render(<CardCompact task={skippedTask} onExpand={vi.fn()} />);
+    expect(screen.getByText("skip: old message from previous day")).toBeInTheDocument();
+  });
 });

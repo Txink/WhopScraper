@@ -33,6 +33,7 @@ export function CardExpanded({ task, pushEvents, onCollapse }: CardExpandedProps
   // Stage: 解析指令 — present if instruction exists
   const hasInstruction = instruction != null;
   const hasOrder = order_id != null;
+  const hasSkipReason = status === "SKIPPED" && Boolean(reject_reason);
 
   // Stage marker class helper
   const isPastStage = (s: string) =>
@@ -126,6 +127,9 @@ export function CardExpanded({ task, pushEvents, onCollapse }: CardExpandedProps
               )}
               {status === "PARSE_ERROR" && reject_reason && (
                 <div className="stage-meta" style={{ color: "var(--err)" }}>{reject_reason}</div>
+              )}
+              {hasSkipReason && (
+                <div className="stage-meta stage-meta-warn">{reject_reason}</div>
               )}
             </div>
             <div className="stage-delta">

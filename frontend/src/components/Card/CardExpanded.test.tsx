@@ -159,4 +159,14 @@ describe("CardExpanded", () => {
     render(<CardExpanded task={task} pushEvents={[]} onCollapse={vi.fn()} />);
     expect(screen.getByText("729308570398740480")).toBeInTheDocument();
   });
+
+  it("shows skip reason in parse stage for SKIPPED tasks", () => {
+    const skippedTask: TaskSummary = {
+      ...task,
+      status: "SKIPPED",
+      reject_reason: "skip: duplicated message",
+    };
+    render(<CardExpanded task={skippedTask} pushEvents={[]} onCollapse={vi.fn()} />);
+    expect(screen.getByText("skip: duplicated message")).toBeInTheDocument();
+  });
 });

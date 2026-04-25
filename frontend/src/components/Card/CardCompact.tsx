@@ -18,6 +18,7 @@ export function CardCompact({ task, onExpand }: CardCompactProps) {
   const { type, status, instruction, message } = task;
   const badgeType = type === "option" ? "option" : "stock";
   const isParseError = status === "PARSE_ERROR";
+  const isSkipped = status === "SKIPPED";
 
   // Parsed symbol takes priority. When absent (PARSE_ERROR or pre-parse states),
   // we show the original message preview in the same cell — never the domID.
@@ -35,7 +36,9 @@ export function CardCompact({ task, onExpand }: CardCompactProps) {
   // Build details line — only used when we have a parsed instruction.
   // Show price-only / qty-only / both, whichever the parser produced.
   let detailContent: React.ReactNode = null;
-  if (parsedSymbol && instruction) {
+  if (isSkipped && task.reject_reason) {
+    detailContent = task.reject_reason;
+  } else if (parsedSymbol && instruction) {
     const price = instruction.price != null ? `$${instruction.price.toFixed(2)}` : null;
     const qty = instruction.quantity != null ? String(instruction.quantity) : null;
     if (price || qty) {

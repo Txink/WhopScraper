@@ -4,7 +4,7 @@
   border: 1px solid var(--line);
   border-radius: var(--radius-card);
   transition: background 150ms ease-out;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 .card:last-child {
   margin-bottom: 0;
@@ -320,6 +320,7 @@
   font-family: var(--font-mono);
   line-height: 1.55;
 }
+.stage-meta.stage-meta-warn { color: var(--warn); }
 .stage-meta .k { color: var(--fg-3); margin-right: 4px; }
 .stage-meta .v { color: var(--fg-2); }
 
