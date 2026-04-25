@@ -15,8 +15,10 @@ import { useStickyTop } from "./hooks/useStickyTop";
 import type { TaskSummary, PushEvent } from "./api/domain-types";
 import "./App.css";
 
-// Config — BASE_URL from env or default; TOKEN resolved at runtime.
-const BASE_URL = import.meta.env.VITE_API_BASE ?? "http://localhost:8000";
+// Config — BASE_URL defaults to the page's origin so localhost / 127.0.0.1 /
+// LAN-IP / etc all work without CORS. Override via VITE_API_BASE only when
+// pointing the frontend at a different backend host (rare).
+const BASE_URL = import.meta.env.VITE_API_BASE ?? window.location.origin;
 
 /**
  * Token resolution priority:
