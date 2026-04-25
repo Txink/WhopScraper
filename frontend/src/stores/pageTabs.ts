@@ -12,11 +12,13 @@ interface PageTabsState {
   activeTabId: ActiveTabId;
   expandModeByTab: Record<string, ExpandMode>;
   orphanCount: number;
+  pagesLoaded: boolean;
 
   setPages(pages: WhopPage[]): void;
   setActiveTab(id: ActiveTabId): void;
   setExpandMode(tabId: string, mode: ExpandMode): void;
   setOrphanCount(n: number): void;
+  markPagesLoaded(): void;
   applyPageChanged(evt: WsEvent): void;
   reset(): void;
 }
@@ -26,6 +28,7 @@ export const usePageTabsStore = create<PageTabsState>((set, get) => ({
   activeTabId: null,
   expandModeByTab: {},
   orphanCount: 0,
+  pagesLoaded: false,
 
   setPages(pages) {
     const stored = localStorage.getItem(LS_KEY);
@@ -40,7 +43,7 @@ export const usePageTabsStore = create<PageTabsState>((set, get) => ({
         next = null;
       }
     }
-    set({ pages, activeTabId: next });
+    set({ pages, activeTabId: next, pagesLoaded: true });
   },
 
   setActiveTab(id) {
@@ -56,6 +59,10 @@ export const usePageTabsStore = create<PageTabsState>((set, get) => ({
 
   setOrphanCount(n) {
     set({ orphanCount: n });
+  },
+
+  markPagesLoaded() {
+    set({ pagesLoaded: true });
   },
 
   applyPageChanged(evt) {
@@ -81,6 +88,6 @@ export const usePageTabsStore = create<PageTabsState>((set, get) => ({
   },
 
   reset() {
-    set({ pages: [], activeTabId: null, expandModeByTab: {}, orphanCount: 0 });
+    set({ pages: [], activeTabId: null, expandModeByTab: {}, orphanCount: 0, pagesLoaded: false });
   },
 }));

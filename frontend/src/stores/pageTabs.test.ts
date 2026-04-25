@@ -107,6 +107,33 @@ describe("pageTabs store", () => {
     expect(usePageTabsStore.getState().pages[0].running).toBe(true);
   });
 
+  it("pagesLoaded defaults to false", () => {
+    expect(usePageTabsStore.getState().pagesLoaded).toBe(false);
+  });
+
+  it("setPages flips pagesLoaded to true", () => {
+    expect(usePageTabsStore.getState().pagesLoaded).toBe(false);
+    usePageTabsStore.getState().setPages([makePage({ id: "a" })]);
+    expect(usePageTabsStore.getState().pagesLoaded).toBe(true);
+  });
+
+  it("setPages with empty list still flips pagesLoaded to true", () => {
+    usePageTabsStore.getState().setPages([]);
+    expect(usePageTabsStore.getState().pagesLoaded).toBe(true);
+  });
+
+  it("markPagesLoaded sets pagesLoaded to true", () => {
+    usePageTabsStore.getState().markPagesLoaded();
+    expect(usePageTabsStore.getState().pagesLoaded).toBe(true);
+  });
+
+  it("reset() resets pagesLoaded to false", () => {
+    usePageTabsStore.getState().setPages([makePage({ id: "a" })]);
+    expect(usePageTabsStore.getState().pagesLoaded).toBe(true);
+    usePageTabsStore.getState().reset();
+    expect(usePageTabsStore.getState().pagesLoaded).toBe(false);
+  });
+
   it("applyPageChanged removed-active falls back to first page", () => {
     usePageTabsStore.getState().setPages([makePage({ id: "a" }), makePage({ id: "b" })]);
     usePageTabsStore.getState().setActiveTab("a");

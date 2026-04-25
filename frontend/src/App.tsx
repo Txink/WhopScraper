@@ -85,6 +85,7 @@ function Dashboard({ token }: { token: string }) {
     activeTabId ? (s.expandModeByTab[activeTabId] ?? "smart") : "smart",
   );
   const orphanCount = usePageTabsStore((s) => s.orphanCount);
+  const pagesLoaded = usePageTabsStore((s) => s.pagesLoaded);
 
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -147,21 +148,26 @@ function Dashboard({ token }: { token: string }) {
     };
   }, []);  // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Compute orphan count whenever tasks or pages change
+  // Compute orphan count whenever tasks or pages change.
+  // Gate on pagesLoaded so we don't recompute orphans against a stale/empty
+  // page list during the first remount paint (which would falsely flag every
+  // task as orphan and trigger the orphan auto-select effect below).
   const pageUrls = useMemo(() => new Set(pages.map((p) => p.url)), [pages]);
   useEffect(() => {
+    if (!pagesLoaded) return;
     const orphans = tasks.filter(
       (t) => t.message?.url == null || !pageUrls.has(t.message.url),
     );
     setOrphanCount(orphans.length);
-  }, [tasks, pageUrls, setOrphanCount]);
+  }, [tasks, pageUrls, setOrphanCount, pagesLoaded]);
 
   // Auto-select orphan tab when no pages exist but orphans do (so user isn't stuck)
   useEffect(() => {
+    if (!pagesLoaded) return;
     if (pages.length === 0 && orphanCount > 0 && activeTabId !== "orphan") {
       usePageTabsStore.getState().setActiveTab("orphan");
     }
-  }, [pages.length, orphanCount, activeTabId]);
+  }, [pages.length, orphanCount, activeTabId, pagesLoaded]);
 
   if (pages.length === 0 && orphanCount === 0) {
     return <main className="main"><EmptyState /></main>;
