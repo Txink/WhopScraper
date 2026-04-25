@@ -13,3 +13,8 @@ export type Position = components["schemas"]["PositionOut"];
 export type Positions = components["schemas"]["PositionsOut"];
 export type StatsToday = components["schemas"]["StatsTodayOut"];
 export type Health = components["schemas"]["HealthOut"];
+
+export type WhopPage = components["schemas"]["WhopPageOut"];
+export type WhopPages = components["schemas"]["WhopPagesOut"];
+export type WhopPageCreate = components["schemas"]["WhopPageCreate"];
+export type WhopCookieStatus = components["schemas"]["WhopCookieStatusOut"];

@@ -5,10 +5,12 @@ import { useConnStore } from "./stores/conn";
 import { useTasksStore } from "./stores/tasks";
 import { useStatsStore } from "./stores/stats";
 import { usePositionsStore } from "./stores/positions";
+import { useViewStore } from "./stores/view";
 import { TopBar } from "./components/TopBar";
 import { RightRail } from "./components/RightRail";
 import { Card } from "./components/Card/Card";
 import { Login } from "./components/Login";
+import { WhopPanel } from "./components/WhopPanel/WhopPanel";
 import { useStickyTop } from "./hooks/useStickyTop";
 import type { TaskSummary, PushEvent } from "./api/domain-types";
 import "./App.css";
@@ -182,35 +184,32 @@ function Dashboard({ token }: { token: string }) {
   }, []);  // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className="app">
-      <TopBar
-        connWhop={conn.whop}
-        connLongport={conn.longport}
-        mode={conn.mode}
-        dryRun={conn.dryRun}
-        onLogout={handleLogout}
-      />
-      <main className="main">
-        <section className="stream">
-          <div className="stream-head">
-            <span>今日任务 · {tasks.length} 条</span>
-            <span>最新在上</span>
+    <main className="main">
+      <section className="stream">
+        <div className="stream-head">
+          <span>今日任务 · {tasks.length} 条</span>
+          <span>最新在上</span>
+        </div>
+        {tasks.length === 0 ? (
+          <div className="empty-state">
+            <p>暂无任务。等待后端推送第一条消息…</p>
+            <p className="hint">
+              WebSocket 状态：<code>{conn.ws}</code>
+            </p>
           </div>
-          {tasks.length === 0 ? (
-            <div className="empty-state">
-              <p>暂无任务。等待后端推送第一条消息…</p>
-              <p className="hint">
-                WebSocket 状态：<code>{conn.ws}</code>
-              </p>
-            </div>
-          ) : (
-            <TaskGroups tasks={tasks} pushEventsByTask={pushEventsByTask} />
-          )}
-        </section>
-        <RightRail />
-      </main>
-    </div>
+        ) : (
+          <TaskGroups tasks={tasks} pushEventsByTask={pushEventsByTask} />
+        )}
+      </section>
+      <RightRail />
+    </main>
   );
+}
+
+function ContentRouter({ token }: { token: string }) {
+  const view = useViewStore((s) => s.view);
+  if (view === "whop") return <WhopPanel />;
+  return <Dashboard token={token} />;
 }
 
 export default function App() {
@@ -219,6 +218,7 @@ export default function App() {
   );
   const [authError, setAuthError] = useState<string | undefined>();
   const [token, setToken] = useState<string>("");
+  const conn = useConnStore();
 
   // First effect: validate token on mount
   useEffect(() => {
@@ -230,7 +230,10 @@ export default function App() {
     setToken(stored);
     configureHttp({ baseUrl: BASE_URL, token: stored });
     api.health()
-      .then(() => setAuthState("valid"))
+      .then((h) => {
+        conn.setHealth(h);
+        setAuthState("valid");
+      })
       .catch((e: unknown) => {
         if (e instanceof HttpError && e.status === 403) {
           setAuthState("invalid");
@@ -242,7 +245,7 @@ export default function App() {
           setAuthState("valid");
         }
       });
-  }, []);
+  }, []);  // eslint-disable-line react-hooks/exhaustive-deps
 
   if (authState === "checking") {
     return (
@@ -255,6 +258,17 @@ export default function App() {
     return <Login errorHint={authError} />;
   }
 
-  // Valid token: render the dashboard
-  return <Dashboard token={token} />;
+  // Valid token: render with persistent TopBar + content router
+  return (
+    <div className="app">
+      <TopBar
+        connWhop={conn.whop}
+        connLongport={conn.longport}
+        mode={conn.mode}
+        dryRun={conn.dryRun}
+        onLogout={handleLogout}
+      />
+      <ContentRouter token={token} />
+    </div>
+  );
 }

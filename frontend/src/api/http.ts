@@ -1,5 +1,6 @@
 import type {
   Task, TaskList, Positions, StatsToday, Health,
+  WhopPage, WhopPages, WhopPageCreate, WhopCookieStatus,
 } from "./domain-types";
 
 
@@ -100,5 +101,37 @@ export const api = {
 
   async health(): Promise<Health> {
     return request<Health>("/api/health");
+  },
+
+  async listWhopPages(): Promise<WhopPages> {
+    return request<WhopPages>("/api/whop/pages");
+  },
+
+  async addWhopPage(body: WhopPageCreate): Promise<WhopPage> {
+    return request<WhopPage>("/api/whop/pages", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+
+  async removeWhopPage(id: string): Promise<void> {
+    const { baseUrl, token } = cfg();
+    const url = new URL(`/api/whop/pages/${encodeURIComponent(id)}`, baseUrl);
+    url.searchParams.set("token", token);
+    const resp = await fetch(url.toString(), { method: "DELETE" });
+    if (!resp.ok) {
+      const body = await resp.json().catch(() => null);
+      throw new HttpError(resp.status, body, `HTTP ${resp.status}`);
+    }
+  },
+
+  async restartWhopPage(id: string): Promise<WhopPage> {
+    return request<WhopPage>(`/api/whop/pages/${encodeURIComponent(id)}/restart`, {
+      method: "POST",
+    });
+  },
+
+  async whopCookieStatus(): Promise<WhopCookieStatus> {
+    return request<WhopCookieStatus>("/api/whop/cookie");
   },
 };

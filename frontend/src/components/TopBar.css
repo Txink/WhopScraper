@@ -47,33 +47,31 @@
   letter-spacing: 0.04em;
 }
 
-/* Filters */
-.filters {
+/* View switcher */
+.topbar-views {
   display: flex;
-  align-items: center;
   gap: 6px;
 }
 
-.filter-chip {
-  padding: 3px 10px;
-  border-radius: var(--radius-chip);
-  border: 1px solid transparent;
+.view-btn {
   background: transparent;
-  color: var(--fg-3);
+  border: 1px solid var(--line-strong);
+  color: var(--fg-2);
+  padding: 4px 14px;
+  border-radius: var(--radius-chip);
   font-size: 12px;
   cursor: pointer;
-  transition: color var(--dur) var(--ease), background var(--dur) var(--ease), border-color var(--dur) var(--ease);
+  transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease), background var(--dur) var(--ease);
 }
 
-.filter-chip:hover {
-  color: var(--fg-2);
-  background: var(--bg-hover);
-}
-
-.filter-chip.active {
+.view-btn:hover {
   color: var(--fg-1);
-  background: var(--bg-3);
-  border-color: var(--line-strong);
+}
+
+.view-btn.active {
+  color: var(--fg-1);
+  border-color: var(--brand);
+  background: rgba(63, 181, 197, 0.08);
 }
 
 /* Right cluster */

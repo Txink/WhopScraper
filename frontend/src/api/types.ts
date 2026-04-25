@@ -138,6 +138,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/whop/pages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Whop Pages */
+        get: operations["list_whop_pages_api_whop_pages_get"];
+        put?: never;
+        /** Create Whop Page */
+        post: operations["create_whop_page_api_whop_pages_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/whop/pages/{page_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Whop Page */
+        delete: operations["delete_whop_page_api_whop_pages__page_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/whop/pages/{page_id}/restart": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restart Whop Page */
+        post: operations["restart_whop_page_api_whop_pages__page_id__restart_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/whop/cookie": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Whop Cookie Status */
+        get: operations["whop_cookie_status_api_whop_cookie_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -382,6 +451,60 @@ export interface components {
             /** Context */
             ctx?: Record<string, never>;
         };
+        /** WhopCookieStatusOut */
+        WhopCookieStatusOut: {
+            /** Exists */
+            exists: boolean;
+            /** Path */
+            path: string;
+            /** Last Modified */
+            last_modified?: string | null;
+            /** Age Seconds */
+            age_seconds?: number | null;
+        };
+        /** WhopPageCreate */
+        WhopPageCreate: {
+            /** Url */
+            url: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "stock" | "option";
+            /** Name */
+            name?: string | null;
+        };
+        /** WhopPageOut */
+        WhopPageOut: {
+            /** Id */
+            id: string;
+            /** Url */
+            url: string;
+            /** Source */
+            source: string;
+            /** Name */
+            name: string;
+            /**
+             * Added At
+             * Format: date-time
+             */
+            added_at: string;
+            /** Running */
+            running: boolean;
+            /** Started At */
+            started_at: string | null;
+            /** Last Poll At */
+            last_poll_at: string | null;
+            /** Messages Published */
+            messages_published: number;
+            /** Last Error */
+            last_error: string | null;
+        };
+        /** WhopPagesOut */
+        WhopPagesOut: {
+            /** Pages */
+            pages: components["schemas"]["WhopPageOut"][];
+        };
     };
     responses: never;
     parameters: never;
@@ -393,14 +516,13 @@ export type $defs = Record<string, never>;
 export interface operations {
     list_tasks_endpoint_api_tasks_get: {
         parameters: {
-            query: {
+            query?: {
                 limit?: number;
                 cursor?: string | null;
                 status?: string | null;
                 type?: string | null;
                 symbol?: string | null;
                 token?: string | null;
-                _kwargs: unknown;
             };
             header?: never;
             path?: never;
@@ -430,9 +552,8 @@ export interface operations {
     };
     get_task_endpoint_api_tasks__task_id__get: {
         parameters: {
-            query: {
+            query?: {
                 token?: string | null;
-                _kwargs: unknown;
             };
             header?: never;
             path: {
@@ -464,9 +585,8 @@ export interface operations {
     };
     cancel_task_endpoint_api_tasks__task_id__cancel_post: {
         parameters: {
-            query: {
+            query?: {
                 token?: string | null;
-                _kwargs: unknown;
             };
             header?: never;
             path: {
@@ -498,9 +618,8 @@ export interface operations {
     };
     stats_today_endpoint_api_stats_today_get: {
         parameters: {
-            query: {
+            query?: {
                 token?: string | null;
-                _kwargs: unknown;
             };
             header?: never;
             path?: never;
@@ -530,9 +649,8 @@ export interface operations {
     };
     list_positions_endpoint_api_positions_get: {
         parameters: {
-            query: {
+            query?: {
                 token?: string | null;
-                _kwargs: unknown;
             };
             header?: never;
             path?: never;
@@ -562,9 +680,8 @@ export interface operations {
     };
     health_endpoint_api_health_get: {
         parameters: {
-            query: {
+            query?: {
                 token?: string | null;
-                _kwargs: unknown;
             };
             header?: never;
             path?: never;
@@ -579,6 +696,167 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_whop_pages_api_whop_pages_get: {
+        parameters: {
+            query?: {
+                token?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WhopPagesOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_whop_page_api_whop_pages_post: {
+        parameters: {
+            query?: {
+                token?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WhopPageCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WhopPageOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_whop_page_api_whop_pages__page_id__delete: {
+        parameters: {
+            query?: {
+                token?: string | null;
+            };
+            header?: never;
+            path: {
+                page_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    restart_whop_page_api_whop_pages__page_id__restart_post: {
+        parameters: {
+            query?: {
+                token?: string | null;
+            };
+            header?: never;
+            path: {
+                page_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WhopPageOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    whop_cookie_status_api_whop_cookie_get: {
+        parameters: {
+            query?: {
+                token?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WhopCookieStatusOut"];
                 };
             };
             /** @description Validation Error */

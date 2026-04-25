@@ -1,8 +1,13 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { TopBar } from "./TopBar";
+import { useViewStore } from "../stores/view";
 
 describe("TopBar", () => {
+  beforeEach(() => {
+    useViewStore.setState({ view: "dashboard" });
+  });
+
   it("renders brand + subtitle", () => {
     render(<TopBar connWhop="up" connLongport="up" mode="paper" dryRun={true} />);
     expect(screen.getByText("Signal Station")).toBeInTheDocument();
@@ -21,11 +26,35 @@ describe("TopBar", () => {
     expect(screen.getByText(/LIVE/)).toBeInTheDocument();
   });
 
-  it("includes all 5 filter buttons", () => {
+  it("renders view-switcher buttons", () => {
     render(<TopBar connWhop="up" connLongport="up" mode="paper" dryRun={true} />);
-    ["全部", "正股", "期权", "已成交", "解析失败"].forEach((label) => {
-      expect(screen.getByRole("button", { name: label })).toBeInTheDocument();
-    });
+    expect(screen.getByRole("button", { name: "监控看板" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Whop 管理" })).toBeInTheDocument();
+  });
+
+  it("clicking Whop 管理 updates view store", () => {
+    useViewStore.setState({ view: "dashboard" });
+    render(<TopBar connWhop="up" connLongport="up" mode="paper" dryRun={true} />);
+    fireEvent.click(screen.getByRole("button", { name: "Whop 管理" }));
+    expect(useViewStore.getState().view).toBe("whop");
+  });
+
+  it("dashboard button has active class when view='dashboard'", () => {
+    useViewStore.setState({ view: "dashboard" });
+    render(<TopBar connWhop="up" connLongport="up" mode="paper" dryRun={true} />);
+    const dashBtn = screen.getByRole("button", { name: "监控看板" });
+    expect(dashBtn.className).toContain("active");
+    const whopBtn = screen.getByRole("button", { name: "Whop 管理" });
+    expect(whopBtn.className).not.toContain("active");
+  });
+
+  it("whop button has active class when view='whop'", () => {
+    useViewStore.setState({ view: "whop" });
+    render(<TopBar connWhop="up" connLongport="up" mode="paper" dryRun={true} />);
+    const whopBtn = screen.getByRole("button", { name: "Whop 管理" });
+    expect(whopBtn.className).toContain("active");
+    const dashBtn = screen.getByRole("button", { name: "监控看板" });
+    expect(dashBtn.className).not.toContain("active");
   });
 
   it("renders logout button when onLogout provided", () => {

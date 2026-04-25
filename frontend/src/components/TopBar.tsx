@@ -1,4 +1,5 @@
 import "./TopBar.css";
+import { useViewStore } from "../stores/view";
 
 export interface TopBarProps {
   connWhop: "up" | "down" | "unknown";
@@ -8,9 +9,10 @@ export interface TopBarProps {
   onLogout?: () => void;
 }
 
-const FILTER_LABELS = ["全部", "正股", "期权", "已成交", "解析失败"] as const;
-
 export function TopBar({ connWhop, connLongport, mode, dryRun, onLogout }: TopBarProps) {
+  const view = useViewStore((s) => s.view);
+  const setView = useViewStore((s) => s.setView);
+
   const pillLabel = `${mode === "paper" ? "PAPER" : "REAL"} · ${dryRun ? "DRY" : "LIVE"}`;
 
   return (
@@ -23,17 +25,20 @@ export function TopBar({ connWhop, connLongport, mode, dryRun, onLogout }: TopBa
         <span className="brand-sub">whop → longport</span>
       </div>
 
-      {/* Filter chips */}
-      <nav className="filters">
-        {FILTER_LABELS.map((label) => (
-          <button
-            key={label}
-            className={`filter-chip${label === "全部" ? " active" : ""}`}
-            onClick={() => {}}
-          >
-            {label}
-          </button>
-        ))}
+      {/* View switcher */}
+      <nav className="topbar-views">
+        <button
+          className={view === "dashboard" ? "view-btn active" : "view-btn"}
+          onClick={() => setView("dashboard")}
+        >
+          监控看板
+        </button>
+        <button
+          className={view === "whop" ? "view-btn active" : "view-btn"}
+          onClick={() => setView("whop")}
+        >
+          Whop 管理
+        </button>
       </nav>
 
       {/* Right cluster: conn indicators + account pill */}
