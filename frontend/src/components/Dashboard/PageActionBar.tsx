@@ -82,8 +82,14 @@ export function PageActionBar({ page, onOpenSettings }: Props) {
       >
         {busy ? "● …" : powerLabel}
       </button>
-      <button onClick={onOpenSettings} disabled={isOrphan} className="action-btn">
-        ⚙ 设置
+      <button
+        onClick={onOpenSettings}
+        disabled={isOrphan}
+        className="action-btn icon-only"
+        title="设置"
+        aria-label="设置"
+      >
+        ⚙
       </button>
       <button
         onClick={cycleExpandMode}

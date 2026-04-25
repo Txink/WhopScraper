@@ -405,21 +405,21 @@
 
 /* ===== Stream divider ===== */
 .stream-divider {
-  margin: 14px 4px 8px;
-  color: var(--fg-3);
-  font-size: 10px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  margin: 18px 4px 10px;
+  color: var(--fg-1);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 .stream-divider::before,
 .stream-divider::after {
   content: "";
   flex: 1;
   height: 1px;
-  background: var(--line);
+  background: var(--line-strong);
 }
 
 /* ===== Push block ===== */

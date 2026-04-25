@@ -77,6 +77,15 @@
   border-color: var(--brand);
 }
 .page-action-bar .action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.page-action-bar .action-btn.icon-only {
+  padding: 2px 8px;
+  font-size: 18px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+}
 
 .page-action-bar .power-btn {
   background: var(--bg-2);

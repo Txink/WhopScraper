@@ -16,7 +16,7 @@ describe("<PageActionBar>", () => {
   it("disables power/settings when orphan", () => {
     render(<PageActionBar page={null} onOpenSettings={vi.fn()} />);
     expect(screen.getByText(/关机/)).toBeDisabled();
-    expect(screen.getByText(/设置/)).toBeDisabled();
+    expect(screen.getByLabelText("设置")).toBeDisabled();
   });
 
   it("clicks start when page is off", async () => {
