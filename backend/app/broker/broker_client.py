@@ -66,5 +66,12 @@ class BrokerClient(Protocol):
         subscribers may be registered; all are called in registration order.
         """
 
+    def cancel_order(self, order_id: str) -> None:
+        """Cancel an open order by broker-assigned order_id.
+
+        On ``dry_run=True`` implementations should log + no-op rather than
+        making a network call.  Raises on failure.
+        """
+
     def close(self) -> None:
         """Release SDK resources.  Safe to call multiple times."""

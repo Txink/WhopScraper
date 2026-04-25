@@ -131,6 +131,18 @@ class LongPortClient:
             remark=remark,
         )
 
+    def cancel_order(self, order_id: str) -> None:
+        """Cancel an open order.
+
+        On dry_run: log and no-op without a network call.
+        """
+        if self._config.dry_run:
+            logger.info("[DRY RUN] cancel_order order_id=%s — skipped", order_id)
+            return
+        if self._trade_ctx is None:
+            raise RuntimeError("LongPortClient has been closed")
+        self._trade_ctx.cancel_order(order_id)
+
     # ------------------------------------------------------------------ #
     # Quotes                                                               #
     # ------------------------------------------------------------------ #

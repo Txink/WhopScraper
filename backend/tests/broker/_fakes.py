@@ -16,8 +16,10 @@ class FakeBrokerClient:
     is_paper: bool = True
     dry_run: bool = False
     submitted_orders: list[dict[str, Any]] = field(default_factory=list)
+    cancelled_orders: list[str] = field(default_factory=list)
     next_order_id: str = ""
     raise_on_submit: Exception | None = None
+    raise_on_cancel: Exception | None = None
     push_handlers: list[Callable[[Any], None]] = field(default_factory=list)
 
     def submit_option_order(
@@ -53,6 +55,11 @@ class FakeBrokerClient:
                                       "quantity": quantity, "price": price,
                                       "order_type": order_type, "remark": remark})
         return self.next_order_id or f"fake-{uuid.uuid4().hex[:8]}"
+
+    def cancel_order(self, order_id: str) -> None:
+        if self.raise_on_cancel:
+            raise self.raise_on_cancel
+        self.cancelled_orders.append(order_id)
 
     def get_quote(self, symbols: list[str]) -> dict[str, Any]:
         return {s: {"last_done": 0.0} for s in symbols}

@@ -19,10 +19,10 @@ Design notes
 """
 from __future__ import annotations
 
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, time
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -36,7 +36,7 @@ from app.domain.message import Message
 from app.domain.push_event import PushEvent, PushState
 from app.domain.status import Status
 from app.domain.task import Task
-from app.storage.schema import InstructionRow, MessageRow, PushEventRow, TaskRow
+from app.storage.schema import InstructionRow, MessageRow, PositionRow, PushEventRow, TaskRow
 
 # ---------------------------------------------------------------------------
 # Instruction serialization helpers
@@ -471,3 +471,64 @@ async def list_tasks(
         tasks.append(_rows_to_task(task_row, msg_row, inst_row, []))
 
     return tasks
+
+
+async def stats_today(session: AsyncSession) -> dict[str, int]:
+    """Return task counts grouped by status for the current UTC calendar day.
+
+    Keys in the returned dict:
+      - ``msg_count``  — total tasks created today
+      - ``parse_ok``   — tasks that advanced past parsing (any post-parse status)
+      - ``orders``     — tasks that produced a brokerage order (PENDING and beyond)
+      - ``filled``     — tasks with status FILLED
+      - ``rejected``   — tasks that failed broadly (PARSE_ERROR | SUBMIT_FAILED | REJECTED)
+    """
+    today_start = datetime.combine(date.today(), time.min, tzinfo=UTC)
+    # Strip timezone so the comparison works against SQLite's naive UTC datetimes.
+    today_start_naive = today_start.replace(tzinfo=None)
+
+    result = await session.execute(
+        select(TaskRow.status, func.count(TaskRow.id))
+        .where(TaskRow.created_at >= today_start_naive)
+        .group_by(TaskRow.status)
+    )
+    counts: dict[str, int] = {row[0]: row[1] for row in result.all()}
+
+    _parse_ok_statuses: frozenset[str] = frozenset({
+        Status.INSTRUCTION_READY.value,
+        Status.SUBMITTING.value,
+        Status.PENDING.value,
+        Status.PARTIAL.value,
+        Status.FILLED.value,
+        Status.CANCELLED.value,
+        Status.REJECTED.value,
+        Status.SUBMIT_FAILED.value,
+        Status.SKIPPED.value,
+    })
+    _orders_statuses: frozenset[str] = frozenset({
+        Status.PENDING.value,
+        Status.PARTIAL.value,
+        Status.FILLED.value,
+        Status.CANCELLED.value,
+        Status.REJECTED.value,
+    })
+    _rejected_statuses: frozenset[str] = frozenset({
+        Status.PARSE_ERROR.value,
+        Status.SUBMIT_FAILED.value,
+        Status.REJECTED.value,
+    })
+
+    total = sum(counts.values())
+    return {
+        "msg_count": total,
+        "parse_ok": sum(v for k, v in counts.items() if k in _parse_ok_statuses),
+        "orders": sum(v for k, v in counts.items() if k in _orders_statuses),
+        "filled": counts.get(Status.FILLED.value, 0),
+        "rejected": sum(v for k, v in counts.items() if k in _rejected_statuses),
+    }
+
+
+async def list_positions(session: AsyncSession) -> list[PositionRow]:
+    """Return all PositionRows ordered by symbol."""
+    result = await session.execute(select(PositionRow).order_by(PositionRow.symbol))
+    return list(result.scalars())
