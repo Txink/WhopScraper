@@ -30,7 +30,7 @@ from app.api.auth import ws_token_valid
 from app.api.schemas import push_event_to_out, task_to_out
 from app.core.config import Settings
 from app.core.event_bus import Event, EventBus
-from app.core.events import TaskPayload, TaskPushPayload, Topics
+from app.core.events import TaskPayload, TaskPushPayload, Topics, WhopPagePayload
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +72,7 @@ class WebSocketHub:
             Topics.TASK_PUSH_EVENT,
             Topics.TASK_STATUS_CHANGED,
             Topics.SYSTEM_CONNECTION_CHANGED,
+            Topics.WHOP_PAGE_CHANGED,
         ]
         for t in topics_to_bridge:
             unsub = self._bus.subscribe(t, self._on_bus_event)
@@ -106,6 +107,8 @@ class WebSocketHub:
             }
         if isinstance(p, TaskPayload):
             return {"task": task_to_out(p.task).model_dump(mode="json")}
+        if isinstance(p, WhopPagePayload):
+            return {"action": p.action, "page": p.page_dict}
         # Pass-through for dict payloads (e.g. system.connection_changed)
         if isinstance(p, dict):
             return p

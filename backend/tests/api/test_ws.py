@@ -355,3 +355,56 @@ def test_ws_hub_close_removes_all_connections(
         finally:
             ws2_ctx.__exit__(None, None, None)
             ws1_ctx.__exit__(None, None, None)
+
+
+# ---------------------------------------------------------------------------
+# 11. Bridges whop.page_changed bus events to WS clients
+# ---------------------------------------------------------------------------
+
+
+def test_whop_page_changed_broadcast(
+    ws_app: tuple[FastAPI, EventBus, WebSocketHub, Settings],
+) -> None:
+    """Bus publish WHOP_PAGE_CHANGED → WS clients receive event."""
+    from app.core.events import WhopPagePayload
+
+    app, bus, _hub, _settings = ws_app
+    client = TestClient(app)
+
+    with client, client.websocket_connect(f"/ws?token={_TOKEN}") as ws:
+        page_dict = {
+            "id": "p1",
+            "url": "u",
+            "source": "stock",
+            "name": "n",
+            "added_at": "2026-04-25T00:00:00+00:00",
+            "settings": {
+                "dedupe_processed_messages": True,
+                "price_deviation_tolerance": 1.0,
+                "tickers": {},
+            },
+            "running": True,
+            "started_at": None,
+            "last_poll_at": None,
+            "messages_published": 0,
+            "last_error": None,
+        }
+
+        async def _pub() -> None:
+            await bus.publish(
+                Event(
+                    topic=Topics.WHOP_PAGE_CHANGED,
+                    payload=WhopPagePayload(
+                        action="settings_updated", page_dict=page_dict
+                    ),
+                )
+            )
+            await bus.wait_idle(timeout=2.0)
+
+        assert client.portal is not None
+        client.portal.call(_pub)
+
+        msg = json.loads(ws.receive_text())
+        assert msg["type"] == "whop.page_changed"
+        assert msg["payload"]["action"] == "settings_updated"
+        assert msg["payload"]["page"]["id"] == "p1"
