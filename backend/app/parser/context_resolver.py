@@ -16,12 +16,9 @@
 from __future__ import annotations
 
 import dataclasses
-import json
 import logging
 import re
 from datetime import timedelta
-from pathlib import Path
-from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -29,38 +26,6 @@ from app.domain.instruction import Instruction, OptionInstruction, StockInstruct
 from app.domain.message import Message
 
 logger = logging.getLogger(__name__)
-
-# ---------------------------------------------------------------------------
-# Path helpers
-# ---------------------------------------------------------------------------
-
-# backend/app/parser/context_resolver.py  →  project_root = ../../..
-_HERE = Path(__file__).parent  # backend/app/parser
-_PROJECT_ROOT = _HERE.parent.parent.parent  # signal-station/
-
-
-def load_watched_tickers(
-    path: Path = _PROJECT_ROOT / "config" / "watched_stocks.json",
-) -> set[str]:
-    """Load the watched-stocks whitelist from JSON; return uppercase ticker set.
-
-    The JSON format is: { "ticker_lowercase": { "position": ..., "bucket": ... }, ... }
-    Keys starting with "_" are skipped (comment convention).
-    Returns an empty set if the file is missing or malformed.
-    """
-    try:
-        with open(path, encoding="utf-8") as f:
-            data: Any = json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        logger.warning("watched_stocks file not found or invalid: %s", path)
-        return set()
-    if not isinstance(data, dict):
-        return set()
-    return {
-        k.strip().upper()
-        for k in data
-        if k and not k.startswith("_") and isinstance(data[k], dict)
-    }
 
 
 # ---------------------------------------------------------------------------
@@ -239,7 +204,7 @@ async def resolve_context(
     session_factory: async_sessionmaker[AsyncSession],
     msg: Message,
     parsed: Instruction | None,
-    watched_tickers: set[str] | None = None,
+    watched_tickers: set[str],
     recent_window_minutes: int = 120,
     recent_limit: int = 20,
 ) -> Instruction | None:
@@ -276,7 +241,7 @@ async def resolve_context(
         return result
 
     # --- Tier 2: watchlist (stock-only) ---
-    if watched_tickers is not None:
+    if watched_tickers:
         result = _tier_watchlist(msg, parsed, watched_tickers)
         if result is not None:
             return result

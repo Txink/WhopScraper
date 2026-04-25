@@ -19,7 +19,6 @@ from app.broker.push_listener import PushListener, register_push_listener
 from app.broker.trader import register_trader
 from app.core.config import Settings, get_settings
 from app.core.event_bus import EventBus
-from app.parser.context_resolver import load_watched_tickers
 from app.parser.service import register_parser_service
 from app.storage.db import Base, create_engine, make_session_factory
 from app.storage.listeners import register_storage_listeners
@@ -105,17 +104,21 @@ def create_app(
                 )
                 state.broker = NoopBrokerClient()
 
-        # Parser watchlist -------------------------------------------------
-        try:
-            watchlist = load_watched_tickers()
-        except (FileNotFoundError, Exception):
-            watchlist = set()
+        # Whop registry — constructed early (without starting listeners) so the
+        # ParserService can hold a reference and look up per-page tickers by url.
+        state.whop_registry = WhopRegistry(
+            bus=bus,
+            settings=settings,
+            session_factory=state.session_factory,
+        )
 
         # Wire up event-bus listeners --------------------------------------
 
         # 1. Parser service: MESSAGE_RECEIVED → task pipeline
         state.unsubs.append(
-            register_parser_service(bus, session_factory, watched_tickers=watchlist)
+            register_parser_service(
+                bus, session_factory, registry=state.whop_registry
+            )
         )
 
         # 2. Trader: TASK_INSTRUCTION_READY → broker order submission
@@ -149,12 +152,7 @@ def create_app(
         state.hub = WebSocketHub(bus)
         await state.hub.register_listeners()
 
-        # 6. Whop registry (manages all Whop page listeners)
-        state.whop_registry = WhopRegistry(
-            bus=bus,
-            settings=settings,
-            session_factory=state.session_factory,
-        )
+        # 6. Finally: start Whop listeners (this is where Playwright launches)
         if not skip_whop:
             try:
                 await state.whop_registry.load_and_start_all()

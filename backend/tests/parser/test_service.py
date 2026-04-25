@@ -10,6 +10,7 @@ Five test cases covering the parser event-bus service:
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from unittest.mock import MagicMock
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -19,6 +20,20 @@ from app.core.events import MessagePayload, TaskPayload, Topics
 from app.domain.message import Message
 from app.domain.status import Status
 from app.parser.service import register_parser_service
+from app.whop.page_settings import PageSettings, TickerConfig
+
+
+def _fake_registry(tickers: set[str]) -> MagicMock:
+    """Build a MagicMock WhopRegistry whose get_settings_for_url returns a
+    PageSettings populated with *tickers*. Used by stock-fallback tests that
+    previously passed ``watched_tickers={"TSLL"}`` directly."""
+    registry = MagicMock()
+    registry.get_settings_for_url.return_value = PageSettings(
+        dedupe_processed_messages=True,
+        price_deviation_tolerance=1.0,
+        tickers={t: TickerConfig(trade_quantity=100) for t in tickers},
+    )
+    return registry
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -94,7 +109,7 @@ async def test_stock_message_resolves_to_instruction_ready(
     """Valid stock message 'TSLL 26.5 加一半' (TSLL in watched_tickers) →
     TASK_INSTRUCTION_READY with status=INSTRUCTION_READY, type=stock, ticker=TSLL."""
     bus = EventBus()
-    register_parser_service(bus, session_factory, watched_tickers={"TSLL"})
+    register_parser_service(bus, session_factory, registry=_fake_registry({"TSLL"}))
 
     msg = _stock_msg("s1", "TSLL 26.5 买一半")
     observed = await _run(bus, msg)
@@ -128,7 +143,7 @@ async def test_option_message_resolves(
 ) -> None:
     """Valid option message → TASK_INSTRUCTION_READY with type=option."""
     bus = EventBus()
-    register_parser_service(bus, session_factory, watched_tickers=None)
+    register_parser_service(bus, session_factory)
 
     # A clear option message that the option parser can parse
     msg = _option_msg("o1", "NVDA 135C 本周 2.15 买")
@@ -164,7 +179,7 @@ async def test_unparseable_message_emits_parse_failed(
     """Content '盘后信息参考' (chatter, no action/price) → TASK_PARSE_FAILED
     with status=PARSE_ERROR and reject_reason present."""
     bus = EventBus()
-    register_parser_service(bus, session_factory, watched_tickers=None)
+    register_parser_service(bus, session_factory)
 
     msg = _stock_msg("s-fail", "盘后信息参考")
     observed = await _run(bus, msg)
@@ -195,7 +210,7 @@ async def test_task_created_emitted_before_final_event(
 ) -> None:
     """TASK_CREATED must appear before TASK_INSTRUCTION_READY or TASK_PARSE_FAILED."""
     bus = EventBus()
-    register_parser_service(bus, session_factory, watched_tickers={"TSLL"})
+    register_parser_service(bus, session_factory, registry=_fake_registry({"TSLL"}))
 
     # Use a message that will succeed so we get TASK_INSTRUCTION_READY
     msg = _stock_msg("s-order", "TSLL 26.5 买一半")
@@ -226,7 +241,7 @@ async def test_parse_timing_recorded(
 ) -> None:
     """Task.stage_timings should have 'parse' key after handling."""
     bus = EventBus()
-    register_parser_service(bus, session_factory, watched_tickers={"TSLL"})
+    register_parser_service(bus, session_factory, registry=_fake_registry({"TSLL"}))
 
     msg = _stock_msg("s-timing", "TSLL 26.5 买一半")
     observed = await _run(bus, msg)

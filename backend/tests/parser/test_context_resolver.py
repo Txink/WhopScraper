@@ -192,7 +192,7 @@ async def test_refer_to_parsed_message_fills_ticker(
         session_factory=session_factory,
         msg=current_msg,
         parsed=parsed,
-        watched_tickers=None,
+        watched_tickers=set(),
     )
 
     assert result is not None
@@ -274,7 +274,7 @@ async def test_recent_fills_ticker_when_db_has_recent_task(
         session_factory=session_factory,
         msg=msg,
         parsed=parsed,
-        watched_tickers=None,  # no watchlist help
+        watched_tickers=set(),  # no watchlist help (empty = skip tier 2)
         recent_window_minutes=120,
         recent_limit=20,
     )

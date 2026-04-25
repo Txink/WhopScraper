@@ -23,6 +23,7 @@ from __future__ import annotations
 import logging
 import time
 from collections.abc import Callable
+from typing import Protocol
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -36,12 +37,24 @@ from app.parser.context_resolver import resolve_context
 logger = logging.getLogger(__name__)
 
 
+class _RegistryLike(Protocol):
+    """Minimal interface ParserService needs from WhopRegistry."""
+
+    def get_settings_for_url(self, url: str | None):  # noqa: ANN201
+        ...
+
+
 def register_parser_service(
     bus: EventBus,
     session_factory: async_sessionmaker[AsyncSession],
-    watched_tickers: set[str] | None = None,
+    *,
+    registry: _RegistryLike | None = None,
 ) -> Callable[[], None]:
     """Subscribe the parser handler to ``message.received``.
+
+    ``registry`` (optional) provides per-page ticker lists used by the stock
+    context resolver fallback. When ``None`` (or when the message is an orphan
+    / option), the fallback receives an empty set and is therefore skipped.
 
     Returns an unsubscribe callable so the caller can tear down the listener
     (useful in tests and application lifecycle management).
@@ -61,6 +74,14 @@ def register_parser_service(
 
         # Publish TASK_CREATED (status=PARSING) so storage has a record
         await bus.publish(Event(Topics.TASK_CREATED, TaskPayload(task)))
+
+        # Per-page tickers for the stock fallback. orphan / option / no-registry
+        # all collapse to an empty set, which the resolver treats as "no help".
+        watched: set[str] = set()
+        if msg.source == "stock" and registry is not None:
+            page_settings = registry.get_settings_for_url(msg.url)
+            if page_settings is not None and page_settings.tickers:
+                watched = set(page_settings.tickers.keys())
 
         started = time.perf_counter()
 
@@ -82,7 +103,7 @@ def register_parser_service(
                     session_factory=session_factory,
                     msg=msg,
                     parsed=parsed,
-                    watched_tickers=watched_tickers,
+                    watched_tickers=watched,
                 )
             else:
                 resolved = parsed
