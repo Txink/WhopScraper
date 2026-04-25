@@ -1,0 +1,48 @@
+"""Shared event topic constants and typed payload dataclasses.
+
+Topics
+------
+Centralises all ``EventBus`` topic strings so the rest of the codebase can
+import a single ``Topics`` class instead of scattering string literals.
+
+Payload types
+-------------
+``TaskPayload`` and ``TaskPushPayload`` are frozen dataclasses (in-process
+only; no serialisation boundary, so Pydantic is not needed).
+
+Convention: every ``task.*`` event except ``task.push_event`` carries a
+``TaskPayload``; ``task.push_event`` carries a ``TaskPushPayload``.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+from app.domain.push_event import PushEvent
+from app.domain.task import Task
+
+
+class Topics:
+    MESSAGE_RECEIVED = "message.received"
+    TASK_CREATED = "task.created"
+    TASK_INSTRUCTION_READY = "task.instruction_ready"
+    TASK_PARSE_FAILED = "task.parse_failed"
+    TASK_ORDER_SUBMITTED = "task.order_submitted"
+    TASK_SUBMIT_FAILED = "task.submit_failed"
+    TASK_PUSH_EVENT = "task.push_event"
+    TASK_STATUS_CHANGED = "task.status_changed"
+    SYSTEM_CONNECTION_CHANGED = "system.connection_changed"
+
+
+@dataclass(frozen=True)
+class TaskPayload:
+    """Payload for all ``task.*`` events except ``task.push_event``."""
+
+    task: Task
+
+
+@dataclass(frozen=True)
+class TaskPushPayload:
+    """Payload for ``task.push_event`` events."""
+
+    task: Task
+    push_event: PushEvent
