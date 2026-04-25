@@ -7,16 +7,20 @@ import a single ``Topics`` class instead of scattering string literals.
 
 Payload types
 -------------
-``TaskPayload`` and ``TaskPushPayload`` are frozen dataclasses (in-process
-only; no serialisation boundary, so Pydantic is not needed).
+``MessagePayload``, ``TaskPayload`` and ``TaskPushPayload`` are frozen
+dataclasses (in-process only; no serialisation boundary, so Pydantic is not
+needed).
 
-Convention: every ``task.*`` event except ``task.push_event`` carries a
-``TaskPayload``; ``task.push_event`` carries a ``TaskPushPayload``.
+Convention:
+- ``message.received`` carries a ``MessagePayload``.
+- every ``task.*`` event except ``task.push_event`` carries a ``TaskPayload``.
+- ``task.push_event`` carries a ``TaskPushPayload``.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass
 
+from app.domain.message import Message
 from app.domain.push_event import PushEvent
 from app.domain.task import Task
 
@@ -31,6 +35,13 @@ class Topics:
     TASK_PUSH_EVENT = "task.push_event"
     TASK_STATUS_CHANGED = "task.status_changed"
     SYSTEM_CONNECTION_CHANGED = "system.connection_changed"
+
+
+@dataclass(frozen=True)
+class MessagePayload:
+    """Payload for ``message.received`` events."""
+
+    message: Message
 
 
 @dataclass(frozen=True)
