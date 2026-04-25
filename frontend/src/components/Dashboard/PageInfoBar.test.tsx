@@ -10,11 +10,15 @@ const stockPage = {
 };
 
 describe("<PageInfoBar>", () => {
-  it("renders running page", () => {
+  it("renders page with url link and basic info", () => {
     render(<PageInfoBar page={stockPage} />);
     expect(screen.getByText("正股")).toBeInTheDocument();
     expect(screen.getByText("Hello")).toBeInTheDocument();
-    expect(screen.getByText("运行中")).toBeInTheDocument();
+    // Status moved to the power button — should be absent here.
+    expect(screen.queryByText(/运行中/)).toBeNull();
+    const urlLink = screen.getByRole("link");
+    expect(urlLink).toHaveAttribute("href", stockPage.url);
+    expect(urlLink).toHaveAttribute("target", "_blank");
     expect(screen.getByText(/已发消息\s*42/)).toBeInTheDocument();
   });
 

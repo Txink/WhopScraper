@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { usePageTabsStore } from "../../stores/pageTabs";
+import * as httpModule from "../../api/http";
 import { PageActionBar } from "./PageActionBar";
 
 const stockPage = {
@@ -12,10 +13,33 @@ const stockPage = {
 describe("<PageActionBar>", () => {
   beforeEach(() => { usePageTabsStore.getState().reset(); });
 
-  it("disables restart/settings when orphan", () => {
+  it("disables power/settings when orphan", () => {
     render(<PageActionBar page={null} onOpenSettings={vi.fn()} />);
-    expect(screen.getByText(/重启/)).toBeDisabled();
+    expect(screen.getByText(/关机/)).toBeDisabled();
     expect(screen.getByText(/设置/)).toBeDisabled();
+  });
+
+  it("clicks start when page is off", async () => {
+    const stockPageOff = { ...stockPage, running: false, last_error: null };
+    const startSpy = vi.spyOn(httpModule.api, "startWhopPage").mockResolvedValue(stockPageOff);
+    render(<PageActionBar page={stockPageOff} onOpenSettings={vi.fn()} />);
+    fireEvent.click(screen.getByText(/关机/));
+    await waitFor(() => expect(startSpy).toHaveBeenCalledWith("a"));
+  });
+
+  it("clicks stop when page is on", async () => {
+    const stockPageOn = { ...stockPage, running: true, last_error: null };
+    const stopSpy = vi.spyOn(httpModule.api, "stopWhopPage").mockResolvedValue(stockPageOn);
+    render(<PageActionBar page={stockPageOn} onOpenSettings={vi.fn()} />);
+    fireEvent.click(screen.getByText(/运行中/));
+    await waitFor(() => expect(stopSpy).toHaveBeenCalledWith("a"));
+  });
+
+  it("error state shows red label with last_error tooltip", () => {
+    const errPage = { ...stockPage, running: false, last_error: "navigate failed" };
+    render(<PageActionBar page={errPage} onOpenSettings={vi.fn()} />);
+    const btn = screen.getByText(/错误/);
+    expect(btn).toHaveAttribute("title", "navigate failed");
   });
 
   it("expand mode button cycles smart → all-open → all-closed → smart", () => {

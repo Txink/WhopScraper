@@ -28,11 +28,24 @@
 .page-info-bar .badge.stock { background: rgba(95,191,139,0.15); color: #5fbf8b; }
 .page-info-bar .badge.option { background: rgba(139,111,207,0.15); color: #8b6fcf; }
 .page-info-bar .badge.gray { background: rgba(140,140,140,0.15); color: #999; }
-.page-info-bar .status.running { color: #5fbf8b; }
-.page-info-bar .status.error { color: #cf6f6f; cursor: help; }
-.page-info-bar .status.stopped { color: var(--fg-3); }
 .page-info-bar .sep { opacity: 0.4; }
-.page-info-bar .url-hover { cursor: help; opacity: 0.6; }
+.page-info-bar .page-name { color: var(--fg-1); font-weight: 500; }
+.page-info-bar .page-url {
+  font-family: var(--font-mono);
+  color: var(--fg-3);
+  font-size: 11px;
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+  max-width: 50ch;
+}
+.page-info-bar .page-url:hover {
+  color: var(--brand);
+  text-decoration: underline;
+}
 
 .page-action-bar {
   display: flex; gap: 6px;
@@ -64,6 +77,35 @@
   border-color: var(--brand);
 }
 .page-action-bar .action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.page-action-bar .power-btn {
+  background: var(--bg-2);
+  border: 1px solid var(--line-strong);
+  color: var(--fg-2);
+  padding: 4px 12px;
+  cursor: pointer;
+  border-radius: var(--radius-chip);
+  font: inherit;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  transition: filter var(--dur) var(--ease),
+              background var(--dur) var(--ease),
+              border-color var(--dur) var(--ease);
+}
+.page-action-bar .power-btn:hover:not(:disabled) { filter: brightness(1.15); }
+.page-action-bar .power-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.page-action-bar .power-btn.on {
+  background: rgba(95, 191, 139, 0.15);
+  border-color: rgba(95, 191, 139, 0.4);
+  color: #5fbf8b;
+}
+.page-action-bar .power-btn.err {
+  background: rgba(207, 111, 111, 0.15);
+  border-color: rgba(207, 111, 111, 0.4);
+  color: #cf6f6f;
+  cursor: help;
+}
+/* .power-btn.off uses base .power-btn styles (neutral) */
 
 .dashboard-empty { padding: 60px 20px; text-align: center; color: var(--fg-2); }
 .dashboard-empty .link-btn { background: none; border: none; color: var(--brand); cursor: pointer; text-decoration: underline; padding: 0; font: inherit; }

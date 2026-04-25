@@ -132,6 +132,18 @@ export const api = {
     });
   },
 
+  async startWhopPage(id: string): Promise<WhopPage> {
+    return request<WhopPage>(`/api/whop/pages/${encodeURIComponent(id)}/start`, {
+      method: "POST",
+    });
+  },
+
+  async stopWhopPage(id: string): Promise<WhopPage> {
+    return request<WhopPage>(`/api/whop/pages/${encodeURIComponent(id)}/stop`, {
+      method: "POST",
+    });
+  },
+
   async updateWhopPageSettings(
     id: string,
     patch: WhopPageSettingsPatch,

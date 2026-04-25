@@ -190,6 +190,53 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/whop/pages/{page_id}/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start Whop Page Endpoint
+         * @description Start the Playwright listener for a page.
+         *
+         *     Idempotent w.r.t. the entry: if a listener is already running it
+         *     is stopped and re-started (same semantics as restart). Returns 404
+         *     if the page id is unknown OR if Playwright launch fails.
+         */
+        post: operations["start_whop_page_endpoint_api_whop_pages__page_id__start_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/whop/pages/{page_id}/stop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stop Whop Page Endpoint
+         * @description Stop the Playwright listener for a page (entry stays).
+         *
+         *     Idempotent: returns 200 even if no listener was running. Returns
+         *     404 only when the entry id is unknown.
+         */
+        post: operations["stop_whop_page_endpoint_api_whop_pages__page_id__stop_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/whop/pages/defaults": {
         parameters: {
             query?: never;
@@ -908,6 +955,72 @@ export interface operations {
         };
     };
     restart_whop_page_api_whop_pages__page_id__restart_post: {
+        parameters: {
+            query?: {
+                token?: string | null;
+            };
+            header?: never;
+            path: {
+                page_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WhopPageOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_whop_page_endpoint_api_whop_pages__page_id__start_post: {
+        parameters: {
+            query?: {
+                token?: string | null;
+            };
+            header?: never;
+            path: {
+                page_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WhopPageOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    stop_whop_page_endpoint_api_whop_pages__page_id__stop_post: {
         parameters: {
             query?: {
                 token?: string | null;

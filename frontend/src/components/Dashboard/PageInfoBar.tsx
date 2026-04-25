@@ -25,20 +25,25 @@ export function PageInfoBar({ page, orphanCount = 0 }: Props) {
       </div>
     );
   }
+  // Note: running/stopped/error status moved to the power-button in PageActionBar.
+  // The url is now displayed inline (clickable, target=_blank) instead of a hover-icon.
   return (
     <div className="page-info-bar">
       <span className={`badge ${page.source}`}>{page.source === "stock" ? "正股" : "期权"}</span>
       <span className="page-name">{page.name}</span>
-      <span className="sep">·</span>
-      <span className={page.running ? "status running" : page.last_error ? "status error" : "status stopped"}
-            title={page.last_error ?? undefined}>
-        {page.running ? "运行中" : page.last_error ? "错误" : "未运行"}
-      </span>
+      <a
+        className="page-url"
+        href={page.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        title={page.url}
+      >
+        {page.url}
+      </a>
       <span className="sep">·</span>
       <span>最后轮询 {formatRelative(page.last_poll_at)}</span>
       <span className="sep">·</span>
       <span>已发消息 {page.messages_published}</span>
-      <span className="url-hover" title={page.url}>ⓘ</span>
     </div>
   );
 }
