@@ -50,24 +50,24 @@ describe("<PageActionBar>", () => {
 
   it("expand mode button cycles smart → all-open → all-closed → smart", () => {
     render(<PageActionBar page={stockPage} mode="page" onOpenSettings={vi.fn()} />);
+    // Icon-only — locate by aria-label which mirrors current state.
     // Initial: smart
-    const initialBtn = screen.getByText(/智能展开/);
-    expect(initialBtn).toBeInTheDocument();
+    expect(screen.getByLabelText("智能展开")).toBeInTheDocument();
 
     // Click 1: smart → all-open
-    fireEvent.click(initialBtn);
+    fireEvent.click(screen.getByLabelText("智能展开"));
     expect(usePageTabsStore.getState().expandModeByTab["a"]).toBe("all-open");
-    expect(screen.getByText(/全部展开/)).toBeInTheDocument();
+    expect(screen.getByLabelText("全部展开")).toBeInTheDocument();
 
     // Click 2: all-open → all-closed
-    fireEvent.click(screen.getByText(/全部展开/));
+    fireEvent.click(screen.getByLabelText("全部展开"));
     expect(usePageTabsStore.getState().expandModeByTab["a"]).toBe("all-closed");
-    expect(screen.getByText(/全部收起/)).toBeInTheDocument();
+    expect(screen.getByLabelText("全部收起")).toBeInTheDocument();
 
     // Click 3: all-closed → smart
-    fireEvent.click(screen.getByText(/全部收起/));
+    fireEvent.click(screen.getByLabelText("全部收起"));
     expect(usePageTabsStore.getState().expandModeByTab["a"]).toBe("smart");
-    expect(screen.getByText(/智能展开/)).toBeInTheDocument();
+    expect(screen.getByLabelText("智能展开")).toBeInTheDocument();
   });
 
   it("expand button gets engaged class when not in smart mode", () => {
@@ -75,7 +75,16 @@ describe("<PageActionBar>", () => {
     // Initial state: smart, no engaged class
     expect(container.querySelector(".action-btn.engaged")).not.toBeInTheDocument();
     // Cycle once → all-open → engaged
-    fireEvent.click(screen.getByText(/智能展开/));
+    fireEvent.click(screen.getByLabelText("智能展开"));
     expect(container.querySelector(".action-btn.engaged")).toBeInTheDocument();
+  });
+
+  it("expand button carries an expand-mode-* class identifying current state", () => {
+    const { container } = render(<PageActionBar page={stockPage} mode="page" onOpenSettings={vi.fn()} />);
+    expect(container.querySelector(".expand-mode-smart")).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText("智能展开"));
+    expect(container.querySelector(".expand-mode-all-open")).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText("全部展开"));
+    expect(container.querySelector(".expand-mode-all-closed")).toBeInTheDocument();
   });
 });

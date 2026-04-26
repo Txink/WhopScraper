@@ -291,12 +291,18 @@
   border-color: var(--fg-3);
 }
 .page-action-bar .action-btn.engaged {
-  background: var(--bg-3);
-  color: var(--fg-1);
-  border-color: var(--line-strong);
+  /* Engaged state used to set color: var(--fg-1) which rendered the
+     stroked SVG icons in pure white — too bright against the dark
+     panel. Switch to the brand cyan: still clearly distinct from the
+     neutral default state, but kinder to the eyes. */
+  background: rgba(63, 181, 197, 0.10);
+  color: var(--brand);
+  border-color: rgba(63, 181, 197, 0.42);
 }
 .page-action-bar .action-btn.engaged:hover:not(:disabled) {
+  background: rgba(63, 181, 197, 0.16);
   border-color: var(--brand);
+  color: var(--brand);
 }
 .page-action-bar .action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .page-action-bar .action-btn.icon-only,

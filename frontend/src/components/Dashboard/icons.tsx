@@ -1,9 +1,82 @@
-// Dashboard icon set — inlined SVG paths from iconfont.cn.
+// Dashboard icon set — inlined SVG paths from iconfont.cn (or hand-drawn).
 // All icons use `currentColor` so they inherit the button's CSS color.
 
 interface IconProps {
   size?: number;       // px
   className?: string;
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Expand-mode tri-state icons. Smart mode shows a half-filled circle
+// (recalls the ◐ glyph used previously in the text label). Open / closed
+// use stacked chevrons in the matching direction so the button itself
+// communicates the action without needing a Chinese label.
+// ──────────────────────────────────────────────────────────────────────
+
+export function SmartIcon({ size = 16, className }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      width={size}
+      height={size}
+      className={className}
+      aria-hidden="true"
+    >
+      <circle
+        cx="8"
+        cy="8"
+        r="5.4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.4"
+      />
+      {/* Right half filled — readable at 16px */}
+      <path
+        d="M8 2.6 A5.4 5.4 0 0 1 8 13.4 Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+export function ExpandAllIcon({ size = 16, className }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      width={size}
+      height={size}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <polyline points="3 4 8 8 13 4" />
+      <polyline points="3 9 8 13 13 9" />
+    </svg>
+  );
+}
+
+export function CollapseAllIcon({ size = 16, className }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      width={size}
+      height={size}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <polyline points="3 7 8 3 13 7" />
+      <polyline points="3 12 8 8 13 12" />
+    </svg>
+  );
 }
 
 export function PowerIcon({ size = 18, className }: IconProps) {
