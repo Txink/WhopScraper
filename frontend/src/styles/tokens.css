@@ -113,18 +113,22 @@ input[type="checkbox"]:checked {
   border-color: var(--brand);
 }
 
-/* Checkmark glyph drawn with two CSS borders rotated to form ✓.
- * Centered against the 14×14 box; the dimensions match a tight tick. */
+/* Checkmark glyph — Unicode ✓ centered via flex on the pseudo-element.
+ * Earlier border-rotation approach drifted off-center because the
+ * rotated bounding box doesn't align nicely with the 14×14 outer box;
+ * Unicode + flex centering is robust regardless of font / zoom level. */
 input[type="checkbox"]:checked::after {
-  content: "";
+  content: "✓";
   position: absolute;
-  left: 3px;
-  top: 0;
-  width: 4px;
-  height: 8px;
-  border: solid var(--bg-0);
-  border-width: 0 2px 2px 0;
-  transform: rotate(45deg);
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--bg-0);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
 }
 
 input[type="checkbox"]:disabled {
