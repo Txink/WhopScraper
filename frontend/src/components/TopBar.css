@@ -119,7 +119,10 @@
      ``gap`` would still allocate its slot even at width:0). */
   border-radius: var(--radius-chip);
   border: 1px solid var(--line-strong);
-  padding: 4px 9px;
+  /* Asymmetric padding: a hair more on the left so the dot has visual
+     room, tighter on the right so the label sits close to the border
+     when the refresh icon is collapsed. */
+  padding: 4px 6px 4px 8px;
   background: transparent;
   cursor: pointer;
   font: inherit;
@@ -128,7 +131,7 @@
   transition: color 150ms ease, border-color 150ms ease, background 150ms ease;
 }
 .longport-conn .conn-dot {
-  margin-right: 6px;
+  margin-right: 4px;
 }
 .longport-conn:disabled {
   cursor: default;
