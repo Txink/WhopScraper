@@ -45,3 +45,7 @@ frontend/vite.config.js
 
 # Brainstorm artifacts
 .superpowers/
+
+# Parser validation harness
+data/parser_validation_report.json
+data/golden_batches/
