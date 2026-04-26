@@ -25,6 +25,7 @@ from longport.openapi import (
 from longport.openapi import (
     QuoteContext,
     TimeInForceType,
+    TopicType,
     TradeContext,
 )
 
@@ -59,6 +60,11 @@ class LongPortClient:
 
         # Wire push callback — fans out to all registered handlers.
         self._trade_ctx.set_on_order_changed(self._on_order_changed)
+        # Subscribe to the Private topic so the SDK actually delivers
+        # order-changed pushes. set_on_order_changed alone only registers
+        # the callback; without subscribe([TopicType.Private]) the SDK never
+        # pushes anything and submitted orders sit at PENDING forever.
+        self._trade_ctx.subscribe([TopicType.Private])
 
     # ------------------------------------------------------------------ #
     # Properties                                                           #
