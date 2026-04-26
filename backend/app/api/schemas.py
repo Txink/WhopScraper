@@ -201,6 +201,19 @@ class LongPortSettingsPatch(BaseModel):
     dry_run: bool | None = None
 
 
+class BrokerStatusOut(BaseModel):
+    """Snapshot of the running broker — whether it's a live LongPortClient
+    or fell back to NoopBrokerClient, plus the last init error if any.
+    Used by the settings dialog to surface init state and let the user
+    trigger a rebuild after correcting credentials.
+    """
+
+    is_real: bool
+    mode: Literal["paper", "real"]
+    dry_run: bool
+    last_init_error: str | None = None
+
+
 # ---------------------------------------------------------------------------
 # Cancel
 # ---------------------------------------------------------------------------

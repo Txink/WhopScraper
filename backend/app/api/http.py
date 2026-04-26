@@ -34,14 +34,16 @@ Usage::
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Annotated
+from typing import TYPE_CHECKING, Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.api.auth import require_app_token
 from app.api.schemas import (
+    BrokerStatusOut,
     CancelOk,
     HealthOut,
     LongPortCredentialSet,
@@ -88,14 +90,32 @@ def build_http_router(
     bus: EventBus,
     longport_runtime: LongPortRuntimeStore | None = None,
     whop_registry: WhopRegistry | None = None,
+    broker_getter: Callable[[], BrokerClient] | None = None,
+    broker_status_fn: Callable[[], dict[str, Any]] | None = None,
+    broker_reload_fn: Callable[[], Awaitable[dict[str, Any]]] | None = None,
 ) -> APIRouter:
     """Factory — injects session_factory, broker, and settings at app assembly.
+
+    Parameters
+    ----------
+    broker:
+        Initial broker reference. Endpoints that need the broker LATER
+        (e.g. ``cancel_task_endpoint``) should go through ``broker_getter``
+        instead so they pick up post-reload swaps.
+    broker_getter:
+        Callable returning the *current* broker. Defaults to a closure over
+        the initial ``broker`` for callers that don't support live reload.
+    broker_status_fn / broker_reload_fn:
+        Optional integration with the lifespan-managed broker rebuild flow.
+        When omitted (e.g. in tests), the corresponding endpoints are not
+        registered.
 
     All routes share ``dependencies=[Depends(require_app_token)]`` applied at
     the router level, so auth is enforced uniformly without per-route boilerplate.
     """
     router = APIRouter(dependencies=[Depends(require_app_token)])
     runtime_store = longport_runtime or LongPortRuntimeStore.from_settings_defaults(settings)
+    _get_broker: Callable[[], BrokerClient] = broker_getter or (lambda: broker)
 
     def _longport_settings_out() -> LongPortSettingsOut:
         runtime = runtime_store.get()
@@ -208,7 +228,7 @@ def build_http_router(
         if not task.order_id:
             raise HTTPException(400, detail="task has no order_id (not yet submitted)")
         try:
-            broker.cancel_order(task.order_id)
+            _get_broker().cancel_order(task.order_id)
         except Exception as exc:
             raise HTTPException(502, detail=f"broker cancel failed: {exc}") from exc
         return CancelOk()
@@ -314,6 +334,39 @@ def build_http_router(
             patch["dry_run"] = body.dry_run
         runtime_store.update(patch)
         return _longport_settings_out()
+
+    # ------------------------------------------------------------------ #
+    # Broker status + reload — surfaces LongPort init state to the UI    #
+    # so the user can see if the broker fell back to Noop and trigger a  #
+    # rebuild after fixing credentials.                                   #
+    # ------------------------------------------------------------------ #
+    if broker_status_fn is not None:
+
+        @router.get("/api/longport/broker/status", response_model=BrokerStatusOut)
+        async def get_broker_status() -> BrokerStatusOut:  # noqa: RUF029
+            snap = broker_status_fn()
+            return BrokerStatusOut(
+                is_real=bool(snap.get("is_real")),
+                mode=str(snap.get("mode", "paper")),
+                dry_run=bool(snap.get("dry_run")),
+                last_init_error=snap.get("last_init_error"),
+            )
+
+    if broker_reload_fn is not None:
+
+        @router.post("/api/longport/broker/reload", response_model=BrokerStatusOut)
+        async def post_broker_reload() -> BrokerStatusOut:
+            """Tear down the current broker + push subscription, build a
+            new one from the latest credentials in runtime store, and
+            return the resulting status. Used by the UI's refresh button.
+            """
+            snap = await broker_reload_fn()
+            return BrokerStatusOut(
+                is_real=bool(snap.get("is_real")),
+                mode=str(snap.get("mode", "paper")),
+                dry_run=bool(snap.get("dry_run")),
+                last_init_error=snap.get("last_init_error"),
+            )
 
     @router.post("/api/tasks/{task_id}/confirm", response_model=TaskOut)
     async def confirm_task_endpoint(task_id: str) -> TaskOut:

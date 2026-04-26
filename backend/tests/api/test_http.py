@@ -573,3 +573,123 @@ def test_skip_400_when_status_not_instruction_ready(
     resp = client.post("/api/tasks/skp2/skip", params={"token": _TOKEN})
     assert resp.status_code == 400
     assert "INSTRUCTION_READY" in resp.json()["detail"]
+
+
+# ---------------------------------------------------------------------------
+# Broker status + reload endpoints
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def app_with_broker_lifecycle(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> tuple[FastAPI, dict, FakeBrokerClient]:
+    """Variant of make_app that also wires broker_status_fn + broker_reload_fn.
+
+    The state dict stays mutable so tests can assert reload swapped the
+    broker / mutated last_init_error.
+    """
+    broker = FakeBrokerClient()
+    settings = Settings(app_token=_TOKEN)
+    state = {
+        "broker": broker,
+        "is_real": True,  # FakeBroker stands in for a "real" client in tests
+        "last_init_error": None,
+        "reload_count": 0,
+    }
+
+    def _status() -> dict:
+        return {
+            "is_real": state["is_real"],
+            "mode": "paper" if state["broker"].is_paper else "real",
+            "dry_run": state["broker"].dry_run,
+            "last_init_error": state["last_init_error"],
+        }
+
+    async def _reload() -> dict:
+        # Simulate a real reload: optionally toggle to "noop" / set an error.
+        state["reload_count"] += 1
+        return _status()
+
+    app = FastAPI()
+    app.include_router(
+        build_http_router(
+            session_factory=session_factory,
+            broker=broker,
+            settings=settings,
+            bus=EventBus(),
+            broker_status_fn=_status,
+            broker_reload_fn=_reload,
+        )
+    )
+    app.dependency_overrides[get_settings] = lambda: settings
+    return app, state, broker
+
+
+def test_broker_status_returns_current_state(
+    app_with_broker_lifecycle: tuple[FastAPI, dict, FakeBrokerClient],
+) -> None:
+    app, state, _ = app_with_broker_lifecycle
+    client = TestClient(app, raise_server_exceptions=True)
+    resp = client.get("/api/longport/broker/status", params={"token": _TOKEN})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["is_real"] is True
+    assert body["mode"] == "paper"
+    assert body["dry_run"] is False
+    assert body["last_init_error"] is None
+
+
+def test_broker_status_surfaces_init_error(
+    app_with_broker_lifecycle: tuple[FastAPI, dict, FakeBrokerClient],
+) -> None:
+    app, state, _ = app_with_broker_lifecycle
+    state["is_real"] = False
+    state["last_init_error"] = "OpenApiException: token empty"
+    client = TestClient(app, raise_server_exceptions=True)
+    resp = client.get("/api/longport/broker/status", params={"token": _TOKEN})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["is_real"] is False
+    assert body["last_init_error"] == "OpenApiException: token empty"
+
+
+def test_broker_reload_invokes_reload_fn(
+    app_with_broker_lifecycle: tuple[FastAPI, dict, FakeBrokerClient],
+) -> None:
+    app, state, _ = app_with_broker_lifecycle
+    client = TestClient(app, raise_server_exceptions=True)
+    resp = client.post("/api/longport/broker/reload", params={"token": _TOKEN})
+    assert resp.status_code == 200
+    assert state["reload_count"] == 1
+    body = resp.json()
+    assert body["is_real"] is True
+    # And status reflects post-reload state
+    resp2 = client.post("/api/longport/broker/reload", params={"token": _TOKEN})
+    assert resp2.status_code == 200
+    assert state["reload_count"] == 2
+
+
+def test_broker_status_endpoint_omitted_when_status_fn_not_provided(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """When the lifespan does not pass status/reload functions (e.g. minimal
+    test setups), the corresponding endpoints are 404 — not registered."""
+    broker = FakeBrokerClient()
+    settings = Settings(app_token=_TOKEN)
+    app = FastAPI()
+    app.include_router(
+        build_http_router(
+            session_factory=session_factory,
+            broker=broker,
+            settings=settings,
+            bus=EventBus(),
+        )
+    )
+    app.dependency_overrides[get_settings] = lambda: settings
+    client = TestClient(app, raise_server_exceptions=True)
+
+    resp = client.get("/api/longport/broker/status", params={"token": _TOKEN})
+    assert resp.status_code == 404
+    resp = client.post("/api/longport/broker/reload", params={"token": _TOKEN})
+    assert resp.status_code == 404
