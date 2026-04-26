@@ -261,3 +261,59 @@ def test_run_validation_counts_classifications(tmp_path: Path) -> None:
     assert result.summary.by_classification == {
         "chatter": 1, "ambiguous": 1, "trade_signal": 1,
     }
+
+
+# ---------------------------------------------------------------------------
+# CLI tests (Task 5)
+# ---------------------------------------------------------------------------
+
+import io
+import sys
+
+from scripts.validate_parser import (
+    format_console_summary,
+    write_report_json,
+)
+
+
+def test_format_console_summary_pass(tmp_path: Path) -> None:
+    corpus = [_msg("c", "TSLL 27.2出一半")]
+    golden = [_gold_signal("c", "TSLL 27.2出一半", _expected())]
+    result = run_validation(
+        corpus_path=_write_corpus(tmp_path, corpus),
+        golden_path=_write_golden(tmp_path, golden),
+    )
+    output = format_console_summary(result)
+    assert "OVERALL: PASS" in output
+    assert "regressions:" in output
+
+
+def test_format_console_summary_alias_marks_recovery_exempt(tmp_path: Path) -> None:
+    corpus = [_msg("c", "TSLL 27.2出一半")]
+    golden = [_gold_signal("c", "TSLL 27.2出一半", _expected())]
+    result = run_validation(
+        corpus_path=_write_corpus(tmp_path, corpus),
+        golden_path=_write_golden(tmp_path, golden),
+    )
+    output = format_console_summary(result)
+    assert "exempt" in output.lower() or "alias" in output.lower()
+
+
+def test_write_report_json_round_trip(tmp_path: Path) -> None:
+    corpus = [_msg("c", "TSLL 27.2出一半")]
+    golden = [_gold_signal("c", "TSLL 27.2出一半", _expected())]
+    result = run_validation(
+        corpus_path=_write_corpus(tmp_path, corpus),
+        golden_path=_write_golden(tmp_path, golden),
+    )
+    report_path = tmp_path / "report.json"
+    write_report_json(result, report_path)
+
+    data = json.loads(report_path.read_text())
+    assert "summary" in data
+    assert data["summary"]["passed"] is True
+    assert "regressions" in data
+    assert "recoveries" in data
+    assert "still_failing_non_context" in data
+    assert "still_failing_context_dependent" in data
+    assert "false_positives_on_chatter_v2" in data

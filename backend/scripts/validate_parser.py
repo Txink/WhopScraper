@@ -18,8 +18,9 @@ Match semantics — see spec section 6.3:
 from __future__ import annotations
 
 import json
+import sys
 from collections import Counter
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Callable
 
@@ -301,3 +302,75 @@ def run_validation(
         still_failing_context_dependent=still_failing_context_dependent,
         false_positives_on_chatter_v2=false_positives_on_chatter_v2,
     )
+
+
+# ---------------------------------------------------------------------------
+# CLI helpers
+# ---------------------------------------------------------------------------
+
+
+def format_console_summary(result: ValidationResult) -> str:
+    """Human-readable summary string suitable for terminal output."""
+    s = result.summary
+    lines: list[str] = []
+    lines.append("==== Parser Validation Report ====")
+    lines.append(f"total messages: {s.total}")
+    lines.append(f"  · chatter:                {s.by_classification.get('chatter', 0)}")
+    lines.append(f"  · ambiguous:              {s.by_classification.get('ambiguous', 0)}  (skipped)")
+    lines.append(f"  · trade_signal:           {s.by_classification.get('trade_signal', 0)}")
+    lines.append(f"      ├─ requires_context:    {s.trade_signals_requires_context}  (excluded from recovery/regression counts)")
+    lines.append(f"      └─ single-msg solvable: {s.trade_signals_single_msg_solvable}")
+    lines.append("")
+    lines.append("v1 vs golden (single-msg solvable trade_signals only):")
+    lines.append(f"  pass={s.v1_pass_single_msg}  fail={s.v1_fail_single_msg}")
+    lines.append("v2 vs golden (single-msg solvable trade_signals only):")
+    lines.append(f"  pass={s.v2_pass_single_msg}  fail={s.v2_fail_single_msg}")
+    lines.append("")
+    reg_marker = "✓" if s.regressions == 0 else "✗"
+    lines.append(f"regressions:           {s.regressions}   {reg_marker} (must be 0)")
+    lines.append(f"recoveries:           {s.recoveries:>2}")
+    if s.recovery_rate is None:
+        lines.append("recovery_rate:    EXEMPT  (parser_v2 is alias of stock_parser; constraint deferred until B2 lands)")
+    else:
+        rec_marker = "✓" if s.recovery_rate >= 0.20 else "✗"
+        # Denominator = v1's failures on single-msg solvable trade_signals.
+        # By construction, v1_fail_single_msg == recoveries + still_failing_non_context.
+        denom = s.v1_fail_single_msg
+        lines.append(
+            f"recovery_rate:    {s.recoveries}/{denom} = {s.recovery_rate*100:.2f}%   "
+            f"{rec_marker} (must be ≥ 20%)"
+        )
+    fp_marker = "✓" if s.false_positives_on_chatter_v2 == 0 else "✗"
+    lines.append(f"false_positives_on_chatter_v2:    {s.false_positives_on_chatter_v2}   {fp_marker} (must be 0)")
+    lines.append("")
+    lines.append(f"still_failing_context_dependent:    {s.still_failing_context_dependent}  (informational)")
+    lines.append("")
+    overall = "PASS" if s.passed else "FAIL"
+    lines.append(f"OVERALL: {overall}")
+    return "\n".join(lines)
+
+
+def write_report_json(result: ValidationResult, path: Path) -> None:
+    """Serialize ValidationResult to JSON file (overwrite)."""
+    data = {
+        "summary": asdict(result.summary),
+        "regressions": [asdict(d) for d in result.regressions],
+        "recoveries": [asdict(d) for d in result.recoveries],
+        "still_failing_non_context": [asdict(d) for d in result.still_failing_non_context],
+        "still_failing_context_dependent": [asdict(d) for d in result.still_failing_context_dependent],
+        "false_positives_on_chatter_v2": [asdict(d) for d in result.false_positives_on_chatter_v2],
+    }
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2))
+
+
+def main() -> int:
+    """CLI entrypoint. Returns process exit code (0 = pass, 1 = fail)."""
+    result = run_validation()
+    print(format_console_summary(result))
+    write_report_json(result, REPORT_PATH_DEFAULT)
+    print(f"\nDetail report: {REPORT_PATH_DEFAULT}")
+    return 0 if result.summary.passed else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
