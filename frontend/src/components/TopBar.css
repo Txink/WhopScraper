@@ -106,6 +106,42 @@
   color: var(--fg-3);
 }
 
+/* LongPort conn pill — rounded border, color-coded by broker init state.
+ * Green when backend's LongPortClient is alive; red when it fell back to
+ * NoopClient (init failed). Hovering shows the precise reason. */
+.longport-conn {
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  padding: 3px 9px 3px 7px;
+  cursor: help;
+  transition: color 150ms ease, border-color 150ms ease, background 150ms ease;
+}
+.longport-conn[data-broker-real="true"] {
+  border-color: rgba(61, 214, 140, 0.42);
+  background: rgba(61, 214, 140, 0.08);
+}
+.longport-conn[data-broker-real="true"] .conn-label {
+  color: var(--ok);
+}
+.longport-conn[data-broker-real="true"] .conn-dot {
+  background: var(--ok);
+  box-shadow: 0 0 4px var(--ok);
+}
+.longport-conn[data-broker-real="false"] {
+  border-color: rgba(239, 91, 91, 0.42);
+  background: rgba(239, 91, 91, 0.08);
+}
+.longport-conn[data-broker-real="false"] .conn-label {
+  color: var(--err);
+}
+.longport-conn[data-broker-real="false"] .conn-dot {
+  background: var(--err);
+  box-shadow: 0 0 4px var(--err);
+}
+.longport-conn[data-broker-real="unknown"] .conn-label {
+  color: var(--fg-3);
+}
+
 /* Account pill */
 .acct-pill {
   font-family: var(--font-mono);

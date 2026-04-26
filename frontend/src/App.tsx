@@ -127,6 +127,17 @@ function Dashboard({ token }: { token: string }) {
         console.warn("longport settings fetch failed:", e);
       }
       try {
+        const status = await api.getBrokerStatus();
+        if (alive) {
+          useConnStore.getState().setBrokerStatus({
+            is_real: status.is_real,
+            last_init_error: status.last_init_error ?? null,
+          });
+        }
+      } catch (e) {
+        console.warn("broker status fetch failed:", e);
+      }
+      try {
         const r = await api.listTasks({ limit: 100 });
         if (alive) useTasksStore.getState().setInitialTasks(r.tasks);
       } catch (e) {
@@ -325,6 +336,8 @@ export default function App() {
     <div className="app">
       <TopBar
         connLongport={conn.longport}
+        brokerIsReal={conn.brokerIsReal}
+        brokerInitError={conn.brokerInitError}
         mode={conn.mode}
         dryRun={conn.dryRun}
         autoTrade={conn.autoTrade}

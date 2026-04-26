@@ -91,6 +91,17 @@
   margin: 0;
 }
 
+/* Header row above mode-switch: "当前模式 [● real] [⟳]" */
+.mode-header-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.mode-header-row label {
+  margin: 0;
+}
+
 .mode-switch {
   display: flex;
   gap: 6px;
@@ -117,10 +128,9 @@
   background: rgba(63, 181, 197, 0.1);
 }
 
-/* ── Broker live-status pill (right of paper/real toggle) ── */
+/* ── Broker live-status pill (right of "当前模式" label) ── */
 .broker-status-pill {
-  margin-left: 12px;
-  padding: 3px 9px;
+  padding: 2px 8px;
   border-radius: 999px;
   border: 1px solid var(--line-strong);
   font-family: var(--font-mono);
@@ -130,6 +140,7 @@
   cursor: help;
   color: var(--fg-3);
   background: var(--bg-1);
+  line-height: 1.4;
 }
 .broker-status-pill[data-real="true"] {
   color: var(--ok);
@@ -137,32 +148,44 @@
   background: rgba(61, 214, 140, 0.08);
 }
 .broker-status-pill[data-real="false"] {
-  color: var(--warn);
-  border-color: rgba(231, 167, 61, 0.32);
-  background: rgba(231, 167, 61, 0.08);
+  color: var(--err);
+  border-color: rgba(239, 91, 91, 0.32);
+  background: rgba(239, 91, 91, 0.08);
 }
 
-/* ── Refresh button — rebuilds broker + re-subscribes push ── */
+/* ── Icon-only refresh button — rebuilds broker + re-subscribes push ── */
 .broker-refresh-btn {
-  margin-left: 4px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid var(--line-strong);
   background: var(--bg-1);
   color: var(--fg-2);
-  border-radius: var(--radius-chip);
-  padding: 5px 11px;
-  font-size: 11px;
-  font-family: var(--font-mono);
+  border-radius: 4px;
   cursor: pointer;
-  letter-spacing: 0.04em;
-  transition: border-color 120ms, color 120ms;
+  transition: border-color 120ms, color 120ms, background 120ms;
+}
+.broker-refresh-btn svg {
+  width: 12px;
+  height: 12px;
 }
 .broker-refresh-btn:hover:not(:disabled) {
   border-color: var(--brand);
-  color: var(--fg-1);
+  color: var(--brand);
+  background: rgba(63, 181, 197, 0.08);
 }
 .broker-refresh-btn:disabled {
   opacity: 0.5;
   cursor: default;
+}
+.broker-refresh-btn.spinning svg {
+  animation: broker-refresh-spin 0.9s linear infinite;
+}
+@keyframes broker-refresh-spin {
+  to { transform: rotate(360deg); }
 }
 
 /* ── Inline init-error message under the mode-switch row ── */

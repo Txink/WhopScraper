@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, HttpError } from "../../api/http";
 import type { BrokerStatus, LongportSettings } from "../../api/domain-types";
+import { useConnStore } from "../../stores/conn";
 import "./LongportSettingsModal.css";
 
 interface Props {
@@ -33,6 +34,11 @@ export function LongportSettingsModal({ onClose, onSaved }: Props) {
         if (!alive) return;
         setForm(settings);
         setBrokerStatus(status);
+        // Mirror to the global store so the TopBar status indicator stays in sync.
+        useConnStore.getState().setBrokerStatus({
+          is_real: status.is_real,
+          last_init_error: status.last_init_error ?? null,
+        });
       })
       .catch((e: unknown) => {
         if (!alive) return;
@@ -50,6 +56,10 @@ export function LongportSettingsModal({ onClose, onSaved }: Props) {
     try {
       const status = await api.reloadBroker();
       setBrokerStatus(status);
+      useConnStore.getState().setBrokerStatus({
+        is_real: status.is_real,
+        last_init_error: status.last_init_error ?? null,
+      });
     } catch (e) {
       setError(_toMessage(e));
     } finally {
@@ -130,22 +140,8 @@ export function LongportSettingsModal({ onClose, onSaved }: Props) {
                 </label>
               </section>
               <section className="lp-panel">
-                <label>当前模式</label>
-                <div className="mode-switch">
-                  <button
-                    className={form.mode === "paper" ? "active" : ""}
-                    onClick={() => setForm({ ...form, mode: "paper" })}
-                    type="button"
-                  >
-                    paper
-                  </button>
-                  <button
-                    className={form.mode === "real" ? "active" : ""}
-                    onClick={() => setForm({ ...form, mode: "real" })}
-                    type="button"
-                  >
-                    real
-                  </button>
+                <div className="mode-header-row">
+                  <label>当前模式</label>
                   <span
                     className="broker-status-pill"
                     data-real={brokerStatus?.is_real ?? false}
@@ -165,13 +161,43 @@ export function LongportSettingsModal({ onClose, onSaved }: Props) {
                   </span>
                   <button
                     type="button"
-                    className="broker-refresh-btn"
+                    className={`broker-refresh-btn ${reloading ? "spinning" : ""}`}
                     onClick={handleReloadBroker}
                     disabled={reloading || loading}
                     title="重建 broker + 重新订阅 push 推送"
                     aria-label="刷新 broker"
                   >
-                    {reloading ? "刷新中…" : "刷新"}
+                    <svg
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      {/* circular arrow refresh glyph */}
+                      <path d="M2.5 8a5.5 5.5 0 0 1 9.9-3.3" />
+                      <polyline points="13 2.2 13 4.7 10.5 4.7" />
+                      <path d="M13.5 8a5.5 5.5 0 0 1-9.9 3.3" />
+                      <polyline points="3 13.8 3 11.3 5.5 11.3" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="mode-switch">
+                  <button
+                    className={form.mode === "paper" ? "active" : ""}
+                    onClick={() => setForm({ ...form, mode: "paper" })}
+                    type="button"
+                  >
+                    paper
+                  </button>
+                  <button
+                    className={form.mode === "real" ? "active" : ""}
+                    onClick={() => setForm({ ...form, mode: "real" })}
+                    type="button"
+                  >
+                    real
                   </button>
                 </div>
                 {brokerStatus?.last_init_error && (

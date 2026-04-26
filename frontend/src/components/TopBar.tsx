@@ -3,6 +3,10 @@ import { useViewStore } from "../stores/view";
 
 export interface TopBarProps {
   connLongport: "up" | "down" | "unknown";
+  /** True iff backend's broker is a live LongPortClient. False = NoopClient
+   *  fallback (init failed). Null/undefined = haven't fetched broker status. */
+  brokerIsReal?: boolean | null;
+  brokerInitError?: string | null;
   mode: "paper" | "real";
   dryRun: boolean;
   autoTrade?: boolean;
@@ -12,6 +16,8 @@ export interface TopBarProps {
 
 export function TopBar({
   connLongport,
+  brokerIsReal = null,
+  brokerInitError = null,
   mode,
   dryRun,
   autoTrade = false,
@@ -58,7 +64,17 @@ export function TopBar({
       {/* Right cluster: conn indicators + account pill */}
       <div className="topbar-right">
         <div className="conn-group">
-          <div className="conn">
+          <div
+            className="conn longport-conn"
+            data-broker-real={brokerIsReal === null ? "unknown" : brokerIsReal ? "true" : "false"}
+            title={
+              brokerIsReal === null
+                ? "broker 状态加载中"
+                : brokerIsReal
+                  ? "broker 已连接 LongPort"
+                  : `broker 未初始化（NoopClient）${brokerInitError ? "：" + brokerInitError : ""}`
+            }
+          >
             <span className={`conn-dot ${connLongport}`} />
             <span className="conn-label">longport</span>
           </div>
