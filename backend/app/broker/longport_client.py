@@ -204,7 +204,22 @@ class LongPortClient:
         self._push_handlers.append(handler)
 
     def _on_order_changed(self, event: Any) -> None:
-        """SDK callback — fans out to all registered subscribers."""
+        """SDK callback — fans out to all registered subscribers.
+
+        Logged at INFO so we can correlate "broker submit at Tx" with
+        "SDK push at Ty" when chasing missing-push reports — without it
+        the only signal of "did the SDK actually deliver?" was the
+        downstream PushListener log line, which doesn't fire if the
+        push was dropped before reaching the listener.
+        """
+        order_id = getattr(event, "order_id", None)
+        status = getattr(event, "status", None)
+        logger.info(
+            "LongPortClient: SDK push received order_id=%s status=%r handlers=%d",
+            order_id,
+            status,
+            len(self._push_handlers),
+        )
         for handler in list(self._push_handlers):
             try:
                 handler(event)

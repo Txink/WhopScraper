@@ -313,19 +313,87 @@ class PushListener:
         self._client.subscribe_order_push(_sync_callback)
         logger.info("PushListener started — subscribed to broker order push")
 
+    # Race-safe lookup config: in production we have observed pushes for
+    # an order arrive BEFORE the trader's storage listener has committed
+    # the task row carrying that order_id. submit_order returns an id at
+    # T+~120ms; LongPort can push NotReported within a few ms of that;
+    # the storage save runs on the same event loop and finishes shortly
+    # after. A blind first lookup races with the commit. Retrying gives
+    # the in-flight save a chance to finish.
+    _LOOKUP_RETRY_ATTEMPTS = 4
+    _LOOKUP_RETRY_DELAY_S = 0.1
+
+    async def _load_task_with_retry(self, order_id: str) -> Task | None:
+        """Look up the Task by order_id, retrying briefly to absorb the
+        trader→storage commit race. Returns None only after all retries fail.
+        """
+        last_attempt = self._LOOKUP_RETRY_ATTEMPTS - 1
+        for attempt in range(self._LOOKUP_RETRY_ATTEMPTS):
+            async with self._session_factory() as session:
+                task = await load_task_by_order_id(session, order_id)
+            if task is not None:
+                if attempt > 0:
+                    logger.info(
+                        "PushListener: task lookup succeeded on retry %d/%d for "
+                        "order_id=%s — absorbed trader→storage commit race",
+                        attempt + 1,
+                        self._LOOKUP_RETRY_ATTEMPTS,
+                        order_id,
+                    )
+                return task
+            if attempt < last_attempt:
+                logger.debug(
+                    "PushListener: task lookup miss attempt %d/%d for order_id=%s; "
+                    "retrying in %.0fms",
+                    attempt + 1,
+                    self._LOOKUP_RETRY_ATTEMPTS,
+                    order_id,
+                    self._LOOKUP_RETRY_DELAY_S * 1000,
+                )
+                await asyncio.sleep(self._LOOKUP_RETRY_DELAY_S)
+        return None
+
     async def _handle_raw_push(self, raw: Any) -> None:
         """Async handler.  Looks up Task, builds PushEvent, publishes to bus."""
         order_id: str = str(getattr(raw, "order_id", "") or "")
+        sdk_status = getattr(raw, "status", None)
         if not order_id:
-            logger.warning("PushListener: received push with no order_id — skipping")
+            logger.warning(
+                "PushListener: received push with no order_id — skipping; raw=%r",
+                repr(raw)[:200],
+            )
             return
 
-        async with self._session_factory() as session:
-            task: Task | None = await load_task_by_order_id(session, order_id)
+        logger.info(
+            "PushListener: handling push order_id=%s sdk_status=%r",
+            order_id,
+            sdk_status,
+        )
 
+        task = await self._load_task_with_retry(order_id)
         if task is None:
-            logger.warning("PushListener: no Task found for order_id=%r — skipping push", order_id)
+            # All retries failed. This is either a push for a foreign
+            # order_id (we never submitted it — possibly residual broker
+            # session leftovers) or our trader was so slow to commit that
+            # even the retry window was not enough. Logging the raw event
+            # at WARNING gives the operator something to grep for.
+            logger.warning(
+                "PushListener: no Task found for order_id=%s after %d attempts "
+                "(total wait ≈ %dms) — DROPPING push; sdk_status=%r raw=%r",
+                order_id,
+                self._LOOKUP_RETRY_ATTEMPTS,
+                int(self._LOOKUP_RETRY_DELAY_S * 1000 * (self._LOOKUP_RETRY_ATTEMPTS - 1)),
+                sdk_status,
+                repr(raw)[:200],
+            )
             return
+
+        logger.info(
+            "PushListener: task loaded id=%s prior_status=%s prior_push_count=%d",
+            task.id,
+            task.status.value,
+            len(task.push_events),
+        )
 
         evt = _build_push_event(raw, task)
         task.append_push_event(evt)
@@ -342,10 +410,14 @@ class PushListener:
                 payload=TaskPushPayload(task=task, push_event=evt),
             )
         )
-        logger.debug(
-            "PushListener: published TASK_PUSH_EVENT task_id=%s state=%s",
+        logger.info(
+            "PushListener: published TASK_PUSH_EVENT task_id=%s new_state=%s "
+            "reject_reason=%r delta_qty=%s cum_qty=%s",
             task.id,
-            evt.state,
+            evt.state.name,
+            task.reject_reason,
+            evt.delta_qty,
+            evt.cumulative_qty,
         )
 
 

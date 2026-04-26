@@ -28,10 +28,13 @@ not the threading bridge (which is tested implicitly by test 5 via
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
+
+import pytest
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -221,7 +224,14 @@ async def test_push_filled_emits_with_cumulative_deltas(
 
 async def test_push_for_unknown_order_id_logs_and_skips(
     session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """A push for an order_id that never appears in DB is dropped after
+    all retries — the listener emits a WARNING and does NOT publish
+    TASK_PUSH_EVENT. Use a tiny retry delay so the test stays fast.
+    """
+    monkeypatch.setattr(PushListener, "_LOOKUP_RETRY_DELAY_S", 0.005)
+
     bus = EventBus()
     client = FakeBrokerClient()
 
@@ -239,6 +249,85 @@ async def test_push_for_unknown_order_id_logs_and_skips(
     await bus.wait_idle(timeout=2.0)
 
     assert len(received_events) == 0
+
+
+# ---------------------------------------------------------------------------
+# Race recovery: push arrives BEFORE the trader's storage commit
+# ---------------------------------------------------------------------------
+# Reproduces the production bug where the first push for a freshly-submitted
+# order arrived faster than the storage listener could commit the task row.
+# Without retry, ``load_task_by_order_id`` returned None on the first lookup
+# and the push was silently dropped — explaining tasks stuck at PENDING with
+# zero push_events while sibling orders submitted milliseconds later got
+# their full push trail.
+
+
+async def test_handle_raw_push_retries_lookup_when_task_not_yet_committed(
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """If the task lands in DB AFTER the first lookup miss but BEFORE the
+    last retry, the listener should still find it and publish the event."""
+    # 50ms retry × 4 attempts = up to 150ms total wait.
+    monkeypatch.setattr(PushListener, "_LOOKUP_RETRY_DELAY_S", 0.05)
+
+    bus = EventBus()
+    client = FakeBrokerClient()
+    listener = _make_listener(bus, client, session_factory)
+
+    received_events: list[Event] = []
+
+    async def _capture(evt: Event) -> None:
+        received_events.append(evt)
+
+    bus.subscribe(Topics.TASK_PUSH_EVENT, _capture)
+
+    task = _make_pending_task("task-race", "ord-race")
+
+    # Schedule the save to happen ~80ms in — between the first miss
+    # (immediate) and second retry (at 50ms). The third retry at 100ms
+    # will succeed.
+    async def _delayed_save() -> None:
+        await asyncio.sleep(0.08)
+        await _save(session_factory, task)
+
+    save_coro = asyncio.create_task(_delayed_save())
+    raw = FakePushEvent(order_id="ord-race", status="NEW")
+    await listener._handle_raw_push(raw)
+    await save_coro
+    await bus.wait_idle(timeout=2.0)
+
+    assert len(received_events) == 1
+    payload = received_events[0].payload
+    assert isinstance(payload, TaskPushPayload)
+    assert payload.task.id == "task-race"
+    assert payload.push_event.state == PushState.NEW
+
+
+async def test_handle_raw_push_succeeds_first_try_when_task_already_committed(
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Sanity check: when the task is already in DB at lookup time, the
+    handler succeeds on the first attempt — no extra delay incurred."""
+    monkeypatch.setattr(PushListener, "_LOOKUP_RETRY_DELAY_S", 1.0)  # would block forever if a retry were needed
+
+    bus = EventBus()
+    client = FakeBrokerClient()
+    listener = _make_listener(bus, client, session_factory)
+    task = _make_pending_task("task-fast", "ord-fast")
+    await _save(session_factory, task)
+
+    received: list[Event] = []
+    bus.subscribe(Topics.TASK_PUSH_EVENT, lambda e: received.append(e) or asyncio.sleep(0))  # type: ignore
+
+    raw = FakePushEvent(order_id="ord-fast", status="FILLED", executed_quantity=100)
+    # Wrap with a wall-clock budget so a stuck retry is surfaced as a
+    # test failure rather than a hang.
+    await asyncio.wait_for(listener._handle_raw_push(raw), timeout=0.5)
+    await bus.wait_idle(timeout=2.0)
+
+    assert len(received) == 1
 
 
 # ---------------------------------------------------------------------------

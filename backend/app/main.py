@@ -226,6 +226,9 @@ def create_app(
 
         async def _broker_reload() -> dict[str, Any]:
             async with _reload_lock:
+                logger.info("broker reload: starting (current is_real=%s, last_init_error=%s)",
+                            type(state.broker).__name__ != "NoopBrokerClient",
+                            state.last_init_error)
                 # 0. Drain any in-flight TASK_INSTRUCTION_READY (or other
                 #    bus traffic) so we don't unsubscribe the trader handler
                 #    out from under a half-processed event. Without this, a
@@ -266,9 +269,11 @@ def create_app(
                 # 5. Re-register trader + push_listener against the new broker.
                 _register_trader_and_push()
 
+                from app.broker.longport_client import LongPortClient
+                is_real = isinstance(state.broker, LongPortClient)
                 logger.info(
-                    "broker reloaded — is_real=%s, error=%s",
-                    isinstance(state.broker, type(state.broker)) and state.last_init_error is None,
+                    "broker reload: complete — is_real=%s, last_init_error=%s",
+                    is_real,
                     state.last_init_error,
                 )
                 return _broker_status()
