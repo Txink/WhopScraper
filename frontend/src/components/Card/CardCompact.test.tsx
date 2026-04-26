@@ -160,6 +160,22 @@ describe("CardCompact", () => {
     expect(screen.getByText("skip: old message from previous day")).toBeInTheDocument();
   });
 
+  it("renders raw message preview in its own cell alongside the parsed cluster", () => {
+    // Layout: 正股 | 原始文本 | TSLL.US | BUY | $26.50 × 500 | ts | elapsed | status | ▸
+    // — the raw text cell is always visible, even when the signal parsed cleanly.
+    const { container } = render(
+      <CardCompact task={stockTask} autoTrade={true} onExpand={vi.fn()} />
+    );
+    const rawMsg = container.querySelector(".raw-msg");
+    expect(rawMsg).toBeInTheDocument();
+    expect(rawMsg?.textContent).toContain("TSLL 26.5 附近加一半");
+    // Title attribute exposes the full content for hover.
+    expect(rawMsg?.getAttribute("title")).toBe("TSLL 26.5 附近加一半");
+    // The parsed cluster (symbol + side + details) coexists with raw-msg.
+    expect(screen.getByText("TSLL.US")).toBeInTheDocument();
+    expect(screen.getByText("BUY")).toBeInTheDocument();
+  });
+
   const readyTask: TaskSummary = {
     ...stockTask,
     status: "INSTRUCTION_READY",

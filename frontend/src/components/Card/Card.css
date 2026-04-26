@@ -16,8 +16,17 @@
 /* ===== COMPACT ===== */
 .card.compact {
   display: grid;
+  /* type | raw-msg (elastic) | symbol | side | details | ts | elapsed | status | caret */
   grid-template-columns:
-    44px minmax(220px, 280px) 44px 1fr 90px 80px 104px 20px;
+    44px
+    minmax(0, 1fr)
+    minmax(96px, auto)
+    44px
+    minmax(110px, auto)
+    90px
+    80px
+    104px
+    20px;
   align-items: center;
   gap: 10px;
   padding: 8px 12px;
@@ -29,22 +38,30 @@
   border-color: var(--line-strong);
 }
 
+/* Raw message preview — single line with ellipsis, fills the elastic
+   2nd column. Title attribute exposes the full content on hover. */
+.card.compact .raw-msg {
+  color: var(--fg-2);
+  font-family: var(--font-sans);
+  font-style: italic;
+  font-size: 11.5px;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
 .card.compact .card-symbol {
   font-size: 12.5px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
-/* When the symbol cell carries the original message preview (no parsed
-   instruction), allow it to wrap to multiple lines; the row grows. */
 .card.compact .card-symbol.has-message {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  white-space: normal;
-  overflow: visible;
-  text-overflow: clip;
+  /* Empty placeholder cell when not parsed (only "未识别" tag may appear);
+     no special wrapping needed now that the message preview lives elsewhere. */
+  white-space: nowrap;
 }
 .card.compact .unidentified-tag {
   color: var(--warn);
@@ -53,16 +70,6 @@
   font-size: 10.5px;
   letter-spacing: 0.04em;
   display: inline-block;
-}
-.card.compact .msg-preview-inline {
-  color: var(--fg-2);
-  font-family: var(--font-sans);
-  font-weight: 400;
-  font-size: 11px;
-  font-style: italic;
-  line-height: 1.45;
-  word-break: break-word;
-  overflow-wrap: anywhere;
 }
 
 .card.compact .details {

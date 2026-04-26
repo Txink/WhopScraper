@@ -65,16 +65,21 @@ export function CardCompact({ task, autoTrade, onExpand }: CardCompactProps) {
   const sideClass = side?.toLowerCase().includes("sell") ? "side-sell" : "side-buy";
   const sideLabel = side?.toLowerCase().includes("sell") ? "SELL" : (side ? "BUY" : "");
 
+  // Raw message preview always shows (even when we have a parsed signal),
+  // truncated to one line with ellipsis. Sits between the TypeBadge and
+  // the parsed cluster; provides the original-text context every row.
+  const rawMessageText = truncate(message.content || "", 200);
+
   // Symbol cell:
   //   parsed → "TSLL.US" mono
-  //   PARSE_ERROR → 黄色"未识别" + message preview (wrapped, smaller font)
-  //   pre-parse / no symbol → message preview only (wrapped, smaller font)
+  //   PARSE_ERROR → 黄色"未识别" tag (the message text itself is in the
+  //   raw-msg cell on the left, no need to repeat)
+  //   pre-parse / no symbol → empty cell
   const symbolCell = parsedSymbol ? (
     <span className="card-symbol">{parsedSymbol}</span>
   ) : (
     <span className="card-symbol has-message">
       {isParseError && <span className="unidentified-tag">未识别</span>}
-      {messagePreview && <span className="msg-preview-inline">{messagePreview}</span>}
     </span>
   );
 
@@ -82,6 +87,7 @@ export function CardCompact({ task, autoTrade, onExpand }: CardCompactProps) {
     <div className="card compact" onClick={onExpand} role="button" tabIndex={0}
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onExpand(); }}>
       <TypeBadge type={badgeType} />
+      <span className="raw-msg" title={message.content}>{rawMessageText}</span>
       {symbolCell}
       {sideLabel ? (
         <span className={`card-side ${sideClass}`}>{sideLabel}</span>
