@@ -39,8 +39,10 @@ from app.storage.db import Base  # noqa: E402
 config = context.config
 
 # Interpret the config file for Python logging.
+# disable_existing_loggers=False prevents alembic from silencing loggers that
+# were created before this fileConfig call (e.g. app.* loggers in the test suite).
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 # Expose metadata for autogenerate support.
 target_metadata = Base.metadata
