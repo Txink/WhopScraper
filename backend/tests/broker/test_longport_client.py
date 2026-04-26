@@ -178,3 +178,82 @@ class TestPushSubscription:
 
         client._on_order_changed(object())  # must not propagate exception
         assert results == ["ok"]
+
+
+class TestDynamicDryRun:
+    """``dry_run_getter`` makes the dry_run flag dynamic — toggling it at
+    runtime takes effect on the next submit without rebuilding the client.
+
+    Regression: previously dry_run was captured at LongPortClient construction
+    in ``self._config.dry_run``. After the user toggled dry_run off in the
+    UI, the running broker still produced ``DRY-...`` order ids on every
+    submit, so orders never reached the LongPort server and tasks sat at
+    PENDING forever.
+    """
+
+    def _make_client_with_getter(
+        self,
+        getter,
+        **overrides: Any,
+    ) -> LongPortClient:
+        cfg = _dry_config(dry_run=False, **overrides)  # config snapshot says False
+        with _SDK_PATCHES[0], _SDK_PATCHES[1], _SDK_PATCHES[2]:
+            return LongPortClient(cfg, dry_run_getter=getter)
+
+    def test_getter_overrides_config_when_returns_true(self) -> None:
+        """Even though config says dry_run=False, the getter forces dry path."""
+        client = self._make_client_with_getter(lambda: True)
+        assert client.dry_run is True
+        order_id = client.submit_stock_order(
+            symbol="AAPL.US", side="BUY", quantity=1,
+            price=180.0, order_type="LIMIT",
+        )
+        assert order_id.startswith("DRY-")
+
+    def test_getter_observed_on_each_submit(self) -> None:
+        """Mutating the source between submits is observed without reconstruction."""
+        flag = {"v": True}
+        client = self._make_client_with_getter(lambda: flag["v"])
+
+        first = client.submit_stock_order(
+            symbol="AAPL.US", side="BUY", quantity=1,
+            price=180.0, order_type="LIMIT",
+        )
+        assert first.startswith("DRY-")
+
+        flag["v"] = False
+        # Now dry_run should resolve to False — submit hits the SDK path
+        # (mocked TradeContext.submit_order), NOT the DRY shortcut.
+        client._trade_ctx.submit_order.return_value.order_id = "real-id-42"
+        second = client.submit_stock_order(
+            symbol="AAPL.US", side="BUY", quantity=1,
+            price=180.0, order_type="LIMIT",
+        )
+        assert second == "real-id-42"
+        assert not second.startswith("DRY-")
+
+    def test_no_getter_falls_back_to_config_value(self) -> None:
+        """Without a getter the broker still honors config.dry_run as before."""
+        cfg = _dry_config(dry_run=True)
+        with _SDK_PATCHES[0], _SDK_PATCHES[1], _SDK_PATCHES[2]:
+            client = LongPortClient(cfg)
+        assert client.dry_run is True
+        order_id = client.submit_stock_order(
+            symbol="AAPL.US", side="BUY", quantity=1,
+            price=180.0, order_type="LIMIT",
+        )
+        assert order_id.startswith("DRY-")
+
+    def test_cancel_order_dry_run_uses_getter(self) -> None:
+        """cancel_order also routes through the dynamic dry_run flag."""
+        flag = {"v": True}
+        client = self._make_client_with_getter(lambda: flag["v"])
+
+        # dry_run=True → no SDK call
+        client.cancel_order("ORD-X")
+        client._trade_ctx.cancel_order.assert_not_called()
+
+        # Flip live; cancel now goes to SDK
+        flag["v"] = False
+        client.cancel_order("ORD-Y")
+        client._trade_ctx.cancel_order.assert_called_once_with("ORD-Y")

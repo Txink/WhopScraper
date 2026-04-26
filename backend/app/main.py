@@ -51,6 +51,7 @@ def create_app(
     *,
     settings: Settings | None = None,
     broker_override: BrokerClient | None = None,
+    longport_runtime_override: LongPortRuntimeStore | None = None,
     skip_whop: bool = False,
 ) -> FastAPI:
     """App factory.
@@ -62,6 +63,10 @@ def create_app(
     broker_override:
         Inject a ``FakeBrokerClient`` (or any BrokerClient) instead of
         instantiating a real ``LongPortClient``.  Useful in tests.
+    longport_runtime_override:
+        Inject a ``LongPortRuntimeStore`` (typically built from
+        ``from_settings_defaults`` so it stays in-memory) so tests don't
+        accidentally read or write the real ``data/longport_settings.json``.
     """
     if settings is None:
         settings = get_settings()
@@ -90,7 +95,15 @@ def create_app(
 
         bus = EventBus()
         state.bus = bus
-        state.longport_runtime = LongPortRuntimeStore()
+        # When a test passes broker_override OR an explicit runtime override,
+        # do NOT read/write the real settings file. Use the override (or an
+        # in-memory store derived from Settings) so test runs stay hermetic.
+        if longport_runtime_override is not None:
+            state.longport_runtime = longport_runtime_override
+        elif broker_override is not None:
+            state.longport_runtime = LongPortRuntimeStore.from_settings_defaults(settings)
+        else:
+            state.longport_runtime = LongPortRuntimeStore()
 
         # Broker -----------------------------------------------------------
         # Building the broker is encapsulated in a closure so we can re-run it
@@ -112,7 +125,16 @@ def create_app(
                     state.longport_runtime.get(),
                     settings=settings,
                 )
-                return LongPortClient(cfg), None
+                # dry_run_getter lets the UI's dry_run toggle take effect on
+                # the next submit without rebuilding the broker — same pattern
+                # as the trader's auto_trade_getter.
+                return (
+                    LongPortClient(
+                        cfg,
+                        dry_run_getter=lambda: state.longport_runtime.get().dry_run,
+                    ),
+                    None,
+                )
             except Exception as exc:  # noqa: BLE001 — widened from (ValueError, ImportError)
                 # Network / SDK errors can also surface during Quote/TradeContext
                 # init or subscribe(). Falling back to Noop is the right behavior

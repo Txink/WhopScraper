@@ -40,10 +40,19 @@ class LongPortClient:
 
     Pass ``config.dry_run=True`` to exercise order-submission code paths
     without ever making a network call — useful in unit tests and staging.
+    For interactive dry_run toggling at runtime (e.g. from the UI) pass
+    ``dry_run_getter`` so the flag is read on every submit instead of being
+    captured at construction.
     """
 
-    def __init__(self, config: LongPortConfig) -> None:
+    def __init__(
+        self,
+        config: LongPortConfig,
+        *,
+        dry_run_getter: Callable[[], bool] | None = None,
+    ) -> None:
         self._config = config
+        self._dry_run_getter = dry_run_getter
         self._push_handlers: list[Callable[[Any], None]] = []
         self._closed = False
 
@@ -76,6 +85,11 @@ class LongPortClient:
 
     @property
     def dry_run(self) -> bool:
+        # Prefer the runtime getter when wired — lets the UI's dry_run
+        # toggle take effect on the next submit without rebuilding the
+        # broker. Falls back to the config snapshot for tests / direct use.
+        if self._dry_run_getter is not None:
+            return bool(self._dry_run_getter())
         return self._config.dry_run
 
     # ------------------------------------------------------------------ #
@@ -93,7 +107,7 @@ class LongPortClient:
         remark: str = "",
     ) -> str:
         """Submit an option order; return broker-assigned order_id."""
-        if self._config.dry_run:
+        if self.dry_run:
             dry_id = f"DRY-{uuid.uuid4()}"
             logger.info(
                 "[DRY RUN] submit_option_order symbol=%s side=%s qty=%d price=%s → %s",
@@ -125,7 +139,7 @@ class LongPortClient:
         remark: str = "",
     ) -> str:
         """Submit a stock order; return broker-assigned order_id."""
-        if self._config.dry_run:
+        if self.dry_run:
             dry_id = f"DRY-{uuid.uuid4()}"
             logger.info(
                 "[DRY RUN] submit_stock_order symbol=%s side=%s qty=%d price=%s → %s",
@@ -151,7 +165,7 @@ class LongPortClient:
 
         On dry_run: log and no-op without a network call.
         """
-        if self._config.dry_run:
+        if self.dry_run:
             logger.info("[DRY RUN] cancel_order order_id=%s — skipped", order_id)
             return
         if self._trade_ctx is None:
