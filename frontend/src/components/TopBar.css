@@ -114,16 +114,21 @@
 .longport-conn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  /* Inter-child spacing handled via per-child margin so the trailing
+     refresh icon truly contributes zero space when collapsed (flex
+     ``gap`` would still allocate its slot even at width:0). */
   border-radius: var(--radius-chip);
   border: 1px solid var(--line-strong);
-  padding: 4px 11px;
+  padding: 4px 9px;
   background: transparent;
   cursor: pointer;
   font: inherit;
   color: inherit;
   line-height: 1.45;
   transition: color 150ms ease, border-color 150ms ease, background 150ms ease;
+}
+.longport-conn .conn-dot {
+  margin-right: 6px;
 }
 .longport-conn:disabled {
   cursor: default;
