@@ -73,12 +73,14 @@ describe("Card", () => {
     expect(container.querySelector(".card.compact")).not.toBeInTheDocument();
   });
 
-  it("clicking collapse button in expanded mode collapses it", () => {
+  it("clicking the header in expanded mode collapses it", () => {
+    // The dedicated collapse button was removed; the entire .card-header
+    // is now the collapse hit-target (role=button, aria-label="收起").
     const { container } = render(
       <Card task={filledTask} pushEvents={[]} defaultExpanded={true} autoTrade={true} />
     );
-    const collapseBtn = container.querySelector(".collapse-btn")!;
-    fireEvent.click(collapseBtn);
+    const header = container.querySelector(".card.expanded .card-header")!;
+    fireEvent.click(header);
     expect(container.querySelector(".card.compact")).toBeInTheDocument();
     expect(container.querySelector(".card.expanded")).not.toBeInTheDocument();
   });

@@ -101,7 +101,6 @@ export function CardCompact({ task, autoTrade, onExpand }: CardCompactProps) {
         ? <ConfirmActions taskId={task.id} variant="compact" />
         : <StatusPill status={status} />
       }
-      <span className="caret">▸</span>
     </div>
   );
 }

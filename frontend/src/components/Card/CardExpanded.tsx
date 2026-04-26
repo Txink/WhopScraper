@@ -57,7 +57,22 @@ export function CardExpanded({ task, pushEvents, autoTrade, onCollapse }: CardEx
 
   return (
     <article className="card expanded">
-      <div className="card-header">
+      {/* Header acts as the collapse hit-target: click anywhere on the row
+          to toggle back to the compact form. role + tabIndex give keyboard
+          users the same affordance. */}
+      <div
+        className="card-header"
+        role="button"
+        tabIndex={0}
+        aria-label="收起"
+        onClick={onCollapse}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onCollapse();
+          }
+        }}
+      >
         <TypeBadge type={badgeType} />
         <span className="card-symbol">{title}</span>
         {sideLabel && (
@@ -65,13 +80,6 @@ export function CardExpanded({ task, pushEvents, autoTrade, onCollapse }: CardEx
         )}
         <span className="header-spacer" />
         <StatusPill status={status} />
-        <button
-          className="collapse-btn"
-          onClick={onCollapse}
-          aria-label="收起"
-        >
-          ▴
-        </button>
       </div>
 
       {/* Raw message */}
