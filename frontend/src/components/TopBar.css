@@ -106,25 +106,36 @@
   color: var(--fg-3);
 }
 
-/* LongPort conn pill — clickable; rounded border, color-coded by broker
- * init state. Green when backend's LongPportClient is alive; red when it
- * fell back to NoopClient (init failed). Hover swaps the content to a
- * "⟳ 刷新" affordance and the click triggers a backend broker rebuild
- * (POST /api/longport/broker/reload). */
+/* LongPort conn pill — clickable. Default content (● longport) stays
+ * visible at all times; hover/reloading state flips colors to brand
+ * cyan and fades-in a refresh ⟳ glyph at the trailing edge — same
+ * affordance pattern as the whitelist ticker chip's hover-to-delete
+ * (border + bg + text shift, icon slides in from the side). */
 .longport-conn {
-  position: relative;
-  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: var(--radius-chip);
   border: 1px solid var(--line-strong);
-  padding: 3px 9px 3px 7px;
+  padding: 4px 11px;
   background: transparent;
   cursor: pointer;
   font: inherit;
   color: inherit;
+  line-height: 1.45;
   transition: color 150ms ease, border-color 150ms ease, background 150ms ease;
 }
 .longport-conn:disabled {
   cursor: default;
 }
+
+/* Bigger label so it doesn't disappear next to the larger PAPER pill. */
+.longport-conn .conn-label {
+  font-size: 12.5px;
+  letter-spacing: 0.02em;
+}
+
+/* Default state colors (broker real / noop / unknown) */
 .longport-conn[data-broker-real="true"] {
   border-color: rgba(61, 214, 140, 0.42);
   background: rgba(61, 214, 140, 0.08);
@@ -151,45 +162,64 @@
   color: var(--fg-3);
 }
 
-/* Default vs hover content swap — the button always renders both
- * spans; CSS toggles which one is visible. */
-.longport-conn .longport-default,
-.longport-conn .longport-hover {
+/* Trailing refresh icon — hidden by default, fades + slides in on hover.
+ * Mirrors the ticker chip's .ticker-del-icon transition. */
+.longport-conn .longport-refresh-icon {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  line-height: 1;
+  justify-content: center;
+  width: 13px;
+  height: 13px;
+  margin-left: 0;
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: opacity 140ms ease, transform 140ms ease, color 140ms ease;
+  color: var(--fg-3);
 }
-.longport-conn .longport-hover {
-  display: none;
-  color: var(--brand);
-}
-.longport-conn .longport-hover svg {
-  width: 12px;
-  height: 12px;
-}
-.longport-conn .longport-hover .conn-label {
-  color: var(--brand);
-}
-.longport-conn:hover:not(:disabled) .longport-default {
-  display: none;
-}
-.longport-conn:hover:not(:disabled) .longport-hover {
-  display: inline-flex;
-}
-.longport-conn:hover:not(:disabled) {
-  border-color: var(--brand);
-  background: rgba(63, 181, 197, 0.10);
+.longport-conn .longport-refresh-icon svg {
+  width: 13px;
+  height: 13px;
 }
 
-/* In-flight: force the hover (refresh) view + spin the icon. */
-.longport-conn.reloading .longport-default {
-  display: none;
+/* Hover: flip the whole chip to brand cyan + reveal the refresh glyph. */
+.longport-conn:hover:not(:disabled) {
+  border-color: rgba(63, 181, 197, 0.55);
+  background: rgba(63, 181, 197, 0.14);
 }
-.longport-conn.reloading .longport-hover {
-  display: inline-flex;
+.longport-conn:hover:not(:disabled) .conn-label {
+  color: var(--brand);
 }
-.longport-conn .longport-hover svg.spinning {
+.longport-conn:hover:not(:disabled) .conn-dot {
+  background: var(--brand);
+  box-shadow: 0 0 4px var(--brand);
+}
+.longport-conn:hover:not(:disabled) .longport-refresh-icon {
+  opacity: 1;
+  transform: translateX(0);
+  color: var(--brand);
+}
+.longport-conn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* In-flight: lock the hover-revealed icon visible and spin it. */
+.longport-conn.reloading {
+  border-color: rgba(63, 181, 197, 0.55);
+  background: rgba(63, 181, 197, 0.14);
+}
+.longport-conn.reloading .conn-label {
+  color: var(--brand);
+}
+.longport-conn.reloading .conn-dot {
+  background: var(--brand);
+  box-shadow: 0 0 4px var(--brand);
+}
+.longport-conn.reloading .longport-refresh-icon {
+  opacity: 1;
+  transform: translateX(0);
+  color: var(--brand);
+}
+.longport-conn .longport-refresh-icon svg.spinning {
   animation: longport-spin 0.9s linear infinite;
 }
 @keyframes longport-spin {

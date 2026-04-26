@@ -101,13 +101,9 @@ export function TopBar({
             disabled={reloading || !onReloadBroker}
             onClick={handleLongportClick}
           >
-            {/* Default: show broker status (dot + "longport" label) */}
-            <span className="longport-default">
-              <span className={`conn-dot ${connLongport}`} />
-              <span className="conn-label">longport</span>
-            </span>
-            {/* Hover (or in-flight): swap to refresh affordance */}
-            <span className="longport-hover">
+            <span className={`conn-dot ${connLongport}`} />
+            <span className="conn-label">longport</span>
+            <span className="longport-refresh-icon" aria-hidden="true">
               <svg
                 viewBox="0 0 14 14"
                 fill="none"
@@ -115,7 +111,6 @@ export function TopBar({
                 strokeWidth="1.4"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                aria-hidden="true"
                 className={reloading ? "spinning" : ""}
               >
                 <path d="M2 7a5 5 0 0 1 9-3" />
@@ -123,7 +118,6 @@ export function TopBar({
                 <path d="M12 7a5 5 0 0 1-9 3" />
                 <polyline points="2.5 12.5 2.5 10 5 10" />
               </svg>
-              <span className="conn-label">{reloading ? "刷新中" : "刷新"}</span>
             </span>
           </button>
         </div>
