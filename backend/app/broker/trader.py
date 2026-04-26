@@ -26,6 +26,7 @@ from __future__ import annotations
 import logging
 import time
 from collections.abc import Callable
+from datetime import datetime
 from typing import TYPE_CHECKING, Any, cast
 
 from app.broker.broker_client import BrokerClient, OrderSide, OrderType
@@ -40,7 +41,8 @@ from app.domain.instruction import (
     StockInstruction,
 )
 from app.domain.task import Task
-from app.whop.page_settings import position_size_to_fraction
+from app.storage.repo import TaskQueryRepo
+from app.whop.page_settings import position_size_to_fraction, sell_quantity_to_fraction
 
 if TYPE_CHECKING:
     from app.whop.page_settings import PageSettings
@@ -70,6 +72,63 @@ def _format_broker_error(exc: BaseException) -> str:
     return f"broker error: {exc}"
 
 
+async def _qty_for_whitelisted_stock(
+    inst: StockInstruction,
+    ticker_upper: str,
+    page_settings: "PageSettings",
+    *,
+    task_query_repo: TaskQueryRepo | None,
+    now: datetime,
+) -> int:
+    """Compute submit qty for a whitelisted stock task.
+
+    Lot path: if instruction carries (referenced_lot_price, sell_quantity)
+    and a TaskQueryRepo is injected, look up the most recent reverse-side
+    task and multiply by sell_quantity_to_fraction(...). Falls through to
+    the default page-settings × position_size path on any miss / missing
+    precondition.
+    """
+    if (
+        inst.referenced_lot_price is not None
+        and inst.sell_quantity is not None
+        and task_query_repo is not None
+    ):
+        opposite = (
+            InstructionType.BUY
+            if inst.instruction_type == InstructionType.SELL
+            else InstructionType.SELL
+        )
+        prior_qty = await task_query_repo.find_recent_task_by_ref(
+            ticker=ticker_upper,
+            side=opposite,
+            price=inst.referenced_lot_price,
+            before=now,
+            window_hours=24 * 7,
+        )
+        if prior_qty is not None:
+            fraction = sell_quantity_to_fraction(inst.sell_quantity)
+            qty = max(int(prior_qty * fraction), 1)
+            logger.info(
+                "Trader: lot ref @%.4f qty=%d × %s → %d (ticker=%s)",
+                inst.referenced_lot_price,
+                prior_qty,
+                inst.sell_quantity,
+                qty,
+                ticker_upper,
+            )
+            return qty
+        logger.info(
+            "Trader: no prior %s within 7d for %s @%.4f, falling back to default qty",
+            opposite.value,
+            ticker_upper,
+            inst.referenced_lot_price,
+        )
+
+    base_qty = page_settings.tickers[ticker_upper].trade_quantity
+    fraction = position_size_to_fraction(inst.position_size)
+    return max(int(base_qty * fraction), 1)
+
+
 def register_trader(
     bus: EventBus,
     client: BrokerClient,
@@ -77,6 +136,7 @@ def register_trader(
     *,
     registry: Any | None = None,
     auto_trade_getter: Callable[[], bool] | None = None,
+    task_query_repo: TaskQueryRepo | None = None,
 ) -> Callable[[], None]:
     """Subscribe trader handler to TASK_INSTRUCTION_READY.
 
@@ -89,6 +149,10 @@ def register_trader(
         ``PageSettings | None``. If ``None``, every task is treated as an
         "orphan" (no page settings) and falls back to ``instruction.quantity``
         + global Settings tolerance.
+    task_query_repo:
+        Optional ``TaskQueryRepo``. When provided, instructions carrying both
+        ``referenced_lot_price`` and ``sell_quantity`` resolve qty via the
+        prior reverse-side task. None disables the path entirely.
 
     Returns the unsubscribe callable.
     """
@@ -184,10 +248,13 @@ def register_trader(
         if isinstance(inst, StockInstruction):
             ticker_upper = (inst.ticker or "").upper()
             if page_settings is not None and page_settings.tickers is not None:
-                # Whitelisted stock — qty derived from page_settings.
-                base_qty = page_settings.tickers[ticker_upper].trade_quantity
-                fraction = position_size_to_fraction(inst.position_size)
-                computed_qty = max(int(base_qty * fraction), 1)
+                computed_qty = await _qty_for_whitelisted_stock(
+                    inst,
+                    ticker_upper,
+                    page_settings,
+                    task_query_repo=task_query_repo,
+                    now=task.created_at,
+                )
             else:
                 # Orphan stock task — fall back to instruction.quantity
                 computed_qty = inst.quantity or 0
