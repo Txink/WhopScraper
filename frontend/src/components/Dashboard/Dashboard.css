@@ -15,10 +15,21 @@
 
 .page-meta-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-3);
   padding: var(--space-2) var(--space-3);
   border-bottom: 1px solid var(--line);
+}
+
+/* Wraps PageInfoBar + the optional PageWhitelistBar so action buttons
+ * (power / settings / collapse-all) stay pinned to the right while the
+ * stack on the left can grow downward when the whitelist row is added. */
+.page-meta-stack {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .page-info-bar {
@@ -47,6 +58,215 @@
 .page-info-bar .page-url:hover {
   color: var(--brand);
   text-decoration: underline;
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+ * Whitelist bar — sits below the page header on stock pages.
+ * Inline editor: ticker chips + an "add" affordance, no modal needed.
+ * Each chip flips to a delete state on hover (red tint + ✕ glyph).
+ * ────────────────────────────────────────────────────────────────────── */
+.page-whitelist-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--line);
+  font-size: 11px;
+  color: var(--fg-3);
+}
+.page-whitelist-bar .whitelist-label {
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  color: var(--fg-3);
+  text-transform: uppercase;
+  margin-right: 2px;
+}
+.page-whitelist-bar .whitelist-empty {
+  font-size: 11px;
+  color: var(--fg-3);
+  font-style: italic;
+}
+.page-whitelist-bar .whitelist-error {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--err);
+  margin-left: 6px;
+}
+
+/* Default chip — ``TSLL.US · 2000`` */
+.page-whitelist-bar .ticker-chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(95, 191, 139, 0.32);
+  background: rgba(95, 191, 139, 0.08);
+  color: var(--fg-1);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.45;
+  cursor: pointer;
+  transition: border-color 140ms ease, background 140ms ease, color 140ms ease;
+}
+.page-whitelist-bar .ticker-chip:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.page-whitelist-bar .ticker-chip .ticker-name {
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: #6cd5e3;          /* matches stock-type accent */
+}
+.page-whitelist-bar .ticker-chip .ticker-sep {
+  color: var(--fg-3);
+  font-weight: 400;
+}
+.page-whitelist-bar .ticker-chip .ticker-qty {
+  color: var(--fg-2);
+}
+.page-whitelist-bar .ticker-chip .ticker-del-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  height: 12px;
+  margin-left: 1px;
+  opacity: 0;
+  transform: translateX(-2px);
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+.page-whitelist-bar .ticker-chip .ticker-del-icon svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* Hover — flip to delete affordance */
+.page-whitelist-bar .ticker-chip:hover:not(:disabled) {
+  border-color: rgba(239, 91, 91, 0.55);
+  background: rgba(239, 91, 91, 0.14);
+}
+.page-whitelist-bar .ticker-chip:hover:not(:disabled) .ticker-name,
+.page-whitelist-bar .ticker-chip:hover:not(:disabled) .ticker-qty,
+.page-whitelist-bar .ticker-chip:hover:not(:disabled) .ticker-sep {
+  color: var(--err);
+}
+.page-whitelist-bar .ticker-chip:hover:not(:disabled) .ticker-del-icon {
+  opacity: 1;
+  transform: translateX(0);
+  color: var(--err);
+}
+.page-whitelist-bar .ticker-chip:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+/* Add (+) button — same pill silhouette as chips, neutral palette */
+.page-whitelist-bar .ticker-add-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 22px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px dashed var(--line-strong);
+  background: transparent;
+  color: var(--fg-2);
+  cursor: pointer;
+  transition: border-color 140ms ease, color 140ms ease, background 140ms ease;
+}
+.page-whitelist-bar .ticker-add-btn:hover:not(:disabled) {
+  border-style: solid;
+  border-color: var(--brand);
+  color: var(--brand);
+  background: rgba(63, 181, 197, 0.08);
+}
+.page-whitelist-bar .ticker-add-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.page-whitelist-bar .ticker-add-btn svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* Inline add form — same pill silhouette, two compact inputs */
+.page-whitelist-bar .ticker-add-form {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px 2px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--brand);
+  background: rgba(63, 181, 197, 0.08);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+.page-whitelist-bar .ticker-add-input {
+  background: transparent;
+  border: 0;
+  outline: none;
+  color: var(--fg-1);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 2px 0;
+}
+.page-whitelist-bar .ticker-add-input.ticker-name-input {
+  width: 64px;
+  text-transform: uppercase;
+  color: #6cd5e3;
+  font-weight: 500;
+}
+.page-whitelist-bar .ticker-add-input.ticker-name-input::placeholder {
+  text-transform: none;
+  color: var(--fg-3);
+  font-weight: 400;
+}
+.page-whitelist-bar .ticker-add-input.ticker-qty-input {
+  width: 56px;
+  color: var(--fg-2);
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.page-whitelist-bar .ticker-add-input.ticker-qty-input::-webkit-outer-spin-button,
+.page-whitelist-bar .ticker-add-input.ticker-qty-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.page-whitelist-bar .ticker-add-confirm,
+.page-whitelist-bar .ticker-add-cancel {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+.page-whitelist-bar .ticker-add-confirm {
+  color: var(--ok);
+}
+.page-whitelist-bar .ticker-add-confirm:hover:not(:disabled) {
+  background: rgba(61, 214, 140, 0.18);
+}
+.page-whitelist-bar .ticker-add-cancel {
+  color: var(--fg-3);
+}
+.page-whitelist-bar .ticker-add-cancel:hover:not(:disabled) {
+  background: rgba(239, 91, 91, 0.16);
+  color: var(--err);
+}
+.page-whitelist-bar .ticker-add-confirm svg,
+.page-whitelist-bar .ticker-add-cancel svg {
+  width: 12px;
+  height: 12px;
 }
 
 .page-action-bar {

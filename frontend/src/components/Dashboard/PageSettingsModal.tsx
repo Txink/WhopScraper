@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import type { WhopPage, WhopPageSettings } from "../../api/domain-types";
 import { api, HttpError } from "../../api/http";
 import { useTasksStore } from "../../stores/tasks";
@@ -7,12 +7,6 @@ import "./PageSettingsModal.css";
 interface Props {
   page: WhopPage;
   onClose: () => void;
-}
-
-interface TickerRow {
-  rowId: string;
-  ticker: string;
-  trade_quantity: number;
 }
 
 export function PageSettingsModal({ page, onClose }: Props) {
@@ -33,17 +27,6 @@ export function PageSettingsModal({ page, onClose }: Props) {
     page.settings.option_total_price_limit != null ? String(page.settings.option_total_price_limit) : ""
   );
 
-  const initialTickers = page.settings.tickers ?? {};
-  const nextRowId = useRef(Object.keys(initialTickers).length);
-  const newRowId = () => `row-${++nextRowId.current}`;
-
-  const [tickerRows, setTickerRows] = useState<TickerRow[]>(() =>
-    Object.entries(initialTickers).map(([ticker, cfg], i) => ({
-      rowId: `row-${i}`,
-      ticker,
-      trade_quantity: cfg.trade_quantity,
-    }))
-  );
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [clearing, setClearing] = useState(false);
@@ -73,19 +56,6 @@ export function PageSettingsModal({ page, onClose }: Props) {
   const initialDedupe = page.settings.dedupe_processed_messages;
   const dedupeChanged = dedupe !== initialDedupe;
 
-  const handleAddTicker = () => {
-    setTickerRows(prev => [...prev, { rowId: newRowId(), ticker: "", trade_quantity: 0 }]);
-  };
-  const handleRemoveTicker = (rowId: string) => {
-    setTickerRows(prev => prev.filter(r => r.rowId !== rowId));
-  };
-  const handleEditTickerName = (rowId: string, name: string) => {
-    setTickerRows(prev => prev.map(r => (r.rowId === rowId ? { ...r, ticker: name } : r)));
-  };
-  const handleEditTickerQty = (rowId: string, qty: number) => {
-    setTickerRows(prev => prev.map(r => (r.rowId === rowId ? { ...r, trade_quantity: qty } : r)));
-  };
-
   const handleSave = async () => {
     setError(null);
     const tolNum = Number(tolerance);
@@ -93,15 +63,7 @@ export function PageSettingsModal({ page, onClose }: Props) {
       setError("价格偏差必须 ≥ 0");
       return;
     }
-    if (page.source === "stock") {
-      for (const r of tickerRows) {
-        if (!r.ticker.trim()) { setError("ticker 不能为空"); return; }
-        if (!Number.isFinite(r.trade_quantity) || r.trade_quantity <= 0) {
-          setError(`${r.ticker}: 数量必须 > 0`);
-          return;
-        }
-      }
-    } else if (page.source === "option") {
+    if (page.source === "option") {
       if (optionBuyQtyEnabled) {
         const optionQtyNum = Number(optionBuyQty);
         if (Number.isNaN(optionQtyNum) || optionQtyNum <= 0 || !Number.isInteger(optionQtyNum)) {
@@ -125,11 +87,11 @@ export function PageSettingsModal({ page, onClose }: Props) {
         block_non_today_messages: blockNonToday,
         launch_headless: launchHeadless,
       };
-      if (page.source === "stock") {
-        patch.tickers = Object.fromEntries(
-          tickerRows.map(r => [r.ticker.toUpperCase(), { trade_quantity: r.trade_quantity }])
-        );
-      } else if (page.source === "option") {
+      // Stock whitelist (tickers) is now edited inline below the page header
+      // via PageWhitelistBar — not in this modal — so we never include it
+      // in the patch body. The backend's per-field merge keeps the existing
+      // tickers untouched when the key is omitted.
+      if (page.source === "option") {
         patch.option_buy_quantity_enabled = optionBuyQtyEnabled;
         patch.option_buy_quantity = optionBuyQtyEnabled ? Number(optionBuyQty) : null;
         patch.option_total_price_limit_enabled = optionTotalLimitEnabled;
@@ -208,43 +170,6 @@ export function PageSettingsModal({ page, onClose }: Props) {
               重启监听后生效；关闭后会以可见浏览器窗口启动该页面监听。
             </p>
           </section>
-
-          {page.source === "stock" && (
-            <section>
-              <h4>股票配置</h4>
-              <p className="hint small">
-                只有列表里的 ticker 才会触发下单；trade_quantity 是"常规仓"的整股数（半仓 ÷2、1/3 仓 ÷3）。
-              </p>
-              <table className="tickers-table">
-                <thead><tr><th>Ticker</th><th>常规仓数量</th><th /></tr></thead>
-                <tbody>
-                  {tickerRows.map(row => (
-                    <tr key={row.rowId}>
-                      <td>
-                        <input
-                          className="ticker-input"
-                          placeholder="输入 ticker"
-                          value={row.ticker}
-                          onChange={e => handleEditTickerName(row.rowId, e.target.value)}
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="number" min="1" placeholder="数量"
-                          value={row.trade_quantity || ""}
-                          onChange={e => handleEditTickerQty(row.rowId, Number(e.target.value))}
-                        />
-                      </td>
-                      <td>
-                        <button onClick={() => handleRemoveTicker(row.rowId)} className="del" aria-label="删除">✕</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <button onClick={handleAddTicker} className="add-link">+ 添加 ticker</button>
-            </section>
-          )}
 
           {page.source === "option" && (
             <section>

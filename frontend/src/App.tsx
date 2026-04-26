@@ -13,6 +13,7 @@ import { Login } from "./components/Login";
 import { WhopPanel } from "./components/WhopPanel/WhopPanel";
 import { PageTabs } from "./components/Dashboard/PageTabs";
 import { PageInfoBar } from "./components/Dashboard/PageInfoBar";
+import { PageWhitelistBar } from "./components/Dashboard/PageWhitelistBar";
 import { PageActionBar } from "./components/Dashboard/PageActionBar";
 import { PageSettingsModal } from "./components/Dashboard/PageSettingsModal";
 import { TaskStream } from "./components/Dashboard/TaskStream";
@@ -216,11 +217,16 @@ function Dashboard({ token }: { token: string }) {
       <section className="stream">
         <PageTabs />
         <div className="page-meta-row">
-          <PageInfoBar
-            page={activePage}
-            orphanCount={orphanCount}
-            mode={isOrphanTab ? "orphan" : "page"}
-          />
+          <div className="page-meta-stack">
+            <PageInfoBar
+              page={activePage}
+              orphanCount={orphanCount}
+              mode={isOrphanTab ? "orphan" : "page"}
+            />
+            {!isOrphanTab && activePage && activePage.source === "stock" && (
+              <PageWhitelistBar page={activePage} />
+            )}
+          </div>
           <PageActionBar
             page={activePage}
             mode={isOrphanTab ? "orphan" : "page"}

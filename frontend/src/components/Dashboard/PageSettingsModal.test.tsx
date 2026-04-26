@@ -38,26 +38,21 @@ const optionPage: WhopPage = {
 describe("<PageSettingsModal>", () => {
   beforeEach(() => { vi.restoreAllMocks(); });
 
-  it("stock modal shows ticker editor; option modal hides it", () => {
-    const { unmount } = render(<PageSettingsModal page={stockPage} onClose={vi.fn()} />);
-    expect(screen.getByText(/股票配置/)).toBeInTheDocument();
-    unmount();
-    render(<PageSettingsModal page={optionPage} onClose={vi.fn()} />);
+  it("ticker whitelist editor is no longer in the settings modal (moved to PageWhitelistBar)", () => {
+    // Whitelist editing is now inline below the page header — see PageWhitelistBar.
+    // The settings modal should not surface 股票配置 or any ticker editing UI.
+    render(<PageSettingsModal page={stockPage} onClose={vi.fn()} />);
     expect(screen.queryByText(/股票配置/)).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText(/输入 ticker/)).not.toBeInTheDocument();
   });
 
-  it("editing ticker uppercases the key on save", async () => {
+  it("save patch never sends tickers — backend's per-field merge keeps existing whitelist", async () => {
     const spy = vi.spyOn(httpModule.api, "updateWhopPageSettings").mockResolvedValue(stockPage);
     render(<PageSettingsModal page={stockPage} onClose={vi.fn()} />);
-    fireEvent.click(screen.getByText(/添加 ticker/));
-    const tickerInputs = screen.getAllByPlaceholderText(/输入 ticker/);
-    fireEvent.change(tickerInputs[tickerInputs.length - 1], { target: { value: "nvda" } });
-    const qtyInputs = screen.getAllByPlaceholderText(/数量/);
-    fireEvent.change(qtyInputs[qtyInputs.length - 1], { target: { value: "500" } });
     fireEvent.click(screen.getByText(/^保存/));
     await waitFor(() => expect(spy).toHaveBeenCalled());
     const arg = spy.mock.calls[0][1];
-    expect(arg.tickers).toMatchObject({ NVDA: { trade_quantity: 500 } });
+    expect(arg).not.toHaveProperty("tickers");
   });
 
   it("toggling dedupe shows hint about restart", () => {
