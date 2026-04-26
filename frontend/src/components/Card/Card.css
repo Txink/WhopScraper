@@ -16,13 +16,13 @@
 /* ===== COMPACT ===== */
 .card.compact {
   display: grid;
-  /* type | raw-msg (elastic) | symbol | side | details | ts | elapsed | status | caret */
+  /* type | raw-msg (220-280) | symbol | side | details (elastic) | ts | elapsed | status | caret */
   grid-template-columns:
     44px
-    minmax(0, 1fr)
+    minmax(220px, 280px)
     minmax(96px, auto)
     44px
-    minmax(110px, auto)
+    1fr
     90px
     80px
     104px
@@ -38,14 +38,16 @@
   border-color: var(--line-strong);
 }
 
-/* Raw message preview — fills the elastic 2nd column. Wraps when the
-   message exceeds the available width so the user can see the full
-   text without expanding the card; the row grows accordingly. */
+/* Raw message preview — fills the 220-280px-wide 2nd column and wraps
+   when the message exceeds that width. Same typography as the previous
+   ``.msg-preview-inline`` style so the visual weight matches the look
+   that worked well in PARSE_ERROR cards. */
 .card.compact .raw-msg {
   color: var(--fg-2);
   font-family: var(--font-sans);
+  font-weight: 400;
+  font-size: 11px;
   font-style: italic;
-  font-size: 11.5px;
   line-height: 1.45;
   white-space: normal;
   word-break: break-word;
