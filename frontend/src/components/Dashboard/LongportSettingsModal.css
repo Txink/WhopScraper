@@ -83,13 +83,7 @@
   margin: 0;
 }
 
-.lp-modal input[type="checkbox"] {
-  width: 14px;
-  height: 14px;
-  accent-color: var(--brand);
-  cursor: pointer;
-  margin: 0;
-}
+/* Checkbox visual style now lives globally in styles/tokens.css. */
 
 /* Header row above mode-switch: "当前模式 [● real] [⟳]" */
 .mode-header-row {

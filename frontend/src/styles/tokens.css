@@ -73,6 +73,65 @@ button {
   color: inherit;
 }
 
+/* ──────────────────────────────────────────────────────────────────────
+ * Custom checkbox — replaces the user-agent's white square with a
+ * 14×14 dark pill that fits the project's dark theme. The native
+ * ``accent-color`` only colors the CHECKED state on most browsers;
+ * unchecked + indeterminate still default to white. Setting
+ * ``appearance: none`` and drawing the box ourselves gives full control.
+ *
+ * Applies to every input[type="checkbox"] in the app — modals, settings
+ * panels, anywhere — so we don't have to repeat this per-component.
+ * ────────────────────────────────────────────────────────────────────── */
+input[type="checkbox"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  background: var(--bg-1);
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+  transition: border-color var(--dur) var(--ease),
+              background var(--dur) var(--ease);
+}
+
+input[type="checkbox"]:hover:not(:disabled) {
+  border-color: var(--brand);
+}
+
+input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+input[type="checkbox"]:checked {
+  background: var(--brand);
+  border-color: var(--brand);
+}
+
+/* Checkmark glyph drawn with two CSS borders rotated to form ✓.
+ * Centered against the 14×14 box; the dimensions match a tight tick. */
+input[type="checkbox"]:checked::after {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 0;
+  width: 4px;
+  height: 8px;
+  border: solid var(--bg-0);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+input[type="checkbox"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 @keyframes pulse {
   0%, 100% { opacity: 0.6; transform: scale(1); }
   50% { opacity: 0; transform: scale(1.15); }
