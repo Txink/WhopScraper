@@ -28,6 +28,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/tasks/count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Count Tasks Endpoint
+         * @description Return total task count (supports the same filters as /api/tasks).
+         */
+        get: operations["count_tasks_endpoint_api_tasks_count_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tasks/{task_id}": {
         parameters: {
             query?: never;
@@ -132,6 +152,61 @@ export interface paths {
         get: operations["health_endpoint_api_health_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/longport/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Longport Settings */
+        get: operations["get_longport_settings_api_longport_settings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Patch Longport Settings */
+        patch: operations["patch_longport_settings_api_longport_settings_patch"];
+        trace?: never;
+    };
+    "/api/tasks/{task_id}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm Task Endpoint */
+        post: operations["confirm_task_endpoint_api_tasks__task_id__confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tasks/{task_id}/skip": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Skip Task Endpoint
+         * @description Mark an INSTRUCTION_READY task as SKIPPED on user request.
+         */
+        post: operations["skip_task_endpoint_api_tasks__task_id__skip_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -385,6 +460,44 @@ export interface components {
             /** Expiry */
             expiry?: string | null;
         };
+        /** LongPortCredentialSet */
+        LongPortCredentialSet: {
+            /** App Key */
+            app_key: string;
+            /** App Secret */
+            app_secret: string;
+            /** Access Token */
+            access_token: string;
+        };
+        /** LongPortSettingsOut */
+        LongPortSettingsOut: {
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "paper" | "real";
+            paper: components["schemas"]["LongPortCredentialSet"];
+            real: components["schemas"]["LongPortCredentialSet"];
+            /** Auto Trade */
+            auto_trade: boolean;
+            /** Region */
+            region: string;
+            /** Dry Run */
+            dry_run: boolean;
+        };
+        /** LongPortSettingsPatch */
+        LongPortSettingsPatch: {
+            /** Mode */
+            mode?: ("paper" | "real") | null;
+            paper?: components["schemas"]["LongPortCredentialSet"] | null;
+            real?: components["schemas"]["LongPortCredentialSet"] | null;
+            /** Auto Trade */
+            auto_trade?: boolean | null;
+            /** Region */
+            region?: string | null;
+            /** Dry Run */
+            dry_run?: boolean | null;
+        };
         /** MessageOut */
         MessageOut: {
             /** Id */
@@ -493,6 +606,11 @@ export interface components {
             filled: number;
             /** Rejected */
             rejected: number;
+        };
+        /** TaskCountOut */
+        TaskCountOut: {
+            /** Total Count */
+            total_count: number;
         };
         /** TaskListOut */
         TaskListOut: {
@@ -638,7 +756,11 @@ export interface components {
             /** Block Non Today Messages */
             block_non_today_messages: boolean;
             /** Launch Headless */
-            launch_headless?: boolean | null;
+            launch_headless: boolean;
+            /** Tickers */
+            tickers?: {
+                [key: string]: components["schemas"]["TickerConfigOut"];
+            } | null;
             /** Option Buy Quantity Enabled */
             option_buy_quantity_enabled?: boolean | null;
             /** Option Buy Quantity */
@@ -647,10 +769,6 @@ export interface components {
             option_total_price_limit_enabled?: boolean | null;
             /** Option Total Price Limit */
             option_total_price_limit?: number | null;
-            /** Tickers */
-            tickers?: {
-                [key: string]: components["schemas"]["TickerConfigOut"];
-            } | null;
         };
         /**
          * WhopPageSettingsPatch
@@ -665,6 +783,10 @@ export interface components {
             block_non_today_messages?: boolean | null;
             /** Launch Headless */
             launch_headless?: boolean | null;
+            /** Tickers */
+            tickers?: {
+                [key: string]: components["schemas"]["TickerConfigOut"];
+            } | null;
             /** Option Buy Quantity Enabled */
             option_buy_quantity_enabled?: boolean | null;
             /** Option Buy Quantity */
@@ -673,10 +795,6 @@ export interface components {
             option_total_price_limit_enabled?: boolean | null;
             /** Option Total Price Limit */
             option_total_price_limit?: number | null;
-            /** Tickers */
-            tickers?: {
-                [key: string]: components["schemas"]["TickerConfigOut"];
-            } | null;
         };
         /** WhopPagesOut */
         WhopPagesOut: {
@@ -715,6 +833,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TaskListOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    count_tasks_endpoint_api_tasks_count_get: {
+        parameters: {
+            query?: {
+                status?: string | null;
+                type?: string | null;
+                symbol?: string | null;
+                token?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskCountOut"];
                 };
             };
             /** @description Validation Error */
@@ -874,6 +1026,138 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_longport_settings_api_longport_settings_get: {
+        parameters: {
+            query?: {
+                token?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LongPortSettingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_longport_settings_api_longport_settings_patch: {
+        parameters: {
+            query?: {
+                token?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LongPortSettingsPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LongPortSettingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_task_endpoint_api_tasks__task_id__confirm_post: {
+        parameters: {
+            query?: {
+                token?: string | null;
+            };
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    skip_task_endpoint_api_tasks__task_id__skip_post: {
+        parameters: {
+            query?: {
+                token?: string | null;
+            };
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskOut"];
                 };
             };
             /** @description Validation Error */

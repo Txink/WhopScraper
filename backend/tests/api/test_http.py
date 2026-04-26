@@ -36,6 +36,7 @@ from app.domain.push_event import PushEvent, PushState
 from app.domain.status import Status
 from app.domain.task import Task
 from app.storage import repo
+from app.storage.listeners import register_storage_listeners
 from tests.broker._fakes import FakeBrokerClient
 
 _TOKEN = "test-token-http-XYZ"
@@ -111,6 +112,7 @@ def make_app(session_factory: async_sessionmaker[AsyncSession]) -> tuple[FastAPI
     """Return a (FastAPI app, FakeBrokerClient) pair."""
     broker: FakeBrokerClient = FakeBrokerClient()
     settings = Settings(app_token=_TOKEN)
+    bus = EventBus()
 
     app = FastAPI()
     app.include_router(
@@ -118,11 +120,14 @@ def make_app(session_factory: async_sessionmaker[AsyncSession]) -> tuple[FastAPI
             session_factory=session_factory,
             broker=broker,
             settings=settings,
-            bus=EventBus(),
+            bus=bus,
         )
     )
     # Override the settings dependency so require_app_token uses the same token.
     app.dependency_overrides[get_settings] = lambda: settings
+
+    # Register storage listeners so events are persisted to DB
+    register_storage_listeners(bus, session_factory)
 
     return app, broker
 
@@ -512,3 +517,59 @@ def test_confirm_task_endpoint_rejects_non_instruction_ready(
     client, _ = client_and_broker
     resp = client.post("/api/tasks/cxl2/confirm", params={"token": _TOKEN})
     assert resp.status_code == 400
+
+
+# ---------------------------------------------------------------------------
+# Skip endpoint — POST /api/tasks/{id}/skip
+# ---------------------------------------------------------------------------
+
+
+@pytest_asyncio.fixture
+async def ready_task_for_skip(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> Task:
+    task = _task("skp1", Status.INSTRUCTION_READY, offset_secs=0)
+    task.instruction = _stock_instruction()
+    async with session_factory() as session:
+        await repo.save_task(session, task)
+    return task
+
+
+def test_skip_marks_task_skipped(
+    client_and_broker: tuple[TestClient, FakeBrokerClient],
+    ready_task_for_skip: Task,
+) -> None:
+    client, _ = client_and_broker
+    resp = client.post("/api/tasks/skp1/skip", params={"token": _TOKEN})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] == "SKIPPED"
+    assert data["reject_reason"] == "用户手动取消"
+
+
+def test_skip_404_when_task_missing(
+    client_and_broker: tuple[TestClient, FakeBrokerClient],
+) -> None:
+    client, _ = client_and_broker
+    resp = client.post("/api/tasks/no-such-id/skip", params={"token": _TOKEN})
+    assert resp.status_code == 404
+
+
+@pytest_asyncio.fixture
+async def pending_task_no_skip(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> Task:
+    task = _task("skp2", Status.PENDING, order_id="ORD-PSKP", offset_secs=0)
+    async with session_factory() as session:
+        await repo.save_task(session, task)
+    return task
+
+
+def test_skip_400_when_status_not_instruction_ready(
+    client_and_broker: tuple[TestClient, FakeBrokerClient],
+    pending_task_no_skip: Task,
+) -> None:
+    client, _ = client_and_broker
+    resp = client.post("/api/tasks/skp2/skip", params={"token": _TOKEN})
+    assert resp.status_code == 400
+    assert "INSTRUCTION_READY" in resp.json()["detail"]

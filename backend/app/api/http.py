@@ -343,6 +343,27 @@ def build_http_router(
             raise HTTPException(500, detail="task missing after confirm")
         return task_to_out(refreshed)
 
+    @router.post("/api/tasks/{task_id}/skip", response_model=TaskOut)
+    async def skip_task_endpoint(task_id: str) -> TaskOut:
+        """Mark an INSTRUCTION_READY task as SKIPPED on user request."""
+        async with session_scope(session_factory) as session:
+            task = await repo.load_task(session, task_id)
+        if task is None:
+            raise HTTPException(404, detail="task not found")
+        if task.status != Status.INSTRUCTION_READY:
+            raise HTTPException(
+                400,
+                detail=f"task status must be INSTRUCTION_READY for skip, got: {task.status}",
+            )
+        task.mark_skipped("用户手动取消")
+        await bus.publish(Event(Topics.TASK_STATUS_CHANGED, TaskPayload(task)))
+        await bus.wait_idle(timeout=3.0)
+        async with session_scope(session_factory) as session:
+            refreshed = await repo.load_task(session, task_id)
+        if refreshed is None:
+            raise HTTPException(500, detail="task missing after skip")
+        return task_to_out(refreshed)
+
     # ------------------------------------------------------------------ #
     # Whop monitoring management (only when registry provided)             #
     # ------------------------------------------------------------------ #
