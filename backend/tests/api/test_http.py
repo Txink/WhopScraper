@@ -488,6 +488,71 @@ def test_patch_longport_settings(client_and_broker: tuple[TestClient, FakeBroker
     assert body["real"]["app_key"] == "rk"
 
 
+def test_patch_longport_settings_empty_credential_fields_preserve_existing(
+    client_and_broker: tuple[TestClient, FakeBrokerClient],
+) -> None:
+    """Empty credential strings in PATCH must NOT wipe existing values.
+
+    Regression: a UI form glitch (e.g. paste mishap clearing a field) was
+    sending paper.app_secret="" with otherwise-correct creds. Wholesale
+    overwrite stored "" → restart loaded empty creds → LongPort init failed
+    → broker fell back to NoopClient. Per-field merge preserves the prior
+    value when the incoming string is empty.
+    """
+    client, _ = client_and_broker
+    # 1. Seed with full creds
+    resp = client.patch(
+        "/api/longport/settings",
+        params={"token": _TOKEN},
+        json={
+            "paper": {"app_key": "pk-good", "app_secret": "ps-good", "access_token": "pt-good"},
+        },
+    )
+    assert resp.status_code == 200
+    assert resp.json()["paper"]["app_key"] == "pk-good"
+
+    # 2. PATCH with one field empty (simulating UI glitch). The other two
+    #    arrive correctly; access_token is empty.
+    resp = client.patch(
+        "/api/longport/settings",
+        params={"token": _TOKEN},
+        json={
+            "paper": {"app_key": "pk-good", "app_secret": "ps-good", "access_token": ""},
+        },
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    # Empty access_token preserved the previously-stored value.
+    assert body["paper"]["access_token"] == "pt-good"
+    # Non-empty fields stay as sent.
+    assert body["paper"]["app_key"] == "pk-good"
+    assert body["paper"]["app_secret"] == "ps-good"
+
+
+def test_patch_longport_settings_all_empty_credentials_preserve_existing(
+    client_and_broker: tuple[TestClient, FakeBrokerClient],
+) -> None:
+    """A PATCH where ALL three credential fields are empty (e.g. modal sent
+    a stale form before user re-entered anything) must leave existing creds
+    untouched."""
+    client, _ = client_and_broker
+    client.patch(
+        "/api/longport/settings",
+        params={"token": _TOKEN},
+        json={"paper": {"app_key": "k1", "app_secret": "s1", "access_token": "t1"}},
+    )
+    resp = client.patch(
+        "/api/longport/settings",
+        params={"token": _TOKEN},
+        json={"paper": {"app_key": "", "app_secret": "", "access_token": ""}},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["paper"]["app_key"] == "k1"
+    assert body["paper"]["app_secret"] == "s1"
+    assert body["paper"]["access_token"] == "t1"
+
+
 @pytest_asyncio.fixture
 async def instruction_ready_task(session_factory: async_sessionmaker[AsyncSession]) -> Task:
     task = _task("confirm-1", Status.RECEIVED, offset_secs=0)

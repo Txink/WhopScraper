@@ -314,17 +314,24 @@ def build_http_router(
         patch: dict[str, object] = {}
         if body.mode is not None:
             patch["mode"] = body.mode
+        # Credentials: per-field merge. An empty string means "keep existing"
+        # — this prevents a UI form glitch (e.g. one of the long-string fields
+        # accidentally cleared during paste / selection) from wiping real
+        # credentials. To explicitly clear a credential the user can edit the
+        # runtime JSON file directly; the UI never has a legitimate reason to
+        # set a field to "".
+        current = runtime_store.get()
         if body.paper is not None:
             patch["paper"] = {
-                "app_key": body.paper.app_key,
-                "app_secret": body.paper.app_secret,
-                "access_token": body.paper.access_token,
+                "app_key": body.paper.app_key or current.paper.app_key,
+                "app_secret": body.paper.app_secret or current.paper.app_secret,
+                "access_token": body.paper.access_token or current.paper.access_token,
             }
         if body.real is not None:
             patch["real"] = {
-                "app_key": body.real.app_key,
-                "app_secret": body.real.app_secret,
-                "access_token": body.real.access_token,
+                "app_key": body.real.app_key or current.real.app_key,
+                "app_secret": body.real.app_secret or current.real.app_secret,
+                "access_token": body.real.access_token or current.real.access_token,
             }
         if body.auto_trade is not None:
             patch["auto_trade"] = body.auto_trade
