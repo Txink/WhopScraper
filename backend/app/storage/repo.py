@@ -21,13 +21,13 @@ Design notes
 from __future__ import annotations
 
 from datetime import UTC, date, datetime, time, timedelta
-from typing import Any
+from typing import Any, Protocol
 from urllib.parse import urlsplit, urlunsplit
 
 from sqlalchemy import delete as sa_delete
 from sqlalchemy import func, select
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.domain.instruction import (
     Instruction,
@@ -708,3 +708,52 @@ async def delete_tasks_by_url(session: AsyncSession, url: str | None) -> int:
     await session.execute(sa_delete(MessageRow).where(MessageRow.id.in_(task_ids)))
     await session.commit()
     return len(task_ids)
+
+
+# ---------------------------------------------------------------------------
+# TaskQueryRepo — injection seam for the trader's lot lookup.
+# ---------------------------------------------------------------------------
+
+
+class TaskQueryRepo(Protocol):
+    """Read-only task lookups for components outside the storage layer.
+
+    Decoupled from AsyncSession so the trader (which doesn't own a session)
+    can depend on this interface and tests can substitute a fake.
+    """
+
+    async def find_recent_task_by_ref(
+        self,
+        *,
+        ticker: str,
+        side: InstructionType,
+        price: float,
+        before: datetime,
+        window_hours: int = 24 * 7,
+    ) -> int | None: ...
+
+
+class SqlTaskQueryRepo:
+    """Production implementation: opens a session from the factory per call."""
+
+    def __init__(self, factory: async_sessionmaker[AsyncSession]) -> None:
+        self._factory = factory
+
+    async def find_recent_task_by_ref(
+        self,
+        *,
+        ticker: str,
+        side: InstructionType,
+        price: float,
+        before: datetime,
+        window_hours: int = 24 * 7,
+    ) -> int | None:
+        async with self._factory() as session:
+            return await find_recent_task_by_ref(
+                session,
+                ticker=ticker,
+                side=side,
+                price=price,
+                before=before,
+                window_hours=window_hours,
+            )

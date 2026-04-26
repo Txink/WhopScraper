@@ -228,3 +228,28 @@ async def test_before_is_strict_less_than(
             price=12.42, before=base, window_hours=24 * 7,
         )
     assert qty is None
+
+
+async def test_sql_task_query_repo_binds_session_factory(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """SqlTaskQueryRepo opens its own session per call from the factory."""
+    from app.storage.repo import SqlTaskQueryRepo
+
+    base = datetime(2026, 4, 23, 10, 0, 0, tzinfo=UTC)
+    buy = _stock_task(
+        id_="t-buy", when=base, side=InstructionType.BUY,
+        price=12.42, quantity=4000, order_id="ORD-1",
+    )
+    async with session_factory() as session:
+        await save_task(session, buy)
+
+    repo = SqlTaskQueryRepo(session_factory)
+    qty = await repo.find_recent_task_by_ref(
+        ticker="TSLL",
+        side=InstructionType.BUY,
+        price=12.42,
+        before=base + timedelta(hours=1),
+        window_hours=24 * 7,
+    )
+    assert qty == 4000
