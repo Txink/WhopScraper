@@ -156,3 +156,72 @@ def test_parse_populates_symbol_for_longport() -> None:
     assert result2 is not None
     assert result2.ticker == "CONL"
     assert result2.symbol == "CONL.US"
+
+
+# ---------------------------------------------------------------------------
+# 10. Lot-reference fallback patterns — recover messages that were previously
+#     PARSE_ERROR. Each case here came from a real production miss (see
+#     2026-04-23 issue list). The new fallbacks live at the end of
+#     _parse_buy / _parse_sell so existing happy-path patterns are unaffected.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "tag, msg, side, ticker, price, ref_price, sell_q, pos_size",
+    [
+        # Shape A: <price>出<ticker><ref><qual>
+        (
+            "1CaJw9", "23.32出了bmnr21.5剩下一半",
+            InstructionType.SELL, "BMNR", 23.32, 21.5, "剩下一半", None,
+        ),
+        (
+            "1CaNgx", "12.52出tsll11.76剩下一半",
+            InstructionType.SELL, "TSLL", 12.52, 11.76, "剩下一半", None,
+        ),
+        # Shape B: <ticker><price>出/卖<free-text>  (ticker+price tight, no whitespace)
+        (
+            "1CaKQo", "tsll14.1出掉财报前博财报的仓位",
+            InstructionType.SELL, "TSLL", 14.1, None, None, None,
+        ),
+        # Shape C: <price>开了<ticker><sizing>
+        (
+            "1CaL2T", "85.65开了hood常规仓的一半",
+            InstructionType.BUY, "HOOD", 85.65, None, None, "常规仓的一半",
+        ),
+        # Shape D: <ticker>...<ref>(的)?部分...<price>出/卖
+        (
+            "1CaLgt", "oklo盘前有利好把之前78的部分在78.4出",
+            InstructionType.SELL, "OKLO", 78.4, 78.0, "部分", None,
+        ),
+        (
+            "1CaLnm", "tsll 夜盘 12.32 部分 12.4出",
+            InstructionType.SELL, "TSLL", 12.4, 12.32, "部分", None,
+        ),
+    ],
+)
+def test_parse_lot_reference_fallback(
+    tag: str,
+    msg: str,
+    side: InstructionType,
+    ticker: str,
+    price: float,
+    ref_price: float | None,
+    sell_q: str | None,
+    pos_size: str | None,
+) -> None:
+    """6 production messages that hit PARSE_ERROR before plan A.
+
+    Verifies all of: side, ticker, current price, referenced_lot_price (the
+    new field plumbed from Task 1), sell_quantity, and position_size.
+    """
+    result = parse(msg, message_id=tag)
+    assert result is not None, f"{tag}: expected parse, got None"
+    assert result.instruction_type == side
+    assert result.ticker == ticker
+    assert result.price == pytest.approx(price)
+    if ref_price is None:
+        assert result.referenced_lot_price is None
+    else:
+        assert result.referenced_lot_price == pytest.approx(ref_price)
+    assert result.sell_quantity == sell_q
+    assert result.position_size == pos_size

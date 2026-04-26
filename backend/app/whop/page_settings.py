@@ -192,6 +192,11 @@ _SELL_FRACTION_MAP: dict[str, float] = {
     "全部": 1.0,
     "剩下": 1.0,
     "剩下一半": 0.5,
+    # "部分" / "那部分" reference the entire prior lot (e.g., "12.32 部分 12.4出"
+    # = "sell at 12.4 the full prior 12.32 lot"). Maps to 1.0 of the
+    # referenced_lot_price's qty.
+    "部分": 1.0,
+    "那部分": 1.0,
 }
 
 

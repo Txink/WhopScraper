@@ -455,6 +455,42 @@ _BUY_REF_FRIDAY = re.compile(r"周五卖出的", re.IGNORECASE)
 _BUY_REF_TODAY = re.compile(r"今天卖出的", re.IGNORECASE)
 _BUY_REF_PART = re.compile(r"卖出的一部分", re.IGNORECASE)
 
+# Lot-reference fallback patterns — handle messages that anchor a current
+# action to a prior lot identified by its entry price. Captured groups
+# differ per pattern; see _parse_buy / _parse_sell for the slotting.
+#
+# Shape A: "<price>出<ticker><ref_price>?<qual>?" — e.g. "23.32出了bmnr21.5剩下一半"
+SELL_PRICE_VERB_TICKER_REF = re.compile(
+    r"^(\d+(?:\.\d+)?)\s*(?:出了|出掉|出|卖出|卖)\s*([A-Za-z]{2,5})"
+    r"(?:\s*(\d+(?:\.\d+)?))?\s*(剩下一半|剩下|全部|一半|那部分|部分)?",
+    re.IGNORECASE,
+)
+
+# Shape B: "<ticker><price>出/卖[free-text]" — compact form, ticker + price
+# adjacent (no whitespace), e.g. "tsll14.1出掉财报前博财报的仓位"
+SELL_TICKER_PRICE_VERB_TIGHT = re.compile(
+    r"^([A-Za-z]{2,5})\s*(\d+(?:\.\d+)?)\s*(?:出了|出掉|出|卖出|卖)",
+    re.IGNORECASE,
+)
+
+# Shape C: "<price>开/建/加<ticker>[sizing]" — price-prefix BUY
+# e.g. "85.65开了hood常规仓的一半"
+BUY_PRICE_VERB_TICKER = re.compile(
+    r"^(\d+(?:\.\d+)?)\s*(?:开了?|建仓|加仓?|加了|买入|买了?)\s*([A-Za-z]{2,5})",
+    re.IGNORECASE,
+)
+
+# Shape D: "<ticker>...<ref>(的)?部分...<price>出/卖" — narrative-style SELL
+# referencing a prior lot via "部分" keyword. Permissive {0,N}? gaps absorb
+# free text like "盘前有利好把之前", "夜盘", "在".
+# e.g. "oklo盘前有利好把之前78的部分在78.4出"
+#      "tsll 夜盘 12.32 部分 12.4出"
+SELL_TICKER_REF_PART_PRICE = re.compile(
+    r"([A-Za-z]{2,5})[\s\S]{0,30}?(\d+(?:\.\d+)?)[\s\S]{0,10}?(?:的)?部分"
+    r"[\s\S]{0,15}?(\d+(?:\.\d+)?)\s*(?:出|卖)",
+    re.IGNORECASE,
+)
+
 _PORTION_MAP = {
     "三分之一": "1/3",
     "三分之二": "2/3",
@@ -533,6 +569,7 @@ def _make_stock(
     stop_loss_price: float | None = None,
     take_profit_price: float | None = None,
     sell_quantity: str | None = None,
+    referenced_lot_price: float | None = None,
     parser_notes: list[str] | None = None,
 ) -> StockInstruction | None:
     """
@@ -579,6 +616,7 @@ def _make_stock(
             # `if not inst.symbol` check doesn't skip valid stock instructions.
             symbol=f"{ticker}.US",
             sell_quantity=sell_quantity,
+            referenced_lot_price=referenced_lot_price,
         )
     except ValueError:
         return None
@@ -1086,6 +1124,21 @@ def _parse_buy(message: str, message_id: str) -> StockInstruction | None:  # noq
         )
 
     match = BUY_VERBOSE_ACTION_SUFFIX.search(message)
+    if match:
+        price = _normalize_price(match.group(1))
+        ticker = match.group(2).upper()
+        position_size = _resolve_position_size(message)
+        return _make_stock(
+            ticker=ticker,
+            instruction_type=InstructionType.BUY,
+            message_id=message_id,
+            raw_message=message,
+            price=price,
+            position_size=position_size,
+        )
+
+    # Fallback shape C: "<price>开了<ticker>[sizing]"
+    match = BUY_PRICE_VERB_TICKER.search(message)
     if match:
         price = _normalize_price(match.group(1))
         ticker = match.group(2).upper()
@@ -1694,6 +1747,53 @@ def _parse_sell(message: str, message_id: str) -> StockInstruction | None:  # no
             raw_message=message,
             price=price,
             sell_quantity=sq,
+        )
+
+    # Fallback shape A: "<price>出<ticker><ref_price>?<qual>?"
+    match = SELL_PRICE_VERB_TICKER_REF.search(message)
+    if match:
+        price = _normalize_price(match.group(1))
+        ticker = match.group(2).upper()
+        ref_raw = match.group(3)
+        ref_price = _normalize_price(ref_raw) if ref_raw else None
+        sq = match.group(4)
+        return _make_stock(
+            ticker=ticker,
+            instruction_type=InstructionType.SELL,
+            message_id=message_id,
+            raw_message=message,
+            price=price,
+            sell_quantity=sq,
+            referenced_lot_price=ref_price,
+        )
+
+    # Fallback shape D: "<ticker>...<ref>(的)?部分...<price>出/卖"
+    match = SELL_TICKER_REF_PART_PRICE.search(message)
+    if match:
+        ticker = match.group(1).upper()
+        ref_price = _normalize_price(match.group(2))
+        price = _normalize_price(match.group(3))
+        return _make_stock(
+            ticker=ticker,
+            instruction_type=InstructionType.SELL,
+            message_id=message_id,
+            raw_message=message,
+            price=price,
+            sell_quantity="部分",
+            referenced_lot_price=ref_price,
+        )
+
+    # Fallback shape B: "<ticker><price>出/卖[free-text]" — compact, no whitespace
+    match = SELL_TICKER_PRICE_VERB_TIGHT.search(message)
+    if match:
+        ticker = match.group(1).upper()
+        price = _normalize_price(match.group(2))
+        return _make_stock(
+            ticker=ticker,
+            instruction_type=InstructionType.SELL,
+            message_id=message_id,
+            raw_message=message,
+            price=price,
         )
 
     return None
