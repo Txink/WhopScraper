@@ -60,6 +60,11 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  /* Extra breathing room from the raw-msg cell on its left. The grid's
+     uniform 10px gap felt cramped against the wrapped italic message;
+     this pushes the parsed cluster (TSLL.US / SELL / $X×Y) visually
+     further right without affecting the other inter-column gaps. */
+  margin-left: 14px;
 }
 .card.compact .card-symbol.has-message {
   /* Empty placeholder cell when not parsed (only "未识别" tag may appear);
