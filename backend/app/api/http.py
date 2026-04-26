@@ -34,12 +34,15 @@ Usage::
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
+logger = logging.getLogger(__name__)
 
 from app.api.auth import require_app_token
 from app.api.schemas import (
@@ -395,7 +398,20 @@ def build_http_router(
             await bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
         finally:
             runtime_store.update({"auto_trade": prev_runtime.auto_trade})
-        await bus.wait_idle(timeout=3.0)
+        # 8s gives time for: validation gate → broker submit (typical
+        # ~120ms but can be much slower under load / slow network) →
+        # initial NotReported push event → bus storage save. The previous
+        # 3s window often returned with status still at INSTRUCTION_READY
+        # because the broker submit hadn't completed when the response was
+        # serialized, leaving the user wondering if confirm did anything.
+        try:
+            await bus.wait_idle(timeout=8.0)
+        except TimeoutError:
+            logger.warning(
+                "confirm_task_endpoint: bus did not idle within 8s for task %s; "
+                "returning current DB state",
+                task_id,
+            )
 
         async with session_scope(session_factory) as session:
             refreshed = await repo.load_task(session, task_id)

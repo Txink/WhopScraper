@@ -226,6 +226,20 @@ def create_app(
 
         async def _broker_reload() -> dict[str, Any]:
             async with _reload_lock:
+                # 0. Drain any in-flight TASK_INSTRUCTION_READY (or other
+                #    bus traffic) so we don't unsubscribe the trader handler
+                #    out from under a half-processed event. Without this, a
+                #    parser publish that lands in the unsub→re-subscribe
+                #    window has no listener and the task is silently
+                #    abandoned at INSTRUCTION_READY.
+                try:
+                    await bus.wait_idle(timeout=2.0)
+                except TimeoutError:
+                    logger.warning(
+                        "broker reload: bus did not idle within 2s; "
+                        "proceeding anyway. In-flight events may be lost."
+                    )
+
                 # 1. Tear down trader subscription (so it stops receiving events
                 #    on the old broker reference).
                 if state.trader_unsub is not None:
