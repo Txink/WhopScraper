@@ -30,6 +30,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 from app.broker.broker_client import BrokerClient, OrderSide, OrderType
 from app.broker.config import LongPortConfig
+from app.broker.validation import validate_for_submission
 from app.core.event_bus import Event, EventBus
 from app.core.events import TaskPayload, Topics
 from app.domain.instruction import (
@@ -98,13 +99,23 @@ def register_trader(
         if inst is None:
             return
 
-        # ---- Top-level validation ----
+        # ① Parameter completeness gate — runs before auto_trade so incomplete
+        # tasks never reach the manual-confirmation UI.
+        reason = validate_for_submission(inst)
+        if reason is not None:
+            await _publish_skip(task, reason)
+            return
+
+        # ② auto_trade gate — manual-confirm UI only appears for tasks that
+        # passed gate ①, which guarantees the parser-level fields are present.
         auto_trade_enabled = auto_trade_getter() if auto_trade_getter is not None else config.auto_trade
         if not auto_trade_enabled:
-            # Keep task at INSTRUCTION_READY so the UI can trigger manual confirmation.
             task.reject_reason = "auto_trade disabled in config; awaiting manual confirmation"
             await bus.publish(Event(Topics.TASK_STATUS_CHANGED, TaskPayload(task)))
             return
+
+        # ③ Defensive (now unreachable when gate ① is honored, but kept as
+        # belt-and-braces for non-validated callers in tests).
         if not getattr(inst, "symbol", None):
             await _publish_skip(task, "instruction missing symbol")
             return

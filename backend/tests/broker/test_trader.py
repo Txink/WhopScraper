@@ -282,3 +282,59 @@ async def test_missing_symbol_skips() -> None:
     skipped_task: Task = status_events[0].payload.task
     assert skipped_task.status == Status.SKIPPED
     assert "symbol" in (skipped_task.reject_reason or "")
+
+
+# ---------------------------------------------------------------------------
+# Pre-submission validation gate — Task 2 (revised design)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_trader_skips_when_instruction_invalid_side() -> None:
+    """A task whose instruction has CLOSE side fails the validation gate
+    before the auto_trade check, regardless of auto_trade."""
+    bus = EventBus()
+    fake_broker = FakeBrokerClient()
+    register_trader(bus, fake_broker, _config(auto_trade=True))
+
+    task = _stock_task(instruction_type=InstructionType.CLOSE)
+    await bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
+    await bus.wait_idle(timeout=2.0)
+
+    assert task.status == Status.SKIPPED
+    assert task.reject_reason is not None
+    assert "参数不齐" in task.reject_reason
+    assert "BUY" in task.reject_reason and "SELL" in task.reject_reason
+
+
+@pytest.mark.asyncio
+async def test_trader_holds_for_manual_when_valid_and_auto_trade_off() -> None:
+    """Valid instruction + auto_trade=false: validation gate passes, then
+    the auto_trade gate keeps the task at INSTRUCTION_READY with reject_reason
+    set, ready for manual confirmation."""
+    bus = EventBus()
+    fake_broker = FakeBrokerClient()
+    register_trader(bus, fake_broker, _config(auto_trade=False))
+
+    task = _stock_task()  # BUY, complete instruction
+    await bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
+    await bus.wait_idle(timeout=2.0)
+
+    assert task.status == Status.INSTRUCTION_READY  # held for manual
+    assert task.reject_reason is not None
+    assert "auto_trade" in task.reject_reason
+
+
+@pytest.mark.asyncio
+async def test_trader_proceeds_when_valid_and_auto_trade_on() -> None:
+    """Valid instruction + auto_trade=true: both gates pass, broker called."""
+    bus = EventBus()
+    fake_broker = FakeBrokerClient()
+    register_trader(bus, fake_broker, _config(auto_trade=True))
+
+    task = _stock_task()  # BUY, complete instruction
+    await bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
+    await bus.wait_idle(timeout=2.0)
+
+    # Status advanced past INSTRUCTION_READY (PENDING means broker submitted)
+    assert task.status in (Status.PENDING, Status.SUBMITTING, Status.FILLED)
