@@ -84,7 +84,7 @@ export function PageActionBar({ page, mode, onOpenSettings }: Props) {
     : "全部收起";
 
   const expandIcon =
-    expandMode === "smart" ? <SmartIcon size={16} />
+    expandMode === "smart" ? <SmartIcon size={18} />
     : expandMode === "all-open" ? <ExpandAllIcon size={16} />
     : <CollapseAllIcon size={16} />;
 
