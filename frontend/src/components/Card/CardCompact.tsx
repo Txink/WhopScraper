@@ -1,11 +1,13 @@
 import type { TaskSummary } from "../../api/domain-types";
 import { TypeBadge } from "../common/TypeBadge";
 import { StatusPill } from "../common/StatusPill";
+import { ConfirmActions } from "./ConfirmActions";
 import { formatTitle, fmtTime, fmtElapsed, elapsedMs } from "./cardHelpers";
 import "./Card.css";
 
 export interface CardCompactProps {
   task: TaskSummary;
+  autoTrade: boolean;
   onExpand: () => void;
 }
 
@@ -14,7 +16,7 @@ function truncate(text: string, maxLen: number): string {
   return text.slice(0, maxLen) + "…";
 }
 
-export function CardCompact({ task, onExpand }: CardCompactProps) {
+export function CardCompact({ task, autoTrade, onExpand }: CardCompactProps) {
   const { type, status, instruction, message } = task;
   const badgeType = type === "option" ? "option" : "stock";
   const isParseError = status === "PARSE_ERROR";
@@ -56,6 +58,9 @@ export function CardCompact({ task, onExpand }: CardCompactProps) {
     detailContent = task.reject_reason;
   }
 
+  const showConfirmActions =
+    !autoTrade && status === "INSTRUCTION_READY" && instruction != null;
+
   const side = instruction?.instruction_type;
   const sideClass = side?.toLowerCase().includes("sell") ? "side-sell" : "side-buy";
   const sideLabel = side?.toLowerCase().includes("sell") ? "SELL" : (side ? "BUY" : "");
@@ -86,7 +91,10 @@ export function CardCompact({ task, onExpand }: CardCompactProps) {
       <span className="details">{detailContent}</span>
       <span className="ts">{ts}</span>
       <span className="elapsed">{elapsed}</span>
-      <StatusPill status={status} />
+      {showConfirmActions
+        ? <ConfirmActions taskId={task.id} variant="compact" />
+        : <StatusPill status={status} />
+      }
       <span className="caret">▸</span>
     </div>
   );

@@ -324,32 +324,6 @@
 .stage-meta .k { color: var(--fg-3); margin-right: 4px; }
 .stage-meta .v { color: var(--fg-2); }
 
-.manual-confirm-row {
-  margin-top: 8px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.manual-confirm-btn {
-  border: 1px solid var(--brand);
-  background: rgba(63, 181, 197, 0.08);
-  color: var(--fg-1);
-  border-radius: var(--radius-chip);
-  padding: 4px 10px;
-  cursor: pointer;
-}
-
-.manual-confirm-btn:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
-.manual-confirm-err {
-  color: var(--err);
-  font-size: 11px;
-}
-
 .stage-delta {
   font-family: var(--font-mono);
   font-size: 11px;
@@ -650,4 +624,70 @@
   white-space: nowrap;
   z-index: 5;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+}
+
+/* ===== Confirm / Skip icon buttons (auto_trade=off manual gate) ===== */
+.confirm-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.confirm-actions.compact {
+  justify-content: center;
+}
+
+.ca-btn {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  background: var(--bg-1);
+  cursor: pointer;
+  padding: 0;
+  transition: border-color 120ms, background 120ms, color 120ms;
+}
+.ca-btn svg { width: 12px; height: 12px; }
+.ca-btn:disabled { opacity: 0.5; cursor: default; }
+
+.ca-confirm { color: var(--ok); }
+.ca-confirm:hover:not(:disabled) {
+  border-color: var(--ok);
+  background: rgba(61, 214, 140, 0.10);
+}
+.ca-cancel { color: var(--err); }
+.ca-cancel:hover:not(:disabled) {
+  border-color: var(--err);
+  background: rgba(239, 91, 91, 0.08);
+}
+
+.ca-spinner {
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: ca-spin 0.7s linear infinite;
+}
+@keyframes ca-spin { to { transform: rotate(360deg); } }
+
+.ca-err {
+  color: var(--err);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  cursor: help;
+  margin-left: 2px;
+}
+
+.confirm-actions-row {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.confirm-hint {
+  color: var(--fg-3);
+  font-size: 11px;
 }

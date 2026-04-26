@@ -23,5 +23,5 @@ export function Card({ task, pushEvents, defaultExpanded, autoTrade }: CardProps
       />
     );
   }
-  return <CardCompact task={task} onExpand={() => setExpanded(true)} />;
+  return <CardCompact task={task} autoTrade={autoTrade} onExpand={() => setExpanded(true)} />;
 }

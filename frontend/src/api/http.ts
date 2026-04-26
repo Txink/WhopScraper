@@ -109,6 +109,10 @@ export const api = {
     return request<Task>(`/api/tasks/${encodeURIComponent(id)}/confirm`, { method: "POST" });
   },
 
+  async skipTask(id: string): Promise<Task> {
+    return request<Task>(`/api/tasks/${encodeURIComponent(id)}/skip`, { method: "POST" });
+  },
+
   async stats(): Promise<StatsToday> {
     return request<StatsToday>("/api/stats/today");
   },

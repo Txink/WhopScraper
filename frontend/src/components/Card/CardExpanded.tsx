@@ -1,12 +1,11 @@
 import { useState } from "react";
 import type { TaskSummary, PushEvent } from "../../api/domain-types";
-import { api, HttpError } from "../../api/http";
-import { useTasksStore } from "../../stores/tasks";
 import { TypeBadge } from "../common/TypeBadge";
 import { StatusPill } from "../common/StatusPill";
 import { OrderSubmit } from "./OrderSubmit";
 import { PushChain } from "./PushChain";
 import { PushDetail } from "./PushDetail";
+import { ConfirmActions } from "./ConfirmActions";
 import { formatTitle, fmtElapsed, elapsedMs } from "./cardHelpers";
 import "./Card.css";
 
@@ -19,8 +18,6 @@ export interface CardExpandedProps {
 
 export function CardExpanded({ task, pushEvents, autoTrade, onCollapse }: CardExpandedProps) {
   const [pushExpanded, setPushExpanded] = useState(false);
-  const [confirming, setConfirming] = useState(false);
-  const [confirmError, setConfirmError] = useState<string | null>(null);
 
   const { type, status, instruction, message, order_id, stage_timings, reject_reason } = task;
   const badgeType = type === "option" ? "option" : "stock";
@@ -57,25 +54,6 @@ export function CardExpanded({ task, pushEvents, autoTrade, onCollapse }: CardEx
   const lastPartial = [...pushEvents].reverse().find((e) => e.state === "PARTIAL");
   const cumQty = lastPartial?.cumulative_qty;
   const cumAvg = lastPartial?.cumulative_avg_price;
-
-  const handleConfirm = async () => {
-    setConfirming(true);
-    setConfirmError(null);
-    try {
-      const updated = await api.confirmTask(task.id);
-      useTasksStore.getState().upsertTask(updated);
-    } catch (e) {
-      if (e instanceof HttpError) {
-        setConfirmError(typeof e.body === "object" && e.body && "detail" in e.body
-          ? String((e.body as { detail: unknown }).detail)
-          : e.message);
-      } else {
-        setConfirmError(e instanceof Error ? e.message : String(e));
-      }
-    } finally {
-      setConfirming(false);
-    }
-  };
 
   return (
     <article className="card expanded">
@@ -157,16 +135,9 @@ export function CardExpanded({ task, pushEvents, autoTrade, onCollapse }: CardEx
                 <div className="stage-meta stage-meta-warn">{reject_reason}</div>
               )}
               {canManualConfirm && (
-                <div className="manual-confirm-row">
-                  <button
-                    type="button"
-                    className="manual-confirm-btn"
-                    onClick={handleConfirm}
-                    disabled={confirming}
-                  >
-                    {confirming ? "提交中…" : "确认下单"}
-                  </button>
-                  {confirmError && <span className="manual-confirm-err">{confirmError}</span>}
+                <div className="confirm-actions-row">
+                  <ConfirmActions taskId={task.id} variant="expanded" />
+                  <span className="confirm-hint">auto_trade 已关闭 · 待人工确认</span>
                 </div>
               )}
             </div>

@@ -170,14 +170,30 @@ describe("CardExpanded", () => {
     expect(screen.getByText("skip: duplicated message")).toBeInTheDocument();
   });
 
-  it("shows manual confirm button when autoTrade off and instruction ready", () => {
+  it("shows ConfirmActions when autoTrade off and instruction ready", () => {
     const readyTask: TaskSummary = {
       ...task,
       status: "INSTRUCTION_READY",
       order_id: null,
       reject_reason: "awaiting manual confirmation",
     };
-    render(<CardExpanded task={readyTask} pushEvents={[]} autoTrade={false} onCollapse={vi.fn()} />);
+    const { container } = render(
+      <CardExpanded task={readyTask} pushEvents={[]} autoTrade={false} onCollapse={vi.fn()} />
+    );
+    expect(container.querySelector(".confirm-actions.expanded")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "确认下单" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "取消" })).toBeInTheDocument();
+  });
+
+  it("hides ConfirmActions when autoTrade is on", () => {
+    const readyTask: TaskSummary = {
+      ...task,
+      status: "INSTRUCTION_READY",
+      order_id: null,
+    };
+    const { container } = render(
+      <CardExpanded task={readyTask} pushEvents={[]} autoTrade={true} onCollapse={vi.fn()} />
+    );
+    expect(container.querySelector(".confirm-actions")).not.toBeInTheDocument();
   });
 });

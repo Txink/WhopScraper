@@ -77,4 +77,28 @@ describe("http", () => {
     expect(url).toContain("/api/tasks/msg-1/cancel");
     expect(init.method).toBe("POST");
   });
+
+  it("uses POST method for skipTask", async () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        id: "msg-1",
+        status: "SKIPPED",
+        type: "stock",
+        message: {},
+        instruction: null,
+        order_id: null,
+        push_events: [],
+        stage_timings: {},
+        created_at: "",
+        updated_at: "",
+        reject_reason: "用户手动取消",
+      }),
+    });
+    await api.skipTask("msg-1");
+    const call = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [url, init] = call;
+    expect(url).toContain("/api/tasks/msg-1/skip");
+    expect(init.method).toBe("POST");
+  });
 });
