@@ -124,7 +124,7 @@ def register_trader(
             if posted_local != today_local:
                 await _publish_skip(
                     task,
-                    f"非当天消息（posted={posted_local}, today={today_local}），已拦截下单",
+                    f"非当天消息（posted={posted_local}, today={today_local}）",
                 )
                 return
 
