@@ -30,11 +30,17 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from decimal import Decimal
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.broker.push_listener import PushListener, register_push_listener
+from app.broker.push_listener import (
+    PushListener,
+    _build_push_event,
+    _to_payload_dict,
+    register_push_listener,
+)
 from app.core.event_bus import Event, EventBus
 from app.core.events import TaskPushPayload, Topics
 from app.domain.message import Message
@@ -327,3 +333,219 @@ async def test_multiple_subscribers_on_same_event(
     # (There may be 2 if the run_coroutine_threadsafe coroutine also completed.)
     assert len(bus_events) >= 1
     assert bus_events[0].payload.push_event.state == PushState.FILLED
+
+
+# ---------------------------------------------------------------------------
+# 6. Realistic C-extension SDK shape: vars()/__dict__ does not return a dict
+# ---------------------------------------------------------------------------
+#
+# Production bug (commit ed1b108): LongPort SDK's PushOrderChanged is a
+# Rust-backed C-extension whose ``__dict__`` is a builtin method, not a
+# Python dict. The old ``_to_payload_dict`` did
+#     pairs = vars(raw).items()
+# expecting either a dict (returned items()) or a TypeError (caught and
+# fell through). It got NEITHER — vars() silently returned a non-dict
+# (the bound method itself), and ``.items()`` raised AttributeError. This
+# crashed ``_handle_raw_push`` for every real push, so push_events stayed
+# empty in production despite valid pushes arriving.
+#
+# Old test doubles (FakePushEvent above) are plain Python ``@dataclass``
+# instances with a normal ``__dict__``, so they always hit the happy
+# fast path and never exercised the C-extension branch.
+#
+# The doubles below reproduce the exact production conditions:
+#  - ``__dict__`` resolves to a non-dict, non-raising value
+#  - attribute reads via ``getattr`` work (matching real SDK)
+#  - ``dir()`` enumerates the public attribute names
+#  - enum-shaped fields ``repr()`` as ``"OrderStatus.NotReported"`` etc.,
+#    so ``_serialise_value`` must split on ``.`` to reach ``"NotReported"``
+
+
+class _SDKEnumLike:
+    """Mimics LongPort SDK enum value reprs (e.g. ``"OrderStatus.NotReported"``).
+
+    The real SDK enums are PyO3-bound Rust enums whose ``repr`` is
+    ``"<TypeName>.<VariantName>"``. ``_serialise_value`` relies on this format
+    to extract the variant name when no Python ``Enum`` subclass match.
+    """
+
+    def __init__(self, type_name: str, variant: str) -> None:
+        self._type = type_name
+        self._variant = variant
+
+    def __repr__(self) -> str:
+        return f"{self._type}.{self._variant}"
+
+
+class _CExtensionPushOrderChanged:
+    """Test double for LongPort's C-extension ``PushOrderChanged``.
+
+    Reproduces the runtime shape that broke production:
+      * ``vars(raw)`` returns a non-dict (a builtin method) instead of a
+        Python ``dict``, and crucially does NOT raise ``TypeError``.
+      * Attribute reads via ``getattr(raw, name)`` work (Rust property
+        descriptors) — this is how the real SDK exposes fields.
+      * ``dir(raw)`` enumerates the public attribute names — the
+        ``_to_payload_dict`` dir-fallback walks these.
+
+    Implementation note: ``__slots__`` removes the auto-generated instance
+    ``__dict__``; the override in ``__getattribute__`` reroutes ``__dict__``
+    to a plain builtin function so ``isinstance(vars(self), dict)`` is False.
+    """
+
+    __slots__ = ("_attrs",)
+
+    def __init__(self, **fields: Any) -> None:
+        object.__setattr__(self, "_attrs", fields)
+
+    def __getattribute__(self, name: str) -> Any:
+        if name == "__dict__":
+            # The real SDK exposes __dict__ as a Rust property/method —
+            # vars() returns it as-is without raising. dict.fromkeys is a
+            # convenient stand-in: a builtin_function_or_method, not a dict.
+            return dict.fromkeys
+        if name == "_attrs":
+            return object.__getattribute__(self, "_attrs")
+        # User-data attributes live in _attrs (mimicking SDK property descriptors)
+        attrs = object.__getattribute__(self, "_attrs")
+        if name in attrs:
+            return attrs[name]
+        return object.__getattribute__(self, name)
+
+    def __dir__(self) -> list[str]:
+        return list(object.__getattribute__(self, "_attrs").keys())
+
+
+def _realistic_sdk_push(
+    *,
+    order_id: str = "1232925773216645120",
+    status_variant: str = "NotReported",
+    side_variant: str = "Buy",
+) -> _CExtensionPushOrderChanged:
+    """Build a double with field shapes captured from a live SDK push.
+
+    Field set + types match a real ``PushOrderChanged`` observed in a paper
+    diag run. Values are realistic enough to exercise every branch of
+    ``_serialise_value`` (Decimal, SDK enums, datetime ISO strings, plain
+    primitives, Optional/None).
+    """
+    return _CExtensionPushOrderChanged(
+        side=_SDKEnumLike("OrderSide", side_variant),
+        stock_name="苹果",
+        submitted_quantity=Decimal("1"),
+        symbol="AAPL.US",
+        order_type=_SDKEnumLike("OrderType", "LO"),
+        submitted_price=Decimal("1.00"),
+        executed_quantity=Decimal("0"),
+        executed_price=None,
+        order_id=order_id,
+        currency="USD",
+        status=_SDKEnumLike("OrderStatus", status_variant),
+        submitted_at="2026-04-26T05:15:54Z",
+        updated_at="2026-04-26T05:15:54Z",
+        trigger_price=None,
+        msg="",
+        tag=_SDKEnumLike("OrderTag", "Normal"),
+        trigger_status=_SDKEnumLike("TriggerStatus", "Unknown"),
+        trigger_at=None,
+        trailing_amount=None,
+        trailing_percent=None,
+        limit_offset=None,
+        account_no="LBPT10030472",
+        last_share=None,
+        last_price=None,
+        remark="diag test",
+    )
+
+
+def test_to_payload_dict_handles_c_extension_with_non_dict_dunder_dict() -> None:
+    """Regression for production crash: ``vars(SDK_obj)`` returns a non-dict.
+
+    Without the dir()-based fallback, ``vars(raw).items()`` raises
+    AttributeError and kills the entire push pipeline (push_events table
+    stays empty despite valid SDK pushes arriving).
+    """
+    raw = _realistic_sdk_push()
+
+    # Sanity: simulator reproduces the bug condition. If this assertion
+    # ever flips, the test is no longer probing the production failure mode.
+    assert not isinstance(vars(raw), dict), (
+        "simulator must reproduce the C-extension behavior where vars() "
+        "returns a non-dict; otherwise this test isn't catching the bug"
+    )
+
+    # Must not crash, must produce a usable payload.
+    payload = _to_payload_dict(raw)
+
+    assert isinstance(payload, dict)
+    # Field presence
+    assert payload["order_id"] == "1232925773216645120"
+    assert payload["symbol"] == "AAPL.US"
+    assert payload["currency"] == "USD"
+    assert payload["account_no"] == "LBPT10030472"
+    assert payload["msg"] == ""
+    assert payload["remark"] == "diag test"
+    # SDK enum-likes are reduced to their variant name by _serialise_value
+    assert payload["status"] == "NotReported"
+    assert payload["side"] == "Buy"
+    assert payload["order_type"] == "LO"
+    assert payload["tag"] == "Normal"
+    # None values pass through
+    assert payload["executed_price"] is None
+    assert payload["trigger_at"] is None
+
+
+def test_build_push_event_with_realistic_c_extension_raw() -> None:
+    """End-to-end: ``_build_push_event`` accepts a realistic SDK-shaped raw.
+
+    Verifies the entire payload-building path works against the C-extension
+    double, not just the dict conversion. Status mapping, payload
+    serialisation, and PushEvent construction all need to cope with the
+    SDK's runtime shape.
+    """
+    raw = _realistic_sdk_push(status_variant="Filled")
+    task = _make_pending_task("task-cext-1", "1232925773216645120")
+
+    evt = _build_push_event(raw, task)
+
+    assert evt.task_id == "task-cext-1"
+    assert evt.order_id == "1232925773216645120"
+    assert evt.state == PushState.FILLED  # OrderStatus.Filled → PushState.FILLED
+    # Payload was extracted via the dir() fallback and contains the SDK fields.
+    assert isinstance(evt.payload, dict)
+    assert evt.payload["symbol"] == "AAPL.US"
+    assert evt.payload["status"] == "Filled"
+
+
+async def test_handle_raw_push_publishes_when_raw_is_c_extension_shaped(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """End-to-end through ``_handle_raw_push``: C-extension raw lookups the
+    Task by order_id, builds the PushEvent, and publishes
+    TASK_PUSH_EVENT — exactly the path that crashed in production.
+    """
+    bus = EventBus()
+    client = FakeBrokerClient()
+    task = _make_pending_task("task-cext-2", "1232925773216645120")
+    await _save(session_factory, task)
+
+    listener = _make_listener(bus, client, session_factory)
+
+    captured: list[Event] = []
+
+    async def _capture(evt: Event) -> None:
+        captured.append(evt)
+
+    bus.subscribe(Topics.TASK_PUSH_EVENT, _capture)
+
+    raw = _realistic_sdk_push(status_variant="PartialFilled")
+    await listener._handle_raw_push(raw)
+    await bus.wait_idle(timeout=2.0)
+
+    assert len(captured) == 1
+    payload: TaskPushPayload = captured[0].payload  # type: ignore[assignment]
+    assert payload.push_event.state == PushState.PARTIAL
+    assert payload.push_event.order_id == "1232925773216645120"
+    # The serialised payload reached storage shape via the dir() fallback.
+    assert payload.push_event.payload["symbol"] == "AAPL.US"
+    assert payload.push_event.payload["status"] == "PartialFilled"
