@@ -98,13 +98,23 @@ async def _qty_for_whitelisted_stock(
             if inst.instruction_type == InstructionType.SELL
             else InstructionType.SELL
         )
-        prior_qty = await task_query_repo.find_recent_task_by_ref(
-            ticker=ticker_upper,
-            side=opposite,
-            price=inst.referenced_lot_price,
-            before=now,
-            window_hours=24 * 7,
-        )
+        try:
+            prior_qty = await task_query_repo.find_recent_task_by_ref(
+                ticker=ticker_upper,
+                side=opposite,
+                price=inst.referenced_lot_price,
+                before=now,
+                window_hours=24 * 7,
+            )
+        except Exception as exc:  # noqa: BLE001 — Decision 6: never block submission on lookup failure
+            logger.warning(
+                "Trader: lot lookup failed for %s @%.4f (%s); falling back to default qty",
+                ticker_upper,
+                inst.referenced_lot_price,
+                exc,
+            )
+            prior_qty = None
+
         if prior_qty is not None:
             fraction = sell_quantity_to_fraction(inst.sell_quantity)
             qty = max(int(prior_qty * fraction), 1)
@@ -117,6 +127,9 @@ async def _qty_for_whitelisted_stock(
                 ticker_upper,
             )
             return qty
+        # Either no row matched (the original miss path) OR the repo raised
+        # (already logged WARN above). For the empty-miss case, log INFO so
+        # operators can see why the fallback fired even when the ref looked OK.
         logger.info(
             "Trader: no prior %s within 7d for %s @%.4f, falling back to default qty",
             opposite.value,

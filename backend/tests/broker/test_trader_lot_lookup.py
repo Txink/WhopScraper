@@ -264,3 +264,31 @@ async def test_repo_called_with_opposite_side() -> None:
     assert repo.calls[0]["side"] == InstructionType.BUY
     assert repo.calls[0]["price"] == 12.42
     assert repo.calls[0]["window_hours"] == 24 * 7
+
+
+@pytest.mark.asyncio
+async def test_repo_exception_falls_back_to_default() -> None:
+    """If the repo raises, trader logs and falls back to default qty (Decision 6)."""
+
+    class _RaisingRepo:
+        async def find_recent_task_by_ref(self, **_kw: object) -> int | None:
+            raise RuntimeError("simulated DB blip")
+
+    bus = EventBus()
+    fake = FakeBrokerClient()
+    register_trader(
+        bus, fake, _config(),
+        registry=_registry_with_default(default_qty=300),
+        task_query_repo=_RaisingRepo(),  # type: ignore[arg-type]
+    )
+
+    task = _stock_task(
+        side=InstructionType.SELL, price=12.87,
+        referenced_lot_price=12.42, sell_quantity="1/2",
+    )
+    await bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
+    await bus.wait_idle(timeout=2.0)
+
+    # The task is NOT silently dropped: order is submitted with default qty.
+    assert len(fake.submitted_orders) == 1
+    assert fake.submitted_orders[0]["quantity"] == 300
