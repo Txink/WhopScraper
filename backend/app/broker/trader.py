@@ -48,6 +48,28 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def _format_broker_error(exc: BaseException) -> str:
+    """Reduce a broker exception to a user-facing reject_reason.
+
+    longport's ``OpenApiException`` stringifies as
+    ``"OpenApiException: (kind=..., code=..., trace_id=...) <message>"``,
+    which exposes internals to the UI. When the exception carries the
+    distinctive structural fields, surface only ``code`` + ``message``;
+    otherwise fall back to ``str(exc)``. The full traceback still goes to
+    the logger via ``exc_info=True`` at the call site.
+    """
+    code = getattr(exc, "code", None)
+    message = getattr(exc, "message", None)
+    if (
+        code is not None
+        and isinstance(message, str)
+        and getattr(exc, "kind", None) is not None
+        and getattr(exc, "trace_id", None) is not None
+    ):
+        return f"broker [{code}] {message}"
+    return f"broker error: {exc}"
+
+
 def register_trader(
     bus: EventBus,
     client: BrokerClient,
@@ -275,7 +297,7 @@ def register_trader(
         except Exception as exc:
             elapsed = (time.perf_counter() - started) * 1000
             task.stage_timings["submit"] = elapsed
-            task.mark_submit_failed(f"broker error: {exc}")
+            task.mark_submit_failed(_format_broker_error(exc))
             logger.error(
                 "Trader: order submission failed for task %s: %s",
                 task.id,

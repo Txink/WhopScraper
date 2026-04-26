@@ -261,6 +261,53 @@ async def test_broker_exception_marks_submit_failed() -> None:
 
 
 @pytest.mark.asyncio
+async def test_openapi_exception_reject_reason_drops_envelope() -> None:
+    """OpenApiException-shaped errors are reduced to "broker [code] message"
+    so the UI shows the server message rather than the SDK's repr envelope
+    (kind=..., trace_id=...)."""
+
+    class _OpenApiExceptionLike(Exception):
+        """Duck-typed stand-in for longport.openapi.OpenApiException — same
+        structural fields (kind/code/trace_id/message) the helper looks for."""
+
+        def __init__(self, *, kind: str, code: int, trace_id: str, message: str) -> None:
+            super().__init__(message)
+            self.kind = kind
+            self.code = code
+            self.trace_id = trace_id
+            self.message = message
+
+    exc = _OpenApiExceptionLike(
+        kind="ErrorKind.OpenApi",
+        code=603301,
+        trace_id="bbbb8a494db6cb14b34f618c5c905feb",
+        message="The symbol currently does not support short selling.",
+    )
+
+    bus = EventBus()
+    fake = FakeBrokerClient(raise_on_submit=exc)
+    register_trader(bus, fake, _config())
+
+    failed_events: list[Event] = []
+
+    async def capture_failed(event: Event) -> None:
+        failed_events.append(event)
+
+    bus.subscribe(Topics.TASK_SUBMIT_FAILED, capture_failed)
+
+    task = _stock_task()
+    await bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
+    await bus.wait_idle(timeout=2.0)
+
+    assert len(failed_events) == 1
+    failed_task: Task = failed_events[0].payload.task
+    assert failed_task.status == Status.SUBMIT_FAILED
+    assert failed_task.reject_reason == (
+        "broker [603301] The symbol currently does not support short selling."
+    )
+
+
+@pytest.mark.asyncio
 async def test_missing_symbol_skips() -> None:
     """Instruction with empty symbol → SKIPPED, no broker call."""
     bus = EventBus()

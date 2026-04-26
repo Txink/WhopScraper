@@ -155,12 +155,18 @@ export function CardExpanded({ task, pushEvents, autoTrade, onCollapse }: CardEx
           </div>
         )}
 
-        {/* Stage 3: 提交订单 */}
-        {hasOrder && instruction && (
+        {/* Stage 3: 提交订单 — shown for any task that reached the submit
+            stage, including synchronous broker rejections (SUBMIT_FAILED)
+            where no order_id was issued. The error message comes from
+            task.reject_reason which trader._format_broker_error populated
+            from the broker exception (e.g. "broker [603301] The symbol
+            currently does not support short selling."). */}
+        {instruction && (hasOrder || status === "SUBMIT_FAILED") && (
           <OrderSubmit
             instruction={instruction}
-            orderId={order_id!}
+            orderId={order_id ?? null}
             delta={stage_timings?.submit ?? null}
+            error={status === "SUBMIT_FAILED" ? reject_reason : null}
           />
         )}
       </div>
