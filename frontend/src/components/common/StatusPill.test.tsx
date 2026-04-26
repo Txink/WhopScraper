@@ -38,9 +38,9 @@ describe("StatusPill", () => {
     expect(container.querySelector(".status-cancelled")).toBeInTheDocument();
   });
 
-  it("REJECTED → status-error class", () => {
+  it("REJECTED → status-rejected class", () => {
     const { container } = render(<StatusPill status="REJECTED" />);
-    expect(container.querySelector(".status-error")).toBeInTheDocument();
+    expect(container.querySelector(".status-rejected")).toBeInTheDocument();
   });
 
   it("PARSE_ERROR → status-error class", () => {

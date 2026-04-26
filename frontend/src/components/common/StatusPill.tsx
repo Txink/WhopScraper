@@ -23,6 +23,7 @@ function statusClass(status: string): string {
     case "SKIPPED":
       return "status-cancelled";
     case "REJECTED":
+      return "status-rejected";
     case "PARSE_ERROR":
     case "SUBMIT_FAILED":
       return "status-error";

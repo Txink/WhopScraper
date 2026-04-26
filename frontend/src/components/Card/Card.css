@@ -216,6 +216,7 @@
 .status-partial  { background: rgba(231, 167, 61, 0.14); color: var(--warn); }
 .status-pending  { background: rgba(90, 160, 255, 0.10); color: var(--info); }
 .status-cancelled { background: rgba(138, 147, 161, 0.10); color: var(--fg-2); }
+.status-rejected { background: rgba(231, 167, 61, 0.14); color: var(--warn); }
 .status-error    { background: rgba(239, 91, 91, 0.14);  color: var(--err); }
 
 /* Pulse animation overlay for pending / partial */
