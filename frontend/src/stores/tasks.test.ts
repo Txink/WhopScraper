@@ -22,6 +22,41 @@ describe("tasks store", () => {
     expect(useTasksStore.getState().tasks[0].status).toBe("FILLED");
   });
 
+  it("upsertTask preserves terminal status against stale non-terminal payload", () => {
+    // Regression: two backend push handlers race; one publishes
+    // task.status=REJECTED, the other (with a stale in-memory snapshot)
+    // publishes task.status=PENDING. WS broadcasts both. Whichever arrives
+    // last must NOT regress the displayed status from REJECTED to PENDING —
+    // otherwise the user sees "等待成交" on a task that LongPort already
+    // rejected.
+    const rejected = _mkTask("t1", "2026-04-25T10:00:01Z", "REJECTED");
+    rejected.reject_reason = "订单金额超出最大购买力";
+    const stalePending = _mkTask("t1", "2026-04-25T10:00:01Z", "PENDING");
+
+    useTasksStore.getState().upsertTask(rejected);
+    useTasksStore.getState().upsertTask(stalePending);
+
+    const stored = useTasksStore.getState().tasks[0];
+    expect(stored.status).toBe("REJECTED");
+    expect(stored.reject_reason).toBe("订单金额超出最大购买力");
+  });
+
+  it("upsertTask allows non-terminal → terminal as a legitimate progression", () => {
+    const pending = _mkTask("t1", "2026-04-25T10:00:01Z", "PENDING");
+    const filled = _mkTask("t1", "2026-04-25T10:00:02Z", "FILLED");
+    useTasksStore.getState().upsertTask(pending);
+    useTasksStore.getState().upsertTask(filled);
+    expect(useTasksStore.getState().tasks[0].status).toBe("FILLED");
+  });
+
+  it("upsertTask allows non-terminal → non-terminal transitions", () => {
+    const parsing = _mkTask("t1", "2026-04-25T10:00:01Z", "PARSING");
+    const ready = _mkTask("t1", "2026-04-25T10:00:02Z", "INSTRUCTION_READY");
+    useTasksStore.getState().upsertTask(parsing);
+    useTasksStore.getState().upsertTask(ready);
+    expect(useTasksStore.getState().tasks[0].status).toBe("INSTRUCTION_READY");
+  });
+
   it("upsertTask keeps newest first", () => {
     useTasksStore.getState().upsertTask(_mkTask("t1", "2026-04-25T10:00:00Z"));
     useTasksStore.getState().upsertTask(_mkTask("t2", "2026-04-25T11:00:00Z"));
