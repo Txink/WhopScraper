@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { CardCompact } from "./CardCompact";
 import type { TaskSummary } from "../../api/domain-types";
 import * as httpModule from "../../api/http";
@@ -193,11 +193,15 @@ describe("CardCompact", () => {
     expect(container.querySelector(".card-status")).toBeInTheDocument();
   });
 
-  it("clicking confirm/cancel buttons does not bubble to expand", () => {
+  it("clicking confirm/cancel buttons does not bubble to expand", async () => {
     const onExpand = vi.fn();
     vi.spyOn(httpModule.api, "skipTask").mockResolvedValue(stockTask as never);
     render(<CardCompact task={readyTask} autoTrade={false} onExpand={onExpand} />);
     fireEvent.click(screen.getByRole("button", { name: "取消" }));
     expect(onExpand).not.toHaveBeenCalled();
+    // Flush async mock resolution so act() warning is suppressed
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "取消" })).not.toBeDisabled()
+    );
   });
 });
