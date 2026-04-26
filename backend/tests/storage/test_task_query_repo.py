@@ -230,6 +230,61 @@ async def test_before_is_strict_less_than(
     assert qty is None
 
 
+async def test_cancelled_task_with_order_id_still_matches(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """Decision 4: order_id IS NOT NULL is the only status filter — CANCELLED
+    tasks still count as 'submitted to broker'. Locks in the spec promise
+    so a future status-filter refactor can't silently break it."""
+    base = datetime(2026, 4, 23, 10, 0, 0, tzinfo=UTC)
+    cancelled = _stock_task(
+        id_="t-cancelled", when=base, side=InstructionType.BUY,
+        price=12.42, quantity=4000, order_id="ORD-1",
+    )
+    cancelled.status = Status.CANCELLED  # explicitly override the helper default
+    async with session_factory() as session:
+        await save_task(session, cancelled)
+
+    async with session_factory() as session:
+        qty = await find_recent_task_by_ref(
+            session, ticker="TSLL", side=InstructionType.BUY,
+            price=12.42, before=base + timedelta(hours=1), window_hours=24 * 7,
+        )
+    assert qty == 4000
+
+
+async def test_window_lower_bound_is_inclusive(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """A task at exactly `before - window_hours` matches; one second earlier doesn't."""
+    base = datetime(2026, 4, 30, 10, 0, 0, tzinfo=UTC)
+    seven_days = timedelta(hours=24 * 7)
+
+    on_edge = _stock_task(
+        id_="t-edge", when=base - seven_days,  # exactly 7 days
+        side=InstructionType.BUY,
+        price=12.42, quantity=2000, order_id="ORD-edge",
+    )
+    just_outside = _stock_task(
+        id_="t-out", when=base - seven_days - timedelta(seconds=1),  # 7d + 1s
+        side=InstructionType.BUY,
+        price=12.42, quantity=4000, order_id="ORD-out",
+    )
+
+    async with session_factory() as session:
+        await save_task(session, on_edge)
+        await save_task(session, just_outside)
+
+    # Exactly-7-days task should match (cutoff is inclusive)
+    async with session_factory() as session:
+        qty = await find_recent_task_by_ref(
+            session, ticker="TSLL", side=InstructionType.BUY,
+            price=12.42, before=base, window_hours=24 * 7,
+        )
+    # The on_edge row is the more-recent qualifier (just_outside is excluded)
+    assert qty == 2000
+
+
 async def test_sql_task_query_repo_binds_session_factory(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
