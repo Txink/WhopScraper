@@ -30,6 +30,7 @@ class Instruction:
     take_profit_price: float | None
     context_source: ContextSource | None
     parser_notes: list[str] = field(default_factory=list)
+    referenced_lot_price: float | None = None
 
     def __post_init__(self) -> None:
         if self.price is None and self.price_range is None:

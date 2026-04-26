@@ -55,6 +55,7 @@ class InstructionOut(BaseModel):
     take_profit_price: float | None
     context_source: str | None
     parser_notes: list[str]
+    referenced_lot_price: float | None = None  # ← new
     # Stock-only
     ticker: str | None = None
     symbol: str | None = None
@@ -359,6 +360,7 @@ def instruction_to_out(inst: Instruction) -> InstructionOut:
             take_profit_price=inst.take_profit_price,
             context_source=inst.context_source,
             parser_notes=list(inst.parser_notes),
+            referenced_lot_price=inst.referenced_lot_price,  # ← new
             ticker=inst.ticker,
             symbol=inst.symbol,
             sell_quantity=None,
@@ -378,6 +380,7 @@ def instruction_to_out(inst: Instruction) -> InstructionOut:
             take_profit_price=inst.take_profit_price,
             context_source=inst.context_source,
             parser_notes=list(inst.parser_notes),
+            referenced_lot_price=inst.referenced_lot_price,  # ← new
             ticker=inst.ticker,
             symbol=inst.symbol,
             sell_quantity=inst.sell_quantity,
@@ -398,6 +401,7 @@ def instruction_to_out(inst: Instruction) -> InstructionOut:
             take_profit_price=inst.take_profit_price,
             context_source=inst.context_source,
             parser_notes=list(inst.parser_notes),
+            referenced_lot_price=inst.referenced_lot_price,  # ← new
         )
 
 

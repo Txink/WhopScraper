@@ -64,6 +64,7 @@ def _stock_inst() -> StockInstruction:
         ticker="TSLL",
         symbol="TSLL.US",
         sell_quantity=None,
+        referenced_lot_price=12.42,  # ← add this kwarg
     )
 
 
@@ -165,6 +166,7 @@ async def test_save_and_load_task_with_stock_instruction_roundtrip(
     assert li.ticker == "TSLL"
     assert li.symbol == "TSLL.US"
     assert li.sell_quantity is None
+    assert li.referenced_lot_price == pytest.approx(12.42)  # ← add this line
 
     # No push events on fresh task
     assert loaded.push_events == []

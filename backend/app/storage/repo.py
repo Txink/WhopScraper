@@ -58,6 +58,7 @@ def _instruction_to_json(inst: Instruction) -> dict[str, Any]:
         "take_profit_price": inst.take_profit_price,
         "context_source": inst.context_source,
         "parser_notes": list(inst.parser_notes),
+        "referenced_lot_price": inst.referenced_lot_price,  # ← new
     }
 
     if isinstance(inst, StockInstruction):
@@ -102,6 +103,7 @@ def _instruction_from_json(data: dict[str, Any]) -> Instruction:
         "take_profit_price": data.get("take_profit_price"),
         "context_source": data.get("context_source"),
         "parser_notes": data.get("parser_notes", []),
+        "referenced_lot_price": data.get("referenced_lot_price"),  # ← new
     }
 
     if type_ == "stock":
