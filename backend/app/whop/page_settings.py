@@ -177,3 +177,35 @@ def position_size_to_fraction(s: str | None) -> float:
         return _FRACTION_MAP[s2]
     logger.warning("unrecognized position_size %r — falling back to 1.0", s2)
     return 1.0
+
+
+# --------------------------------------------------------------------------- #
+# Sell quantity string → fraction multiplier                                    #
+# --------------------------------------------------------------------------- #
+
+_SELL_FRACTION_MAP: dict[str, float] = {
+    "1/2": 0.5,
+    "1/3": 1 / 3,
+    "1/4": 0.25,
+    "2/3": 2 / 3,
+    "3/4": 0.75,
+    "全部": 1.0,
+    "剩下": 1.0,
+    "剩下一半": 0.5,
+}
+
+
+def sell_quantity_to_fraction(s: str | None) -> float:
+    """把 stock_parser 解出来的 sell_quantity 字符串 → 数量倍数。
+
+    未识别 / None / 空 → 1.0（按引用 lot 全量计算）。
+    未识别时记 warning。决策见 design 第 5 节：'剩下一半' 等同 1/2，不做
+    lot 累计消耗追踪。
+    """
+    if not s:
+        return 1.0
+    s2 = s.strip()
+    if s2 in _SELL_FRACTION_MAP:
+        return _SELL_FRACTION_MAP[s2]
+    logger.warning("unrecognized sell_quantity %r — falling back to 1.0", s2)
+    return 1.0

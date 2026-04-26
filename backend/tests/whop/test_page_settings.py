@@ -8,6 +8,7 @@ from app.whop.page_settings import (
     page_settings_from_dict,
     page_settings_to_dict,
     position_size_to_fraction,
+    sell_quantity_to_fraction,  # ← new
 )
 
 
@@ -117,3 +118,28 @@ def test_ticker_keys_uppercased_on_from_dict():
     out = page_settings_from_dict(raw, source="stock")
     assert "TSLL" in out.tickers
     assert "tsll" not in out.tickers
+
+
+def test_sell_quantity_to_fraction_known():
+    assert sell_quantity_to_fraction(None) == 1.0
+    assert sell_quantity_to_fraction("") == 1.0
+    assert sell_quantity_to_fraction("1/2") == 0.5
+    assert sell_quantity_to_fraction("1/3") == pytest.approx(1 / 3)
+    assert sell_quantity_to_fraction("1/4") == 0.25
+    assert sell_quantity_to_fraction("2/3") == pytest.approx(2 / 3)
+    assert sell_quantity_to_fraction("3/4") == 0.75
+    assert sell_quantity_to_fraction("全部") == 1.0
+    assert sell_quantity_to_fraction("剩下") == 1.0
+    assert sell_quantity_to_fraction("剩下一半") == 0.5  # decision 5: same as 1/2
+
+
+def test_sell_quantity_to_fraction_strips_whitespace():
+    assert sell_quantity_to_fraction("  1/2  ") == 0.5
+    assert sell_quantity_to_fraction("\t全部\n") == 1.0
+
+
+def test_sell_quantity_to_fraction_unknown_returns_one(caplog):
+    import logging
+    with caplog.at_level(logging.WARNING, logger="app.whop.page_settings"):
+        assert sell_quantity_to_fraction("一点点") == 1.0
+    assert any("unrecognized sell_quantity" in r.getMessage() for r in caplog.records)
