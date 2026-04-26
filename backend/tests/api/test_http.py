@@ -20,6 +20,7 @@
 from __future__ import annotations
 
 from datetime import UTC, date, datetime, timedelta
+from pathlib import Path
 
 import pytest
 import pytest_asyncio
@@ -28,6 +29,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.api.http import build_http_router
+from app.broker.runtime_settings import LongPortRuntimeStore
 from app.core.config import Settings, get_settings
 from app.core.event_bus import EventBus
 from app.domain.instruction import InstructionType, StockInstruction
@@ -108,11 +110,21 @@ def _stock_instruction() -> StockInstruction:
 
 
 @pytest.fixture
-def make_app(session_factory: async_sessionmaker[AsyncSession]) -> tuple[FastAPI, FakeBrokerClient]:
-    """Return a (FastAPI app, FakeBrokerClient) pair."""
+def make_app(
+    session_factory: async_sessionmaker[AsyncSession],
+    tmp_path: Path,
+) -> tuple[FastAPI, FakeBrokerClient]:
+    """Return a (FastAPI app, FakeBrokerClient) pair.
+
+    Builds an isolated LongPortRuntimeStore backed by a tmp file so any
+    PATCH /api/longport/settings calls in tests do NOT clobber the real
+    data/longport_settings.json — that file holds the user's real
+    credentials and was being silently overwritten by every test run.
+    """
     broker: FakeBrokerClient = FakeBrokerClient()
     settings = Settings(app_token=_TOKEN)
     bus = EventBus()
+    runtime_store = LongPortRuntimeStore(settings_file=tmp_path / "longport_settings.json")
 
     app = FastAPI()
     app.include_router(
@@ -121,6 +133,7 @@ def make_app(session_factory: async_sessionmaker[AsyncSession]) -> tuple[FastAPI
             broker=broker,
             settings=settings,
             bus=bus,
+            longport_runtime=runtime_store,
         )
     )
     # Override the settings dependency so require_app_token uses the same token.

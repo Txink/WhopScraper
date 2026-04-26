@@ -59,15 +59,30 @@ class LongPortRuntimeSettings:
 class LongPortRuntimeStore:
     """Persistent runtime settings for LongPort, independent from .env."""
 
-    def __init__(self, *, settings_file: Path | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        settings_file: Path | None = None,
+        persist: bool = True,
+    ) -> None:
         self._settings_file = settings_file or _DEFAULT_SETTINGS_FILE
+        self._persist = persist
         self._value = self._load_or_default()
 
     @classmethod
     def from_settings_defaults(cls, settings: Settings) -> LongPortRuntimeStore:
-        """Test/helper fallback when no persistent store is wired."""
+        """In-memory fallback used when build_http_router is invoked without
+        a real store (test fixtures, isolated subapps).
+
+        DOES NOT write to disk — earlier this method tagged the global default
+        file path, so any test that PATCHed /api/longport/settings silently
+        clobbered the user's real ``data/longport_settings.json``. Now updates
+        stay in-memory; the prod file is only ever touched by the real store
+        explicitly wired in main.py's lifespan.
+        """
         obj = cls.__new__(cls)
-        obj._settings_file = _DEFAULT_SETTINGS_FILE
+        obj._settings_file = _DEFAULT_SETTINGS_FILE  # cosmetic; never written
+        obj._persist = False
         mode_raw = settings.longport_mode.lower()
         mode: Literal["paper", "real"] = "real" if mode_raw == "real" else "paper"
         obj._value = LongPortRuntimeSettings(
@@ -116,6 +131,8 @@ class LongPortRuntimeStore:
         return LongPortRuntimeSettings()
 
     def _save(self) -> None:
+        if not self._persist:
+            return
         self._settings_file.parent.mkdir(parents=True, exist_ok=True)
         self._settings_file.write_text(
             json.dumps(self._value.to_dict(), indent=2, ensure_ascii=False),
