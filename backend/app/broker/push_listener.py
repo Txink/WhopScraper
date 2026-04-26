@@ -214,6 +214,20 @@ def _to_payload_dict(raw: Any) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
+def _extract_broker_msg(raw: Any) -> str | None:
+    """Pull the broker-supplied message off the raw push event, if any.
+
+    LongPort's ``PushOrderChanged.msg`` carries the human-readable rejection
+    reason (e.g. ``"订单金额超出最大购买力"``) on Rejected events. Other
+    states usually have an empty msg.
+    """
+    msg = getattr(raw, "msg", None)
+    if not isinstance(msg, str):
+        return None
+    msg = msg.strip()
+    return msg or None
+
+
 def _build_push_event(raw: Any, task: Task) -> PushEvent:
     """Build a ``PushEvent`` from a raw SDK event and the associated ``Task``.
 
@@ -222,8 +236,12 @@ def _build_push_event(raw: Any, task: Task) -> PushEvent:
       from already-recorded push events.  Only set when positive.
     - ``delta_price``: None — SDK's ``executed_price`` is a weighted average,
       not the fill price of this specific batch.
+
+    ``note`` priority:
+    1. Broker-supplied ``raw.msg`` if non-empty (rejection reason etc).
+    2. Otherwise the unknown-status warning emitted by ``_map_sdk_status``.
     """
-    state, note = _map_sdk_status(getattr(raw, "status", None))
+    state, status_note = _map_sdk_status(getattr(raw, "status", None))
 
     cum_qty = _to_int(getattr(raw, "executed_quantity", None))
     cum_avg = _to_float(getattr(raw, "executed_price", None))
@@ -237,6 +255,9 @@ def _build_push_event(raw: Any, task: Task) -> PushEvent:
     delta_qty: int | None = None
     if cum_qty is not None and cum_qty > prior_cum:
         delta_qty = cum_qty - prior_cum
+
+    # Prefer broker-supplied message — that's where the rejection reason lives.
+    note = _extract_broker_msg(raw) or status_note
 
     return PushEvent(
         id=uuid.uuid4().hex,
@@ -308,6 +329,12 @@ class PushListener:
 
         evt = _build_push_event(raw, task)
         task.append_push_event(evt)
+
+        # Surface broker-side rejection / failure reason on the Task itself
+        # so the UI can show "REJECTED · 订单金额超出最大购买力" directly,
+        # and not just on the individual push event.
+        if evt.state in (PushState.REJECTED, PushState.FAILED) and evt.note:
+            task.reject_reason = evt.note
 
         await self._bus.publish(
             Event(

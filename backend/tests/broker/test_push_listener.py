@@ -549,3 +549,140 @@ async def test_handle_raw_push_publishes_when_raw_is_c_extension_shaped(
     # The serialised payload reached storage shape via the dir() fallback.
     assert payload.push_event.payload["symbol"] == "AAPL.US"
     assert payload.push_event.payload["status"] == "PartialFilled"
+
+
+# ---------------------------------------------------------------------------
+# 7. Broker-supplied rejection msg surfaces on PushEvent.note + Task.reject_reason
+# ---------------------------------------------------------------------------
+
+
+async def test_rejected_push_surfaces_broker_msg_as_note_and_reject_reason(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """When LongPort rejects an order, ``PushOrderChanged.msg`` carries the
+    human-readable reason (e.g. ``"订单金额超出最大购买力"``). We must:
+
+    1. Put it on ``PushEvent.note`` so the expanded card's push detail
+       row can render it next to the REJECTED node.
+    2. Copy it onto ``Task.reject_reason`` so the card header / status
+       pill can show ``"REJECTED · <reason>"`` without having to dig
+       through push events.
+    """
+    bus = EventBus()
+    client = FakeBrokerClient()
+    task = _make_pending_task("task-reject-msg", "ord-rej")
+    await _save(session_factory, task)
+
+    listener = _make_listener(bus, client, session_factory)
+
+    captured: list[Event] = []
+
+    async def _capture(evt: Event) -> None:
+        captured.append(evt)
+
+    bus.subscribe(Topics.TASK_PUSH_EVENT, _capture)
+
+    raw = _CExtensionPushOrderChanged(
+        order_id="ord-rej",
+        status=_SDKEnumLike("OrderStatus", "Rejected"),
+        side=_SDKEnumLike("OrderSide", "Buy"),
+        symbol="AAPL.US",
+        executed_quantity=Decimal("0"),
+        executed_price=None,
+        msg="订单金额超出最大购买力",
+    )
+    await listener._handle_raw_push(raw)
+    await bus.wait_idle(timeout=2.0)
+
+    assert len(captured) == 1
+    payload: TaskPushPayload = captured[0].payload  # type: ignore[assignment]
+    assert payload.push_event.state == PushState.REJECTED
+    # Broker msg lands on the PushEvent note (not the unknown-status fallback).
+    assert payload.push_event.note == "订单金额超出最大购买力"
+    # And it bubbles to the Task itself for header-level display.
+    assert payload.task.reject_reason == "订单金额超出最大购买力"
+
+
+def test_build_push_event_prefers_broker_msg_over_unknown_status_note() -> None:
+    """If the SDK sends an unrecognised status AND a non-empty msg, the msg
+    is the more useful note; the unknown-status warning is a fallback only."""
+    raw = _CExtensionPushOrderChanged(
+        order_id="ord-x",
+        status=_SDKEnumLike("OrderStatus", "TotallyMadeUpStatus"),
+        side=_SDKEnumLike("OrderSide", "Buy"),
+        symbol="AAPL.US",
+        executed_quantity=Decimal("0"),
+        executed_price=None,
+        msg="账户冻结",
+    )
+    task = _make_pending_task("task-msg-priority", "ord-x")
+
+    evt = _build_push_event(raw, task)
+
+    assert evt.state == PushState.FAILED  # unknown status → FAILED
+    # Note prefers the broker msg, not "unknown status: ..."
+    assert evt.note == "账户冻结"
+
+
+def test_build_push_event_falls_back_to_unknown_status_note_when_msg_empty() -> None:
+    """When msg is empty/missing, the unknown-status warning is preserved
+    so we don't lose diagnostic info on truly unrecognised SDK statuses."""
+    raw = _CExtensionPushOrderChanged(
+        order_id="ord-y",
+        status=_SDKEnumLike("OrderStatus", "MadeUp"),
+        side=_SDKEnumLike("OrderSide", "Buy"),
+        symbol="AAPL.US",
+        executed_quantity=Decimal("0"),
+        executed_price=None,
+        msg="",
+    )
+    task = _make_pending_task("task-msg-empty", "ord-y")
+
+    evt = _build_push_event(raw, task)
+
+    assert evt.state == PushState.FAILED
+    assert evt.note is not None
+    assert "unknown status" in evt.note
+    assert "MadeUp" in evt.note
+
+
+async def test_filled_push_with_msg_does_not_set_reject_reason(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """reject_reason is set only on REJECTED/FAILED states. A FILLED push with
+    a msg (rare but legal — e.g. partial-fill informational note) must not
+    pollute reject_reason.
+    """
+    bus = EventBus()
+    client = FakeBrokerClient()
+    task = _make_pending_task("task-filled-msg", "ord-f")
+    await _save(session_factory, task)
+
+    listener = _make_listener(bus, client, session_factory)
+
+    captured: list[Event] = []
+
+    async def _capture(evt: Event) -> None:
+        captured.append(evt)
+
+    bus.subscribe(Topics.TASK_PUSH_EVENT, _capture)
+
+    raw = _CExtensionPushOrderChanged(
+        order_id="ord-f",
+        status=_SDKEnumLike("OrderStatus", "Filled"),
+        side=_SDKEnumLike("OrderSide", "Buy"),
+        symbol="AAPL.US",
+        executed_quantity=Decimal("100"),
+        executed_price=Decimal("25.00"),
+        msg="info: full fill",
+    )
+    await listener._handle_raw_push(raw)
+    await bus.wait_idle(timeout=2.0)
+
+    assert len(captured) == 1
+    payload: TaskPushPayload = captured[0].payload  # type: ignore[assignment]
+    assert payload.push_event.state == PushState.FILLED
+    # Note still carries the msg for audit visibility…
+    assert payload.push_event.note == "info: full fill"
+    # …but reject_reason stays clean.
+    assert payload.task.reject_reason is None
