@@ -38,17 +38,18 @@
   border-color: var(--line-strong);
 }
 
-/* Raw message preview — single line with ellipsis, fills the elastic
-   2nd column. Title attribute exposes the full content on hover. */
+/* Raw message preview — fills the elastic 2nd column. Wraps when the
+   message exceeds the available width so the user can see the full
+   text without expanding the card; the row grows accordingly. */
 .card.compact .raw-msg {
   color: var(--fg-2);
   font-family: var(--font-sans);
   font-style: italic;
   font-size: 11.5px;
-  line-height: 1.4;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.45;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
   min-width: 0;
 }
 
