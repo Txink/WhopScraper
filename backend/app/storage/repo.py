@@ -585,13 +585,22 @@ async def list_positions(session: AsyncSession) -> list[PositionRow]:
 
 
 def _canonicalize_url(url: str | None) -> str | None:
+    """Normalize a Whop URL for case + trailing-slash insensitive comparison.
+
+    Whop's routes are case-insensitive (``/joined/X`` and ``/Joined/X``
+    resolve to the same page) and the user-typed URL may or may not carry
+    a trailing slash. Lowercasing ``scheme`` + ``netloc`` covers protocol
+    + host; lowercasing ``path`` covers the route segments; ``rstrip("/")``
+    folds the trailing-slash variant. Query and fragment are dropped — the
+    persisted "page URL" never carries them in our usage.
+    """
     if url is None:
         return None
     s = str(url).strip()
     if not s:
         return None
     p = urlsplit(s)
-    path = p.path.rstrip("/") or "/"
+    path = (p.path or "").lower().rstrip("/") or "/"
     return urlunsplit((p.scheme.lower(), p.netloc.lower(), path, "", ""))
 
 

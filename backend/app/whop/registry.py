@@ -42,13 +42,22 @@ _DEFAULT_PAGES_FILE = _PROJECT_ROOT / "data" / "whop_pages.json"
 
 
 def _canonicalize_url(url: str | None) -> str | None:
+    """Normalize a Whop URL for case + trailing-slash insensitive lookup.
+
+    Whop routes are case-insensitive (``/joined/X`` ≡ ``/Joined/X``) and
+    the user-supplied URL may or may not carry a trailing slash. Folding
+    both the host and the path to lowercase, plus stripping a trailing
+    ``/``, makes ``get_settings_for_url`` (and downstream listener lookups
+    that use the same canonicalization in storage/repo) match regardless
+    of how the URL was originally typed in.
+    """
     if url is None:
         return None
     s = str(url).strip()
     if not s:
         return None
     p = urlsplit(s)
-    path = p.path.rstrip("/") or "/"
+    path = (p.path or "").lower().rstrip("/") or "/"
     return urlunsplit((p.scheme.lower(), p.netloc.lower(), path, "", ""))
 
 
