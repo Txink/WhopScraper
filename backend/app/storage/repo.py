@@ -37,7 +37,7 @@ from app.domain.instruction import (
 )
 from app.domain.message import Message
 from app.domain.push_event import PushEvent, PushState
-from app.domain.status import Status
+from app.domain.status import TERMINAL, Status
 from app.domain.task import Task
 from app.storage.schema import InstructionRow, MessageRow, PositionRow, PushEventRow, TaskRow
 
@@ -293,6 +293,11 @@ _INSTRUCTION_UPDATE_COLS = (
     "payload_json",
 )
 
+# String values of the terminal statuses, for SQL WHERE clauses that
+# prevent a terminal row from being overwritten by a stale non-terminal
+# update (race protection — see save_task).
+_TERMINAL_STATUS_VALUES = frozenset(s.value for s in TERMINAL)
+
 
 async def save_task(session: AsyncSession, task: Task) -> None:
     """Upsert a Task and its linked Message / Instruction rows.
@@ -336,10 +341,16 @@ async def save_task(session: AsyncSession, task: Task) -> None:
     }
 
     # --- tasks UPSERT ---
+    # Race protection: refuse the UPDATE branch when the existing row is
+    # already at a terminal status. This prevents a slow / out-of-order push
+    # handler from overwriting (e.g.) REJECTED with PENDING when two SDK
+    # pushes for the same order_id arrive within milliseconds and their
+    # _handle_raw_push coroutines race. INSERT (new row) is always allowed.
     task_stmt = sqlite_insert(TaskRow).values(**task_values)
     task_stmt = task_stmt.on_conflict_do_update(
         index_elements=["id"],
         set_={col: task_stmt.excluded[col] for col in _TASK_UPDATE_COLS},
+        where=TaskRow.status.notin_(_TERMINAL_STATUS_VALUES),
     )
     await session.execute(task_stmt)
     await session.flush()

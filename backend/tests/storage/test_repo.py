@@ -607,3 +607,165 @@ async def test_save_task_concurrent_same_id_no_conflict(
         loaded = await load_task(session, task.id)
     assert loaded is not None
     assert loaded.id == task.id
+
+
+# ---------------------------------------------------------------------------
+# 15. Terminal-status race protection
+# ---------------------------------------------------------------------------
+# Reproduces the production race that left tasks stuck at PENDING despite
+# REJECTED push events. Two SDK pushes (NotReported → SUBMITTED, Rejected
+# → REJECTED) for the same order_id arrive within ms. Their _handle_raw_push
+# coroutines both load the task at PENDING. Coroutine B saves REJECTED.
+# Coroutine A (slow) then tries to save the (still-in-memory) task as
+# PENDING with state=SUBMITTED → without race protection this overwrites
+# REJECTED with PENDING, and the UI shows "等待成交" indefinitely.
+
+
+@pytest.mark.asyncio
+async def test_save_task_does_not_overwrite_terminal_status_with_non_terminal(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """A subsequent save with a non-terminal status must NOT overwrite an
+    existing terminal status row. (Race protection for concurrent push handlers.)
+    """
+    from app.storage.db import session_scope
+
+    task_id = "msg-terminal-race"
+    # First save: terminal REJECTED with reject_reason
+    task_terminal = _make_task(task_id, status=Status.RECEIVED)
+    task_terminal.mark_parsing()
+    task_terminal.attach_instruction(_stock_inst())
+    task_terminal.mark_submitting()
+    task_terminal.mark_submitted(order_id="ORD-RACE", timing_ms=10.0)
+    # transition PENDING → REJECTED
+    task_terminal.append_push_event(
+        PushEvent(
+            id="evt-1",
+            task_id=task_id,
+            order_id="ORD-RACE",
+            state=PushState.REJECTED,
+            received_at=datetime(2026, 4, 26, 10, 0, 0, tzinfo=UTC),
+            payload={},
+            note="订单金额超出最大购买力",
+        )
+    )
+    task_terminal.reject_reason = "订单金额超出最大购买力"
+    async with session_scope(session_factory) as session:
+        await save_task(session, task_terminal)
+
+    # Second save: same task_id, non-terminal status PENDING with no reject_reason.
+    # This simulates the race-y "later" coroutine whose in-memory task never
+    # observed the REJECTED transition. The save MUST be a no-op on the
+    # status / reject_reason fields — DB stays at REJECTED.
+    task_stale = _make_task(task_id, status=Status.RECEIVED)
+    task_stale.mark_parsing()
+    task_stale.attach_instruction(_stock_inst())
+    task_stale.mark_submitting()
+    task_stale.mark_submitted(order_id="ORD-RACE", timing_ms=10.0)
+    # leave at PENDING, no reject_reason
+    async with session_scope(session_factory) as session:
+        await save_task(session, task_stale)
+
+    async with session_scope(session_factory) as session:
+        loaded = await load_task(session, task_id)
+    assert loaded is not None
+    assert loaded.status == Status.REJECTED, (
+        f"expected REJECTED to be preserved, got {loaded.status}"
+    )
+    assert loaded.reject_reason == "订单金额超出最大购买力"
+
+
+@pytest.mark.asyncio
+async def test_save_task_normal_progression_through_non_terminal_still_updates(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """Race protection must NOT block legitimate non-terminal → non-terminal
+    or non-terminal → terminal updates. RECEIVED → PARSING → INSTRUCTION_READY
+    → SUBMITTING → PENDING → REJECTED should all persist normally.
+    """
+    from app.storage.db import session_scope
+
+    task_id = "msg-progression"
+    task = _make_task(task_id, status=Status.RECEIVED)
+
+    # RECEIVED → PARSING
+    task.mark_parsing()
+    async with session_scope(session_factory) as session:
+        await save_task(session, task)
+
+    # PARSING → INSTRUCTION_READY
+    task.attach_instruction(_stock_inst())
+    async with session_scope(session_factory) as session:
+        await save_task(session, task)
+    async with session_scope(session_factory) as session:
+        loaded = await load_task(session, task_id)
+    assert loaded is not None and loaded.status == Status.INSTRUCTION_READY
+
+    # INSTRUCTION_READY → SUBMITTING → PENDING → REJECTED
+    task.mark_submitting()
+    task.mark_submitted(order_id="ORD-PROG", timing_ms=12.0)
+    async with session_scope(session_factory) as session:
+        await save_task(session, task)
+    async with session_scope(session_factory) as session:
+        loaded = await load_task(session, task_id)
+    assert loaded is not None and loaded.status == Status.PENDING
+
+    # Final: PENDING → REJECTED (legitimate terminal transition)
+    task.append_push_event(
+        PushEvent(
+            id="evt-final",
+            task_id=task_id,
+            order_id="ORD-PROG",
+            state=PushState.REJECTED,
+            received_at=datetime(2026, 4, 26, 10, 0, 0, tzinfo=UTC),
+            payload={},
+            note="风控驳回",
+        )
+    )
+    task.reject_reason = "风控驳回"
+    async with session_scope(session_factory) as session:
+        await save_task(session, task)
+
+    async with session_scope(session_factory) as session:
+        loaded = await load_task(session, task_id)
+    assert loaded is not None
+    assert loaded.status == Status.REJECTED
+    assert loaded.reject_reason == "风控驳回"
+
+
+@pytest.mark.asyncio
+async def test_save_task_all_terminal_statuses_protected(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """Every terminal status (PARSE_ERROR, SUBMIT_FAILED, FILLED, CANCELLED,
+    REJECTED, SKIPPED) must be protected — not just REJECTED.
+    """
+    from app.storage.db import session_scope
+
+    cases = [
+        ("term-parse-err", Status.PARSE_ERROR),
+        ("term-submit-fail", Status.SUBMIT_FAILED),
+        ("term-filled", Status.FILLED),
+        ("term-cancelled", Status.CANCELLED),
+        ("term-rejected", Status.REJECTED),
+        ("term-skipped", Status.SKIPPED),
+    ]
+
+    for task_id, terminal_status in cases:
+        # Save row directly at terminal status
+        task = _make_task(task_id, status=terminal_status)
+        async with session_scope(session_factory) as session:
+            await save_task(session, task)
+
+        # Try to overwrite with a non-terminal status
+        stale = _make_task(task_id, status=Status.RECEIVED)
+        async with session_scope(session_factory) as session:
+            await save_task(session, stale)
+
+        async with session_scope(session_factory) as session:
+            loaded = await load_task(session, task_id)
+        assert loaded is not None
+        assert loaded.status == terminal_status, (
+            f"{terminal_status.value} was overwritten by RECEIVED — "
+            f"got {loaded.status}"
+        )
