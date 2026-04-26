@@ -166,24 +166,47 @@ def _serialise_value(v: Any) -> Any:
 def _to_payload_dict(raw: Any) -> dict[str, Any]:
     """Convert a SDK push event object to a JSON-serialisable dict.
 
-    Uses ``__dict__`` / ``vars()`` where available; falls back to ``repr``.
-    Nested non-primitive values are stringified.
+    Strategy:
+      1. ``vars()`` for plain Python objects (test doubles, dataclasses).
+         Note: on a C-extension object ``vars(obj)`` may NOT raise — it can
+         return a non-dict (the ``__dict__`` *property* itself), so the
+         result must be type-checked before iterating.
+      2. ``dir()`` introspection for C-extension objects (e.g. LongPort
+         ``PushOrderChanged``) which expose attributes as Rust-backed
+         properties rather than a Python ``__dict__``.
+      3. ``repr`` as the final fallback.
     """
+    # 1. Plain-Python fast path
     try:
-        pairs = vars(raw).items()
+        candidate = vars(raw)
+        if isinstance(candidate, dict):
+            pairs = list(candidate.items())
+            result: dict[str, Any] = {}
+            for k, v in pairs:
+                if k.startswith("_"):
+                    continue
+                result[str(k)] = _serialise_value(v)
+            return result
     except TypeError:
-        # C-extension objects may not support vars(); try __dict__
-        try:
-            pairs = raw.__dict__.items()
-        except AttributeError:
-            return {"_raw": repr(raw)}
+        pass
 
-    result: dict[str, Any] = {}
-    for k, v in pairs:
-        if k.startswith("_"):
+    # 2. C-extension fallback via dir()
+    pairs2: list[tuple[str, Any]] = []
+    for name in dir(raw):
+        if name.startswith("_"):
             continue
-        result[str(k)] = _serialise_value(v)
-    return result
+        try:
+            val = getattr(raw, name)
+        except Exception:  # noqa: BLE001
+            continue
+        if callable(val):
+            continue
+        pairs2.append((name, val))
+    if pairs2:
+        return {k: _serialise_value(v) for k, v in pairs2}
+
+    # 3. Last-resort repr
+    return {"_raw": repr(raw)}
 
 
 # ---------------------------------------------------------------------------
