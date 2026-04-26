@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -14,6 +15,7 @@ from app.domain.instruction import InstructionType, OptionInstruction, StockInst
 from app.domain.message import Message
 from app.domain.status import Status
 from app.domain.task import Task
+from app.whop.page_settings import PageSettings, TickerConfig
 from tests.broker._fakes import FakeBrokerClient
 
 # ---------------------------------------------------------------------------
@@ -338,3 +340,111 @@ async def test_trader_proceeds_when_valid_and_auto_trade_on() -> None:
 
     # Status advanced past INSTRUCTION_READY (PENDING means broker submitted)
     assert task.status in (Status.PENDING, Status.SUBMITTING, Status.FILLED)
+
+
+# ---------------------------------------------------------------------------
+# Helpers for ordering tests
+# ---------------------------------------------------------------------------
+
+
+def _fake_registry(tickers: set[str], block_non_today: bool = False) -> MagicMock:
+    registry = MagicMock()
+    registry.get_settings_for_url.return_value = PageSettings(
+        dedupe_processed_messages=True,
+        price_deviation_tolerance=1.0,
+        tickers={t: TickerConfig(trade_quantity=100) for t in tickers},
+        block_non_today_messages=block_non_today,
+    )
+    return registry
+
+
+# ---------------------------------------------------------------------------
+# Ordering tests (gate ① a → ① b → ① c ordering)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_trader_whitelist_check_runs_before_validation() -> None:
+    """A stock task whose ticker is NOT in the page whitelist AND has an
+    invalid side (CLOSE) should SKIP with the WHITELIST reason — not the
+    validation reason — proving whitelist check runs first."""
+    bus = EventBus()
+    fake_broker = FakeBrokerClient()
+    register_trader(bus, fake_broker, _config(auto_trade=True), registry=_fake_registry({"AAPL"}))
+
+    task = _stock_task(instruction_type=InstructionType.CLOSE)  # ticker is TSLA, not in whitelist
+    await bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
+    await bus.wait_idle(timeout=2.0)
+
+    assert task.status == Status.SKIPPED
+    assert task.reject_reason is not None
+    assert "not in trade whitelist" in task.reject_reason
+    assert "参数不齐" not in task.reject_reason
+
+
+@pytest.mark.asyncio
+async def test_trader_non_today_runs_before_validation() -> None:
+    """Whitelisted ticker with non-today posted_at AND invalid side: the
+    non-today reason should win, proving non-today check runs before the
+    completeness check."""
+    bus = EventBus()
+    fake_broker = FakeBrokerClient()
+    register_trader(
+        bus, fake_broker, _config(auto_trade=True),
+        registry=_fake_registry({"TSLA"}, block_non_today=True),
+    )
+
+    # Build a task whose message.posted_at is two days ago.
+    task = _stock_task(instruction_type=InstructionType.CLOSE)
+    yesterday = datetime.now(UTC) - timedelta(days=2)
+    task.message = Message(
+        id=task.message.id,
+        content=task.message.content,
+        raw_content=task.message.raw_content,
+        author=task.message.author,
+        posted_at=yesterday,
+        received_at=task.message.received_at,
+        source=task.message.source,  # type: ignore[arg-type]
+    )
+
+    await bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
+    await bus.wait_idle(timeout=2.0)
+
+    assert task.status == Status.SKIPPED
+    assert task.reject_reason is not None
+    assert "非当天消息" in task.reject_reason
+
+
+@pytest.mark.asyncio
+async def test_trader_accepts_whitelisted_stock_without_qty_or_position_size() -> None:
+    """The bug being fixed: a whitelisted stock signal that parsed only
+    ticker+side+price (no qty, no position_size) should NOT be SKIPPED
+    by the validation gate. trader.py should resolve qty from
+    page_settings.trade_quantity."""
+    bus = EventBus()
+    fake_broker = FakeBrokerClient()
+    register_trader(
+        bus, fake_broker, _config(auto_trade=True),
+        registry=_fake_registry({"TSLA"}),
+    )
+
+    # Build a stock task with quantity=None and position_size=None
+    task = Task.new_from_message(_msg(source="stock"))
+    task.mark_parsing()
+    inst = StockInstruction(
+        instruction_type=InstructionType.BUY,
+        price=25.0, price_range=None,
+        quantity=None, position_size=None,  # ← the bug case
+        stop_loss_price=None, take_profit_price=None,
+        context_source="group", parser_notes=[],
+        ticker="TSLA", symbol="TSLA.US", sell_quantity=None,
+    )
+    task.attach_instruction(inst)
+
+    await bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
+    await bus.wait_idle(timeout=2.0)
+
+    # Should advance past INSTRUCTION_READY (broker submitted)
+    assert task.status in (Status.PENDING, Status.SUBMITTING, Status.FILLED), (
+        f"expected submission, got {task.status} with reason={task.reject_reason}"
+    )

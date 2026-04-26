@@ -99,23 +99,53 @@ def register_trader(
         if inst is None:
             return
 
-        # ① Parameter completeness gate — runs before auto_trade so incomplete
-        # tasks never reach the manual-confirmation UI.
+        page_settings = _resolve_settings(task)
+
+        # ============== 完整信息校验节点 (gate ①) ==============
+        # Order: whitelist → non-today → validate_for_submission
+
+        # ① a. Whitelist check (stock with configured tickers only).
+        if (
+            isinstance(inst, StockInstruction)
+            and page_settings is not None
+            and page_settings.tickers is not None
+        ):
+            ticker_upper = (inst.ticker or "").upper()
+            if ticker_upper not in page_settings.tickers:
+                await _publish_skip(task, f"ticker {ticker_upper} not in trade whitelist")
+                return
+
+        # ① b. Non-today-message check (per-page setting).
+        if page_settings is not None and page_settings.block_non_today_messages:
+            from datetime import datetime
+
+            posted_local = task.message.posted_at.astimezone().date()
+            today_local = datetime.now().date()
+            if posted_local != today_local:
+                await _publish_skip(
+                    task,
+                    f"非当天消息（posted={posted_local}, today={today_local}），已拦截下单",
+                )
+                return
+
+        # ① c. Parameter completeness — ticker + side + price (for stock);
+        # ticker + side + price + strike + CP + expiry (for option).
         reason = validate_for_submission(inst)
         if reason is not None:
             await _publish_skip(task, reason)
             return
 
-        # ② auto_trade gate — manual-confirm UI only appears for tasks that
-        # passed gate ①, which guarantees the parser-level fields are present.
-        auto_trade_enabled = auto_trade_getter() if auto_trade_getter is not None else config.auto_trade
+        # ============== auto_trade 节点 (gate ②) ==============
+        auto_trade_enabled = (
+            auto_trade_getter() if auto_trade_getter is not None else config.auto_trade
+        )
         if not auto_trade_enabled:
             task.reject_reason = "auto_trade disabled in config; awaiting manual confirmation"
             await bus.publish(Event(Topics.TASK_STATUS_CHANGED, TaskPayload(task)))
             return
 
-        # ③ Defensive (now unreachable when gate ① is honored, but kept as
-        # belt-and-braces for non-validated callers in tests).
+        # ============== 既有防御 / 数量 / 偏离 / 下单 (gate ③+) ==============
+        # Defensive (unreachable when gates ①+② were honored).
         if not getattr(inst, "symbol", None):
             await _publish_skip(task, "instruction missing symbol")
             return
@@ -123,16 +153,11 @@ def register_trader(
             await _publish_skip(task, f"unsupported instruction type: {inst.instruction_type}")
             return
 
-        page_settings = _resolve_settings(task)
-
         # ---- qty calc + per-asset gates ----
         if isinstance(inst, StockInstruction):
             ticker_upper = (inst.ticker or "").upper()
             if page_settings is not None and page_settings.tickers is not None:
-                # Stock page with explicit whitelist
-                if ticker_upper not in page_settings.tickers:
-                    await _publish_skip(task, f"ticker {ticker_upper} not in trade whitelist")
-                    return
+                # Whitelisted stock — qty derived from page_settings.
                 base_qty = page_settings.tickers[ticker_upper].trade_quantity
                 fraction = position_size_to_fraction(inst.position_size)
                 computed_qty = max(int(base_qty * fraction), 1)
@@ -201,19 +226,6 @@ def register_trader(
         # Persist the resolved execution quantity back onto instruction so
         # API task payloads can render QTY/TOTAL consistently in the frontend.
         inst.quantity = computed_qty
-
-        # ---- Block non-today messages if configured (per-page setting) ----
-        if page_settings is not None and page_settings.block_non_today_messages:
-            from datetime import datetime
-
-            posted_local = task.message.posted_at.astimezone().date()
-            today_local = datetime.now().date()
-            if posted_local != today_local:
-                await _publish_skip(
-                    task,
-                    f"非当天消息（posted={posted_local}, today={today_local}），已拦截下单",
-                )
-                return
 
         # ---- Deviation → order_type decision ----
         signal_price = (

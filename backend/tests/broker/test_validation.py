@@ -50,6 +50,14 @@ def test_stock_complete_with_position_size_returns_none():
     assert validate_for_submission(inst) is None
 
 
+def test_stock_no_quantity_no_position_size_returns_none():
+    """Stock parser legitimately emits signals with neither quantity nor
+    position_size (e.g. 'TSLL 26.5 买'). The validation gate must accept
+    them — qty resolves later from page_settings.trade_quantity."""
+    inst = _stock(quantity=None, position_size=None)
+    assert validate_for_submission(inst) is None
+
+
 def test_option_complete_returns_none():
     assert validate_for_submission(_option()) is None
 
@@ -65,18 +73,6 @@ def test_stock_with_price_range_only_returns_none():
 
 
 # ---------- stock missing fields ----------
-
-def test_stock_missing_quantity_and_position_size():
-    reason = validate_for_submission(_stock(quantity=None, position_size=None))
-    assert reason is not None
-    assert "数量" in reason
-
-
-def test_stock_zero_quantity_and_no_position_size():
-    reason = validate_for_submission(_stock(quantity=0, position_size=None))
-    assert reason is not None
-    assert "数量" in reason
-
 
 def test_stock_close_instruction_type_rejected():
     reason = validate_for_submission(_stock(instruction_type=InstructionType.CLOSE))
@@ -123,18 +119,23 @@ def test_option_close_instruction_type_rejected():
 # ---------- error string format ----------
 
 def test_reason_starts_with_zh_prefix():
-    reason = validate_for_submission(_stock(quantity=None, position_size=None))
+    reason = validate_for_submission(_stock(instruction_type=InstructionType.CLOSE))
     assert reason is not None
     assert reason.startswith("参数不齐: ")
 
 
 def test_reason_lists_multiple_missing_fields():
-    inst = _stock(
-        quantity=None, position_size=None,
+    """Multiple missing fields produce a reason joined by 、 separator.
+    Uses an OptionInstruction with CLOSE side + zero strike + no expiry to
+    trigger three distinct failures and verify 、-joining."""
+    inst = _option(
         instruction_type=InstructionType.CLOSE,
+        strike=0,
     )
+    inst.expiry = None  # type: ignore[assignment]
     reason = validate_for_submission(inst)
     assert reason is not None
-    assert "数量" in reason
     assert "BUY" in reason and "SELL" in reason
+    assert "行权价" in reason
+    assert "到期日" in reason
     assert "、" in reason
