@@ -204,11 +204,15 @@
 }
 
 .lp-modal input[type="text"],
+.lp-modal input[type="password"],
+.lp-modal input[type="number"],
 .lp-modal input:not([type]) {
   width: 100%;
 }
 
 .lp-modal input[type="text"],
+.lp-modal input[type="password"],
+.lp-modal input[type="number"],
 .lp-modal input:not([type]) {
   background: var(--bg-1);
   border: 1px solid var(--line-strong);
@@ -221,8 +225,23 @@
 }
 
 .lp-modal input[type="text"]:focus,
+.lp-modal input[type="password"]:focus,
+.lp-modal input[type="number"]:focus,
 .lp-modal input:not([type]):focus {
   border-color: var(--brand);
+}
+
+/* Override the browser's white autofill background that overrides our
+   --bg-1 dark fill once the user submits the form once and the browser
+   marks the field as "filled". Using inset shadow because background-color
+   is locked by the user-agent stylesheet on -webkit-autofill. */
+.lp-modal input:-webkit-autofill,
+.lp-modal input:-webkit-autofill:hover,
+.lp-modal input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--fg-1);
+  -webkit-box-shadow: 0 0 0 1000px var(--bg-1) inset;
+  caret-color: var(--fg-1);
+  transition: background-color 600000s 0s, color 600000s 0s;
 }
 
 .lp-modal .hint {
