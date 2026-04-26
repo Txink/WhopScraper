@@ -20,7 +20,7 @@ Design notes
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime, time
+from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
@@ -448,6 +448,48 @@ async def load_task_by_order_id(session: AsyncSession, order_id: str) -> Task | 
     if task_row is None:
         return None
     return await load_task(session, task_row.id)
+
+
+async def find_recent_task_by_ref(
+    session: AsyncSession,
+    *,
+    ticker: str,
+    side: InstructionType,
+    price: float,
+    before: datetime,
+    window_hours: int = 24 * 7,
+) -> int | None:
+    """Find the most recent submitted task whose ticker/side/price match.
+
+    Used by the trader to resolve "lot @<price>" references in messages like
+    "12.87 减一半 12.42 的 tsll" — looks up the prior reverse-side task and
+    returns its planned quantity.
+
+    Filters:
+    - ticker exact match
+    - side exact match (caller passes the *opposite* of current instruction)
+    - ABS(price - :price) < 0.0001 (decision 7: strict exact)
+    - order_id IS NOT NULL (decision 4: only tasks that submitted to broker)
+    - created_at in (before - window_hours, before) — strict open interval
+
+    Returns the matched task's `quantity`, or None if no row matches.
+    """
+    cutoff = before - timedelta(hours=window_hours)
+    stmt = (
+        select(TaskRow.quantity)
+        .where(
+            TaskRow.ticker == ticker,
+            TaskRow.side == side.value,
+            func.abs(TaskRow.price - price) < 0.0001,
+            TaskRow.order_id.is_not(None),
+            TaskRow.created_at < before,
+            TaskRow.created_at >= cutoff,
+        )
+        .order_by(TaskRow.created_at.desc())
+        .limit(1)
+    )
+    result = await session.execute(stmt)
+    return result.scalar_one_or_none()
 
 
 async def list_tasks(
