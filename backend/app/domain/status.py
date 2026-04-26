@@ -35,7 +35,7 @@ TERMINAL: frozenset[Status] = frozenset(
 # 合法转换表：src -> 允许的 dst 集合
 _ALLOWED: dict[Status, frozenset[Status]] = {
     Status.RECEIVED: frozenset({Status.PARSING}),
-    Status.PARSING: frozenset({Status.PARSE_ERROR, Status.INSTRUCTION_READY}),
+    Status.PARSING: frozenset({Status.PARSE_ERROR, Status.INSTRUCTION_READY, Status.SKIPPED}),
     Status.INSTRUCTION_READY: frozenset({Status.SUBMITTING, Status.SKIPPED}),
     Status.SUBMITTING: frozenset({Status.PENDING, Status.SUBMIT_FAILED, Status.SKIPPED}),
     Status.PENDING: frozenset({Status.PARTIAL, Status.FILLED, Status.CANCELLED, Status.REJECTED}),

@@ -20,6 +20,7 @@ def test_terminal_set_contents():
         (Status.RECEIVED, Status.PARSING, True),
         (Status.PARSING, Status.PARSE_ERROR, True),
         (Status.PARSING, Status.INSTRUCTION_READY, True),
+        (Status.PARSING, Status.SKIPPED, True),
         (Status.INSTRUCTION_READY, Status.SUBMITTING, True),
         (Status.SUBMITTING, Status.PENDING, True),
         (Status.SUBMITTING, Status.SUBMIT_FAILED, True),
@@ -36,6 +37,8 @@ def test_terminal_set_contents():
         (Status.PARSE_ERROR, Status.PARSING, False),
         (Status.RECEIVED, Status.FILLED, False),
         (Status.CANCELLED, Status.FILLED, False),
+        # Negative: SKIPPED is terminal, can't go back
+        (Status.SKIPPED, Status.PARSING, False),
     ],
 )
 def test_transition_rules(src, dst, ok):
