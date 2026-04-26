@@ -128,20 +128,30 @@
 .page-whitelist-bar .ticker-chip .ticker-qty {
   color: var(--fg-2);
 }
+/* Trailing delete icon — collapsed (zero width) by default so the chip
+ * stays compact; expands and fades in on hover. The parent's flex
+ * ``gap: 6px`` would still allocate a 6px slot between the qty cell
+ * and a width:0 child, so we cancel it with a negative margin-left
+ * when collapsed (becomes 0 when expanded). Mirrors the topbar
+ * .longport-refresh-icon pattern. */
 .page-whitelist-bar .ticker-chip .ticker-del-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 12px;
+  width: 0;
   height: 12px;
-  margin-left: 1px;
+  margin-left: -6px;
+  overflow: hidden;
   opacity: 0;
-  transform: translateX(-2px);
-  transition: opacity 140ms ease, transform 140ms ease;
+  transition: width 160ms ease,
+              margin-left 160ms ease,
+              opacity 160ms ease,
+              color 140ms ease;
 }
 .page-whitelist-bar .ticker-chip .ticker-del-icon svg {
   width: 12px;
   height: 12px;
+  flex-shrink: 0;
 }
 
 /* Hover — flip to delete affordance */
@@ -155,8 +165,9 @@
   color: var(--err);
 }
 .page-whitelist-bar .ticker-chip:hover:not(:disabled) .ticker-del-icon {
+  width: 12px;
+  margin-left: 0;
   opacity: 1;
-  transform: translateX(0);
   color: var(--err);
 }
 .page-whitelist-bar .ticker-chip:active:not(:disabled) {
