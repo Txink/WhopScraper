@@ -162,23 +162,30 @@
   color: var(--fg-3);
 }
 
-/* Trailing refresh icon — hidden by default, fades + slides in on hover.
- * Mirrors the ticker chip's .ticker-del-icon transition. */
+/* Trailing refresh icon — collapsed (zero width) by default so the
+ * chip stays compact; expands and fades in on hover. The flex ``gap``
+ * is replaced with a per-child margin-left so the pre-icon spacing
+ * also collapses when the icon is hidden, leaving no awkward
+ * trailing whitespace inside the chip. */
 .longport-conn .longport-refresh-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 13px;
+  width: 0;
   height: 13px;
   margin-left: 0;
+  overflow: hidden;
   opacity: 0;
-  transform: translateX(-4px);
-  transition: opacity 140ms ease, transform 140ms ease, color 140ms ease;
   color: var(--fg-3);
+  transition: width 160ms ease,
+              margin-left 160ms ease,
+              opacity 160ms ease,
+              color 140ms ease;
 }
 .longport-conn .longport-refresh-icon svg {
   width: 13px;
   height: 13px;
+  flex-shrink: 0;
 }
 
 /* Hover: flip the whole chip to brand cyan + reveal the refresh glyph. */
@@ -194,8 +201,9 @@
   box-shadow: 0 0 4px var(--brand);
 }
 .longport-conn:hover:not(:disabled) .longport-refresh-icon {
+  width: 13px;
+  margin-left: 6px;
   opacity: 1;
-  transform: translateX(0);
   color: var(--brand);
 }
 .longport-conn:active:not(:disabled) {
@@ -215,8 +223,9 @@
   box-shadow: 0 0 4px var(--brand);
 }
 .longport-conn.reloading .longport-refresh-icon {
+  width: 13px;
+  margin-left: 6px;
   opacity: 1;
-  transform: translateX(0);
   color: var(--brand);
 }
 .longport-conn .longport-refresh-icon svg.spinning {
