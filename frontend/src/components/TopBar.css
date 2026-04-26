@@ -106,15 +106,24 @@
   color: var(--fg-3);
 }
 
-/* LongPort conn pill — rounded border, color-coded by broker init state.
- * Green when backend's LongPortClient is alive; red when it fell back to
- * NoopClient (init failed). Hovering shows the precise reason. */
+/* LongPort conn pill — clickable; rounded border, color-coded by broker
+ * init state. Green when backend's LongPportClient is alive; red when it
+ * fell back to NoopClient (init failed). Hover swaps the content to a
+ * "⟳ 刷新" affordance and the click triggers a backend broker rebuild
+ * (POST /api/longport/broker/reload). */
 .longport-conn {
+  position: relative;
   border-radius: 999px;
   border: 1px solid var(--line-strong);
   padding: 3px 9px 3px 7px;
-  cursor: help;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
   transition: color 150ms ease, border-color 150ms ease, background 150ms ease;
+}
+.longport-conn:disabled {
+  cursor: default;
 }
 .longport-conn[data-broker-real="true"] {
   border-color: rgba(61, 214, 140, 0.42);
@@ -140,6 +149,51 @@
 }
 .longport-conn[data-broker-real="unknown"] .conn-label {
   color: var(--fg-3);
+}
+
+/* Default vs hover content swap — the button always renders both
+ * spans; CSS toggles which one is visible. */
+.longport-conn .longport-default,
+.longport-conn .longport-hover {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  line-height: 1;
+}
+.longport-conn .longport-hover {
+  display: none;
+  color: var(--brand);
+}
+.longport-conn .longport-hover svg {
+  width: 12px;
+  height: 12px;
+}
+.longport-conn .longport-hover .conn-label {
+  color: var(--brand);
+}
+.longport-conn:hover:not(:disabled) .longport-default {
+  display: none;
+}
+.longport-conn:hover:not(:disabled) .longport-hover {
+  display: inline-flex;
+}
+.longport-conn:hover:not(:disabled) {
+  border-color: var(--brand);
+  background: rgba(63, 181, 197, 0.10);
+}
+
+/* In-flight: force the hover (refresh) view + spin the icon. */
+.longport-conn.reloading .longport-default {
+  display: none;
+}
+.longport-conn.reloading .longport-hover {
+  display: inline-flex;
+}
+.longport-conn .longport-hover svg.spinning {
+  animation: longport-spin 0.9s linear infinite;
+}
+@keyframes longport-spin {
+  to { transform: rotate(360deg); }
 }
 
 /* Account pill */

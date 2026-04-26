@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, HttpError } from "../../api/http";
-import type { BrokerStatus, LongportSettings } from "../../api/domain-types";
-import { useConnStore } from "../../stores/conn";
+import type { LongportSettings } from "../../api/domain-types";
 import "./LongportSettingsModal.css";
 
 interface Props {
@@ -24,21 +23,13 @@ export function LongportSettingsModal({ onClose, onSaved }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState<LongportSettings | null>(null);
-  const [brokerStatus, setBrokerStatus] = useState<BrokerStatus | null>(null);
-  const [reloading, setReloading] = useState(false);
 
   useEffect(() => {
     let alive = true;
-    Promise.all([api.getLongportSettings(), api.getBrokerStatus()])
-      .then(([settings, status]) => {
+    api.getLongportSettings()
+      .then((settings) => {
         if (!alive) return;
         setForm(settings);
-        setBrokerStatus(status);
-        // Mirror to the global store so the TopBar status indicator stays in sync.
-        useConnStore.getState().setBrokerStatus({
-          is_real: status.is_real,
-          last_init_error: status.last_init_error ?? null,
-        });
       })
       .catch((e: unknown) => {
         if (!alive) return;
@@ -49,23 +40,6 @@ export function LongportSettingsModal({ onClose, onSaved }: Props) {
       });
     return () => { alive = false; };
   }, []);
-
-  const handleReloadBroker = async () => {
-    setReloading(true);
-    setError(null);
-    try {
-      const status = await api.reloadBroker();
-      setBrokerStatus(status);
-      useConnStore.getState().setBrokerStatus({
-        is_real: status.is_real,
-        last_init_error: status.last_init_error ?? null,
-      });
-    } catch (e) {
-      setError(_toMessage(e));
-    } finally {
-      setReloading(false);
-    }
-  };
 
   const updateCredentialField = (
     mode: "paper" | "real",
@@ -140,50 +114,7 @@ export function LongportSettingsModal({ onClose, onSaved }: Props) {
                 </label>
               </section>
               <section className="lp-panel">
-                <div className="mode-header-row">
-                  <label>当前模式</label>
-                  <span
-                    className="broker-status-pill"
-                    data-real={brokerStatus?.is_real ?? false}
-                    title={
-                      brokerStatus
-                        ? brokerStatus.is_real
-                          ? "broker 已连接 LongPort"
-                          : `broker 当前为 NoopClient${brokerStatus.last_init_error ? "（" + brokerStatus.last_init_error + "）" : ""}`
-                        : "broker 状态加载中"
-                    }
-                  >
-                    {brokerStatus
-                      ? brokerStatus.is_real
-                        ? "● real"
-                        : "○ noop"
-                      : "…"}
-                  </span>
-                  <button
-                    type="button"
-                    className={`broker-refresh-btn ${reloading ? "spinning" : ""}`}
-                    onClick={handleReloadBroker}
-                    disabled={reloading || loading}
-                    title="重建 broker + 重新订阅 push 推送"
-                    aria-label="刷新 broker"
-                  >
-                    <svg
-                      viewBox="0 0 16 16"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.6"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
-                    >
-                      {/* circular arrow refresh glyph */}
-                      <path d="M2.5 8a5.5 5.5 0 0 1 9.9-3.3" />
-                      <polyline points="13 2.2 13 4.7 10.5 4.7" />
-                      <path d="M13.5 8a5.5 5.5 0 0 1-9.9 3.3" />
-                      <polyline points="3 13.8 3 11.3 5.5 11.3" />
-                    </svg>
-                  </button>
-                </div>
+                <label>当前模式</label>
                 <div className="mode-switch">
                   <button
                     className={form.mode === "paper" ? "active" : ""}
@@ -200,13 +131,9 @@ export function LongportSettingsModal({ onClose, onSaved }: Props) {
                     real
                   </button>
                 </div>
-                {brokerStatus?.last_init_error && (
-                  <p className="hint small broker-init-error">
-                    init error: {brokerStatus.last_init_error}
-                  </p>
-                )}
                 <p className="hint small">
-                  当前模式会同时决定下方正在编辑的密钥组。
+                  当前模式会同时决定下方正在编辑的密钥组。保存后请点击右上角
+                  longport 标识刷新 broker。
                 </p>
               </section>
 

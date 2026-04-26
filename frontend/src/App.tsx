@@ -348,6 +348,17 @@ export default function App() {
         dryRun={conn.dryRun}
         autoTrade={conn.autoTrade}
         onOpenLongportSettings={() => setLongportSettingsOpen(true)}
+        onReloadBroker={async () => {
+          try {
+            const status = await api.reloadBroker();
+            useConnStore.getState().setBrokerStatus({
+              is_real: status.is_real,
+              last_init_error: status.last_init_error ?? null,
+            });
+          } catch (e) {
+            console.warn("broker reload failed:", e);
+          }
+        }}
         onLogout={handleLogout}
       />
       <ContentRouter token={token} />

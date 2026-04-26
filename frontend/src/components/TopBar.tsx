@@ -1,3 +1,4 @@
+import { useState } from "react";
 import "./TopBar.css";
 import { useViewStore } from "../stores/view";
 
@@ -11,6 +12,12 @@ export interface TopBarProps {
   dryRun: boolean;
   autoTrade?: boolean;
   onOpenLongportSettings?: () => void;
+  /** Trigger a backend broker rebuild (POST /api/longport/broker/reload).
+   *  When provided, the longport pill becomes clickable: hovering swaps
+   *  the status content for a "⟳ 刷新" affordance, clicking runs the
+   *  callback. The pill shows a spinning icon while the request is in
+   *  flight; the resulting status flows back via the conn store. */
+  onReloadBroker?: () => Promise<void> | void;
   onLogout?: () => void;
 }
 
@@ -22,14 +29,35 @@ export function TopBar({
   dryRun,
   autoTrade = false,
   onOpenLongportSettings,
+  onReloadBroker,
   onLogout,
 }: TopBarProps) {
   const view = useViewStore((s) => s.view);
   const setView = useViewStore((s) => s.setView);
+  const [reloading, setReloading] = useState(false);
 
   const pillParts = [mode === "paper" ? "PAPER" : "REAL", dryRun ? "DRY" : "LIVE"];
   if (autoTrade) pillParts.push("AUTO");
   const pillLabel = pillParts.join(" · ");
+
+  const handleLongportClick = async () => {
+    if (!onReloadBroker || reloading) return;
+    setReloading(true);
+    try {
+      await onReloadBroker();
+    } finally {
+      setReloading(false);
+    }
+  };
+
+  const longportTitle =
+    reloading
+      ? "刷新中…"
+      : brokerIsReal === null
+        ? "broker 状态加载中 — 点击刷新"
+        : brokerIsReal
+          ? "broker 已连接 LongPort — 点击刷新"
+          : `broker 未初始化（NoopClient）${brokerInitError ? "：" + brokerInitError : ""} — 点击刷新`;
 
   return (
     <header className="topbar">
@@ -64,20 +92,40 @@ export function TopBar({
       {/* Right cluster: conn indicators + account pill */}
       <div className="topbar-right">
         <div className="conn-group">
-          <div
-            className="conn longport-conn"
+          <button
+            type="button"
+            className={`conn longport-conn ${reloading ? "reloading" : ""}`}
             data-broker-real={brokerIsReal === null ? "unknown" : brokerIsReal ? "true" : "false"}
-            title={
-              brokerIsReal === null
-                ? "broker 状态加载中"
-                : brokerIsReal
-                  ? "broker 已连接 LongPort"
-                  : `broker 未初始化（NoopClient）${brokerInitError ? "：" + brokerInitError : ""}`
-            }
+            title={longportTitle}
+            aria-label={reloading ? "刷新中" : "刷新 broker"}
+            disabled={reloading || !onReloadBroker}
+            onClick={handleLongportClick}
           >
-            <span className={`conn-dot ${connLongport}`} />
-            <span className="conn-label">longport</span>
-          </div>
+            {/* Default: show broker status (dot + "longport" label) */}
+            <span className="longport-default">
+              <span className={`conn-dot ${connLongport}`} />
+              <span className="conn-label">longport</span>
+            </span>
+            {/* Hover (or in-flight): swap to refresh affordance */}
+            <span className="longport-hover">
+              <svg
+                viewBox="0 0 14 14"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+                className={reloading ? "spinning" : ""}
+              >
+                <path d="M2 7a5 5 0 0 1 9-3" />
+                <polyline points="11.5 1.5 11.5 4 9 4" />
+                <path d="M12 7a5 5 0 0 1-9 3" />
+                <polyline points="2.5 12.5 2.5 10 5 10" />
+              </svg>
+              <span className="conn-label">{reloading ? "刷新中" : "刷新"}</span>
+            </span>
+          </button>
         </div>
         <button
           type="button"
