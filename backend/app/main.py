@@ -196,12 +196,15 @@ def create_app(
                 )
 
         def _register_trader_and_push() -> None:
+            from app.storage.repo import SqlTaskQueryRepo
+
             state.trader_unsub = register_trader(
                 bus,
                 state.broker,
                 _make_trader_cfg(),
                 registry=state.whop_registry,
                 auto_trade_getter=lambda: state.longport_runtime.get().auto_trade,
+                task_query_repo=SqlTaskQueryRepo(session_factory),
             )
             state.push_listener = register_push_listener(
                 bus, state.broker, session_factory
