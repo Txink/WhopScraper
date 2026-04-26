@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, HttpError } from "../../api/http";
-import type { LongportSettings } from "../../api/domain-types";
+import type { BrokerStatus, LongportSettings } from "../../api/domain-types";
 import "./LongportSettingsModal.css";
 
 interface Props {
@@ -8,34 +8,54 @@ interface Props {
   onSaved: (settings: LongportSettings) => void;
 }
 
+function _toMessage(e: unknown): string {
+  if (e instanceof HttpError) {
+    if (typeof e.body === "object" && e.body && "detail" in e.body) {
+      return String((e.body as { detail: unknown }).detail);
+    }
+    return e.message;
+  }
+  return e instanceof Error ? e.message : String(e);
+}
+
 export function LongportSettingsModal({ onClose, onSaved }: Props) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState<LongportSettings | null>(null);
+  const [brokerStatus, setBrokerStatus] = useState<BrokerStatus | null>(null);
+  const [reloading, setReloading] = useState(false);
 
   useEffect(() => {
     let alive = true;
-    api.getLongportSettings()
-      .then((settings) => {
+    Promise.all([api.getLongportSettings(), api.getBrokerStatus()])
+      .then(([settings, status]) => {
         if (!alive) return;
         setForm(settings);
+        setBrokerStatus(status);
       })
       .catch((e: unknown) => {
         if (!alive) return;
-        if (e instanceof HttpError) {
-          setError(typeof e.body === "object" && e.body && "detail" in e.body
-            ? String((e.body as { detail: unknown }).detail)
-            : e.message);
-        } else {
-          setError(e instanceof Error ? e.message : String(e));
-        }
+        setError(_toMessage(e));
       })
       .finally(() => {
         if (alive) setLoading(false);
       });
     return () => { alive = false; };
   }, []);
+
+  const handleReloadBroker = async () => {
+    setReloading(true);
+    setError(null);
+    try {
+      const status = await api.reloadBroker();
+      setBrokerStatus(status);
+    } catch (e) {
+      setError(_toMessage(e));
+    } finally {
+      setReloading(false);
+    }
+  };
 
   const updateCredentialField = (
     mode: "paper" | "real",
@@ -68,13 +88,7 @@ export function LongportSettingsModal({ onClose, onSaved }: Props) {
       onSaved(saved);
       onClose();
     } catch (e) {
-      if (e instanceof HttpError) {
-        setError(typeof e.body === "object" && e.body && "detail" in e.body
-          ? String((e.body as { detail: unknown }).detail)
-          : e.message);
-      } else {
-        setError(e instanceof Error ? e.message : String(e));
-      }
+      setError(_toMessage(e));
     } finally {
       setSaving(false);
     }
@@ -132,7 +146,39 @@ export function LongportSettingsModal({ onClose, onSaved }: Props) {
                   >
                     real
                   </button>
+                  <span
+                    className="broker-status-pill"
+                    data-real={brokerStatus?.is_real ?? false}
+                    title={
+                      brokerStatus
+                        ? brokerStatus.is_real
+                          ? "broker 已连接 LongPort"
+                          : `broker 当前为 NoopClient${brokerStatus.last_init_error ? "（" + brokerStatus.last_init_error + "）" : ""}`
+                        : "broker 状态加载中"
+                    }
+                  >
+                    {brokerStatus
+                      ? brokerStatus.is_real
+                        ? "● real"
+                        : "○ noop"
+                      : "…"}
+                  </span>
+                  <button
+                    type="button"
+                    className="broker-refresh-btn"
+                    onClick={handleReloadBroker}
+                    disabled={reloading || loading}
+                    title="重建 broker + 重新订阅 push 推送"
+                    aria-label="刷新 broker"
+                  >
+                    {reloading ? "刷新中…" : "刷新"}
+                  </button>
                 </div>
+                {brokerStatus?.last_init_error && (
+                  <p className="hint small broker-init-error">
+                    init error: {brokerStatus.last_init_error}
+                  </p>
+                )}
                 <p className="hint small">
                   当前模式会同时决定下方正在编辑的密钥组。
                 </p>

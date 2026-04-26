@@ -176,6 +176,45 @@ export interface paths {
         patch: operations["patch_longport_settings_api_longport_settings_patch"];
         trace?: never;
     };
+    "/api/longport/broker/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Broker Status */
+        get: operations["get_broker_status_api_longport_broker_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/longport/broker/reload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Broker Reload
+         * @description Tear down the current broker + push subscription, build a
+         *     new one from the latest credentials in runtime store, and
+         *     return the resulting status. Used by the UI's refresh button.
+         */
+        post: operations["post_broker_reload_api_longport_broker_reload_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tasks/{task_id}/confirm": {
         parameters: {
             query?: never;
@@ -392,6 +431,26 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * BrokerStatusOut
+         * @description Snapshot of the running broker — whether it's a live LongPortClient
+         *     or fell back to NoopBrokerClient, plus the last init error if any.
+         *     Used by the settings dialog to surface init state and let the user
+         *     trigger a rebuild after correcting credentials.
+         */
+        BrokerStatusOut: {
+            /** Is Real */
+            is_real: boolean;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "paper" | "real";
+            /** Dry Run */
+            dry_run: boolean;
+            /** Last Init Error */
+            last_init_error?: string | null;
+        };
         /** CancelOk */
         CancelOk: {
             /**
@@ -1092,6 +1151,68 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LongPortSettingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_broker_status_api_longport_broker_status_get: {
+        parameters: {
+            query?: {
+                token?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrokerStatusOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_broker_reload_api_longport_broker_reload_post: {
+        parameters: {
+            query?: {
+                token?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrokerStatusOut"];
                 };
             };
             /** @description Validation Error */

@@ -2,6 +2,7 @@ import type {
   Task, TaskList, Positions, StatsToday, Health,
   WhopPage, WhopPages, WhopPageCreate, WhopCookieStatus,
   WhopPageSettings, WhopPageSettingsPatch, LongportSettings, LongportSettingsPatch,
+  BrokerStatus,
 } from "./domain-types";
 
 
@@ -134,6 +135,14 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify(patch),
     });
+  },
+
+  async getBrokerStatus(): Promise<BrokerStatus> {
+    return request<BrokerStatus>("/api/longport/broker/status");
+  },
+
+  async reloadBroker(): Promise<BrokerStatus> {
+    return request<BrokerStatus>("/api/longport/broker/reload", { method: "POST" });
   },
 
   async listWhopPages(): Promise<WhopPages> {

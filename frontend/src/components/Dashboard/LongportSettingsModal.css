@@ -94,6 +94,7 @@
 .mode-switch {
   display: flex;
   gap: 6px;
+  align-items: center;
 }
 
 .mode-switch button {
@@ -114,6 +115,62 @@
   color: var(--fg-1);
   border-color: var(--brand);
   background: rgba(63, 181, 197, 0.1);
+}
+
+/* ── Broker live-status pill (right of paper/real toggle) ── */
+.broker-status-pill {
+  margin-left: 12px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  cursor: help;
+  color: var(--fg-3);
+  background: var(--bg-1);
+}
+.broker-status-pill[data-real="true"] {
+  color: var(--ok);
+  border-color: rgba(61, 214, 140, 0.35);
+  background: rgba(61, 214, 140, 0.08);
+}
+.broker-status-pill[data-real="false"] {
+  color: var(--warn);
+  border-color: rgba(231, 167, 61, 0.32);
+  background: rgba(231, 167, 61, 0.08);
+}
+
+/* ── Refresh button — rebuilds broker + re-subscribes push ── */
+.broker-refresh-btn {
+  margin-left: 4px;
+  border: 1px solid var(--line-strong);
+  background: var(--bg-1);
+  color: var(--fg-2);
+  border-radius: var(--radius-chip);
+  padding: 5px 11px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  letter-spacing: 0.04em;
+  transition: border-color 120ms, color 120ms;
+}
+.broker-refresh-btn:hover:not(:disabled) {
+  border-color: var(--brand);
+  color: var(--fg-1);
+}
+.broker-refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ── Inline init-error message under the mode-switch row ── */
+.broker-init-error {
+  color: var(--err);
+  font-family: var(--font-mono);
+  word-break: break-all;
+  margin-top: 6px;
 }
 
 .cred-grid {
