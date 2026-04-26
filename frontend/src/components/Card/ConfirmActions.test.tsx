@@ -77,7 +77,7 @@ describe("ConfirmActions", () => {
     });
   });
 
-  it("stops click propagation so wrapper handlers do not fire", () => {
+  it("stops click propagation so wrapper handlers do not fire", async () => {
     const wrapperClick = vi.fn();
     vi.spyOn(httpModule.api, "skipTask").mockResolvedValue(fakeTaskOut as never);
     render(
@@ -87,6 +87,10 @@ describe("ConfirmActions", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "取消" }));
     expect(wrapperClick).not.toHaveBeenCalled();
+    // Flush async mock resolution so act() warning is suppressed
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "取消" })).not.toBeDisabled()
+    );
   });
 
   it("upserts the returned task into the store on success", async () => {
