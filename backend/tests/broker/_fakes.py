@@ -91,3 +91,27 @@ class FakeBrokerClient:
         """Test helper: fire a push event to all subscribers."""
         for h in self.push_handlers:
             h(event_obj)
+
+
+@dataclass
+class FakeTaskQueryRepo:
+    """Test fake for TaskQueryRepo. Stores qty by (ticker, side_value, price)."""
+
+    matches: dict[tuple[str, str, float], int] = field(default_factory=dict)
+    calls: list[dict[str, Any]] = field(default_factory=list)
+
+    async def find_recent_task_by_ref(
+        self,
+        *,
+        ticker: str,
+        side: Any,  # InstructionType — kept Any to avoid circular imports here
+        price: float,
+        before: Any,
+        window_hours: int = 24 * 7,
+    ) -> int | None:
+        self.calls.append({
+            "ticker": ticker, "side": side, "price": price,
+            "before": before, "window_hours": window_hours,
+        })
+        side_value = side.value if hasattr(side, "value") else side
+        return self.matches.get((ticker, side_value, price))
