@@ -216,6 +216,9 @@ export function LongportSettingsModal({ onClose, onSaved }: Props) {
                   <label htmlFor="lp-app-key">appKey</label>
                   <input
                     id="lp-app-key"
+                    type="password"
+                    autoComplete="off"
+                    spellCheck={false}
                     value={form[form.mode].app_key}
                     onChange={(e) => updateCredentialField(form.mode, "app_key", e.target.value)}
                     placeholder={`${form.mode} appKey`}
@@ -223,6 +226,9 @@ export function LongportSettingsModal({ onClose, onSaved }: Props) {
                   <label htmlFor="lp-app-secret">appSecret</label>
                   <input
                     id="lp-app-secret"
+                    type="password"
+                    autoComplete="off"
+                    spellCheck={false}
                     value={form[form.mode].app_secret}
                     onChange={(e) => updateCredentialField(form.mode, "app_secret", e.target.value)}
                     placeholder={`${form.mode} appSecret`}
@@ -230,6 +236,9 @@ export function LongportSettingsModal({ onClose, onSaved }: Props) {
                   <label htmlFor="lp-access-token">accessToken</label>
                   <input
                     id="lp-access-token"
+                    type="password"
+                    autoComplete="off"
+                    spellCheck={false}
                     value={form[form.mode].access_token}
                     onChange={(e) => updateCredentialField(form.mode, "access_token", e.target.value)}
                     placeholder={`${form.mode} accessToken`}
