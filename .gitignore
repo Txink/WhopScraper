@@ -28,6 +28,7 @@ data/*.db
 data/*.db-shm
 data/*.db-wal
 data/whop_pages.json
+data/longport_settings.json
 .auth/
 logs/
 *.log
