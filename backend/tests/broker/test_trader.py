@@ -378,7 +378,7 @@ async def test_trader_whitelist_check_runs_before_validation() -> None:
 
     assert task.status == Status.SKIPPED
     assert task.reject_reason is not None
-    assert "not in trade whitelist" in task.reject_reason
+    assert "不在白名单" in task.reject_reason
     assert "参数不齐" not in task.reject_reason
 
 

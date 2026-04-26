@@ -112,7 +112,7 @@ def register_trader(
         ):
             ticker_upper = (inst.ticker or "").upper()
             if ticker_upper not in page_settings.tickers:
-                await _publish_skip(task, f"ticker {ticker_upper} not in trade whitelist")
+                await _publish_skip(task, f"{ticker_upper} 不在白名单")
                 return
 
         # ① b. Non-today-message check (per-page setting).
