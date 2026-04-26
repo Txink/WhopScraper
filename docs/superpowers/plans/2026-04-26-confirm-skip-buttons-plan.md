@@ -18,14 +18,13 @@
 
 | File | Responsibility | Change kind |
 |------|----------------|-------------|
-| `backend/app/domain/status.py` | State-machine transition table | Modify (add `PARSING→SKIPPED`) |
-| `backend/app/parser/validation.py` | Pure function: required-field check on `Instruction` | **Create** |
-| `backend/app/parser/service.py` | Run `validate_for_submission` after parse; emit `STATUS_CHANGED + SKIPPED` on failure | Modify |
+| `backend/app/domain/status.py` | State-machine transition table | Modify (add `PARSING→SKIPPED`) — done |
+| `backend/app/broker/validation.py` | Pure function: required-field check on `Instruction` (parser-output level) | **Create** |
+| `backend/app/broker/trader.py` | Run `validate_for_submission` as the FIRST step of `_handle_instruction_ready`, before the auto_trade decision | Modify |
 | `backend/app/api/http.py` | `POST /api/tasks/{id}/skip` endpoint | Modify (add route) |
-| `backend/tests/domain/test_status.py` | State-machine cases | Modify (extend parametrize) |
-| `backend/tests/parser/test_validation.py` | Pure-function tests | **Create** |
-| `backend/tests/parser/test_service.py` | Service end-to-end behavior | Modify (add validation case) |
-| `backend/tests/parser/test_snapshot_regression.py` | Snapshot tests over real corpus | Possibly update if snapshots break |
+| `backend/tests/domain/test_status.py` | State-machine cases | Modify (extend parametrize) — done |
+| `backend/tests/broker/test_validation.py` | Pure-function tests | **Create** |
+| `backend/tests/broker/test_trader.py` | Trader end-to-end behavior | Modify (add 3 cases) |
 | `backend/tests/api/test_http.py` | HTTP contract | Modify (add 3 skip tests) |
 
 ### Frontend
@@ -46,8 +45,8 @@
 
 ### Commit grouping
 
-1. **chore(domain): allow PARSING → SKIPPED transition** — Task 1
-2. **feat(parser): validate required fields before INSTRUCTION_READY** — Task 2 (depends on 1)
+1. **chore(domain): allow PARSING → SKIPPED transition** — Task 1 ✅ done (`30007c8`)
+2. **feat(broker): validate required fields before order submission** — Task 2 (validation in trader, before auto_trade)
 3. **feat(api): POST /api/tasks/{id}/skip — manual cancel pre-submit** — Task 3 (independent of 2)
 4. **feat(card): confirm/skip icon buttons with web style** — Task 4 (depends on 3)
 
@@ -107,35 +106,34 @@ EOF
 
 ---
 
-## Task 2: Parser parameter completeness validation
+## Task 2: Order-submission parameter completeness validation (in trader)
+
+> **Design note (2026-04-26 revision):** This validation runs as the FIRST step of `trader._handle_instruction_ready`, **before the auto_trade gate**. It checks parser-level fields only — `quantity` is intentionally excluded for option (parser never produces it; page_settings is authoritative) and relaxed to `quantity OR position_size` for stock. See spec §5.2-§5.3.
 
 **Files:**
-- Create: `backend/app/parser/validation.py`
-- Create: `backend/tests/parser/test_validation.py`
-- Modify: `backend/app/parser/service.py:120-128`
-- Modify: `backend/tests/parser/test_service.py` (append new test)
-- Possibly modify: `backend/tests/parser/test_snapshot_regression.py`
+- Create: `backend/app/broker/validation.py`
+- Create: `backend/tests/broker/test_validation.py`
+- Modify: `backend/app/broker/trader.py` (insert validation gate at top of `_handle_instruction_ready`)
+- Modify: `backend/tests/broker/test_trader.py` (append 3 cases)
 
 ### 2A — Pure validation function (TDD)
 
 - [ ] **Step 2A.1: Write the failing tests for `validate_for_submission`**
 
-Create `backend/tests/parser/test_validation.py`:
+Create `backend/tests/broker/test_validation.py`:
 
 ```python
-"""Tests for app.parser.validation.validate_for_submission."""
+"""Tests for app.broker.validation.validate_for_submission."""
 from __future__ import annotations
 
 from datetime import date
-
-import pytest
 
 from app.domain.instruction import (
     InstructionType,
     OptionInstruction,
     StockInstruction,
 )
-from app.parser.validation import validate_for_submission
+from app.broker.validation import validate_for_submission
 
 
 def _stock(**overrides) -> StockInstruction:
@@ -180,12 +178,25 @@ def _option(**overrides) -> OptionInstruction:
 
 # ---------- happy paths ----------
 
-def test_stock_complete_returns_none():
+def test_stock_complete_with_quantity_returns_none():
     assert validate_for_submission(_stock()) is None
+
+
+def test_stock_complete_with_position_size_returns_none():
+    """Stock without numeric quantity but with position_size keyword is OK —
+    trader resolves the concrete qty from page_settings later."""
+    inst = _stock(quantity=None, position_size="常规仓的一半")
+    assert validate_for_submission(inst) is None
 
 
 def test_option_complete_returns_none():
     assert validate_for_submission(_option()) is None
+
+
+def test_option_complete_without_quantity_returns_none():
+    """Option qty is always derived from page_settings; parser-stage qty=None
+    is the normal case and must NOT be flagged."""
+    assert validate_for_submission(_option(quantity=None)) is None
 
 
 def test_stock_with_price_range_only_returns_none():
@@ -194,14 +205,16 @@ def test_stock_with_price_range_only_returns_none():
 
 # ---------- stock missing fields ----------
 
-def test_stock_missing_quantity():
-    reason = validate_for_submission(_stock(quantity=None))
+def test_stock_missing_quantity_and_position_size():
+    """Neither quantity nor position_size — parser produced no qty intent
+    at all, which fails the gate."""
+    reason = validate_for_submission(_stock(quantity=None, position_size=None))
     assert reason is not None
     assert "数量" in reason
 
 
-def test_stock_zero_quantity():
-    reason = validate_for_submission(_stock(quantity=0))
+def test_stock_zero_quantity_and_no_position_size():
+    reason = validate_for_submission(_stock(quantity=0, position_size=None))
     assert reason is not None
     assert "数量" in reason
 
@@ -220,12 +233,6 @@ def test_stock_modify_instruction_type_rejected():
 
 # ---------- option missing fields ----------
 
-def test_option_missing_quantity():
-    reason = validate_for_submission(_option(quantity=None))
-    assert reason is not None
-    assert "数量" in reason
-
-
 def test_option_zero_strike():
     reason = validate_for_submission(_option(strike=0))
     assert reason is not None
@@ -233,8 +240,6 @@ def test_option_zero_strike():
 
 
 def test_option_no_expiry_falsy():
-    # Construct an OptionInstruction with a falsy expiry (sentinel: 1970-01-01
-    # is truthy; mock by direct attribute assignment after construction).
     inst = _option()
     inst.expiry = None  # type: ignore[assignment]
     reason = validate_for_submission(inst)
@@ -250,44 +255,62 @@ def test_option_invalid_type_rejected():
     assert "CALL/PUT" in reason
 
 
+def test_option_close_instruction_type_rejected():
+    reason = validate_for_submission(_option(instruction_type=InstructionType.CLOSE))
+    assert reason is not None
+    assert "BUY" in reason and "SELL" in reason
+
+
 # ---------- error string format ----------
 
 def test_reason_starts_with_zh_prefix():
-    reason = validate_for_submission(_stock(quantity=None))
+    reason = validate_for_submission(_stock(quantity=None, position_size=None))
     assert reason is not None
     assert reason.startswith("参数不齐: ")
 
 
 def test_reason_lists_multiple_missing_fields():
-    inst = _stock(quantity=None, instruction_type=InstructionType.CLOSE)
+    inst = _stock(
+        quantity=None,
+        position_size=None,
+        instruction_type=InstructionType.CLOSE,
+    )
     reason = validate_for_submission(inst)
     assert reason is not None
     assert "数量" in reason
     assert "BUY" in reason and "SELL" in reason
-    # Two missing → the joiner should appear
     assert "、" in reason
 ```
 
-> Note: `StockInstruction.__post_init__` requires `ticker`, and `Instruction.__post_init__` requires `price` or `price_range`. Tests that would violate those constructor invariants (e.g. ticker="") cannot be constructed in the normal way; we don't test those branches at the validation layer because the dataclass already rejects them at construction. The validation function still defends against them (cheap belt-and-braces) but we don't exercise dead paths here.
+> Note: `StockInstruction.__post_init__` requires `ticker`, and `Instruction.__post_init__` requires `price` or `price_range`. Tests that would violate those constructor invariants cannot be constructed normally; the validation function still defends against them (cheap belt-and-braces) but we don't exercise dead paths here.
 
 - [ ] **Step 2A.2: Run — confirm import error**
 
-Run: `cd backend && uv run pytest tests/parser/test_validation.py -v`
-Expected: `ImportError: cannot import name 'validate_for_submission' from 'app.parser.validation'` (or `ModuleNotFoundError` since the file doesn't exist yet).
+Run: `cd backend && uv run pytest tests/broker/test_validation.py -v`
+Expected: `ModuleNotFoundError` because `app/broker/validation.py` doesn't exist yet.
 
 - [ ] **Step 2A.3: Implement `validate_for_submission`**
 
-Create `backend/app/parser/validation.py`:
+Create `backend/app/broker/validation.py`:
 
 ```python
-"""End-of-parse validation: does the produced Instruction carry every field
-the trader needs to submit an order?
+"""Pre-submission parameter completeness gate.
 
-The parser may successfully extract *some* of an instruction (ticker + price
-but no quantity, for example). Without this gate, such half-instructions
-would be promoted to INSTRUCTION_READY and fall through to the trader's ad
-hoc guards. With this gate, they are SKIPPED at parse time with a precise
-Chinese reason — independent of auto_trade.
+Runs as the FIRST step of trader._handle_instruction_ready, before the
+auto_trade decision. Returns a Chinese reason string when *inst* lacks
+the parser-level fields needed to make a sensible order, or None when
+the instruction is OK to proceed.
+
+This gate intentionally does NOT check `quantity`:
+  - Stock: parser typically only emits position_size; concrete qty is
+    resolved by trader using page_settings.tickers[ticker].trade_quantity.
+  - Option: parser never emits quantity; it is fully derived from
+    page_settings (option_buy_quantity / option_total_price_limit).
+
+Stock instead requires either explicit `quantity > 0` OR a non-empty
+`position_size` — evidence that the user expressed *some* quantity
+intent. Option only requires the per-option-contract specifics; qty
+resolution stays the trader's job.
 """
 from __future__ import annotations
 
@@ -305,17 +328,18 @@ def validate_for_submission(inst: Instruction) -> str | None:
     """
     missing: list[str] = []
 
-    # Common required fields
     if inst.instruction_type not in (InstructionType.BUY, InstructionType.SELL):
         missing.append(f"方向(BUY/SELL,当前: {inst.instruction_type})")
-    if inst.quantity is None or inst.quantity <= 0:
-        missing.append("数量")
     if inst.price is None and not inst.price_range:
         missing.append("价格")
 
     if isinstance(inst, StockInstruction):
         if not inst.ticker:
             missing.append("股票名")
+        has_qty = inst.quantity is not None and inst.quantity > 0
+        has_size = bool(inst.position_size)
+        if not has_qty and not has_size:
+            missing.append("数量(qty 或 position_size)")
     elif isinstance(inst, OptionInstruction):
         if not inst.ticker:
             missing.append("股票")
@@ -325,6 +349,7 @@ def validate_for_submission(inst: Instruction) -> str | None:
             missing.append("CALL/PUT")
         if not inst.expiry:
             missing.append("到期日")
+        # NOTE: no quantity check — option qty is derived from page_settings.
 
     if missing:
         return "参数不齐: " + "、".join(missing)
@@ -333,156 +358,187 @@ def validate_for_submission(inst: Instruction) -> str | None:
 
 - [ ] **Step 2A.4: Run validation tests — all green**
 
-Run: `cd backend && uv run pytest tests/parser/test_validation.py -v`
-Expected: all 13 cases pass.
+Run: `cd backend && uv run pytest tests/broker/test_validation.py -v`
+Expected: all 14 cases pass.
 
-### 2B — Wire validation into the parser service
+### 2B — Wire validation into trader (FIRST step, before auto_trade)
 
-- [ ] **Step 2B.1: Write the failing service-level test**
+- [ ] **Step 2B.1: Write the failing trader tests**
 
-Append to `backend/tests/parser/test_service.py`:
+The file already has helpers `_stock_task(symbol, instruction_type)`, `_option_task(...)`, and `_config(**overrides)` plus `FakeBrokerClient`. Use them directly. Append to `backend/tests/broker/test_trader.py`:
 
 ```python
 # ---------------------------------------------------------------------------
-# Test 6: stock parsed but missing quantity → SKIPPED, no INSTRUCTION_READY
+# Pre-submission validation gate — Task 2 (revised design)
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
-async def test_stock_missing_quantity_emits_skipped(
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    """A stock signal that yields a parseable instruction but lacks
-    quantity must terminate at SKIPPED with reject_reason citing the
-    missing field, and TASK_INSTRUCTION_READY must NOT be published."""
+async def test_trader_skips_when_instruction_invalid_side() -> None:
+    """A task whose instruction has CLOSE side fails the validation gate
+    before the auto_trade check, regardless of auto_trade."""
     bus = EventBus()
-    register_parser_service(bus, session_factory, registry=_fake_registry({"TSLL"}))
+    fake_broker = FakeBrokerClient()
+    register_trader(bus, fake_broker, _config(auto_trade=True))
 
-    # No position_size, no quantity hints — parser will produce inst with quantity=None
-    msg = _stock_msg("s-noqty", "TSLL 26.5 买")
-    observed = await _run(bus, msg)
+    task = _stock_task(instruction_type=InstructionType.CLOSE)
+    await bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
+    await bus.wait_idle(timeout=2.0)
 
-    topics = [e.topic for e in observed]
-    assert Topics.TASK_INSTRUCTION_READY not in topics, (
-        f"expected SKIPPED before INSTRUCTION_READY; got: {topics}"
-    )
-
-    status_changed = [e for e in observed if e.topic == Topics.TASK_STATUS_CHANGED]
-    assert len(status_changed) >= 1, f"missing TASK_STATUS_CHANGED; got: {topics}"
-    payload = status_changed[-1].payload
-    assert isinstance(payload, TaskPayload)
-    task = payload.task
     assert task.status == Status.SKIPPED
     assert task.reject_reason is not None
     assert "参数不齐" in task.reject_reason
-    assert "数量" in task.reject_reason
-    # Instruction should still be attached so the UI can render partial info
-    assert task.instruction is not None
+    assert "BUY" in task.reject_reason and "SELL" in task.reject_reason
+    # Crucially: the broker was never called
+    assert fake_broker.submitted_stock_orders == []
+
+
+@pytest.mark.asyncio
+async def test_trader_holds_for_manual_when_valid_and_auto_trade_off() -> None:
+    """Valid instruction + auto_trade=false: validation gate passes, then
+    the auto_trade gate keeps the task at INSTRUCTION_READY with reject_reason
+    set, ready for manual confirmation. The broker is NOT called."""
+    bus = EventBus()
+    fake_broker = FakeBrokerClient()
+    register_trader(bus, fake_broker, _config(auto_trade=False))
+
+    task = _stock_task()  # BUY, complete instruction
+    await bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
+    await bus.wait_idle(timeout=2.0)
+
+    assert task.status == Status.INSTRUCTION_READY  # held for manual
+    assert task.reject_reason is not None
+    assert "auto_trade" in task.reject_reason
+    assert fake_broker.submitted_stock_orders == []
+
+
+@pytest.mark.asyncio
+async def test_trader_proceeds_when_valid_and_auto_trade_on() -> None:
+    """Valid instruction + auto_trade=true: both gates pass, broker called."""
+    bus = EventBus()
+    fake_broker = FakeBrokerClient()
+    register_trader(bus, fake_broker, _config(auto_trade=True))
+
+    task = _stock_task()  # BUY, complete instruction
+    await bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
+    await bus.wait_idle(timeout=2.0)
+
+    # Status advanced past INSTRUCTION_READY
+    assert task.status in (Status.PENDING, Status.SUBMITTING, Status.FILLED)
+    assert len(fake_broker.submitted_stock_orders) == 1
 ```
 
-Also extend the `_run` helper's subscribe loop to include `TASK_STATUS_CHANGED` so the test can observe it. Edit lines 86–92:
+> The exact attribute name on `FakeBrokerClient` (`submitted_stock_orders` vs `submitted_orders` etc.) may differ — open `backend/tests/broker/_fakes.py` and use the actual name. Adjust the assertions accordingly. The intent is "broker recorded a submission" or "broker recorded zero submissions". Also: `_stock_task` already calls `attach_instruction`, so the task arrives at INSTRUCTION_READY exactly as it would in production.
+
+- [ ] **Step 2B.2: Run — confirm failures**
+
+Run: `cd backend && uv run pytest tests/broker/test_trader.py -k "missing_side or manual or auto_trade_on" -v`
+Expected: `test_trader_skips_when_instruction_missing_side` fails (currently the trader's existing CLOSE check uses different reason text); the other two might fail or coincidentally pass depending on existing behavior. Key signal: validation gate not yet wired.
+
+- [ ] **Step 2B.3: Implement the validation gate in `trader.py`**
+
+Edit `backend/app/broker/trader.py`. Add import near the top (next to other `app.broker.*` imports):
 
 ```python
-    for topic in (
-        Topics.TASK_CREATED,
-        Topics.TASK_INSTRUCTION_READY,
-        Topics.TASK_PARSE_FAILED,
-        Topics.TASK_STATUS_CHANGED,
-    ):
-        bus.subscribe(topic, _capture)
+from app.broker.validation import validate_for_submission
 ```
 
-- [ ] **Step 2B.2: Run — confirm failure**
-
-Run: `cd backend && uv run pytest tests/parser/test_service.py::test_stock_missing_quantity_emits_skipped -v`
-Expected: the test fails because the service currently publishes `TASK_INSTRUCTION_READY` for incomplete instructions (or because it cannot parse the message — see note below).
-
-> If the parser fails to parse `"TSLL 26.5 买"` at all (instead of producing a quantity-less instruction), adjust the test message to one the stock_parser is known to handle to the *ticker + price + side* level but not quantity (e.g. one without `加一半 / 加半仓 / 一半仓位` keywords). Run the parser standalone via `uv run python -c "from app.parser.stock_parser import parse; print(parse('<msg>'))"` to find a phrasing that produces `quantity=None`. Document the chosen string in the test comment.
-
-- [ ] **Step 2B.3: Implement the validation gate in `parser/service.py`**
-
-Edit `backend/app/parser/service.py`. Add import near the top:
+Then in `_handle_instruction_ready`, replace the existing top of the function:
 
 ```python
-from app.parser.validation import validate_for_submission
-```
+async def _handle_instruction_ready(event: Event) -> None:
+    payload = event.payload
+    if not isinstance(payload, TaskPayload):
+        return
+    task: Task = payload.task
+    inst: Instruction | None = task.instruction
+    if inst is None:
+        return
 
-(Place it next to the existing `from app.parser import option_parser, stock_parser` line.)
-
-Then replace the block at lines 122-128:
-
-```python
-        if resolved is not None:
-            task.attach_instruction(resolved)
-            await bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
-        else:
-            task.mark_parse_failed("无法解析为交易指令")
-            await bus.publish(Event(Topics.TASK_PARSE_FAILED, TaskPayload(task)))
+    # ---- Top-level validation ----
+    auto_trade_enabled = auto_trade_getter() if auto_trade_getter is not None else config.auto_trade
+    if not auto_trade_enabled:
+        # Keep task at INSTRUCTION_READY so the UI can trigger manual confirmation.
+        task.reject_reason = "auto_trade disabled in config; awaiting manual confirmation"
+        await bus.publish(Event(Topics.TASK_STATUS_CHANGED, TaskPayload(task)))
+        return
+    if not getattr(inst, "symbol", None):
+        await _publish_skip(task, "instruction missing symbol")
+        return
+    if inst.instruction_type not in (InstructionType.BUY, InstructionType.SELL):
+        await _publish_skip(task, f"unsupported instruction type: {inst.instruction_type}")
+        return
 ```
 
 with:
 
 ```python
-        if resolved is None:
-            task.mark_parse_failed("无法解析为交易指令")
-            await bus.publish(Event(Topics.TASK_PARSE_FAILED, TaskPayload(task)))
-            return
+async def _handle_instruction_ready(event: Event) -> None:
+    payload = event.payload
+    if not isinstance(payload, TaskPayload):
+        return
+    task: Task = payload.task
+    inst: Instruction | None = task.instruction
+    if inst is None:
+        return
 
-        reason = validate_for_submission(resolved)
-        if reason is not None:
-            # Attach the partial instruction so the UI can show what we got.
-            # Manual assignment (not attach_instruction) avoids the implicit
-            # PARSING → INSTRUCTION_READY transition we're trying to skip.
-            task.instruction = resolved
-            if isinstance(resolved, OptionInstruction):
-                task.type = "option"
-            elif isinstance(resolved, StockInstruction):
-                task.type = "stock"
-            task.mark_skipped(reason)
-            await bus.publish(Event(Topics.TASK_STATUS_CHANGED, TaskPayload(task)))
-            return
+    # ① Parameter completeness gate — runs before auto_trade so incomplete
+    # tasks never reach the manual-confirmation UI.
+    reason = validate_for_submission(inst)
+    if reason is not None:
+        await _publish_skip(task, reason)
+        return
 
-        task.attach_instruction(resolved)
-        await bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
+    # ② auto_trade gate — manual-confirm UI only appears for tasks that
+    # passed gate ①, which guarantees the parser-level fields are present.
+    auto_trade_enabled = auto_trade_getter() if auto_trade_getter is not None else config.auto_trade
+    if not auto_trade_enabled:
+        task.reject_reason = "auto_trade disabled in config; awaiting manual confirmation"
+        await bus.publish(Event(Topics.TASK_STATUS_CHANGED, TaskPayload(task)))
+        return
+
+    # ③ Defensive (now unreachable when gate ① is honored, but kept as
+    # belt-and-braces for non-validated callers in tests).
+    if not getattr(inst, "symbol", None):
+        await _publish_skip(task, "instruction missing symbol")
+        return
+    if inst.instruction_type not in (InstructionType.BUY, InstructionType.SELL):
+        await _publish_skip(task, f"unsupported instruction type: {inst.instruction_type}")
+        return
 ```
 
-Also add the imports referenced by the new isinstance checks. Near the existing `from app.domain.instruction import Instruction` line, expand to:
+- [ ] **Step 2B.4: Run new trader tests — all pass**
 
-```python
-from app.domain.instruction import Instruction, OptionInstruction, StockInstruction
-```
+Run: `cd backend && uv run pytest tests/broker/test_trader.py -k "missing_side or manual or auto_trade_on" -v`
+Expected: all three pass.
 
-- [ ] **Step 2B.4: Run the new test — should pass**
+- [ ] **Step 2B.5: Run full broker tests**
 
-Run: `cd backend && uv run pytest tests/parser/test_service.py::test_stock_missing_quantity_emits_skipped -v`
-Expected: PASS.
-
-- [ ] **Step 2B.5: Run all parser tests**
-
-Run: `cd backend && uv run pytest tests/parser -v`
-Expected: all green. If `test_snapshot_regression.py` fails, inspect which messages are now `SKIPPED` instead of `INSTRUCTION_READY`. The snapshot tests likely store full task summaries with status; update the affected snapshot expectations to reflect the new `SKIPPED + reject_reason` outcome — that *is* the new correct behavior.
+Run: `cd backend && uv run pytest tests/broker -v`
+Expected: all green. If pre-existing trader tests broke (e.g. they construct a task with `instruction_type=CLOSE` expecting a specific skip reason), update those expectations to the new `"参数不齐: 方向…"` reason — that *is* the new correct behavior.
 
 - [ ] **Step 2B.6: Run the full backend suite**
 
 Run: `cd backend && uv run pytest -q`
-Expected: all green. If `tests/integration/test_acceptance.py` or `tests/broker/test_trader.py` fixtures construct end-to-end scenarios with incomplete instructions, they may need similar fixture updates — adjust them to use complete instructions, since the parser-stage gate now blocks incomplete ones from reaching the trader.
+Expected: all green. If `tests/integration/test_acceptance.py` builds end-to-end fixtures with a CLOSE instruction or some other invalid case, update those expectations.
 
 - [ ] **Step 2B.7: Commit**
 
 ```bash
-git add backend/app/parser/validation.py backend/app/parser/service.py \
-        backend/tests/parser/test_validation.py backend/tests/parser/test_service.py \
-        backend/tests/parser/test_snapshot_regression.py 2>/dev/null
+git add backend/app/broker/validation.py backend/app/broker/trader.py \
+        backend/tests/broker/test_validation.py backend/tests/broker/test_trader.py
+# also include any pre-existing test fixture updates
 git status --short  # verify only intended files
 git commit -m "$(cat <<'EOF'
-feat(parser): validate required fields before INSTRUCTION_READY
+feat(broker): validate required fields before order submission
 
-Parser now runs validate_for_submission as the final gate of the parse
-stage. Stock requires ticker / BUY-or-SELL / quantity / price; option
-additionally requires strike / CALL-or-PUT / expiry. Incomplete
-instructions terminate at SKIPPED with a Chinese reason citing the
-missing fields, and the trader never sees them. Independent of
-auto_trade.
+Trader now runs validate_for_submission as the FIRST step of
+_handle_instruction_ready, before the auto_trade gate. Stock requires
+ticker / BUY-or-SELL / price / (quantity OR position_size); option
+requires ticker / BUY-or-SELL / price / strike / CALL-or-PUT / expiry.
+Option quantity is intentionally not checked — it's resolved from
+page_settings later. Incomplete instructions are SKIPPED with a
+Chinese reject_reason, never showing manual-confirm buttons.
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
 EOF
