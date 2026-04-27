@@ -1,7 +1,7 @@
 """Pre-submission parameter completeness gate.
 
 Runs inside the validation node of trader._handle_instruction_ready (after
-whitelist + non-today checks). Returns a Chinese reason string when *inst*
+whitelist + historical checks). Returns a Chinese reason string when *inst*
 lacks the parser-level fields needed to make a sensible order, or None when
 the instruction is OK to proceed.
 

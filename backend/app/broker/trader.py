@@ -201,7 +201,7 @@ def register_trader(
         page_settings = _resolve_settings(task)
 
         # ============== 完整信息校验节点 (gate ①) ==============
-        # Order: whitelist → non-today → validate_for_submission
+        # Order: whitelist → historical → validate_for_submission
 
         # ① a. Whitelist check (stock with configured tickers only).
         if (
