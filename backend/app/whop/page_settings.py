@@ -21,7 +21,7 @@ class TickerConfig:
 class PageSettings:
     dedupe_processed_messages: bool = True
     price_deviation_tolerance: float = 1.0  # 单位：百分比（1.0 = 1%）
-    block_non_today_messages: bool = False  # 拦截非当天消息下单（仅解析，不下单）
+    block_historical_messages: bool = False  # 拦截下单历史消息（posted_at < listener.started_at），仅解析不下单
     launch_headless: bool = False  # 该页面监听是否以无头模式启动浏览器
     tickers: dict[str, TickerConfig] | None = field(default_factory=dict)
     # Option-page local risk controls (both optional and independently switchable).
@@ -34,7 +34,7 @@ class PageSettings:
 DEFAULT_STOCK_SETTINGS = PageSettings(
     dedupe_processed_messages=True,
     price_deviation_tolerance=1.0,
-    block_non_today_messages=False,
+    block_historical_messages=False,
     launch_headless=False,
     tickers={},
 )
@@ -42,7 +42,7 @@ DEFAULT_STOCK_SETTINGS = PageSettings(
 DEFAULT_OPTION_SETTINGS = PageSettings(
     dedupe_processed_messages=True,
     price_deviation_tolerance=5.0,
-    block_non_today_messages=False,
+    block_historical_messages=False,
     launch_headless=False,
     tickers=None,
     option_buy_quantity_enabled=False,
@@ -57,7 +57,7 @@ def default_settings_for(source: Literal["stock", "option"]) -> PageSettings:
         return PageSettings(
             dedupe_processed_messages=DEFAULT_STOCK_SETTINGS.dedupe_processed_messages,
             price_deviation_tolerance=DEFAULT_STOCK_SETTINGS.price_deviation_tolerance,
-            block_non_today_messages=DEFAULT_STOCK_SETTINGS.block_non_today_messages,
+            block_historical_messages=DEFAULT_STOCK_SETTINGS.block_historical_messages,
             launch_headless=DEFAULT_STOCK_SETTINGS.launch_headless,
             tickers={},
         )
@@ -65,7 +65,7 @@ def default_settings_for(source: Literal["stock", "option"]) -> PageSettings:
         return PageSettings(
             dedupe_processed_messages=DEFAULT_OPTION_SETTINGS.dedupe_processed_messages,
             price_deviation_tolerance=DEFAULT_OPTION_SETTINGS.price_deviation_tolerance,
-            block_non_today_messages=DEFAULT_OPTION_SETTINGS.block_non_today_messages,
+            block_historical_messages=DEFAULT_OPTION_SETTINGS.block_historical_messages,
             launch_headless=DEFAULT_OPTION_SETTINGS.launch_headless,
             tickers=None,
             option_buy_quantity_enabled=DEFAULT_OPTION_SETTINGS.option_buy_quantity_enabled,
@@ -80,7 +80,7 @@ def page_settings_to_dict(s: PageSettings) -> dict[str, Any]:
     out: dict[str, Any] = {
         "dedupe_processed_messages": s.dedupe_processed_messages,
         "price_deviation_tolerance": s.price_deviation_tolerance,
-        "block_non_today_messages": s.block_non_today_messages,
+        "block_historical_messages": s.block_historical_messages,
         "launch_headless": s.launch_headless,
         "option_buy_quantity_enabled": s.option_buy_quantity_enabled,
         "option_buy_quantity": s.option_buy_quantity,
@@ -101,7 +101,7 @@ def page_settings_from_dict(
     base = default_settings_for(source)
     dedupe = bool(d.get("dedupe_processed_messages", base.dedupe_processed_messages))
     tol = float(d.get("price_deviation_tolerance", base.price_deviation_tolerance))
-    block = bool(d.get("block_non_today_messages", base.block_non_today_messages))
+    block_historical = bool(d.get("block_historical_messages", base.block_historical_messages))
     launch_headless = bool(d.get("launch_headless", base.launch_headless))
     option_qty_enabled = bool(
         d.get("option_buy_quantity_enabled", base.option_buy_quantity_enabled)
@@ -125,7 +125,7 @@ def page_settings_from_dict(
     return PageSettings(
         dedupe_processed_messages=dedupe,
         price_deviation_tolerance=tol,
-        block_non_today_messages=block,
+        block_historical_messages=block_historical,
         launch_headless=launch_headless,
         tickers=tickers,
         option_buy_quantity_enabled=option_qty_enabled,

@@ -5,6 +5,7 @@ from app.whop.page_settings import (
     DEFAULT_STOCK_SETTINGS,
     PageSettings,
     TickerConfig,
+    default_settings_for,
     page_settings_from_dict,
     page_settings_to_dict,
     position_size_to_fraction,
@@ -16,7 +17,7 @@ def test_default_stock_settings_shape():
     s = DEFAULT_STOCK_SETTINGS
     assert s.dedupe_processed_messages is True
     assert s.price_deviation_tolerance == 1.0
-    assert s.block_non_today_messages is False
+    assert s.block_historical_messages is False
     assert s.launch_headless is False
     assert s.tickers == {}
     assert s.option_buy_quantity_enabled is False
@@ -29,7 +30,7 @@ def test_default_option_settings_shape():
     s = DEFAULT_OPTION_SETTINGS
     assert s.dedupe_processed_messages is True
     assert s.price_deviation_tolerance == 5.0
-    assert s.block_non_today_messages is False
+    assert s.block_historical_messages is False
     assert s.launch_headless is False
     assert s.tickers is None
     assert s.option_buy_quantity_enabled is False
@@ -42,7 +43,7 @@ def test_round_trip_stock():
     src = PageSettings(
         dedupe_processed_messages=False,
         price_deviation_tolerance=0.7,
-        block_non_today_messages=True,
+        block_historical_messages=True,
         launch_headless=True,
         tickers={"TSLL": TickerConfig(trade_quantity=2000)},
     )
@@ -54,7 +55,7 @@ def test_round_trip_option_drops_tickers():
     src = PageSettings(
         dedupe_processed_messages=True,
         price_deviation_tolerance=8.0,
-        block_non_today_messages=True,
+        block_historical_messages=True,
         tickers=None,
         option_buy_quantity_enabled=True,
         option_buy_quantity=3,
@@ -63,21 +64,70 @@ def test_round_trip_option_drops_tickers():
     )
     d = page_settings_to_dict(src)
     assert "tickers" not in d
-    assert d["block_non_today_messages"] is True
+    assert d["block_historical_messages"] is True
     out = page_settings_from_dict(d, source="option")
     assert out.tickers is None
-    assert out.block_non_today_messages is True
+    assert out.block_historical_messages is True
 
 
-def test_block_non_today_default_false_when_missing():
-    """page_settings_from_dict tolerates missing block_non_today_messages key."""
-    raw = {
+def test_default_stock_settings_block_historical_false():
+    s = default_settings_for("stock")
+    assert s.block_historical_messages is False
+
+
+def test_default_option_settings_block_historical_false():
+    s = default_settings_for("option")
+    assert s.block_historical_messages is False
+
+
+def test_to_dict_writes_block_historical_key():
+    s = PageSettings(
+        dedupe_processed_messages=True,
+        price_deviation_tolerance=1.0,
+        block_historical_messages=True,
+        launch_headless=False,
+        tickers={},
+    )
+    d = page_settings_to_dict(s)
+    assert d["block_historical_messages"] is True
+    assert "block_non_today_messages" not in d
+
+
+def test_from_dict_reads_block_historical_key():
+    d = {
         "dedupe_processed_messages": True,
         "price_deviation_tolerance": 1.0,
-        "tickers": {},
+        "block_historical_messages": True,
+        "launch_headless": False,
     }
-    out = page_settings_from_dict(raw, source="stock")
-    assert out.block_non_today_messages is False
+    s = page_settings_from_dict(d, source="stock")
+    assert s.block_historical_messages is True
+
+
+def test_from_dict_missing_key_defaults_to_false():
+    d = {
+        "dedupe_processed_messages": True,
+        "price_deviation_tolerance": 1.0,
+        "launch_headless": False,
+    }
+    s = page_settings_from_dict(d, source="stock")
+    assert s.block_historical_messages is False
+
+
+def test_from_dict_ignores_legacy_block_non_today_key():
+    """Legacy key in saved JSON must NOT silently activate the new field.
+
+    Spec §3 'Why delete-and-add': users who consciously enabled the old
+    'non-today' must re-opt-in to the tightened semantics through the UI.
+    """
+    d = {
+        "dedupe_processed_messages": True,
+        "price_deviation_tolerance": 1.0,
+        "block_non_today_messages": True,  # legacy
+        "launch_headless": False,
+    }
+    s = page_settings_from_dict(d, source="stock")
+    assert s.block_historical_messages is False
 
 
 def test_position_size_to_fraction_known():
