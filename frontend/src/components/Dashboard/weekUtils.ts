@@ -24,3 +24,39 @@ export function formatWeekRange(weekKey: string): WeekRange {
     ).padStart(2, "0")}`;
   return { startLabel: fmt(start), endLabel: fmt(end) };
 }
+
+import type { TaskSummary } from "../../api/domain-types";
+
+export interface WeekInfo {
+  key: string;
+  startLabel: string;
+  endLabel: string;
+}
+
+export interface ComputedWeeks {
+  groups: Map<string, TaskSummary[]>;
+  weeks: WeekInfo[];
+}
+
+function taskTime(t: TaskSummary): string {
+  return t.message?.posted_at ?? t.created_at;
+}
+
+export function computeWeeks(tasks: TaskSummary[]): ComputedWeeks {
+  const sorted = [...tasks].sort((a, b) => taskTime(b).localeCompare(taskTime(a)));
+  const groups = new Map<string, TaskSummary[]>();
+  for (const t of sorted) {
+    const key = weekKeyOf(taskTime(t));
+    let bucket = groups.get(key);
+    if (!bucket) {
+      bucket = [];
+      groups.set(key, bucket);
+    }
+    bucket.push(t);
+  }
+  const weeks: WeekInfo[] = Array.from(groups.keys()).map((key) => ({
+    key,
+    ...formatWeekRange(key),
+  }));
+  return { groups, weeks };
+}

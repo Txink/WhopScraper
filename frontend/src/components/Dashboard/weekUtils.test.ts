@@ -52,3 +52,62 @@ describe("formatWeekRange", () => {
     });
   });
 });
+
+import { computeWeeks } from "./weekUtils";
+import type { TaskSummary } from "../../api/domain-types";
+
+const mkTask = (id: string, postedAt: string): TaskSummary =>
+  ({
+    id,
+    status: "FILLED",
+    created_at: postedAt,
+    updated_at: postedAt,
+    message: { url: "https://w/x", author: "a", content: "c", posted_at: postedAt, received_at: postedAt },
+  } as unknown as TaskSummary);
+
+describe("computeWeeks", () => {
+  it("returns empty groups and weeks for an empty input", () => {
+    const r = computeWeeks([]);
+    expect(r.weeks).toEqual([]);
+    expect(r.groups.size).toBe(0);
+  });
+
+  it("groups tasks by their local-week Sunday key", () => {
+    const t1 = mkTask("t1", new Date(2026, 3, 22, 10).toISOString()); // wk 04-19
+    const t2 = mkTask("t2", new Date(2026, 3, 25, 10).toISOString()); // wk 04-19
+    const t3 = mkTask("t3", new Date(2026, 3, 27, 10).toISOString()); // wk 04-26
+    const r = computeWeeks([t3, t1, t2]); // arbitrary input order
+    expect(r.weeks.map((w) => w.key)).toEqual(["2026-04-26", "2026-04-19"]);
+    expect(r.groups.get("2026-04-26")?.map((t) => t.id)).toEqual(["t3"]);
+    expect(r.groups.get("2026-04-19")?.map((t) => t.id).sort()).toEqual(["t1", "t2"]);
+  });
+
+  it("returns weeks descending and sorts each group's tasks descending by time", () => {
+    const a = mkTask("a", new Date(2026, 3, 19, 9).toISOString());
+    const b = mkTask("b", new Date(2026, 3, 19, 18).toISOString());
+    const r = computeWeeks([a, b]);
+    expect(r.groups.get("2026-04-19")?.map((t) => t.id)).toEqual(["b", "a"]);
+  });
+
+  it("populates startLabel/endLabel from the week key", () => {
+    const t = mkTask("t", new Date(2026, 3, 22, 10).toISOString());
+    const r = computeWeeks([t]);
+    expect(r.weeks[0]).toMatchObject({
+      key: "2026-04-19",
+      startLabel: "04/19",
+      endLabel: "04/25",
+    });
+  });
+
+  it("falls back to created_at when message.posted_at is null", () => {
+    const t = {
+      id: "t",
+      status: "FILLED",
+      created_at: new Date(2026, 3, 22, 10).toISOString(),
+      updated_at: new Date(2026, 3, 22, 10).toISOString(),
+      message: { url: null, author: null, content: "", posted_at: null, received_at: null },
+    } as unknown as TaskSummary;
+    const r = computeWeeks([t]);
+    expect(r.weeks[0]?.key).toBe("2026-04-19");
+  });
+});
