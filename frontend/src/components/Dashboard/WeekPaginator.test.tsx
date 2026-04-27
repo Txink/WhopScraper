@@ -30,4 +30,15 @@ describe("<WeekPaginator>", () => {
     ]);
     expect(screen.getByRole("option", { selected: true }).textContent).toContain("04/12 ~ 04/18");
   });
+
+  it("calls onSelect with the clicked week's key and collapses", () => {
+    const onSelect = vi.fn();
+    const weeks = [W("2026-04-19", "04/19", "04/25"), W("2026-04-12", "04/12", "04/18")];
+    render(<WeekPaginator weeks={weeks} currentWeekKey="2026-04-19" onSelect={onSelect} />);
+    fireEvent.click(screen.getByRole("button", { name: /04\/19 ~ 04\/25/ }));
+    fireEvent.click(screen.getByRole("option", { name: /04\/12 ~ 04\/18/ }));
+    expect(onSelect).toHaveBeenCalledWith("2026-04-12");
+    // Strip should be gone (collapsed back to a single chip).
+    expect(screen.queryByRole("listbox")).toBeNull();
+  });
 });
