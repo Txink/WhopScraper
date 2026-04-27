@@ -771,3 +771,42 @@ async def test_save_task_all_terminal_statuses_protected(
             f"{terminal_status.value} was overwritten by RECEIVED — "
             f"got {loaded.status}"
         )
+
+
+# ---------------------------------------------------------------------------
+# is_historical round-trip (T3)
+# ---------------------------------------------------------------------------
+
+
+async def test_save_and_load_task_round_trips_is_historical_true(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """is_historical=True persists through save_task → load_task."""
+    task = _make_task("msg-hist-1", status=Status.RECEIVED)
+    task.is_historical = True
+
+    async with session_factory() as session:
+        await save_task(session, task)
+
+    async with session_factory() as session:
+        loaded = await load_task(session, "msg-hist-1")
+
+    assert loaded is not None
+    assert loaded.is_historical is True
+
+
+async def test_save_and_load_task_default_is_historical_false(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """Default is_historical=False round-trips."""
+    task = _make_task("msg-live-1", status=Status.RECEIVED)
+    # default — task.is_historical is False
+
+    async with session_factory() as session:
+        await save_task(session, task)
+
+    async with session_factory() as session:
+        loaded = await load_task(session, "msg-live-1")
+
+    assert loaded is not None
+    assert loaded.is_historical is False

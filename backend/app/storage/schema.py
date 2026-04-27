@@ -15,7 +15,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Any
 
-from sqlalchemy import JSON, Date, DateTime, ForeignKey, Index, Integer, String
+from sqlalchemy import JSON, Boolean, Date, DateTime, ForeignKey, Index, Integer, String, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.storage.db import Base
@@ -59,6 +59,9 @@ class TaskRow(Base):
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    is_historical: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("0")
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -161,6 +161,7 @@ def _task_to_row(task: Task) -> TaskRow:
         stage_timings_json=dict(task.stage_timings) if task.stage_timings else None,
         created_at=task.created_at,
         updated_at=task.updated_at,
+        is_historical=task.is_historical,
     )
 
 
@@ -260,6 +261,7 @@ def _rows_to_task(
         created_at=_ensure_utc(task_row.created_at),
         updated_at=_ensure_utc(task_row.updated_at),
         reject_reason=task_row.reject_reason,
+        is_historical=task_row.is_historical,
     )
 
 
@@ -285,6 +287,7 @@ _TASK_UPDATE_COLS = (
     "price",
     "quantity",
     "reject_reason",
+    "is_historical",
     "stage_timings_json",
     "updated_at",
 )
@@ -337,6 +340,7 @@ async def save_task(session: AsyncSession, task: Task) -> None:
         "price": price,
         "quantity": quantity,
         "reject_reason": task.reject_reason,
+        "is_historical": task.is_historical,
         "stage_timings_json": dict(task.stage_timings) if task.stage_timings else None,
         "created_at": task.created_at,
         "updated_at": task.updated_at,
