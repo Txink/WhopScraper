@@ -222,6 +222,9 @@ function Dashboard({ token }: { token: string }) {
     }
   }, [weeks, groups, currentWeekKey]);
 
+  // Captured at mount; a session that crosses midnight Sunday will not refresh
+  // this. Acceptable per spec — sessions rarely live that long, and TaskStream
+  // remounts on Dashboard remount.
   const realCurrentWeekKey = useMemo(() => weekKeyOf(new Date().toISOString()), []);
   const onPastWeek = currentWeekKey !== null && currentWeekKey !== realCurrentWeekKey;
   const newMessageCount =
