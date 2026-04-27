@@ -528,3 +528,95 @@
   min-width: 64px;
   text-align: center;
 }
+
+/* ──────────────────────────────────────────────────────────────────────
+ * Week bar — sticky row above the task stream, holds WeekPaginator.
+ * The "new messages" indicator is NOT here; it lives on PageInfoBar.
+ * ────────────────────────────────────────────────────────────────────── */
+.week-bar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-1);
+  border-bottom: 1px solid var(--line);
+}
+
+.week-paginator-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  background: var(--bg-2);
+  color: var(--fg-2);
+  font: inherit;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  white-space: nowrap;
+  scroll-snap-align: start;
+}
+.week-paginator-chip:hover:not(:disabled) {
+  border-color: var(--brand);
+  color: var(--fg-1);
+}
+.week-paginator-chip.current {
+  background: var(--bg-3);
+  color: var(--fg-1);
+  border-color: var(--line-strong);
+}
+.week-paginator-chip:disabled {
+  cursor: default;
+  opacity: 0.85;
+}
+.week-paginator-caret {
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+.week-paginator-strip {
+  display: flex;
+  gap: var(--space-2);
+  /* Width = 3 chips (~110px each) + 2 gaps. */
+  max-width: calc(110px * 3 + var(--space-2) * 2);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+.week-paginator-strip::-webkit-scrollbar {
+  display: none;
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+ * PageInfoBar new-messages indicator. Replaces "已发消息 N" with a red,
+ * slow-blinking, clickable label "新消息 +K" when the user is on a past
+ * week and the real current week has data.
+ * ────────────────────────────────────────────────────────────────────── */
+.page-info-new-msg {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border: 1px solid #cf6f6f;
+  border-radius: 4px;
+  background: rgba(207, 111, 111, 0.14);
+  color: #cf6f6f;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  animation: page-info-new-msg-blink 1.6s ease-in-out infinite;
+}
+.page-info-new-msg:hover { background: rgba(207, 111, 111, 0.22); }
+@keyframes page-info-new-msg-blink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.45; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-info-new-msg { animation: none; }
+}
