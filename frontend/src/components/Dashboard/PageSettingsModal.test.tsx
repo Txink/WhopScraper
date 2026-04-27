@@ -9,7 +9,7 @@ const stockPage: WhopPage = {
   settings: {
     dedupe_processed_messages: true,
     price_deviation_tolerance: 1.0,
-    block_non_today_messages: false,
+    block_historical_messages: false,
     launch_headless: false,
     tickers: { TSLL: { trade_quantity: 2000 } },
     option_buy_quantity_enabled: false,
@@ -25,7 +25,7 @@ const optionPage: WhopPage = {
   settings: {
     dedupe_processed_messages: true,
     price_deviation_tolerance: 5.0,
-    block_non_today_messages: false,
+    block_historical_messages: false,
     launch_headless: false,
     tickers: null,
     option_buy_quantity_enabled: false,
@@ -72,15 +72,16 @@ describe("<PageSettingsModal>", () => {
     expect(spy).not.toHaveBeenCalled();
   });
 
-  it("toggling block_non_today_messages saves it", async () => {
+  it("toggling block_historical_messages saves it", async () => {
     const spy = vi.spyOn(httpModule.api, "updateWhopPageSettings").mockResolvedValue(stockPage);
     render(<PageSettingsModal page={stockPage} onClose={vi.fn()} />);
-    const checkbox = screen.getByLabelText(/禁止下单非当天/);
+    const checkbox = screen.getByLabelText(/禁止下单历史消息/);
     fireEvent.click(checkbox);
     fireEvent.click(screen.getByText(/^保存/));
     await waitFor(() => expect(spy).toHaveBeenCalled());
     const arg = spy.mock.calls[0][1];
-    expect(arg.block_non_today_messages).toBe(true);
+    expect(arg.block_historical_messages).toBe(true);
+    expect("block_non_today_messages" in arg).toBe(false);
   });
 
   it("toggling launch_headless saves it", async () => {

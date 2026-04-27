@@ -5,7 +5,7 @@ import { PageInfoBar } from "./PageInfoBar";
 const stockPage = {
   id: "a", url: "https://w/a/", source: "stock" as const, name: "Hello",
   added_at: "2026-04-25T00:00:00Z",
-  settings: { dedupe_processed_messages: true, price_deviation_tolerance: 1, block_non_today_messages: false, launch_headless: false, tickers: {} },
+  settings: { dedupe_processed_messages: true, price_deviation_tolerance: 1, block_historical_messages: false, launch_headless: false, tickers: {} },
   running: true, started_at: null, last_poll_at: null, messages_published: 42, last_error: null,
 };
 

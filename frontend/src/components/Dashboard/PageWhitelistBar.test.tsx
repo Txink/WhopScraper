@@ -14,7 +14,7 @@ function makePage(tickers: Record<string, { trade_quantity: number }> | null = n
     settings: {
       dedupe_processed_messages: true,
       price_deviation_tolerance: 1.0,
-      block_non_today_messages: false,
+      block_historical_messages: false,
       launch_headless: true,
       tickers,
       option_buy_quantity_enabled: false,

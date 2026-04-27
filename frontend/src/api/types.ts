@@ -812,8 +812,8 @@ export interface components {
             dedupe_processed_messages: boolean;
             /** Price Deviation Tolerance */
             price_deviation_tolerance: number;
-            /** Block Non Today Messages */
-            block_non_today_messages: boolean;
+            /** Block Historical Messages */
+            block_historical_messages: boolean;
             /** Launch Headless */
             launch_headless: boolean;
             /** Tickers */
@@ -838,8 +838,8 @@ export interface components {
             dedupe_processed_messages?: boolean | null;
             /** Price Deviation Tolerance */
             price_deviation_tolerance?: number | null;
-            /** Block Non Today Messages */
-            block_non_today_messages?: boolean | null;
+            /** Block Historical Messages */
+            block_historical_messages?: boolean | null;
             /** Launch Headless */
             launch_headless?: boolean | null;
             /** Tickers */

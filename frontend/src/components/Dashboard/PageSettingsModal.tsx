@@ -12,7 +12,7 @@ interface Props {
 export function PageSettingsModal({ page, onClose }: Props) {
   const [dedupe, setDedupe] = useState(page.settings.dedupe_processed_messages);
   const [tolerance, setTolerance] = useState(String(page.settings.price_deviation_tolerance));
-  const [blockNonToday, setBlockNonToday] = useState(page.settings.block_non_today_messages);
+  const [blockHistorical, setBlockHistorical] = useState(page.settings.block_historical_messages);
   const [launchHeadless, setLaunchHeadless] = useState(Boolean(page.settings.launch_headless));
   const [optionBuyQtyEnabled, setOptionBuyQtyEnabled] = useState(
     Boolean(page.settings.option_buy_quantity_enabled)
@@ -84,7 +84,7 @@ export function PageSettingsModal({ page, onClose }: Props) {
       const patch: Partial<WhopPageSettings> = {
         dedupe_processed_messages: dedupe,
         price_deviation_tolerance: tolNum,
-        block_non_today_messages: blockNonToday,
+        block_historical_messages: blockHistorical,
         launch_headless: launchHeadless,
       };
       // Stock whitelist (tickers) is now edited inline below the page header
@@ -147,13 +147,13 @@ export function PageSettingsModal({ page, onClose }: Props) {
             <label>
               <input
                 type="checkbox"
-                checked={blockNonToday}
-                onChange={e => setBlockNonToday(e.target.checked)}
+                checked={blockHistorical}
+                onChange={e => setBlockHistorical(e.target.checked)}
               />
-              <span>禁止下单非当天消息（仅解析指令，不发送订单）</span>
+              <span>禁止下单历史消息（消息发布时间早于本次监听启动时间）</span>
             </label>
             <p className="hint small">
-              当消息的发布日期与服务器今日不同时，trader 跳过下单（任务标记 SKIPPED）。
+              消息 posted_at &lt; listener.started_at → 任务标记 SKIPPED（仅解析入库，不发送订单）。比"按当天/非当天"更细：当天但启动前发布的消息也会被拦。
             </p>
           </section>
 
