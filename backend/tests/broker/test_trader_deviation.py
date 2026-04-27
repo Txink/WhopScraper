@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-import dataclasses
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
 import pytest
@@ -302,45 +301,72 @@ async def test_market_when_within_tolerance():
 
 
 @pytest.mark.asyncio
-async def test_block_non_today_skips_old_message():
-    """When block_non_today_messages=True, a message posted yesterday → SKIPPED."""
+async def test_block_historical_skips_stock_when_marker_true():
+    """is_historical=True + block_historical_messages=True → SKIPPED, reason '历史消息'."""
     bus = EventBus()
     broker = _RecordingBroker()
     page_settings = PageSettings(
         dedupe_processed_messages=True,
         price_deviation_tolerance=1.0,
-        block_non_today_messages=True,
+        block_historical_messages=True,
         tickers={"TSLL": TickerConfig(trade_quantity=100)},
     )
     register_trader(bus, broker, _config(), registry=_registry_with(page_settings))
 
-    yesterday = datetime.now(UTC) - timedelta(days=1)
     task = _stock_task("TSLL", position_size="常规仓")
-    task.message = dataclasses.replace(task.message, posted_at=yesterday)
+    task.is_historical = True
 
     await bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
     await bus.wait_idle()
 
     assert broker.submitted == []
     assert task.status.value == "SKIPPED"
-    assert "非当天消息" in (task.reject_reason or "")
+    assert "历史消息" in (task.reject_reason or "")
 
 
 @pytest.mark.asyncio
-async def test_block_non_today_allows_today_message():
-    """block_non_today=True doesn't block today's message."""
+async def test_block_historical_skips_option_when_marker_true():
+    """is_historical=True + block_historical_messages=True → SKIPPED for an option task too."""
+    bus = EventBus()
+    broker = _RecordingBroker()
+    page_settings = PageSettings(
+        dedupe_processed_messages=True,
+        price_deviation_tolerance=5.0,
+        block_historical_messages=True,
+        tickers=None,
+        # An option page typically lacks tickers; the gate is checked before
+        # the option-rule gate, so this skip should fire regardless of option_*
+        # settings being unset.
+    )
+    register_trader(bus, broker, _config(), registry=_registry_with(page_settings))
+
+    task = _option_task("NVDA")
+    task.is_historical = True
+
+    await bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
+    await bus.wait_idle()
+
+    assert broker.submitted == []
+    assert task.status.value == "SKIPPED"
+    assert "历史消息" in (task.reject_reason or "")
+
+
+@pytest.mark.asyncio
+async def test_block_historical_setting_off_proceeds_even_with_marker_true():
+    """is_historical=True + block_historical_messages=False → passes the gate, submits."""
     bus = EventBus()
     broker = _RecordingBroker()
     page_settings = PageSettings(
         dedupe_processed_messages=True,
         price_deviation_tolerance=1.0,
-        block_non_today_messages=True,
+        block_historical_messages=False,
         tickers={"TSLL": TickerConfig(trade_quantity=100)},
     )
     register_trader(bus, broker, _config(), registry=_registry_with(page_settings))
 
     task = _stock_task("TSLL", position_size="常规仓")
-    # default _stock_task uses datetime.now(UTC) which is today
+    task.is_historical = True
+
     await bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
     await bus.wait_idle()
 
@@ -348,26 +374,25 @@ async def test_block_non_today_allows_today_message():
 
 
 @pytest.mark.asyncio
-async def test_block_non_today_default_off_allows_old():
-    """Default block_non_today=False — yesterday's message still submits."""
+async def test_block_historical_marker_false_proceeds_even_with_setting_on():
+    """is_historical=False + block_historical_messages=True → passes the gate, submits."""
     bus = EventBus()
     broker = _RecordingBroker()
     page_settings = PageSettings(
         dedupe_processed_messages=True,
         price_deviation_tolerance=1.0,
-        block_non_today_messages=False,  # explicit False
+        block_historical_messages=True,
         tickers={"TSLL": TickerConfig(trade_quantity=100)},
     )
     register_trader(bus, broker, _config(), registry=_registry_with(page_settings))
 
-    yesterday = datetime.now(UTC) - timedelta(days=1)
     task = _stock_task("TSLL", position_size="常规仓")
-    task.message = dataclasses.replace(task.message, posted_at=yesterday)
+    # task.is_historical defaults to False — leave as-is
 
     await bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
     await bus.wait_idle()
 
-    assert len(broker.submitted) == 1  # not blocked
+    assert len(broker.submitted) == 1
 
 
 @pytest.mark.asyncio

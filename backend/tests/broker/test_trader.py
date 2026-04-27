@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime
 from unittest.mock import MagicMock
 
 import pytest
@@ -394,13 +394,13 @@ async def test_trader_proceeds_when_valid_and_auto_trade_on() -> None:
 # ---------------------------------------------------------------------------
 
 
-def _fake_registry(tickers: set[str], block_non_today: bool = False) -> MagicMock:
+def _fake_registry(tickers: set[str], block_historical: bool = False) -> MagicMock:
     registry = MagicMock()
     registry.get_settings_for_url.return_value = PageSettings(
         dedupe_processed_messages=True,
         price_deviation_tolerance=1.0,
         tickers={t: TickerConfig(trade_quantity=100) for t in tickers},
-        block_non_today_messages=block_non_today,
+        block_historical_messages=block_historical,
     )
     return registry
 
@@ -430,36 +430,27 @@ async def test_trader_whitelist_check_runs_before_validation() -> None:
 
 
 @pytest.mark.asyncio
-async def test_trader_non_today_runs_before_validation() -> None:
-    """Whitelisted ticker with non-today posted_at AND invalid side: the
-    non-today reason should win, proving non-today check runs before the
+async def test_trader_historical_runs_before_validation() -> None:
+    """Whitelisted ticker with is_historical=True AND invalid side: the
+    historical reason should win, proving the historical check runs before the
     completeness check."""
     bus = EventBus()
     fake_broker = FakeBrokerClient()
     register_trader(
         bus, fake_broker, _config(auto_trade=True),
-        registry=_fake_registry({"TSLA"}, block_non_today=True),
+        registry=_fake_registry({"TSLA"}, block_historical=True),
     )
 
-    # Build a task whose message.posted_at is two days ago.
+    # Build a task with an invalid side (CLOSE) and mark it as historical.
     task = _stock_task(instruction_type=InstructionType.CLOSE)
-    yesterday = datetime.now(UTC) - timedelta(days=2)
-    task.message = Message(
-        id=task.message.id,
-        content=task.message.content,
-        raw_content=task.message.raw_content,
-        author=task.message.author,
-        posted_at=yesterday,
-        received_at=task.message.received_at,
-        source=task.message.source,  # type: ignore[arg-type]
-    )
+    task.is_historical = True
 
     await bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
     await bus.wait_idle(timeout=2.0)
 
     assert task.status == Status.SKIPPED
     assert task.reject_reason is not None
-    assert "非当天消息" in task.reject_reason
+    assert "历史消息" in task.reject_reason
 
 
 @pytest.mark.asyncio

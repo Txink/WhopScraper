@@ -74,7 +74,7 @@ def _registry_with_default(default_qty: int = 2000):
     page = PageSettings(
         dedupe_processed_messages=True,
         price_deviation_tolerance=1.0,
-        block_non_today_messages=False,
+        block_historical_messages=False,
         launch_headless=False,
         tickers={"TSLL": TickerConfig(trade_quantity=default_qty)},
     )

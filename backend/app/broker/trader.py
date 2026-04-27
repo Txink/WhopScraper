@@ -214,23 +214,20 @@ def register_trader(
                 await _publish_skip(task, f"{ticker_upper} 不在白名单")
                 return
 
-        # ① b. Non-today-message check (per-page setting).
-        # Use UTC dates on both sides so the displayed reason matches the
-        # UI: posted_at is stored as Whop's wall-clock with a Z suffix and
-        # the frontend strips T/Z without timezone conversion (see
-        # frontend cardHelpers.fmtTime). Comparing in any other frame
-        # produces a date that disagrees with what the user sees on the card.
-        if page_settings is not None and page_settings.block_non_today_messages:
-            from datetime import UTC, datetime
-
-            posted_date = task.message.posted_at.astimezone(UTC).date()
-            today_date = datetime.now(UTC).date()
-            if posted_date != today_date:
-                await _publish_skip(
-                    task,
-                    f"非当天消息（posted={posted_date}, today={today_date}）",
-                )
-                return
+        # ① b. Historical-message check (per-page setting).
+        # The listener tagged this task at capture time when
+        # message.posted_at was earlier than the listener's started_at.
+        # Setting + marker → SKIP (parse-only, do not order).
+        if (
+            page_settings is not None
+            and page_settings.block_historical_messages
+            and task.is_historical
+        ):
+            await _publish_skip(
+                task,
+                f"历史消息（posted={task.message.posted_at}）",
+            )
+            return
 
         # ① c. Parameter completeness — ticker + side + price (for stock);
         # ticker + side + price + strike + CP + expiry (for option).
