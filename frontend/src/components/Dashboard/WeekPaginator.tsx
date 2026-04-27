@@ -11,6 +11,16 @@ export function WeekPaginator({ weeks, currentWeekKey, onSelect }: WeekPaginator
   const [expanded, setExpanded] = useState(false);
   const stripRef = useRef<HTMLDivElement | null>(null);
 
+  const current = weeks.find((w) => w.key === currentWeekKey);
+  const currentIndex = weeks.findIndex((w) => w.key === currentWeekKey);
+  const canExpand = weeks.length > 1;
+  const scrollMode: "start" | "center" | "end" =
+    currentIndex <= 0
+      ? "start"
+      : currentIndex >= weeks.length - 1
+        ? "end"
+        : "center";
+
   useEffect(() => {
     if (!expanded) return;
     function onDocMouseDown(e: MouseEvent) {
@@ -22,9 +32,22 @@ export function WeekPaginator({ weeks, currentWeekKey, onSelect }: WeekPaginator
     return () => document.removeEventListener("mousedown", onDocMouseDown);
   }, [expanded]);
 
-  const current = weeks.find((w) => w.key === currentWeekKey);
+  useEffect(() => {
+    if (!expanded) return;
+    const el = stripRef.current;
+    if (!el) return;
+    const chip = el.children[currentIndex] as HTMLElement | undefined;
+    if (!chip) return;
+    if (scrollMode === "start") {
+      el.scrollLeft = 0;
+    } else if (scrollMode === "end") {
+      el.scrollLeft = el.scrollWidth - el.clientWidth;
+    } else {
+      el.scrollLeft = chip.offsetLeft - (el.clientWidth - chip.clientWidth) / 2;
+    }
+  }, [expanded, currentIndex, scrollMode]);
+
   if (!current) return null;
-  const canExpand = weeks.length > 1;
 
   if (!expanded) {
     return (
@@ -41,7 +64,12 @@ export function WeekPaginator({ weeks, currentWeekKey, onSelect }: WeekPaginator
   }
 
   return (
-    <div className="week-paginator-strip" role="listbox" ref={stripRef}>
+    <div
+      className="week-paginator-strip"
+      role="listbox"
+      ref={stripRef}
+      data-scroll-mode={scrollMode}
+    >
       {weeks.map((w) => {
         const isCurrent = w.key === currentWeekKey;
         return (

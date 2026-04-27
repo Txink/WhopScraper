@@ -63,4 +63,43 @@ describe("<WeekPaginator>", () => {
     fireEvent.mouseDown(screen.getByTestId("outside"));
     expect(screen.queryByRole("listbox")).toBeNull();
   });
+
+  it("scrolls the strip so the current chip is centered when current is mid-list", () => {
+    const weeks = [
+      W("2026-04-26", "04/26", "05/02"),
+      W("2026-04-19", "04/19", "04/25"),
+      W("2026-04-12", "04/12", "04/18"),
+      W("2026-04-05", "04/05", "04/11"),
+      W("2026-03-29", "03/29", "04/04"),
+    ];
+    render(<WeekPaginator weeks={weeks} currentWeekKey="2026-04-12" onSelect={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: /04\/12 ~ 04\/18/ }));
+    const strip = screen.getByRole("listbox") as HTMLElement;
+    // Current is index 2 of 5. The component should set scrollLeft so that
+    // index 2 is in the middle of the visible 3-chip viewport — i.e., the
+    // strip's data-scroll-mode attribute should be "center".
+    expect(strip.dataset.scrollMode).toBe("center");
+  });
+
+  it("left-aligns when current is the newest week (index 0)", () => {
+    const weeks = [
+      W("2026-04-26", "04/26", "05/02"),
+      W("2026-04-19", "04/19", "04/25"),
+      W("2026-04-12", "04/12", "04/18"),
+    ];
+    render(<WeekPaginator weeks={weeks} currentWeekKey="2026-04-26" onSelect={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: /04\/26 ~ 05\/02/ }));
+    expect((screen.getByRole("listbox") as HTMLElement).dataset.scrollMode).toBe("start");
+  });
+
+  it("right-aligns when current is the oldest week (last index)", () => {
+    const weeks = [
+      W("2026-04-26", "04/26", "05/02"),
+      W("2026-04-19", "04/19", "04/25"),
+      W("2026-04-12", "04/12", "04/18"),
+    ];
+    render(<WeekPaginator weeks={weeks} currentWeekKey="2026-04-12" onSelect={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: /04\/12 ~ 04\/18/ }));
+    expect((screen.getByRole("listbox") as HTMLElement).dataset.scrollMode).toBe("end");
+  });
 });
