@@ -20,9 +20,12 @@
 | `frontend/src/components/Dashboard/weekUtils.test.ts` | Unit tests for the helpers | **Create** |
 | `frontend/src/components/Dashboard/WeekPaginator.tsx` | Controlled chip-strip selector for picking a week | **Create** |
 | `frontend/src/components/Dashboard/WeekPaginator.test.tsx` | Component tests | **Create** |
-| `frontend/src/components/Dashboard/TaskStream.tsx` | Compute weeks, hold `currentWeekKey`, render sticky bar + selected week | Modify |
-| `frontend/src/components/Dashboard/TaskStream.test.tsx` | New tests for week pagination behavior | **Create** |
-| `frontend/src/components/Dashboard/Dashboard.css` | `.week-bar` + `.week-paginator-*` + `.week-bar-new-badge` styles | Modify |
+| `frontend/src/components/Dashboard/PageInfoBar.tsx` | Optional `newMessageCount` + `onJumpToCurrent` props; renders red blinking "新消息 +K" replacement for "已发消息 N" | Modify |
+| `frontend/src/components/Dashboard/PageInfoBar.test.tsx` | New cases for the indicator swap | Modify |
+| `frontend/src/components/Dashboard/TaskStream.tsx` | Becomes a controlled renderer — receives weeks/groups/currentWeekKey/onSelectWeek as props | Modify |
+| `frontend/src/components/Dashboard/TaskStream.test.tsx` | New tests for week-scoped rendering driven by props | **Create** |
+| `frontend/src/App.tsx` | Compute weeks/groups, hold `currentWeekKey` and `realCurrentWeekKey`, derive `newMessageCount`, wire props down to `PageInfoBar` and `TaskStream` | Modify |
+| `frontend/src/components/Dashboard/Dashboard.css` | `.week-bar` + `.week-paginator-*` + `.page-info-new-msg` (red blink) | Modify |
 
 `weekUtils.ts` is split out of the component so the timezone-sensitive
 date math can be tested with the system clock mocked, without standing
@@ -900,27 +903,218 @@ EOF
 
 ---
 
-## Task 10: Refactor `TaskStream` to render only the selected week
+## Task 10: `PageInfoBar` — `newMessageCount` indicator
+
+**Files:**
+- Modify: `frontend/src/components/Dashboard/PageInfoBar.tsx`
+- Modify: `frontend/src/components/Dashboard/PageInfoBar.test.tsx`
+
+- [ ] **Step 1: Add the failing tests**
+
+Append to `frontend/src/components/Dashboard/PageInfoBar.test.tsx`:
+
+```tsx
+import { fireEvent } from "@testing-library/react";
+import { vi } from "vitest";
+
+describe("<PageInfoBar> new-messages indicator", () => {
+  it("renders 已发消息 count by default", () => {
+    render(<PageInfoBar page={stockPage} mode="page" />);
+    expect(screen.getByText(/已发消息\s*42/)).toBeInTheDocument();
+    expect(screen.queryByText(/新消息 \+/)).toBeNull();
+  });
+
+  it("replaces 已发消息 with 新消息 +K when newMessageCount > 0", () => {
+    render(
+      <PageInfoBar
+        page={stockPage}
+        mode="page"
+        newMessageCount={3}
+        onJumpToCurrent={vi.fn()}
+      />,
+    );
+    const btn = screen.getByRole("button", { name: /新消息 \+3/ });
+    expect(btn).toBeInTheDocument();
+    expect(btn).toHaveClass("page-info-new-msg");
+    expect(screen.queryByText(/已发消息/)).toBeNull();
+  });
+
+  it("calls onJumpToCurrent when the indicator is clicked", () => {
+    const onJump = vi.fn();
+    render(
+      <PageInfoBar
+        page={stockPage}
+        mode="page"
+        newMessageCount={5}
+        onJumpToCurrent={onJump}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /新消息 \+5/ }));
+    expect(onJump).toHaveBeenCalledTimes(1);
+  });
+
+  it("ignores newMessageCount when mode is orphan", () => {
+    render(
+      <PageInfoBar
+        page={null}
+        mode="orphan"
+        orphanCount={2}
+        newMessageCount={9}
+        onJumpToCurrent={vi.fn()}
+      />,
+    );
+    expect(screen.queryByText(/新消息 \+/)).toBeNull();
+    expect(screen.getByText(/2 条历史/)).toBeInTheDocument();
+  });
+
+  it("falls back to 已发消息 when newMessageCount is 0", () => {
+    render(
+      <PageInfoBar
+        page={stockPage}
+        mode="page"
+        newMessageCount={0}
+        onJumpToCurrent={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/已发消息\s*42/)).toBeInTheDocument();
+    expect(screen.queryByText(/新消息 \+/)).toBeNull();
+  });
+});
+```
+
+- [ ] **Step 2: Run tests to verify failure**
+
+Run: `cd frontend && npx vitest run src/components/Dashboard/PageInfoBar.test.tsx`
+Expected: FAIL — `newMessageCount` is not a known prop and no
+"新消息 +K" element is rendered.
+
+- [ ] **Step 3: Implement the new props**
+
+Replace the entire contents of `frontend/src/components/Dashboard/PageInfoBar.tsx` with:
+
+```tsx
+import type { WhopPage } from "../../api/domain-types";
+
+interface Props {
+  page: WhopPage | null;
+  mode: "page" | "orphan";
+  orphanCount?: number;
+  newMessageCount?: number;
+  onJumpToCurrent?: () => void;
+}
+
+function formatRelative(iso: string | null): string {
+  if (!iso) return "—";
+  const ms = Date.now() - new Date(iso).getTime();
+  if (ms < 0) return "—";
+  const s = ms / 1000;
+  if (s < 60) return `${s.toFixed(0)}s 前`;
+  if (s < 3600) return `${(s / 60).toFixed(0)}m 前`;
+  if (s < 86400) return `${(s / 3600).toFixed(1)}h 前`;
+  return `${(s / 86400).toFixed(1)}d 前`;
+}
+
+export function PageInfoBar({
+  page,
+  mode,
+  orphanCount = 0,
+  newMessageCount,
+  onJumpToCurrent,
+}: Props) {
+  if (mode === "orphan") {
+    return (
+      <div className="page-info-bar orphan">
+        <span className="badge gray">已停用</span>
+        <span>共 {orphanCount} 条历史 task — 来源 page 已被移除</span>
+      </div>
+    );
+  }
+  if (!page) return null;
+
+  const showNewBadge = (newMessageCount ?? 0) > 0 && onJumpToCurrent != null;
+
+  return (
+    <div className="page-info-bar">
+      <div className="page-info-row">
+        <span className={`badge ${page.source}`}>{page.source === "stock" ? "正股" : "期权"}</span>
+        <span className="page-name">{page.name}</span>
+        <span className="sep">·</span>
+        <span>最后轮询 {formatRelative(page.last_poll_at)}</span>
+        <span className="sep">·</span>
+        {showNewBadge ? (
+          <button
+            type="button"
+            className="page-info-new-msg"
+            onClick={onJumpToCurrent}
+          >
+            新消息 +{newMessageCount}
+          </button>
+        ) : (
+          <span>已发消息 {page.messages_published}</span>
+        )}
+      </div>
+      <a
+        className="page-url"
+        href={page.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        title={page.url}
+      >
+        {page.url}
+      </a>
+    </div>
+  );
+}
+```
+
+- [ ] **Step 4: Run tests to verify they pass**
+
+Run: `cd frontend && npx vitest run src/components/Dashboard/PageInfoBar.test.tsx`
+Expected: PASS, all existing tests + 5 new tests.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add frontend/src/components/Dashboard/PageInfoBar.tsx frontend/src/components/Dashboard/PageInfoBar.test.tsx
+git commit -m "$(cat <<'EOF'
+feat(frontend): PageInfoBar — newMessageCount red blink indicator
+
+Replaces "已发消息 N" with a clickable "新消息 +K" button when the
+caller passes a positive newMessageCount (page mode only).
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+EOF
+)"
+```
+
+---
+
+## Task 11: Refactor `TaskStream` + lift state in `App.tsx` (atomic)
+
+**Why combined:** Removing `TaskStream`'s internal state (so `App.tsx`
+can own it) and updating the `App.tsx` call site must happen in one
+commit — separating them leaves the codebase failing typecheck in
+between.
 
 **Files:**
 - Modify: `frontend/src/components/Dashboard/TaskStream.tsx`
+- Modify: `frontend/src/App.tsx`
 
-- [ ] **Step 1: Read the current file**
+- [ ] **Step 1: Read the current files**
 
-Read `frontend/src/components/Dashboard/TaskStream.tsx` end-to-end to
-confirm the current shape before editing.
+Read `frontend/src/components/Dashboard/TaskStream.tsx` and
+`frontend/src/App.tsx` end-to-end to confirm the current shapes.
 
-- [ ] **Step 2: Replace the file with the new implementation**
+- [ ] **Step 2: Replace `TaskStream.tsx` with the controlled implementation**
 
 Overwrite `frontend/src/components/Dashboard/TaskStream.tsx` with:
 
 ```tsx
-import { useEffect, useMemo, useState } from "react";
 import { Card } from "../Card/Card";
 import type { TaskSummary, PushEvent } from "../../api/domain-types";
 import type { ExpandMode } from "../../stores/pageTabs";
 import { WeekPaginator } from "./WeekPaginator";
-import { computeWeeks, weekKeyOf } from "./weekUtils";
+import type { WeekInfo } from "./weekUtils";
 
 const ACTIVE_STATUSES = new Set([
   "RECEIVED", "PARSING", "INSTRUCTION_READY",
@@ -945,40 +1139,30 @@ function formatDateLabel(dateKey: string): string {
 }
 
 interface Props {
-  tasks: TaskSummary[];
   pushEventsByTask: Record<string, PushEvent[]>;
   expandMode: ExpandMode;
   autoTrade: boolean;
+  weeks: WeekInfo[];
+  groups: Map<string, TaskSummary[]>;
+  currentWeekKey: string | null;
+  onSelectWeek: (key: string) => void;
 }
 
-export function TaskStream({ tasks, pushEventsByTask, expandMode, autoTrade }: Props) {
-  const { groups, weeks } = useMemo(() => computeWeeks(tasks), [tasks]);
-
-  const [currentWeekKey, setCurrentWeekKey] = useState<string | null>(null);
-  useEffect(() => {
-    if (weeks.length === 0) {
-      if (currentWeekKey !== null) setCurrentWeekKey(null);
-      return;
-    }
-    if (currentWeekKey == null || !groups.has(currentWeekKey)) {
-      setCurrentWeekKey(weeks[0].key);
-    }
-  }, [weeks, groups, currentWeekKey]);
-
-  const realCurrentWeekKey = useMemo(
-    () => weekKeyOf(new Date().toISOString()),
-    [],
-  );
-  const onPastWeek = currentWeekKey !== null && currentWeekKey !== realCurrentWeekKey;
-  const newCount = onPastWeek ? (groups.get(realCurrentWeekKey)?.length ?? 0) : 0;
-
+export function TaskStream({
+  pushEventsByTask,
+  expandMode,
+  autoTrade,
+  weeks,
+  groups,
+  currentWeekKey,
+  onSelectWeek,
+}: Props) {
   if (weeks.length === 0 || currentWeekKey == null) {
     return null;
   }
 
   const weekTasks = groups.get(currentWeekKey) ?? [];
 
-  // Within-week per-day grouping (preserves descending order set by computeWeeks).
   const dayGroups = new Map<string, TaskSummary[]>();
   for (const t of weekTasks) {
     const ts = t.message?.posted_at ?? t.created_at;
@@ -994,17 +1178,8 @@ export function TaskStream({ tasks, pushEventsByTask, expandMode, autoTrade }: P
         <WeekPaginator
           weeks={weeks}
           currentWeekKey={currentWeekKey}
-          onSelect={setCurrentWeekKey}
+          onSelect={onSelectWeek}
         />
-        {newCount > 0 && (
-          <button
-            type="button"
-            className="week-bar-new-badge"
-            onClick={() => setCurrentWeekKey(realCurrentWeekKey)}
-          >
-            本周新消息 {newCount} 条 →
-          </button>
-        )}
       </div>
 
       {dateKeys.map((dateKey) => {
@@ -1035,33 +1210,97 @@ export function TaskStream({ tasks, pushEventsByTask, expandMode, autoTrade }: P
 }
 ```
 
-Note: this preserves the existing `Card` props and `formatDateLabel`
-behavior verbatim. The only render-time change is wrapping the
-date-keyed loop with the sticky bar and scoping `dayGroups` to one
-week.
+The `tasks` prop is removed. `App.tsx` is updated in the same commit
+to pass the new shape, so this commit leaves typecheck green.
 
-- [ ] **Step 3: Run typecheck**
+- [ ] **Step 3: Update `App.tsx` — add the import**
+
+In `frontend/src/App.tsx`, near the existing dashboard imports, add:
+
+```ts
+import { computeWeeks, weekKeyOf } from "./components/Dashboard/weekUtils";
+```
+
+- [ ] **Step 4: Update `App.tsx` — compute weeks and hold `currentWeekKey`**
+
+Inside the `Dashboard` function, immediately after the existing
+`filteredTasks` computation, add:
+
+```tsx
+const { groups, weeks } = useMemo(() => computeWeeks(filteredTasks), [filteredTasks]);
+const [currentWeekKey, setCurrentWeekKey] = useState<string | null>(null);
+
+useEffect(() => {
+  if (weeks.length === 0) {
+    if (currentWeekKey !== null) setCurrentWeekKey(null);
+    return;
+  }
+  if (currentWeekKey == null || !groups.has(currentWeekKey)) {
+    setCurrentWeekKey(weeks[0].key);
+  }
+}, [weeks, groups, currentWeekKey]);
+
+const realCurrentWeekKey = useMemo(() => weekKeyOf(new Date().toISOString()), []);
+const onPastWeek = currentWeekKey !== null && currentWeekKey !== realCurrentWeekKey;
+const newMessageCount =
+  onPastWeek ? (groups.get(realCurrentWeekKey)?.length ?? 0) : 0;
+```
+
+`useState` and `useMemo` are already imported in this file.
+
+- [ ] **Step 5: Update `App.tsx` — wire props to `PageInfoBar`**
+
+Replace the existing `<PageInfoBar ... />` invocation with:
+
+```tsx
+<PageInfoBar
+  page={activePage}
+  orphanCount={orphanCount}
+  mode={isOrphanTab ? "orphan" : "page"}
+  newMessageCount={isOrphanTab ? 0 : newMessageCount}
+  onJumpToCurrent={() => setCurrentWeekKey(realCurrentWeekKey)}
+/>
+```
+
+- [ ] **Step 6: Update `App.tsx` — wire props to `TaskStream`**
+
+Replace the existing `<TaskStream ... />` invocation with:
+
+```tsx
+<TaskStream
+  pushEventsByTask={pushEventsByTask}
+  expandMode={expandMode}
+  autoTrade={autoTrade}
+  weeks={weeks}
+  groups={groups}
+  currentWeekKey={currentWeekKey}
+  onSelectWeek={setCurrentWeekKey}
+/>
+```
+
+(`tasks` is no longer passed — TaskStream reads from `groups` now.)
+
+- [ ] **Step 7: Typecheck and run all tests**
 
 Run: `cd frontend && npm run typecheck`
-Expected: zero errors. (If a `Card` prop has changed since this plan
-was written, surface the mismatch and fix before continuing.)
-
-- [ ] **Step 4: Run all existing frontend tests**
+Expected: zero errors.
 
 Run: `cd frontend && npm test`
-Expected: all green. Existing TaskStream consumers should still work
-because `Props` is unchanged.
+Expected: all green. Existing tests pass because `PageInfoBar`
+defaults `newMessageCount` to undefined and the new `TaskStream` test
+file is added in Task 12.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
-git add frontend/src/components/Dashboard/TaskStream.tsx
+git add frontend/src/components/Dashboard/TaskStream.tsx frontend/src/App.tsx
 git commit -m "$(cat <<'EOF'
-feat(frontend): TaskStream — weekly pagination via WeekPaginator
+refactor(frontend): TaskStream controlled + Dashboard owns pagination
 
-Renders one week's tasks at a time, defaulting to the newest week.
-Past-week views show a "本周新消息 N 条 →" badge that jumps back to
-the real current week.
+TaskStream is now a controlled renderer; Dashboard (App.tsx) computes
+weeks/groups, holds currentWeekKey, derives newMessageCount, and
+threads props down to PageInfoBar (indicator) and TaskStream (selector
++ rendered week).
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
 EOF
@@ -1070,7 +1309,7 @@ EOF
 
 ---
 
-## Task 11: `TaskStream` integration tests
+## Task 12: `TaskStream` integration tests
 
 **Files:**
 - Create: `frontend/src/components/Dashboard/TaskStream.test.tsx`
@@ -1083,10 +1322,10 @@ Create `frontend/src/components/Dashboard/TaskStream.test.tsx`:
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, fireEvent, within } from "@testing-library/react";
 import { TaskStream } from "./TaskStream";
+import { computeWeeks } from "./weekUtils";
 import type { TaskSummary } from "../../api/domain-types";
 
-// Freeze "now" so the "real current week" is deterministic.
-const NOW = new Date(2026, 3, 22, 12, 0, 0); // 2026-04-22 (Wednesday) → wk 04-19
+const NOW = new Date(2026, 3, 22, 12, 0, 0); // 2026-04-22 (Wed) → wk 04-19
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -1112,94 +1351,58 @@ const mkTask = (id: string, postedAt: Date, content = "msg"): TaskSummary =>
     },
   }) as unknown as TaskSummary;
 
-describe("<TaskStream> weekly pagination", () => {
-  it("renders only the current week's tasks by default", () => {
+function renderControlled(tasks: TaskSummary[], currentKey?: string) {
+  const { weeks, groups } = computeWeeks(tasks);
+  const onSelect = vi.fn();
+  const result = render(
+    <TaskStream
+      pushEventsByTask={{}}
+      expandMode="smart"
+      autoTrade={false}
+      weeks={weeks}
+      groups={groups}
+      currentWeekKey={currentKey ?? weeks[0]?.key ?? null}
+      onSelectWeek={onSelect}
+    />,
+  );
+  return { ...result, onSelect, weeks, groups };
+}
+
+describe("<TaskStream> weekly pagination (controlled)", () => {
+  it("renders only the selected week's tasks", () => {
     const tasks = [
-      mkTask("this-1", new Date(2026, 3, 22, 10), "this week 1"),
-      mkTask("last-1", new Date(2026, 3, 15, 10), "last week 1"),
+      mkTask("this-1", new Date(2026, 3, 22, 10), "this week"),
+      mkTask("last-1", new Date(2026, 3, 15, 10), "last week"),
     ];
-    render(
-      <TaskStream tasks={tasks} pushEventsByTask={{}} expandMode="smart" autoTrade={false} />,
-    );
-    expect(screen.getByText("this week 1")).toBeInTheDocument();
-    expect(screen.queryByText("last week 1")).toBeNull();
+    renderControlled(tasks); // defaults to newest week
+    expect(screen.getByText("this week")).toBeInTheDocument();
+    expect(screen.queryByText("last week")).toBeNull();
   });
 
   it("shows the WeekPaginator chip with the current week's range", () => {
-    const tasks = [mkTask("a", new Date(2026, 3, 22, 10))];
-    render(
-      <TaskStream tasks={tasks} pushEventsByTask={{}} expandMode="smart" autoTrade={false} />,
-    );
+    renderControlled([mkTask("a", new Date(2026, 3, 22, 10))]);
     expect(screen.getByRole("button", { name: /04\/19 ~ 04\/25/ })).toBeInTheDocument();
   });
 
-  it("switches to a past week when its chip is selected", () => {
+  it("calls onSelectWeek when a different chip is clicked", () => {
+    const tasks = [
+      mkTask("this-1", new Date(2026, 3, 22, 10)),
+      mkTask("last-1", new Date(2026, 3, 15, 10)),
+    ];
+    const { onSelect } = renderControlled(tasks);
+    fireEvent.click(screen.getByRole("button", { name: /04\/19 ~ 04\/25/ }));
+    fireEvent.click(screen.getByRole("option", { name: /04\/12 ~ 04\/18/ }));
+    expect(onSelect).toHaveBeenCalledWith("2026-04-12");
+  });
+
+  it("renders the previous week's tasks when the controller selects it", () => {
     const tasks = [
       mkTask("this-1", new Date(2026, 3, 22, 10), "this week"),
       mkTask("last-1", new Date(2026, 3, 15, 10), "last week"),
     ];
-    render(
-      <TaskStream tasks={tasks} pushEventsByTask={{}} expandMode="smart" autoTrade={false} />,
-    );
-    fireEvent.click(screen.getByRole("button", { name: /04\/19 ~ 04\/25/ }));
-    fireEvent.click(screen.getByRole("option", { name: /04\/12 ~ 04\/18/ }));
+    renderControlled(tasks, "2026-04-12");
+    expect(screen.getByText("last week")).toBeInTheDocument();
     expect(screen.queryByText("this week")).toBeNull();
-    expect(screen.getByText("last week")).toBeInTheDocument();
-  });
-
-  it("shows the new-messages badge with the current-week count when viewing a past week", () => {
-    const tasks = [
-      mkTask("this-1", new Date(2026, 3, 22, 10), "this week 1"),
-      mkTask("this-2", new Date(2026, 3, 21, 10), "this week 2"),
-      mkTask("last-1", new Date(2026, 3, 15, 10), "last week"),
-    ];
-    render(
-      <TaskStream tasks={tasks} pushEventsByTask={{}} expandMode="smart" autoTrade={false} />,
-    );
-    // Switch to last week.
-    fireEvent.click(screen.getByRole("button", { name: /04\/19 ~ 04\/25/ }));
-    fireEvent.click(screen.getByRole("option", { name: /04\/12 ~ 04\/18/ }));
-    const badge = screen.getByRole("button", { name: /本周新消息 2 条/ });
-    expect(badge).toBeInTheDocument();
-    // Click jumps back.
-    fireEvent.click(badge);
-    expect(screen.getByText("this week 1")).toBeInTheDocument();
-    expect(screen.queryByText("last week")).toBeNull();
-    // Badge no longer shown.
-    expect(screen.queryByRole("button", { name: /本周新消息/ })).toBeNull();
-  });
-
-  it("does not show the new-messages badge when the current real week has no data", () => {
-    const tasks = [mkTask("last-1", new Date(2026, 3, 15, 10), "last week only")];
-    render(
-      <TaskStream tasks={tasks} pushEventsByTask={{}} expandMode="smart" autoTrade={false} />,
-    );
-    expect(screen.queryByRole("button", { name: /本周新消息/ })).toBeNull();
-  });
-
-  it("snaps back to the newest week when the previously selected week disappears", () => {
-    const initial = [
-      mkTask("this-1", new Date(2026, 3, 22, 10), "this week"),
-      mkTask("last-1", new Date(2026, 3, 15, 10), "last week"),
-    ];
-    const { rerender } = render(
-      <TaskStream tasks={initial} pushEventsByTask={{}} expandMode="smart" autoTrade={false} />,
-    );
-    // Navigate to last week.
-    fireEvent.click(screen.getByRole("button", { name: /04\/19 ~ 04\/25/ }));
-    fireEvent.click(screen.getByRole("option", { name: /04\/12 ~ 04\/18/ }));
-    expect(screen.getByText("last week")).toBeInTheDocument();
-    // Simulate page-tab swap → new tasks list with no last-week data.
-    rerender(
-      <TaskStream
-        tasks={[mkTask("other-this-1", new Date(2026, 3, 22, 11), "other this week")]}
-        pushEventsByTask={{}}
-        expandMode="smart"
-        autoTrade={false}
-      />,
-    );
-    expect(screen.getByText("other this week")).toBeInTheDocument();
-    expect(screen.queryByText("last week")).toBeNull();
   });
 
   it("preserves the existing per-day stream-divider inside a week", () => {
@@ -1207,13 +1410,24 @@ describe("<TaskStream> weekly pagination", () => {
       mkTask("today", new Date(2026, 3, 22, 10), "today msg"),
       mkTask("yesterday", new Date(2026, 3, 21, 10), "yesterday msg"),
     ];
-    render(
-      <TaskStream tasks={tasks} pushEventsByTask={{}} expandMode="smart" autoTrade={false} />,
-    );
-    const dividers = screen.getAllByText(/2026-04-2[12]/);
-    expect(dividers.length).toBeGreaterThanOrEqual(2);
-    // "Today" label format is `今天 YYYY-MM-DD`.
+    renderControlled(tasks);
     expect(within(document.body).getByText(/今天 2026-04-22/)).toBeInTheDocument();
+    expect(within(document.body).getByText(/昨天 2026-04-21/)).toBeInTheDocument();
+  });
+
+  it("renders nothing when weeks is empty", () => {
+    const { container } = render(
+      <TaskStream
+        pushEventsByTask={{}}
+        expandMode="smart"
+        autoTrade={false}
+        weeks={[]}
+        groups={new Map()}
+        currentWeekKey={null}
+        onSelectWeek={vi.fn()}
+      />,
+    );
+    expect(container.firstChild).toBeNull();
   });
 });
 ```
@@ -1221,11 +1435,7 @@ describe("<TaskStream> weekly pagination", () => {
 - [ ] **Step 2: Run the tests**
 
 Run: `cd frontend && npx vitest run src/components/Dashboard/TaskStream.test.tsx`
-Expected: PASS, 7 tests.
-
-If the "snaps back" test fails because the rerender's effect hasn't
-flushed, wrap the `rerender` call in `act(() => { ... })` from
-`@testing-library/react`. Confirm before adjusting.
+Expected: PASS, 6 tests.
 
 - [ ] **Step 3: Run the full frontend suite**
 
@@ -1237,7 +1447,7 @@ Expected: all green.
 ```bash
 git add frontend/src/components/Dashboard/TaskStream.test.tsx
 git commit -m "$(cat <<'EOF'
-test(frontend): TaskStream weekly pagination behavior
+test(frontend): TaskStream controlled-pagination behavior
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
 EOF
@@ -1246,7 +1456,7 @@ EOF
 
 ---
 
-## Task 12: `.week-bar` and `.week-paginator-*` styles
+## Task 13: CSS — `.week-bar`, `.week-paginator-*`, `.page-info-new-msg`
 
 **Files:**
 - Modify: `frontend/src/components/Dashboard/Dashboard.css`
@@ -1257,9 +1467,8 @@ Append to the end of `frontend/src/components/Dashboard/Dashboard.css`:
 
 ```css
 /* ──────────────────────────────────────────────────────────────────────
- * Week bar — sticky row above the task stream.
- * Holds the WeekPaginator chip-strip on the left and a "new messages"
- * badge on the right when the user is viewing a past week.
+ * Week bar — sticky row above the task stream, holds WeekPaginator.
+ * The "new messages" indicator is NOT here; it lives on PageInfoBar.
  * ────────────────────────────────────────────────────────────────────── */
 .week-bar {
   position: sticky;
@@ -1267,7 +1476,6 @@ Append to the end of `frontend/src/components/Dashboard/Dashboard.css`:
   z-index: 5;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: var(--space-3);
   padding: var(--space-2) var(--space-3);
   background: var(--bg-1);
@@ -1322,37 +1530,47 @@ Append to the end of `frontend/src/components/Dashboard/Dashboard.css`:
   display: none;
 }
 
-.week-bar-new-badge {
+/* ──────────────────────────────────────────────────────────────────────
+ * PageInfoBar new-messages indicator. Replaces "已发消息 N" with a red,
+ * slow-blinking, clickable label "新消息 +K" when the user is on a past
+ * week and the real current week has data.
+ * ────────────────────────────────────────────────────────────────────── */
+.page-info-new-msg {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  height: 26px;
-  padding: 0 10px;
-  border: 1px solid var(--brand);
-  border-radius: 13px;
-  background: rgba(63, 181, 197, 0.12);
-  color: var(--brand);
+  padding: 2px 8px;
+  border: 1px solid #cf6f6f;
+  border-radius: 4px;
+  background: rgba(207, 111, 111, 0.14);
+  color: #cf6f6f;
   font: inherit;
-  font-size: 11.5px;
+  font-size: 11px;
+  font-weight: 500;
   cursor: pointer;
+  animation: page-info-new-msg-blink 1.6s ease-in-out infinite;
 }
-.week-bar-new-badge:hover {
-  background: rgba(63, 181, 197, 0.20);
+.page-info-new-msg:hover { background: rgba(207, 111, 111, 0.22); }
+@keyframes page-info-new-msg-blink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.45; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-info-new-msg { animation: none; }
 }
 ```
 
-- [ ] **Step 2: Verify nothing else broke**
+- [ ] **Step 2: Run all tests**
 
 Run: `cd frontend && npm test`
-Expected: all green. (CSS changes don't affect test outcomes, but a
-typo in a selector that JSX reads via `className` could.)
+Expected: all green. (CSS doesn't affect test outcomes, but a typo
+in a class name that JSX references would surface here.)
 
 - [ ] **Step 3: Commit**
 
 ```bash
 git add frontend/src/components/Dashboard/Dashboard.css
 git commit -m "$(cat <<'EOF'
-style(frontend): week-bar + WeekPaginator chip styles
+style(frontend): week-bar + WeekPaginator + page-info-new-msg blink
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
 EOF
@@ -1361,7 +1579,7 @@ EOF
 
 ---
 
-## Task 13: Manual smoke test in the dev server
+## Task 14: Manual smoke test in the dev server
 
 **Files:** none modified — verification only.
 
@@ -1390,12 +1608,15 @@ Verify each:
 - Clicking the chip expands a horizontal strip; max 3 chips visible
   side-by-side; older weeks are reachable by horizontal scroll/swipe.
 - Selecting a past-week chip swaps the rendered tasks.
-- While on a past week, the "本周新消息 N 条 →" badge appears at the
-  right of the bar; clicking it returns to the newest week and
-  removes the badge.
+- While on a past week, the `PageInfoBar`'s "已发消息 N" element
+  switches to a red, slow-blinking "新消息 +K" button; clicking it
+  returns to the newest week and the label reverts to "已发消息 N".
+- The blink stops if the OS has `prefers-reduced-motion: reduce`.
 - Switching the active page tab (PageTabs) resets selection to the
   newest week of the new tab.
 - Single-week page: chip is a non-interactive plain pill (no caret).
+- Orphan tab: pagination still works; no "新消息" indicator (orphan
+  layout has no "已发消息" anchor).
 
 - [ ] **Step 3: Open browser devtools**
 
@@ -1417,13 +1638,15 @@ test first, then the fix), do not amend earlier commits.
 ## Self-Review Notes
 
 - Spec coverage:
-  - Sun→Sat boundary → Tasks 1, 11.
-  - Empty weeks skipped → Task 3 (computeWeeks only emits keys with non-empty buckets), Task 11 (test covers).
-  - Don't disrupt past-week view; show jump-back badge → Tasks 10, 11.
+  - Sun→Sat boundary → Tasks 1, 12.
+  - Empty weeks skipped → Task 3 (computeWeeks only emits keys with non-empty buckets), Task 12 (controlled-render test).
+  - Don't disrupt past-week view → Task 11 (TaskStream renders only the selected week's tasks regardless of when new ones arrive elsewhere).
   - WeekPaginator standalone, controlled, ≤3 visible chips, scrollable, time decreases L→R, edge alignment rules, single-week guard, outside-click collapse → Tasks 4–9.
-  - New-messages badge sibling of paginator → Task 10.
-  - Per-day grouping inside week preserved → Task 10 (kept `formatDateLabel`), Task 11 (test).
-  - Snap-back-to-newest on tab swap → Task 10 (sync effect), Task 11 (test).
-  - Standalone CSS `.week-bar` + chip styles → Task 12.
+  - PageInfoBar red-blink "新消息 +K" replacing "已发消息 N" with click-to-jump → Task 10.
+  - Orphan-tab indicator skip → Task 10 (test) + Task 11 (`isOrphanTab ? 0 : newMessageCount` guard in App.tsx).
+  - State lifted to App.tsx so PageInfoBar and TaskStream share the same `currentWeekKey`/`onJumpToCurrent` → Task 11.
+  - Per-day grouping inside week preserved → Task 11 (kept `formatDateLabel`), Task 12 (test).
+  - Snap-back-to-newest on tab swap → Task 11 (sync effect in App.tsx).
+  - CSS `.week-bar` + chip styles + `.page-info-new-msg` blink with `prefers-reduced-motion` fallback → Task 13.
 - Placeholder scan: no TODOs, no "similar to", every code step has full code.
-- Type/name consistency: `WeekInfo` defined once in `weekUtils.ts`, re-exported via component import; `WeekPaginatorProps` props match `TaskStream` call site exactly; `currentWeekKey: string | null` used consistently in `TaskStream`, narrowed to `string` before passing into `WeekPaginator`.
+- Type/name consistency: `WeekInfo` defined once in `weekUtils.ts`, imported by `WeekPaginator`, `TaskStream`, and (transitively via `computeWeeks`) `App.tsx`. `WeekPaginatorProps` matches the `TaskStream` call site. `TaskStream` Props removes `tasks` and adds `weeks`/`groups`/`currentWeekKey`/`onSelectWeek`; the `App.tsx` task site updates atomically with the refactor (Tasks 11+12). `PageInfoBar` Props gain optional `newMessageCount?: number` and `onJumpToCurrent?: () => void`; defaults preserve all existing behavior.

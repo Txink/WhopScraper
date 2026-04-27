@@ -23,22 +23,22 @@ with a compact week selector pinned at the top.
 |---|---|
 | Week boundary | **Sunday 00:00 → Saturday 23:59:59 (local timezone)**. Week key = the Sunday's `YYYY-MM-DD`. |
 | Empty weeks | **Skipped.** Only weeks with ≥1 task appear in the page list. |
-| Real-time arrivals on past weeks | **Don't disrupt** the user's view; show a "本周新消息 N 条 →" badge that, when clicked, jumps back to the current real-world week. |
+| Real-time arrivals on past weeks | **Don't disrupt** the user's view; surface the indicator on the existing `PageInfoBar` "已发消息 N" element by replacing it with a red, slow-blinking, clickable label "新消息 +K". K = number of tasks in the real current week. Clicking jumps back to the real current week. **No separate badge in the sticky week bar.** |
 | Selector layout | **Sticky horizontal selector** at the top: collapsed = single chip showing the selected week's date range + ▸; expanded = a horizontally scrollable strip of week chips, container width capped at 3 chips. |
 | Selector ordering | **Time decreases left → right** (newest week leftmost). Expanding rightward = paging into history. |
 | Default visible chips when expanded | **Centered on current selection**: 1 newer + current + 1 older. **Edge case**: if current = newest week, show current + 2 older (left-aligned). If current = oldest week, show 2 newer + current (right-aligned). |
 | Chip label | Date range only, e.g., `04/22 ~ 04/28`. (No relative labels, no count.) |
-| New-messages badge placement | **Outside** the `WeekPaginator` component, as a sibling in the sticky bar. The component itself stays focused on "list of weeks + which is selected." |
 | Encapsulation | `WeekPaginator` is a **standalone, controlled component**. |
+| State location | Pagination state (`weeks`, `groups`, `currentWeekKey`) is **lifted to `App.tsx`'s `Dashboard`** so `PageInfoBar` and `TaskStream` can both read it. `TaskStream` becomes a controlled renderer; the indicator on `PageInfoBar` reuses the same `currentWeekKey` and the same "jump to current week" callback. |
+| Orphan tab | Pagination still works (TaskStream paginates whatever it's handed). The new-messages indicator is **not shown** on the orphan tab — `PageInfoBar` in `mode="orphan"` shows a different layout ("已停用 · X 条历史") and doesn't have the "已发消息 N" anchor. YAGNI; can add later. |
 
 ## 3. User-Visible Change
 
 ### Added
 
-- A sticky bar above the task stream containing:
-  - The `WeekPaginator` chip selector on the left.
-  - A "本周新消息 N 条 →" badge on the right, shown only when the user is viewing a past week and the current real-world week has data.
+- A sticky bar above the task stream containing the `WeekPaginator` chip selector on the left. (No badge or other element on the right.)
 - The body of the stream renders **only the selected week's tasks**, still grouped by day with the existing `stream-divider`.
+- `PageInfoBar` (page mode only): when the user is on a past week *and* the real current week has ≥1 task, the "已发消息 N" element is replaced with a red, slow-blinking, clickable label "新消息 +K". Clicking it jumps the stream back to the real current week, after which the label reverts to "已发消息 N" with the existing lifetime count.
 
 ### Unchanged
 
@@ -130,128 +130,210 @@ export interface WeekPaginatorProps {
 
 **Path**: `frontend/src/components/Dashboard/TaskStream.tsx`
 
-**New computation** (memoized):
+**Become a controlled component.** Pagination state moves up to
+`App.tsx` (see §4.4) so `PageInfoBar` can read it. `TaskStream` no
+longer holds `currentWeekKey` state; instead it receives the selection
++ callback as props.
 
 ```ts
-// Local-time Sunday key for any timestamp string.
-// Returns the local-calendar YYYY-MM-DD of the Sunday that starts the week
-// containing `ts`. We deliberately do NOT use toISOString() because in
-// timezones with a non-zero UTC offset (e.g., Asia/Shanghai +08), the local
-// Sunday midnight serializes to a different UTC date, which would mislabel
-// the week.
-function weekKeyOf(ts: string): string {
-  const d = new Date(ts);
-  const sunday = new Date(d);
-  sunday.setHours(0, 0, 0, 0);
-  sunday.setDate(d.getDate() - d.getDay()); // d.getDay() === 0 for Sunday
-  const yyyy = sunday.getFullYear();
-  const mm = String(sunday.getMonth() + 1).padStart(2, "0");
-  const dd = String(sunday.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
+interface Props {
+  // existing:
+  tasks: TaskSummary[];
+  pushEventsByTask: Record<string, PushEvent[]>;
+  expandMode: ExpandMode;
+  autoTrade: boolean;
+  // new:
+  weeks: WeekInfo[];
+  groups: Map<string, TaskSummary[]>;
+  currentWeekKey: string | null;
+  onSelectWeek: (key: string) => void;
 }
 ```
 
-From the descending-sorted `tasks`, build:
-
-- `groups: Map<weekKey, TaskSummary[]>` — preserves descending order
-  within each bucket because we iterate in sorted order.
-- `weeks: WeekInfo[]` — derived from `groups.keys()`, preserving
-  insertion order (which is descending because the first task of each
-  newer week is encountered first). Each `WeekInfo`'s `startLabel` /
-  `endLabel` are formatted from the Sunday key + 6 days.
-
-**State**:
-
-- `currentWeekKey: string | null` — `useState<string | null>(null)`.
-- An effect synchronizes it with `weeks`:
-
-  ```ts
-  useEffect(() => {
-    if (weeks.length === 0) {
-      if (currentWeekKey !== null) setCurrentWeekKey(null);
-      return;
-    }
-    if (currentWeekKey == null || !groups.has(currentWeekKey)) {
-      setCurrentWeekKey(weeks[0].key);
-    }
-  }, [weeks, currentWeekKey, groups]);
-  ```
-
-  This handles three transitions cleanly:
-  - First render with data → land on newest week.
-  - User switched page tab → previous selection no longer in `groups`
-    → snap back to newest.
-  - Tasks for the selected week were filtered out → snap back to
-    newest.
-
-**New-messages prompt**:
-
-```ts
-const realCurrentWeekKey = useMemo(
-  () => weekKeyOf(new Date().toISOString()),
-  // recomputed only on mount; date rollover during a session is rare,
-  // and the value gets refreshed any time TaskStream remounts.
-  [],
-);
-const onPastWeek = currentWeekKey !== null && currentWeekKey !== realCurrentWeekKey;
-const newCount = onPastWeek ? (groups.get(realCurrentWeekKey)?.length ?? 0) : 0;
-```
+The `tasks` prop is still threaded through (back-compat for any test
+or future caller that wants a "show everything, no pagination"
+shortcut), but `TaskStream` itself now reads from `groups` for
+rendering. The compute happens once in `App.tsx`, both for cheaper
+recomputation and so PageInfoBar gets the same source of truth.
 
 **Render**:
 
 ```tsx
-<>
-  {weeks.length > 0 && currentWeekKey && (
+if (weeks.length === 0 || currentWeekKey == null) return null;
+
+const weekTasks = groups.get(currentWeekKey) ?? [];
+// existing per-day grouping, scoped to weekTasks
+
+return (
+  <>
     <div className="week-bar">
       <WeekPaginator
         weeks={weeks}
         currentWeekKey={currentWeekKey}
-        onSelect={setCurrentWeekKey}
+        onSelect={onSelectWeek}
       />
-      {newCount > 0 && (
-        <button
-          type="button"
-          className="week-bar-new-badge"
-          onClick={() => setCurrentWeekKey(realCurrentWeekKey)}
-        >
-          本周新消息 {newCount} 条 →
-        </button>
-      )}
     </div>
-  )}
-
-  {/* Existing per-day grouping, but only for the selected week */}
-  {currentWeekKey && (groups.get(currentWeekKey) ?? []).length > 0 ? (
-    /* existing dateKey loop, scoped to groups.get(currentWeekKey)! */
-  ) : null}
-</>
+    {/* existing dateKey loop, scoped to weekTasks */}
+  </>
+);
 ```
 
 The empty-state branch (`filteredTasks.length === 0`) stays in
-`App.tsx`, which already handles "no tasks for active page" before
-`TaskStream` is mounted — no change needed there.
+`App.tsx`, which already gates `<TaskStream>` mounting — no change
+needed there.
 
 **`week-bar` styling** (in `Dashboard.css`):
 
-- `position: sticky; top: <existing sticky offset>` — match whatever
-  offset `PageInfoBar` / `PageActionBar` already use.
-- Background and shadow so content doesn't bleed through.
-- Flex row, space-between, vertical centering.
+- `position: sticky; top: <existing sticky offset>`.
+- Background + bottom border so content doesn't bleed through on
+  scroll.
+- Flex row, vertical centering. (No `space-between` since the badge
+  is gone — single child on the left.)
 
-### 4.3 Tests for `TaskStream`
+### 4.3 `PageInfoBar` changes
+
+**Path**: `frontend/src/components/Dashboard/PageInfoBar.tsx`
+
+Add two optional props:
+
+```ts
+interface Props {
+  page: WhopPage | null;
+  mode: "page" | "orphan";
+  orphanCount?: number;
+  // new:
+  newMessageCount?: number;       // null/undefined/0 → no indicator
+  onJumpToCurrent?: () => void;
+}
+```
+
+Behavior:
+
+- `mode="page"`, `newMessageCount` is a positive number, and
+  `onJumpToCurrent` is provided → the `<span>已发消息 {n}</span>`
+  element is replaced with:
+
+  ```tsx
+  <button
+    type="button"
+    className="page-info-new-msg"
+    onClick={onJumpToCurrent}
+  >
+    新消息 +{newMessageCount}
+  </button>
+  ```
+
+  All other elements in the row stay identical.
+- `mode="page"` with no/zero `newMessageCount` → unchanged: shows
+  "已发消息 N" exactly as today.
+- `mode="orphan"` → `newMessageCount` is ignored; orphan layout is
+  unchanged. (Consciously out of scope; see Decisions table.)
+
+CSS in `Dashboard.css`:
+
+```css
+.page-info-new-msg {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border: 1px solid #cf6f6f;
+  border-radius: 4px;
+  background: rgba(207, 111, 111, 0.14);
+  color: #cf6f6f;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  animation: page-info-new-msg-blink 1.6s ease-in-out infinite;
+}
+.page-info-new-msg:hover { background: rgba(207, 111, 111, 0.22); }
+@keyframes page-info-new-msg-blink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.45; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-info-new-msg { animation: none; }
+}
+```
+
+The red hue (`#cf6f6f`) matches the existing `.db-status.rejected`
+treatment in the same stylesheet — reusing the established palette
+instead of inventing a new one.
+
+### 4.4 `App.tsx` changes (state lift)
+
+`Dashboard` already has `filteredTasks` and `activePage` in scope.
+Add:
+
+```ts
+import { computeWeeks, weekKeyOf } from "./components/Dashboard/weekUtils";
+
+const { groups, weeks } = useMemo(() => computeWeeks(filteredTasks), [filteredTasks]);
+const [currentWeekKey, setCurrentWeekKey] = useState<string | null>(null);
+
+useEffect(() => {
+  if (weeks.length === 0) {
+    if (currentWeekKey !== null) setCurrentWeekKey(null);
+    return;
+  }
+  if (currentWeekKey == null || !groups.has(currentWeekKey)) {
+    setCurrentWeekKey(weeks[0].key);
+  }
+}, [weeks, groups, currentWeekKey]);
+
+const realCurrentWeekKey = useMemo(() => weekKeyOf(new Date().toISOString()), []);
+const onPastWeek = currentWeekKey !== null && currentWeekKey !== realCurrentWeekKey;
+const newMessageCount =
+  onPastWeek ? (groups.get(realCurrentWeekKey)?.length ?? 0) : 0;
+```
+
+Then pass through:
+
+```tsx
+<PageInfoBar
+  page={activePage}
+  orphanCount={orphanCount}
+  mode={isOrphanTab ? "orphan" : "page"}
+  newMessageCount={isOrphanTab ? 0 : newMessageCount}
+  onJumpToCurrent={() => setCurrentWeekKey(realCurrentWeekKey)}
+/>
+
+<TaskStream
+  tasks={filteredTasks}
+  pushEventsByTask={pushEventsByTask}
+  expandMode={expandMode}
+  autoTrade={autoTrade}
+  weeks={weeks}
+  groups={groups}
+  currentWeekKey={currentWeekKey}
+  onSelectWeek={setCurrentWeekKey}
+/>
+```
+
+The orphan-tab guard (`isOrphanTab ? 0 : newMessageCount`) keeps the
+indicator off the orphan view per the Decisions table.
+
+### 4.5 Tests for `TaskStream`
 
 Augment existing tests (or add new ones):
 
-- Tasks spanning two weeks → renders only the newest-week tasks by
-  default; the other week's tasks are not in the DOM.
-- Switching `currentWeekKey` (via interacting with `WeekPaginator`)
-  swaps the rendered set.
-- New-message badge appears when the user navigates to a past week
-  whose `realCurrentWeekKey` has data; clicking it jumps back.
-- Empty `groups.get(realCurrentWeekKey)` (e.g., the only data is in
-  past weeks) → no badge shown.
-- After remount with a tasks list that omits the previously-selected
-  week, the component snaps to the newest available week.
+- Given controlled `currentWeekKey` of the newest week, the
+  newest-week tasks are rendered and other weeks' tasks are not in
+  the DOM.
+- Changing the controlling `currentWeekKey` prop swaps the rendered
+  set on the next render.
+- Selecting a non-current chip in `WeekPaginator` invokes
+  `onSelectWeek` with that key.
+
+Tests covering the new-messages indicator live in `PageInfoBar.test.tsx`
+because the indicator is rendered there:
+
+- `newMessageCount > 0` (and `mode="page"`) → "已发消息 N" replaced
+  with `<button>新消息 +K</button>` carrying class
+  `page-info-new-msg`.
+- Clicking that button calls `onJumpToCurrent`.
+- `newMessageCount` 0/undefined → original "已发消息 N" stays.
+- `mode="orphan"` → indicator never shown even if `newMessageCount > 0`.
 
 ## 5. Edge Cases
 
@@ -291,11 +373,16 @@ Augment existing tests (or add new ones):
 The detailed plan will be authored by the writing-plans skill, but
 the rough sequence:
 
-1. Add `WeekPaginator` component + tests.
-2. Refactor `TaskStream` to compute weeks, hold `currentWeekKey`, and
-   render only the selected week.
-3. Add the sticky `week-bar` row with `WeekPaginator` + new-messages
-   badge; CSS in `Dashboard.css`.
-4. Update `TaskStream.test.tsx` for the new behavior.
-5. Manual smoke in the dev server: switch page tabs, expand selector,
-   click chips, verify badge appearance/disappearance.
+1. `weekUtils.ts` helpers (`weekKeyOf`, `formatWeekRange`, `computeWeeks`) + tests.
+2. `WeekPaginator` component + tests (collapsed / expanded / scroll-position / outside-click / single-week guard).
+3. Make `TaskStream` controlled — accepts `weeks`, `groups`,
+   `currentWeekKey`, `onSelectWeek` as props; renders sticky bar with
+   `WeekPaginator` + the selected week's tasks (no badge here).
+4. Extend `PageInfoBar` with `newMessageCount` + `onJumpToCurrent`
+   props and the red blinking label; tests for the swap.
+5. Lift state into `Dashboard` in `App.tsx`: compute weeks/groups,
+   hold `currentWeekKey`, derive `newMessageCount`/`onPastWeek`, wire
+   props down to `PageInfoBar` and `TaskStream`.
+6. CSS: `.week-bar`, `.week-paginator-*`, `.page-info-new-msg` +
+   blink keyframe (with `prefers-reduced-motion` fallback).
+7. Manual smoke in the dev server.
