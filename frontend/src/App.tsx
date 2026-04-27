@@ -17,6 +17,7 @@ import { PageWhitelistBar } from "./components/Dashboard/PageWhitelistBar";
 import { PageActionBar } from "./components/Dashboard/PageActionBar";
 import { PageSettingsModal } from "./components/Dashboard/PageSettingsModal";
 import { TaskStream } from "./components/Dashboard/TaskStream";
+import { computeWeeks, weekKeyOf } from "./components/Dashboard/weekUtils";
 import { OrphanCleanupBar } from "./components/Dashboard/OrphanCleanupBar";
 import { DatabaseRecordsPanel } from "./components/Dashboard/DatabaseRecordsPanel";
 import { EmptyState } from "./components/Dashboard/EmptyState";
@@ -196,10 +197,6 @@ function Dashboard({ token }: { token: string }) {
     }
   }, [pages.length, orphanCount, activeTabId, pagesLoaded]);
 
-  if (pages.length === 0 && orphanCount === 0) {
-    return <main className="main"><EmptyState /></main>;
-  }
-
   const isOrphanTab = activeTabId === "orphan";
   const activePage =
     isOrphanTab || activeTabId === null
@@ -212,6 +209,28 @@ function Dashboard({ token }: { token: string }) {
         ? selectTasksByUrl(tasks, activePage.url, pageUrls)
         : [];
 
+  const { groups, weeks } = useMemo(() => computeWeeks(filteredTasks), [filteredTasks]);
+  const [currentWeekKey, setCurrentWeekKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (weeks.length === 0) {
+      if (currentWeekKey !== null) setCurrentWeekKey(null);
+      return;
+    }
+    if (currentWeekKey == null || !groups.has(currentWeekKey)) {
+      setCurrentWeekKey(weeks[0].key);
+    }
+  }, [weeks, groups, currentWeekKey]);
+
+  const realCurrentWeekKey = useMemo(() => weekKeyOf(new Date().toISOString()), []);
+  const onPastWeek = currentWeekKey !== null && currentWeekKey !== realCurrentWeekKey;
+  const newMessageCount =
+    onPastWeek ? (groups.get(realCurrentWeekKey)?.length ?? 0) : 0;
+
+  if (pages.length === 0 && orphanCount === 0) {
+    return <main className="main"><EmptyState /></main>;
+  }
+
   return (
     <main className="main">
       <section className="stream">
@@ -222,6 +241,8 @@ function Dashboard({ token }: { token: string }) {
               page={activePage}
               orphanCount={orphanCount}
               mode={isOrphanTab ? "orphan" : "page"}
+              newMessageCount={isOrphanTab ? 0 : newMessageCount}
+              onJumpToCurrent={() => setCurrentWeekKey(realCurrentWeekKey)}
             />
             {!isOrphanTab && activePage && activePage.source === "stock" && (
               <PageWhitelistBar page={activePage} />
@@ -238,10 +259,13 @@ function Dashboard({ token }: { token: string }) {
           <div className="empty-state"><p>该监听页暂无任务。</p></div>
         ) : (
           <TaskStream
-            tasks={filteredTasks}
             pushEventsByTask={pushEventsByTask}
             expandMode={expandMode}
             autoTrade={autoTrade}
+            weeks={weeks}
+            groups={groups}
+            currentWeekKey={currentWeekKey}
+            onSelectWeek={setCurrentWeekKey}
           />
         )}
       </section>

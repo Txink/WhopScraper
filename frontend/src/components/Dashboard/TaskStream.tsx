@@ -1,6 +1,8 @@
 import { Card } from "../Card/Card";
 import type { TaskSummary, PushEvent } from "../../api/domain-types";
 import type { ExpandMode } from "../../stores/pageTabs";
+import { WeekPaginator } from "./WeekPaginator";
+import type { WeekInfo } from "./weekUtils";
 
 const ACTIVE_STATUSES = new Set([
   "RECEIVED", "PARSING", "INSTRUCTION_READY",
@@ -25,47 +27,65 @@ function formatDateLabel(dateKey: string): string {
 }
 
 interface Props {
-  tasks: TaskSummary[];
   pushEventsByTask: Record<string, PushEvent[]>;
   expandMode: ExpandMode;
   autoTrade: boolean;
+  weeks: WeekInfo[];
+  groups: Map<string, TaskSummary[]>;
+  currentWeekKey: string | null;
+  onSelectWeek: (key: string) => void;
 }
 
-export function TaskStream({ tasks, pushEventsByTask, expandMode, autoTrade }: Props) {
-  const sorted = [...tasks].sort((a, b) => {
-    const aTime = a.message?.posted_at ?? a.created_at;
-    const bTime = b.message?.posted_at ?? b.created_at;
-    return bTime.localeCompare(aTime);
-  });
-  const groups = new Map<string, TaskSummary[]>();
-  for (const t of sorted) {
+export function TaskStream({
+  pushEventsByTask,
+  expandMode,
+  autoTrade,
+  weeks,
+  groups,
+  currentWeekKey,
+  onSelectWeek,
+}: Props) {
+  if (weeks.length === 0 || currentWeekKey == null) {
+    return null;
+  }
+
+  const weekTasks = groups.get(currentWeekKey) ?? [];
+
+  const dayGroups = new Map<string, TaskSummary[]>();
+  for (const t of weekTasks) {
     const ts = t.message?.posted_at ?? t.created_at;
     const dateKey = ts.slice(0, 10);
-    if (!groups.has(dateKey)) groups.set(dateKey, []);
-    groups.get(dateKey)!.push(t);
+    if (!dayGroups.has(dateKey)) dayGroups.set(dateKey, []);
+    dayGroups.get(dateKey)!.push(t);
   }
-  const dateKeys = Array.from(groups.keys());
+  const dateKeys = Array.from(dayGroups.keys());
 
   return (
     <>
-      {dateKeys.map(dateKey => {
-        const dayTasks = groups.get(dateKey)!;
+      <div className="week-bar">
+        <WeekPaginator
+          weeks={weeks}
+          currentWeekKey={currentWeekKey}
+          onSelect={onSelectWeek}
+        />
+      </div>
+
+      {dateKeys.map((dateKey) => {
+        const dayTasks = dayGroups.get(dateKey)!;
         return (
           <div key={dateKey}>
             <div className="stream-divider">{formatDateLabel(dateKey)} · {dayTasks.length}</div>
-            {dayTasks.map(t => {
-              const expanded =
+            {dayTasks.map((t) => {
+              const defaultExpanded =
                 expandMode === "all-open" ? true :
                 expandMode === "all-closed" ? false :
                 isActiveExpanded(t);
-              // KEY trick: include expandMode in key so card re-mounts when mode flips,
-              // forcing the new defaultExpanded to take effect (Card uses internal useState).
               return (
                 <Card
                   key={`${t.id}-${expandMode}`}
                   task={t}
                   pushEvents={pushEventsByTask[t.id] ?? []}
-                  defaultExpanded={expanded}
+                  defaultExpanded={defaultExpanded}
                   autoTrade={autoTrade}
                 />
               );
