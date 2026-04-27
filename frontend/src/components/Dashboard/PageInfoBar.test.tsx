@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { PageInfoBar } from "./PageInfoBar";
 
 const stockPage = {
@@ -26,5 +26,69 @@ describe("<PageInfoBar>", () => {
     render(<PageInfoBar page={null} mode="orphan" orphanCount={5} />);
     expect(screen.getByText("已停用")).toBeInTheDocument();
     expect(screen.getByText(/5 条历史/)).toBeInTheDocument();
+  });
+});
+
+describe("<PageInfoBar> new-messages indicator", () => {
+  it("renders 已发消息 count by default", () => {
+    render(<PageInfoBar page={stockPage} mode="page" />);
+    expect(screen.getByText(/已发消息\s*42/)).toBeInTheDocument();
+    expect(screen.queryByText(/新消息 \+/)).toBeNull();
+  });
+
+  it("replaces 已发消息 with 新消息 +K when newMessageCount > 0", () => {
+    render(
+      <PageInfoBar
+        page={stockPage}
+        mode="page"
+        newMessageCount={3}
+        onJumpToCurrent={vi.fn()}
+      />,
+    );
+    const btn = screen.getByRole("button", { name: /新消息 \+3/ });
+    expect(btn).toBeInTheDocument();
+    expect(btn).toHaveClass("page-info-new-msg");
+    expect(screen.queryByText(/已发消息/)).toBeNull();
+  });
+
+  it("calls onJumpToCurrent when the indicator is clicked", () => {
+    const onJump = vi.fn();
+    render(
+      <PageInfoBar
+        page={stockPage}
+        mode="page"
+        newMessageCount={5}
+        onJumpToCurrent={onJump}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /新消息 \+5/ }));
+    expect(onJump).toHaveBeenCalledTimes(1);
+  });
+
+  it("ignores newMessageCount when mode is orphan", () => {
+    render(
+      <PageInfoBar
+        page={null}
+        mode="orphan"
+        orphanCount={2}
+        newMessageCount={9}
+        onJumpToCurrent={vi.fn()}
+      />,
+    );
+    expect(screen.queryByText(/新消息 \+/)).toBeNull();
+    expect(screen.getByText(/2 条历史/)).toBeInTheDocument();
+  });
+
+  it("falls back to 已发消息 when newMessageCount is 0", () => {
+    render(
+      <PageInfoBar
+        page={stockPage}
+        mode="page"
+        newMessageCount={0}
+        onJumpToCurrent={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/已发消息\s*42/)).toBeInTheDocument();
+    expect(screen.queryByText(/新消息 \+/)).toBeNull();
   });
 });

@@ -4,6 +4,8 @@ interface Props {
   page: WhopPage | null;
   mode: "page" | "orphan";
   orphanCount?: number;
+  newMessageCount?: number;
+  onJumpToCurrent?: () => void;
 }
 
 function formatRelative(iso: string | null): string {
@@ -17,7 +19,13 @@ function formatRelative(iso: string | null): string {
   return `${(s / 86400).toFixed(1)}d 前`;
 }
 
-export function PageInfoBar({ page, mode, orphanCount = 0 }: Props) {
+export function PageInfoBar({
+  page,
+  mode,
+  orphanCount = 0,
+  newMessageCount,
+  onJumpToCurrent,
+}: Props) {
   if (mode === "orphan") {
     return (
       <div className="page-info-bar orphan">
@@ -27,8 +35,9 @@ export function PageInfoBar({ page, mode, orphanCount = 0 }: Props) {
     );
   }
   if (!page) return null;
-  // Note: running/stopped/error status moved to the power-button in PageActionBar.
-  // URL goes on its own line below the meta row so long urls show fully (wrap on long).
+
+  const showNewBadge = (newMessageCount ?? 0) > 0 && onJumpToCurrent != null;
+
   return (
     <div className="page-info-bar">
       <div className="page-info-row">
@@ -37,7 +46,17 @@ export function PageInfoBar({ page, mode, orphanCount = 0 }: Props) {
         <span className="sep">·</span>
         <span>最后轮询 {formatRelative(page.last_poll_at)}</span>
         <span className="sep">·</span>
-        <span>已发消息 {page.messages_published}</span>
+        {showNewBadge ? (
+          <button
+            type="button"
+            className="page-info-new-msg"
+            onClick={onJumpToCurrent}
+          >
+            新消息 +{newMessageCount}
+          </button>
+        ) : (
+          <span>已发消息 {page.messages_published}</span>
+        )}
       </div>
       <a
         className="page-url"
