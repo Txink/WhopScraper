@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { weekKeyOf } from "./weekUtils";
+import { weekKeyOf, formatWeekRange } from "./weekUtils";
 
 describe("weekKeyOf", () => {
   it("returns the local-calendar Sunday's YYYY-MM-DD for a Wednesday", () => {
@@ -25,5 +25,30 @@ describe("weekKeyOf", () => {
     // local date even when the UTC date has rolled back to Saturday.
     const ts = new Date(2026, 3, 19, 0, 30, 0).toISOString();
     expect(weekKeyOf(ts)).toBe("2026-04-19");
+  });
+});
+
+describe("formatWeekRange", () => {
+  it("returns MM/DD ~ MM/DD for the week starting on the given Sunday", () => {
+    expect(formatWeekRange("2026-04-19")).toEqual({
+      startLabel: "04/19",
+      endLabel: "04/25",
+    });
+  });
+
+  it("handles month rollover", () => {
+    // 2026-04-26 (Sunday) → ends 2026-05-02 (Saturday).
+    expect(formatWeekRange("2026-04-26")).toEqual({
+      startLabel: "04/26",
+      endLabel: "05/02",
+    });
+  });
+
+  it("handles year rollover", () => {
+    // 2025-12-28 (Sunday) → ends 2026-01-03 (Saturday).
+    expect(formatWeekRange("2025-12-28")).toEqual({
+      startLabel: "12/28",
+      endLabel: "01/03",
+    });
   });
 });
