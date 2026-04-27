@@ -13,4 +13,21 @@ describe("<WeekPaginator>", () => {
     // The other week should not be visible while collapsed.
     expect(screen.queryByText("04/12 ~ 04/18")).toBeNull();
   });
+
+  it("expands on click to reveal all weeks, with the current one selected", () => {
+    const weeks = [
+      W("2026-04-19", "04/19", "04/25"),
+      W("2026-04-12", "04/12", "04/18"),
+      W("2026-04-05", "04/05", "04/11"),
+    ];
+    render(<WeekPaginator weeks={weeks} currentWeekKey="2026-04-12" onSelect={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: /04\/12 ~ 04\/18/ }));
+    const options = screen.getAllByRole("option");
+    expect(options.map((o) => o.textContent)).toEqual([
+      expect.stringContaining("04/19 ~ 04/25"),
+      expect.stringContaining("04/12 ~ 04/18"),
+      expect.stringContaining("04/05 ~ 04/11"),
+    ]);
+    expect(screen.getByRole("option", { selected: true }).textContent).toContain("04/12 ~ 04/18");
+  });
 });
