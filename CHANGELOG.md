@@ -15,11 +15,14 @@
 ### Changed
 - **BREAKING**: trader 价格偏差行为从"超阈拒单"改成"超阈降级到 LIMIT @ 信号价"。永不拒单（除非白名单 / 缺价格）。当前实现 first-pass 用 `market_price = signal_price` → 总是 MARKET，待真实 quote 集成后偏差才生效
 - **BREAKING**: stock ticker 白名单 gate—— 不在 page settings.tickers 中的 ticker SKIPPED 不下单
+- **BREAKING**: 替换"非当天消息拦截"为更细的"历史消息拦截"——消息 `posted_at < listener.started_at` 即被 trader SKIPPED（reason 含「历史消息」）。比按日期更细：当天但启动前发布的消息也被拦。
+- **DB**: 新增列 `tasks.is_historical bool default 0`（alembic migration `ceb9c732a26c`）。listener 在 `_scan_once` 计算并写到 `MessagePayload.is_historical`；parser handler 把 flag 拷到 `Task.is_historical`；trader 在 gate ① b 同时检查 `page_settings.block_historical_messages` + `task.is_historical`，二者皆 true 才 SKIP。同时支持股票和期权页面。
 - ParserService 接收 `WhopRegistry`，按 `message.url` 反查 page settings 取 ticker 列表（取代全局 watched_stocks）
 - WhopListener 加 `dedupe_processed_messages` ctor 参数；启动时从 DB 灌 `_seen`（重启不再重复触发解析）
 - WhopRegistry CRUD 现在发布 `whop.page_changed` 事件供前端实时同步
 
 ### Removed
+- **BREAKING**: per-page 设置 `block_non_today_messages` 整体删除（字段、API、UI、测试、`whop_pages.json` 中的 key 全部去除）。已勾选该开关的用户升级后会丢失设置——需要在新 UI 上重新勾选「禁止下单历史消息」。`page_settings_from_dict` 不做 legacy key 兼容；旧 JSON 中的该 key 在加载时被静默忽略，下次保存时自然消失。
 - **BREAKING**: `config/watched_stocks.json` 退役 + `parser.context_resolver.load_watched_tickers` 删除。需要在 dashboard 设置里手动配置每个 stock page 的 ticker 列表
 - `utils/watched_stocks.py` 删除（root 仓 parser/broker 仍引用此模块的代码已变 dead code）
 
