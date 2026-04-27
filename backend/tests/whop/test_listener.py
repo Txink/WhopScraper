@@ -280,3 +280,108 @@ def test_register_creates_listeners_for_real_urls() -> None:
     assert len(listeners) == 2
     assert listeners[0]._source == "stock"
     assert listeners[1]._source == "option"
+
+
+# ---------------------------------------------------------------------------
+# is_historical tagging (T5)
+# ---------------------------------------------------------------------------
+
+
+from datetime import UTC, datetime, timedelta
+
+from app.core.events import MessagePayload
+from app.domain.message import Message
+
+
+def _historical_test_msg(mid: str, posted_at: datetime | None) -> Message:
+    return Message(
+        id=mid,
+        content=f"hello {mid}",
+        raw_content=f"hello {mid}",
+        author=None,
+        posted_at=posted_at,  # type: ignore[arg-type]
+        received_at=datetime.now(UTC),
+        source="stock",
+        url=None,
+        quoted=None,
+        history_hint=[],
+    )
+
+
+@pytest.mark.asyncio
+async def test_scan_once_marks_messages_as_historical_when_posted_before_started_at(
+    monkeypatch, patch_browser
+) -> None:
+    """posted_at < started_at → is_historical=True; posted_at > started_at → False."""
+    started_at = datetime(2026, 4, 28, 12, 0, 0, tzinfo=UTC)
+    old = _historical_test_msg("hist-old", started_at - timedelta(hours=1))
+    new = _historical_test_msg("hist-new", started_at + timedelta(seconds=30))
+
+    # Patch extractor BEFORE start() so the first scan returns our synthetic messages.
+    monkeypatch.setattr(
+        "app.whop.listener.extract_messages",
+        lambda html, source, received_at=None: [old, new],
+    )
+    patch_browser(["<html></html>", "<html></html>"])
+
+    captured: list[MessagePayload] = []
+
+    async def capture(evt: Event) -> None:
+        captured.append(evt.payload)
+
+    bus = EventBus()
+    bus.subscribe(Topics.MESSAGE_RECEIVED, capture)
+
+    listener = WhopListener(
+        bus=bus,
+        url="http://test",
+        source="stock",
+        poll_interval=0.05,
+        skip_initial=False,
+    )
+    # Pin started_at so the comparison is deterministic regardless of wall clock.
+    await listener.start()
+    listener._started_at = started_at  # override the auto-set value for determinism
+    # Trigger one scan; start() already kicked off _loop; sleep briefly to ensure publication.
+    await asyncio.sleep(0.15)
+    await listener.stop()
+    await bus.wait_idle(timeout=1)
+
+    by_id = {p.message.id: p for p in captured}
+    assert "hist-old" in by_id, f"missing old message in {list(by_id)}"
+    assert "hist-new" in by_id, f"missing new message in {list(by_id)}"
+    assert by_id["hist-old"].is_historical is True
+    assert by_id["hist-new"].is_historical is False
+
+
+@pytest.mark.asyncio
+async def test_scan_once_treats_missing_posted_at_as_not_historical(
+    monkeypatch, patch_browser
+) -> None:
+    """posted_at None → is_historical=False (defensive default)."""
+    started_at = datetime(2026, 4, 28, 12, 0, 0, tzinfo=UTC)
+    msg_no_posted = _historical_test_msg("hist-nopost", None)
+
+    monkeypatch.setattr(
+        "app.whop.listener.extract_messages",
+        lambda html, source, received_at=None: [msg_no_posted],
+    )
+    patch_browser(["<html></html>"])
+
+    captured: list[MessagePayload] = []
+    bus = EventBus()
+    bus.subscribe(Topics.MESSAGE_RECEIVED, lambda e: captured.append(e.payload))
+
+    listener = WhopListener(
+        bus=bus, url="http://test", source="stock",
+        poll_interval=0.05, skip_initial=False,
+    )
+    await listener.start()
+    listener._started_at = started_at
+    await asyncio.sleep(0.15)
+    await listener.stop()
+    await bus.wait_idle(timeout=1)
+
+    assert len(captured) >= 1
+    payload = next(p for p in captured if p.message.id == "hist-nopost")
+    assert payload.is_historical is False

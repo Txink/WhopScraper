@@ -246,7 +246,17 @@ class WhopListener:
                 continue
             self._seen.add(msg.id)
             tagged = dataclasses.replace(msg, url=self._url)
-            await self._bus.publish(Event(Topics.MESSAGE_RECEIVED, MessagePayload(message=tagged)))
+            is_historical = (
+                tagged.posted_at is not None
+                and self._started_at is not None
+                and tagged.posted_at.astimezone(UTC) < self._started_at
+            )
+            await self._bus.publish(
+                Event(
+                    Topics.MESSAGE_RECEIVED,
+                    MessagePayload(message=tagged, is_historical=is_historical),
+                )
+            )
             new_count += 1
 
         self._last_poll_at = datetime.now(UTC)
