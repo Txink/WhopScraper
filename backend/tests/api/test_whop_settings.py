@@ -127,7 +127,7 @@ def test_get_pages_includes_settings(
     s = next(p["settings"] for p in pages if p["id"] == stock.id)
     assert s["dedupe_processed_messages"] is True
     assert s["price_deviation_tolerance"] == 1.0
-    assert s["block_non_today_messages"] is False
+    assert s["block_historical_messages"] is False
     assert s["launch_headless"] is False
     assert s["tickers"] == {}
 
@@ -272,7 +272,7 @@ def test_get_settings_defaults_stock(
     s = resp.json()
     assert s["dedupe_processed_messages"] is True
     assert s["price_deviation_tolerance"] == 1.0
-    assert s["block_non_today_messages"] is False
+    assert s["block_historical_messages"] is False
     assert s["tickers"] == {}
     assert s["option_buy_quantity_enabled"] is False
     assert s["option_buy_quantity"] is None
@@ -290,7 +290,7 @@ def test_get_settings_defaults_option(
     s = resp.json()
     assert s["dedupe_processed_messages"] is True
     assert s["price_deviation_tolerance"] == 5.0
-    assert s["block_non_today_messages"] is False
+    assert s["block_historical_messages"] is False
     assert s["launch_headless"] is False
     assert s["tickers"] is None
     assert s["option_buy_quantity_enabled"] is False
@@ -338,3 +338,26 @@ def test_get_settings_defaults_requires_auth(
     _, client, _, _ = registry_and_client
     resp = client.get("/api/whop/pages/defaults", params={"source": "stock"})
     assert resp.status_code == 403
+
+
+def test_patch_then_get_block_historical_messages(
+    registry_and_client: tuple[WhopRegistry, TestClient, WhopPageEntry, WhopPageEntry],
+) -> None:
+    """PATCH the new block_historical_messages field; GET reflects it."""
+    _, client, stock, _ = registry_and_client
+
+    # PATCH to enable block_historical_messages
+    r = client.patch(
+        f"/api/whop/pages/{stock.id}/settings",
+        json={"block_historical_messages": True},
+        params={"token": _TOKEN},
+    )
+    assert r.status_code == 200
+    assert r.json()["settings"]["block_historical_messages"] is True
+
+    # GET the full page list and confirm the field persisted
+    g = client.get("/api/whop/pages", params={"token": _TOKEN})
+    assert g.status_code == 200
+    pages = g.json()["pages"]
+    s = next(p["settings"] for p in pages if p["id"] == stock.id)
+    assert s["block_historical_messages"] is True

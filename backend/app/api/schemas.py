@@ -236,7 +236,7 @@ class TickerConfigOut(BaseModel):
 class WhopPageSettingsOut(BaseModel):
     dedupe_processed_messages: bool
     price_deviation_tolerance: float
-    block_non_today_messages: bool
+    block_historical_messages: bool
     launch_headless: bool
     tickers: dict[str, TickerConfigOut] | None = None  # None = option page
     option_buy_quantity_enabled: bool | None = None
@@ -250,7 +250,7 @@ class WhopPageSettingsPatch(BaseModel):
 
     dedupe_processed_messages: bool | None = None
     price_deviation_tolerance: float | None = Field(default=None, ge=0)
-    block_non_today_messages: bool | None = None
+    block_historical_messages: bool | None = None
     launch_headless: bool | None = None
     tickers: dict[str, TickerConfigOut] | None = None
     option_buy_quantity_enabled: bool | None = None
@@ -446,7 +446,7 @@ def whop_page_to_out(
     settings_out = WhopPageSettingsOut(
         dedupe_processed_messages=entry.settings.dedupe_processed_messages,
         price_deviation_tolerance=entry.settings.price_deviation_tolerance,
-        block_non_today_messages=entry.settings.block_non_today_messages,
+        block_historical_messages=entry.settings.block_historical_messages,
         launch_headless=entry.settings.launch_headless,
         option_buy_quantity_enabled=entry.settings.option_buy_quantity_enabled,
         option_buy_quantity=entry.settings.option_buy_quantity,

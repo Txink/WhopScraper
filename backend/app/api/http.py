@@ -523,7 +523,7 @@ def build_http_router(
             return WhopPageSettingsOut(
                 dedupe_processed_messages=s.dedupe_processed_messages,
                 price_deviation_tolerance=s.price_deviation_tolerance,
-                block_non_today_messages=s.block_non_today_messages,
+                block_historical_messages=s.block_historical_messages,
                 launch_headless=s.launch_headless,
                 option_buy_quantity_enabled=s.option_buy_quantity_enabled,
                 option_buy_quantity=s.option_buy_quantity,
@@ -548,8 +548,8 @@ def build_http_router(
                 patch_dict["dedupe_processed_messages"] = body.dedupe_processed_messages
             if body.price_deviation_tolerance is not None:
                 patch_dict["price_deviation_tolerance"] = body.price_deviation_tolerance
-            if body.block_non_today_messages is not None:
-                patch_dict["block_non_today_messages"] = body.block_non_today_messages
+            if body.block_historical_messages is not None:
+                patch_dict["block_historical_messages"] = body.block_historical_messages
             if body.launch_headless is not None:
                 patch_dict["launch_headless"] = body.launch_headless
             if body.tickers is not None:
