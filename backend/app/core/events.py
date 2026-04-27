@@ -43,9 +43,17 @@ class Topics:
 
 @dataclass(frozen=True)
 class MessagePayload:
-    """Payload for ``message.received`` events."""
+    """Payload for ``message.received`` events.
+
+    ``is_historical`` is set by the listener when ``message.posted_at <
+    listener.started_at`` (i.e., the message existed in the channel
+    before this listener session began). The trader uses it together
+    with the per-page ``block_historical_messages`` setting to decide
+    whether to SKIP ordering.
+    """
 
     message: Message
+    is_historical: bool = False
 
 
 @dataclass(frozen=True)
