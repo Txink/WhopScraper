@@ -41,4 +41,12 @@ describe("<WeekPaginator>", () => {
     // Strip should be gone (collapsed back to a single chip).
     expect(screen.queryByRole("listbox")).toBeNull();
   });
+
+  it("renders a non-interactive single chip with no caret when only one week is available", () => {
+    const weeks = [W("2026-04-19", "04/19", "04/25")];
+    render(<WeekPaginator weeks={weeks} currentWeekKey="2026-04-19" onSelect={vi.fn()} />);
+    const chip = screen.getByRole("button", { name: /04\/19 ~ 04\/25/ });
+    expect(chip).toBeDisabled();
+    expect(chip.querySelector(".week-paginator-caret")).toBeNull();
+  });
 });
