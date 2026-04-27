@@ -37,9 +37,10 @@ class Task:
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     reject_reason: str | None = None
+    is_historical: bool = False
 
     @classmethod
-    def new_from_message(cls, msg: Message) -> Task:
+    def new_from_message(cls, msg: Message, *, is_historical: bool = False) -> Task:
         now = datetime.now(UTC)
         return cls(
             id=msg.id,
@@ -48,6 +49,7 @@ class Task:
             message=msg,
             created_at=now,
             updated_at=now,
+            is_historical=is_historical,
         )
 
     def _transition(self, dst: Status) -> None:

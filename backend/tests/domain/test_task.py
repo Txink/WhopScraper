@@ -99,3 +99,15 @@ def _pe(*, state: PushState, order_id: str, delta_qty: int | None = None) -> Pus
         payload={},
         delta_qty=delta_qty,
     )
+
+
+def test_task_default_is_historical_false():
+    """is_historical defaults to False in new_from_message."""
+    t = Task.new_from_message(_msg())
+    assert t.is_historical is False
+
+
+def test_task_new_from_message_accepts_is_historical_true():
+    """is_historical can be set to True via new_from_message."""
+    t = Task.new_from_message(_msg(), is_historical=True)
+    assert t.is_historical is True
