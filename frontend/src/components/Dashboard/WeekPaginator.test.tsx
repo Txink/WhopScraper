@@ -49,4 +49,18 @@ describe("<WeekPaginator>", () => {
     expect(chip).toBeDisabled();
     expect(chip.querySelector(".week-paginator-caret")).toBeNull();
   });
+
+  it("collapses when the user clicks outside the strip", () => {
+    const weeks = [W("2026-04-19", "04/19", "04/25"), W("2026-04-12", "04/12", "04/18")];
+    render(
+      <div>
+        <WeekPaginator weeks={weeks} currentWeekKey="2026-04-19" onSelect={vi.fn()} />
+        <div data-testid="outside">elsewhere</div>
+      </div>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /04\/19 ~ 04\/25/ }));
+    expect(screen.getByRole("listbox")).toBeInTheDocument();
+    fireEvent.mouseDown(screen.getByTestId("outside"));
+    expect(screen.queryByRole("listbox")).toBeNull();
+  });
 });

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { WeekInfo } from "./weekUtils";
 
 export interface WeekPaginatorProps {
@@ -9,6 +9,19 @@ export interface WeekPaginatorProps {
 
 export function WeekPaginator({ weeks, currentWeekKey, onSelect }: WeekPaginatorProps) {
   const [expanded, setExpanded] = useState(false);
+  const stripRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!expanded) return;
+    function onDocMouseDown(e: MouseEvent) {
+      if (stripRef.current && !stripRef.current.contains(e.target as Node)) {
+        setExpanded(false);
+      }
+    }
+    document.addEventListener("mousedown", onDocMouseDown);
+    return () => document.removeEventListener("mousedown", onDocMouseDown);
+  }, [expanded]);
+
   const current = weeks.find((w) => w.key === currentWeekKey);
   if (!current) return null;
   const canExpand = weeks.length > 1;
@@ -28,7 +41,7 @@ export function WeekPaginator({ weeks, currentWeekKey, onSelect }: WeekPaginator
   }
 
   return (
-    <div className="week-paginator-strip" role="listbox">
+    <div className="week-paginator-strip" role="listbox" ref={stripRef}>
       {weeks.map((w) => {
         const isCurrent = w.key === currentWeekKey;
         return (
