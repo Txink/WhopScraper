@@ -70,7 +70,7 @@ def register_parser_service(
             return
 
         msg = payload.message
-        task = Task.new_from_message(msg)
+        task = Task.new_from_message(msg, is_historical=payload.is_historical)
         task.mark_parsing()
 
         # Publish TASK_CREATED (status=PARSING) so storage has a record

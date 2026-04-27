@@ -255,3 +255,64 @@ async def test_parse_timing_recorded(
         f"Expected 'parse' in stage_timings; got: {task.stage_timings}"
     )
     assert task.stage_timings["parse"] >= 0
+
+
+# ---------------------------------------------------------------------------
+# T6: payload.is_historical → task.is_historical propagation
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_handler_propagates_is_historical_true_to_task(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """When MessagePayload.is_historical=True, the resulting Task carries the flag."""
+    bus = EventBus()
+    register_parser_service(bus, session_factory, registry=_fake_registry({"TSLL"}))
+
+    observed: list[Event] = []
+
+    async def _capture(evt: Event) -> None:
+        observed.append(evt)
+
+    bus.subscribe(Topics.TASK_CREATED, _capture)
+
+    msg = _stock_msg("hist-prop-1", "TSLL 26.5 买一半")
+    await bus.publish(
+        Event(Topics.MESSAGE_RECEIVED, MessagePayload(msg, is_historical=True))
+    )
+    await bus.wait_idle(timeout=5)
+    await bus.wait_idle(timeout=5)
+
+    created_events = [e for e in observed if e.topic == Topics.TASK_CREATED]
+    assert created_events, f"no TASK_CREATED captured; got: {[e.topic for e in observed]}"
+    payload = created_events[0].payload
+    assert isinstance(payload, TaskPayload)
+    assert payload.task.is_historical is True
+
+
+@pytest.mark.asyncio
+async def test_handler_default_is_historical_false_on_task(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """When MessagePayload.is_historical is not set (default False), the Task carries False."""
+    bus = EventBus()
+    register_parser_service(bus, session_factory, registry=_fake_registry({"TSLL"}))
+
+    observed: list[Event] = []
+
+    async def _capture(evt: Event) -> None:
+        observed.append(evt)
+
+    bus.subscribe(Topics.TASK_CREATED, _capture)
+
+    msg = _stock_msg("live-prop-1", "TSLL 26.5 买一半")
+    await bus.publish(Event(Topics.MESSAGE_RECEIVED, MessagePayload(msg)))  # default
+    await bus.wait_idle(timeout=5)
+    await bus.wait_idle(timeout=5)
+
+    created_events = [e for e in observed if e.topic == Topics.TASK_CREATED]
+    assert created_events
+    payload = created_events[0].payload
+    assert isinstance(payload, TaskPayload)
+    assert payload.task.is_historical is False
