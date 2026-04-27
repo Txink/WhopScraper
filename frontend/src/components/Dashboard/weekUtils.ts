@@ -1,3 +1,5 @@
+import type { TaskSummary } from "../../api/domain-types";
+
 export function weekKeyOf(ts: string): string {
   const d = new Date(ts);
   const sunday = new Date(d);
@@ -24,8 +26,6 @@ export function formatWeekRange(weekKey: string): WeekRange {
     ).padStart(2, "0")}`;
   return { startLabel: fmt(start), endLabel: fmt(end) };
 }
-
-import type { TaskSummary } from "../../api/domain-types";
 
 export interface WeekInfo {
   key: string;

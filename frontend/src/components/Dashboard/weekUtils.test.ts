@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { weekKeyOf, formatWeekRange } from "./weekUtils";
+import { weekKeyOf, formatWeekRange, computeWeeks } from "./weekUtils";
+import type { TaskSummary } from "../../api/domain-types";
 
 describe("weekKeyOf", () => {
   it("returns the local-calendar Sunday's YYYY-MM-DD for a Wednesday", () => {
@@ -52,9 +53,6 @@ describe("formatWeekRange", () => {
     });
   });
 });
-
-import { computeWeeks } from "./weekUtils";
-import type { TaskSummary } from "../../api/domain-types";
 
 const mkTask = (id: string, postedAt: string): TaskSummary =>
   ({
