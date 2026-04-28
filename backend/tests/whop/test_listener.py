@@ -388,9 +388,7 @@ async def test_scan_once_treats_missing_posted_at_as_not_historical(
     assert payload.is_historical is False
 
 
-def test_historical_marker_does_not_misclassify_across_utc_beijing_date_boundary(
-    monkeypatch,
-) -> None:
+def test_historical_marker_does_not_misclassify_across_utc_beijing_date_boundary() -> None:
     """At Beijing Apr 28 03:02 (= UTC Apr 27 19:02), a Whop 'Today at 6 PM'
     message means Beijing Apr 28 18:00 = UTC Apr 28 10:00. That instant is
     in the FUTURE relative to listener start, so is_historical must be False.
