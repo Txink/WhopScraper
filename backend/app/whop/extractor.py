@@ -36,6 +36,7 @@ from typing import Literal
 from bs4 import BeautifulSoup, Tag
 
 from app.domain.message import Message
+from app.utils.timezones import BEIJING
 
 # ---------------------------------------------------------------------------
 # Timestamp patterns (mirrors JS regexes in message_extractor.py)
@@ -130,39 +131,49 @@ _FULL_DATE_RE = re.compile(
 
 
 def parse_whop_timestamp(text: str, *, now: datetime | None = None) -> datetime | None:
-    """Parse a Whop timestamp string into an aware UTC datetime.
+    """Parse a Whop timestamp string into a real-UTC aware datetime.
+
+    Whop displays wall-clock times in the user's local timezone. This
+    project runs against a Beijing-based feed, so the input is interpreted
+    as ``Asia/Shanghai`` wall-clock and the result is converted to real UTC.
 
     Handles all 6 formats shown in Whop chat:
-      - "Today at 2:30 PM"         → today at that time
-      - "Yesterday at 11:24 PM"    → yesterday at that time
-      - "Thursday at 11:35 AM"     → most recent Thursday strictly before today
+      - "Today at 2:30 PM"         → today at that time (Beijing)
+      - "Yesterday at 11:24 PM"    → yesterday at that time (Beijing)
+      - "Thursday at 11:35 AM"     → most recent Thursday strictly before today (Beijing)
       - "Thursday 11:35 AM"        → same (variant without "at")
-      - "Apr 13, 2026 5:43 PM"     → explicit date with year
-      - "Apr 13 5:43 PM"           → explicit date (current year)
+      - "Apr 13, 2026 5:43 PM"     → explicit date + time (interpreted Beijing)
+      - "Apr 13 5:43 PM"           → explicit date (current Beijing year)
 
-    Returns datetime with second=0, microsecond=0.
+    ``now`` is the real "current moment" used to anchor relative phrases
+    ("Today" / "Yesterday" / weekday). Defaults to ``datetime.now(UTC)``;
+    pass it for deterministic tests. May be in any timezone — it is
+    converted to Beijing internally.
+
+    Returns a UTC-aware datetime with second=0, microsecond=0.
     Returns None if no pattern matches.
-
-    ``now`` defaults to ``datetime.now(UTC)``; pass it for deterministic tests.
     """
     if not text:
         return None
     text = text.strip()
     if now is None:
         now = datetime.now(UTC)
-    today = now.date()
+    now_bj = now.astimezone(BEIJING)
+    today_bj = now_bj.date()
 
     def _build(d: date, h: int, m: int, ampm: str) -> datetime:
         h24 = (h % 12) + (12 if ampm.upper() == "PM" else 0)
-        return datetime.combine(d, time(h24, m), tzinfo=UTC)
+        # Construct the wall-clock moment in Beijing, then convert to real UTC.
+        bj = datetime.combine(d, time(h24, m), tzinfo=BEIJING)
+        return bj.astimezone(UTC)
 
     # Today at H:MM AM/PM
     if m := _TODAY_RE.match(text):
-        return _build(today, int(m.group(1)), int(m.group(2)), m.group(3))
+        return _build(today_bj, int(m.group(1)), int(m.group(2)), m.group(3))
 
     # Yesterday at H:MM AM/PM
     if m := _YESTERDAY_RE.match(text):
-        return _build(today - timedelta(days=1), int(m.group(1)), int(m.group(2)), m.group(3))
+        return _build(today_bj - timedelta(days=1), int(m.group(1)), int(m.group(2)), m.group(3))
 
     # <Mon> D[, YYYY] H:MM AM/PM  — try full date before weekday to avoid false match
     if m := _FULL_DATE_RE.match(text):
@@ -170,7 +181,7 @@ def parse_whop_timestamp(text: str, *, now: datetime | None = None) -> datetime 
         if mon in _MONTHS_LOWER:
             month_num = _MONTHS_LOWER.index(mon) + 1
             day = int(m.group(2))
-            year = int(m.group(3)) if m.group(3) else today.year
+            year = int(m.group(3)) if m.group(3) else today_bj.year
             try:
                 d = date(year, month_num, day)
                 return _build(d, int(m.group(4)), int(m.group(5)), m.group(6))
@@ -182,13 +193,13 @@ def parse_whop_timestamp(text: str, *, now: datetime | None = None) -> datetime 
         wd_name = m.group(1).lower()
         if wd_name in _WEEKDAYS_LOWER:
             target_wd = _WEEKDAYS_LOWER.index(wd_name)
-            today_wd = today.weekday()
+            today_wd = today_bj.weekday()
             # days_back must be at least 1 (strictly before today).
             # If today is Thursday and text says "Thursday", that's last Thursday (7 days back).
             days_back = (today_wd - target_wd) % 7
             if days_back == 0:
                 days_back = 7
-            d = today - timedelta(days=days_back)
+            d = today_bj - timedelta(days=days_back)
             return _build(d, int(m.group(2)), int(m.group(3)), m.group(4))
 
     return None
