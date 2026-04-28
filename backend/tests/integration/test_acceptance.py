@@ -209,7 +209,7 @@ def test_acceptance_per_page_settings_drive_trader(monkeypatch, tmp_path) -> Non
       add_page → update_settings → MESSAGE_RECEIVED →
         ParserService picks up watched tickers from page settings →
         Trader picks up trade_quantity + tolerance from page settings →
-        order submitted with computed qty (700 * 0.5 = 350) + MARKET order_type.
+        order submitted with computed qty (700 * 0.5 = 350) + LIMIT order_type.
     """
 
     # Isolate registry's pages_file from production data/whop_pages.json.
@@ -283,8 +283,7 @@ def test_acceptance_per_page_settings_drive_trader(monkeypatch, tmp_path) -> Non
         assert order["symbol"] == "TSLL.US"
         # 700 (trade_quantity) * 0.5 (常规仓的一半) = 350
         assert order["quantity"] == 350
-        # First-pass policy: market_price = signal_price → deviation = 0 → MARKET
-        assert order["order_type"] == "MARKET"
+        assert order["order_type"] == "LIMIT"
 
 
 def test_acceptance_unknown_ticker_skipped(monkeypatch, tmp_path) -> None:

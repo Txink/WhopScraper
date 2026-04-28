@@ -13,7 +13,7 @@
 - domain: `Message.url`；listener `_scan_once` 自动注入
 
 ### Changed
-- **BREAKING**: trader 价格偏差行为从"超阈拒单"改成"超阈降级到 LIMIT @ 信号价"。永不拒单（除非白名单 / 缺价格）。当前实现 first-pass 用 `market_price = signal_price` → 总是 MARKET，待真实 quote 集成后偏差才生效
+- **BREAKING**: trader **始终**提交限价单（LIMIT @ 信号价：`inst.price` 或 `price_range` 下限），不再使用市价单；per-page `price_deviation_tolerance` 当前不参与订单类型路由（设置项仍保留）。取代原先「偏离 → 市价/限价」且 first-pass 恒为市价的策略
 - **BREAKING**: stock ticker 白名单 gate—— 不在 page settings.tickers 中的 ticker SKIPPED 不下单
 - **BREAKING**: 替换"非当天消息拦截"为更细的"历史消息拦截"——消息 `posted_at < listener.started_at` 即被 trader SKIPPED（reason 含「历史消息」）。比按日期更细：当天但启动前发布的消息也被拦。
 - **DB**: 新增列 `tasks.is_historical bool default 0`（alembic migration `ceb9c732a26c`）。listener 在 `_scan_once` 计算并写到 `MessagePayload.is_historical`；parser handler 把 flag 拷到 `Task.is_historical`；trader 在 gate ① b 同时检查 `page_settings.block_historical_messages` + `task.is_historical`，二者皆 true 才 SKIP。同时支持股票和期权页面。

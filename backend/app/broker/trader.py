@@ -2,19 +2,20 @@
 
 Behavior (Task G):
 - Looks up the per-page ``PageSettings`` by ``task.message.url`` via the
-  ``WhopRegistry`` reverse-index. ``None`` => orphan task → use instruction.quantity.
+  ``WhopRegistry`` reverse-index. ``None`` => orphan task → use
+  ``instruction.quantity``. ``PageSettings.price_deviation_tolerance`` does not
+  affect order type (always LIMIT).
 - Stock whitelist gate: if page settings has tickers, ticker must be in whitelist
   or task is SKIPPED with a clear reason.
 - Stock qty: ``max(int(trade_quantity * position_size_to_fraction(position_size)), 1)``.
 - Option qty: derived from per-page option settings (quantity rule / total-limit
   rule, independently switchable). If both are disabled, task is SKIPPED.
-- Order type decision based on ``deviation = abs(market - signal) / signal * 100``.
-  ≤ tolerance → MARKET; > tolerance → LIMIT @ signal_price.
-  First-pass: market_price = signal_price (deviation always 0 → always MARKET).
-  TODO: hook real quote via ``broker.get_quote(...)``.
+- Order type: **always LIMIT** at the signal price (``inst.price`` or the low
+  end of ``price_range``). No market orders.
 
 Deferred:
-- Real-quote integration for genuine deviation check.
+- Optional future: deviation / quote-based policy (e.g. MARKET when within
+  tolerance) behind configuration if product needs it again.
 - Stop-loss / take-profit follow-up orders.
 - MODIFY / CLOSE instruction types.
 - Cancel order API.
@@ -160,8 +161,9 @@ def register_trader(
     registry:
         WhopRegistry-like object exposing ``get_settings_for_url(url)`` →
         ``PageSettings | None``. If ``None``, every task is treated as an
-        "orphan" (no page settings) and falls back to ``instruction.quantity``
-        + global Settings tolerance.
+        "orphan" (no page settings) and falls back to ``instruction.quantity``.
+        Per-page ``price_deviation_tolerance`` does not affect order type
+        (submissions are always LIMIT @ signal price).
     task_query_repo:
         Optional ``TaskQueryRepo``. When provided, instructions carrying both
         ``referenced_lot_price`` and ``sell_quantity`` resolve qty via the
@@ -180,14 +182,6 @@ def register_trader(
         # registry is duck-typed (Any) to avoid a circular import; cast back so
         # the trader has a typed view of its only consumed method.
         return cast("PageSettings | None", registry.get_settings_for_url(task.message.url))
-
-    def _fallback_tolerance_pct(task_type: str) -> float:
-        from app.core.config import get_settings  # local import for testability
-
-        s = get_settings()
-        if task_type == "stock":
-            return s.stock_price_deviation_tolerance
-        return s.price_deviation_tolerance
 
     async def _handle_instruction_ready(event: Event) -> None:
         payload = event.payload
@@ -331,7 +325,7 @@ def register_trader(
         # API task payloads can render QTY/TOTAL consistently in the frontend.
         inst.quantity = computed_qty
 
-        # ---- Deviation → order_type decision ----
+        # ---- Limit @ signal price (always LIMIT; no market orders) ----
         signal_price = (
             inst.price
             if inst.price is not None
@@ -341,23 +335,8 @@ def register_trader(
             await _publish_skip(task, "no price available for submission")
             return
 
-        # First-pass: market_price = signal_price (no real quote integration yet).
-        # TODO: hook real quote via broker.get_quote(...) — currently always evaluates
-        # to deviation=0 → MARKET. When real quotes land, this falls back to LIMIT
-        # @ signal_price for stale signals.
-        market_price = signal_price
-        tolerance_pct = (
-            page_settings.price_deviation_tolerance
-            if page_settings is not None
-            else _fallback_tolerance_pct(task.type)
-        )
-        deviation_pct = abs(market_price - signal_price) / signal_price * 100
-        if deviation_pct <= tolerance_pct:
-            order_type: OrderType = "MARKET"
-            limit_price: float | None = None
-        else:
-            order_type = "LIMIT"
-            limit_price = signal_price
+        order_type: OrderType = "LIMIT"
+        limit_price = signal_price
 
         # ---- Submit ----
         task.mark_submitting()
@@ -368,7 +347,7 @@ def register_trader(
                 client,
                 inst,
                 quantity=computed_qty,
-                price=limit_price if limit_price is not None else signal_price,
+                price=limit_price,
                 order_type=order_type,
             )
         except Exception as exc:

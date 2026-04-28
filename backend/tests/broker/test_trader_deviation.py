@@ -1,4 +1,4 @@
-"""Tests for Task G — trader 反查 page settings + 偏差→order_type 决策。"""
+"""Tests for Task G — trader 反查 page settings、数量规则与限价提交。"""
 
 from __future__ import annotations
 
@@ -282,8 +282,8 @@ async def test_orphan_stock_no_qty_skipped():
 
 
 @pytest.mark.asyncio
-async def test_market_when_within_tolerance():
-    """First-pass: market_price = signal_price → deviation 0 → always MARKET."""
+async def test_always_limit_at_signal_price():
+    """Policy: always LIMIT @ signal price regardless of tolerance settings."""
     bus = EventBus()
     broker = _RecordingBroker()
     page_settings = PageSettings(
@@ -293,11 +293,12 @@ async def test_market_when_within_tolerance():
     )
     register_trader(bus, broker, _config(), registry=_registry_with(page_settings))
 
-    task = _stock_task("TSLL", position_size="常规仓")
+    task = _stock_task("TSLL", position_size="常规仓", price=10.0)
     await bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
     await bus.wait_idle()
 
-    assert broker.submitted[0]["order_type"] == "MARKET"
+    assert broker.submitted[0]["order_type"] == "LIMIT"
+    assert broker.submitted[0]["price"] == 10.0
 
 
 @pytest.mark.asyncio

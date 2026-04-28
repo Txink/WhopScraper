@@ -131,10 +131,7 @@ async def test_stock_buy_happy_path() -> None:
     assert order["side"] == "BUY"
     assert order["symbol"] == "TSLA.US"
     assert order["price"] == 25.0
-    # First-pass: orphan task (no registry) uses signal_price as market_price →
-    # deviation 0 → MARKET. When real-quote integration lands, this may flip
-    # to LIMIT @ signal_price for stale signals.
-    assert order["order_type"] == "MARKET"
+    assert order["order_type"] == "LIMIT"
 
     assert len(received_events) == 1
     submitted_task: Task = received_events[0].payload.task
@@ -167,10 +164,7 @@ async def test_option_buy_happy_path() -> None:
     assert order["side"] == "BUY"
     assert order["symbol"] == "AAPL260117C150000.US"
     assert order["price"] == 3.0
-    # First-pass: orphan task (no registry) uses signal_price as market_price →
-    # deviation 0 → MARKET. When real-quote integration lands, this may flip
-    # to LIMIT @ signal_price for stale signals.
-    assert order["order_type"] == "MARKET"
+    assert order["order_type"] == "LIMIT"
 
     assert len(received_events) == 1
     submitted_task: Task = received_events[0].payload.task
