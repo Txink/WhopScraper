@@ -323,7 +323,6 @@ def test_system_notification_no_data_message_id_skipped() -> None:
 # ---------------------------------------------------------------------------
 
 from app.domain.message import Message  # noqa: E402
-from app.utils.timezones import BEIJING  # noqa: E402
 from app.whop.extractor import _assign_subminute_seconds, parse_whop_timestamp  # noqa: E402
 
 # Pin "now" deterministically. _NOW is Saturday 2026-04-25 20:00 Beijing
