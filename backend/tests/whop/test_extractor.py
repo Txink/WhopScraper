@@ -323,78 +323,103 @@ def test_system_notification_no_data_message_id_skipped() -> None:
 # ---------------------------------------------------------------------------
 
 from app.domain.message import Message  # noqa: E402
+from app.utils.timezones import BEIJING  # noqa: E402
 from app.whop.extractor import _assign_subminute_seconds, parse_whop_timestamp  # noqa: E402
 
-# Pin "now" for deterministic tests — Saturday Apr 25 2026 at 12:00 UTC
+# Pin "now" deterministically. _NOW is Saturday 2026-04-25 20:00 Beijing
+# (= 12:00 UTC). Beijing "today" therefore = Apr 25 2026.
 _NOW = datetime(2026, 4, 25, 12, 0, 0, tzinfo=UTC)
 
 
 def test_parse_today_at() -> None:
+    # Beijing 14:30 Apr 25 → UTC 06:30 Apr 25
     got = parse_whop_timestamp("Today at 2:30 PM", now=_NOW)
-    assert got == datetime(2026, 4, 25, 14, 30, 0, tzinfo=UTC)
+    assert got == datetime(2026, 4, 25, 6, 30, 0, tzinfo=UTC)
 
 
 def test_parse_today_no_at() -> None:
     got = parse_whop_timestamp("Today 2:30 PM", now=_NOW)
-    assert got == datetime(2026, 4, 25, 14, 30, 0, tzinfo=UTC)
+    assert got == datetime(2026, 4, 25, 6, 30, 0, tzinfo=UTC)
 
 
 def test_parse_yesterday_at() -> None:
+    # Beijing 23:24 Apr 24 → UTC 15:24 Apr 24
     got = parse_whop_timestamp("Yesterday at 11:24 PM", now=_NOW)
-    assert got == datetime(2026, 4, 24, 23, 24, 0, tzinfo=UTC)
+    assert got == datetime(2026, 4, 24, 15, 24, 0, tzinfo=UTC)
 
 
 def test_parse_yesterday_no_at() -> None:
     got = parse_whop_timestamp("Yesterday 11:24 PM", now=_NOW)
-    assert got == datetime(2026, 4, 24, 23, 24, 0, tzinfo=UTC)
+    assert got == datetime(2026, 4, 24, 15, 24, 0, tzinfo=UTC)
 
 
 def test_parse_thursday_at() -> None:
-    # NOW is Saturday Apr 25 2026; Thursday is Apr 23
+    # Beijing now is Sat Apr 25; Thursday = Apr 23. Beijing 11:35 → UTC 03:35
     got = parse_whop_timestamp("Thursday at 11:35 AM", now=_NOW)
-    assert got == datetime(2026, 4, 23, 11, 35, 0, tzinfo=UTC)
+    assert got == datetime(2026, 4, 23, 3, 35, 0, tzinfo=UTC)
 
 
 def test_parse_weekday_no_at() -> None:
     got = parse_whop_timestamp("Thursday 11:35 AM", now=_NOW)
-    assert got == datetime(2026, 4, 23, 11, 35, 0, tzinfo=UTC)
+    assert got == datetime(2026, 4, 23, 3, 35, 0, tzinfo=UTC)
 
 
 def test_parse_full_date_with_year() -> None:
+    # Beijing 17:43 Apr 13 → UTC 09:43 Apr 13
     got = parse_whop_timestamp("Apr 13, 2026 5:43 PM", now=_NOW)
-    assert got == datetime(2026, 4, 13, 17, 43, 0, tzinfo=UTC)
+    assert got == datetime(2026, 4, 13, 9, 43, 0, tzinfo=UTC)
 
 
 def test_parse_full_date_implicit_year() -> None:
     got = parse_whop_timestamp("Apr 13 5:43 PM", now=_NOW)
-    assert got == datetime(2026, 4, 13, 17, 43, 0, tzinfo=UTC)
+    assert got == datetime(2026, 4, 13, 9, 43, 0, tzinfo=UTC)
 
 
 def test_parse_weekday_when_today_same_weekday() -> None:
-    # NOW is Saturday Apr 25; "Saturday at ..." should mean LAST Saturday (Apr 18)
+    # Beijing now = Sat Apr 25; "Saturday" must mean LAST Saturday (Apr 18).
+    # Beijing 09:00 Apr 18 → UTC 01:00 Apr 18
     got = parse_whop_timestamp("Saturday at 9:00 AM", now=_NOW)
-    assert got == datetime(2026, 4, 18, 9, 0, 0, tzinfo=UTC)
+    assert got == datetime(2026, 4, 18, 1, 0, 0, tzinfo=UTC)
 
 
 def test_parse_midnight_am() -> None:
-    # 12:51 AM → hour 0 (midnight)
+    # 12:51 AM Beijing → 16:51 UTC the previous day
     got = parse_whop_timestamp("Apr 13, 2026 12:51 AM", now=_NOW)
     assert got is not None
-    assert got.hour == 0
-    assert got.minute == 51
+    assert got == datetime(2026, 4, 12, 16, 51, 0, tzinfo=UTC)
 
 
 def test_parse_noon_pm() -> None:
-    # 12:00 PM → hour 12 (noon)
+    # 12:00 PM Beijing → 04:00 UTC same day
     got = parse_whop_timestamp("Apr 13, 2026 12:00 PM", now=_NOW)
     assert got is not None
-    assert got.hour == 12
-    assert got.minute == 0
+    assert got == datetime(2026, 4, 13, 4, 0, 0, tzinfo=UTC)
 
 
 def test_parse_garbage_returns_none() -> None:
     assert parse_whop_timestamp("not a real timestamp", now=_NOW) is None
     assert parse_whop_timestamp("", now=_NOW) is None
+
+
+def test_parse_today_when_utc_and_beijing_dates_differ() -> None:
+    """Regression: real-world bug.
+
+    At 2026-04-28 03:02 Beijing the UTC clock still reads 2026-04-27 19:02.
+    A Whop "Today at 6:00 PM" message must resolve to Beijing Apr 28 18:00,
+    not Apr 27 18:00. (The old UTC-date logic produced the wrong day.)
+    """
+    now = datetime(2026, 4, 27, 19, 2, 0, tzinfo=UTC)  # = 2026-04-28 03:02 Beijing
+    got = parse_whop_timestamp("Today at 6:00 PM", now=now)
+    # Beijing 18:00 Apr 28 → UTC 10:00 Apr 28
+    assert got == datetime(2026, 4, 28, 10, 0, 0, tzinfo=UTC)
+
+
+def test_parse_yesterday_when_utc_and_beijing_dates_differ() -> None:
+    """At Beijing Apr 28 03:02 (UTC Apr 27 19:02), "Yesterday" = Beijing Apr 27."""
+    now = datetime(2026, 4, 27, 19, 2, 0, tzinfo=UTC)
+    got = parse_whop_timestamp("Yesterday at 11:00 AM", now=now)
+    # Beijing 11:00 Apr 27 → UTC 03:00 Apr 27
+    assert got == datetime(2026, 4, 27, 3, 0, 0, tzinfo=UTC)
 
 
 # ---------------------------------------------------------------------------
