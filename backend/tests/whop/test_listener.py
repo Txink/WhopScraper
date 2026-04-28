@@ -291,6 +291,7 @@ from datetime import UTC, datetime, timedelta
 
 from app.core.events import MessagePayload
 from app.domain.message import Message
+from app.whop.extractor import parse_whop_timestamp
 
 
 def _historical_test_msg(mid: str, posted_at: datetime | None) -> Message:
@@ -385,3 +386,30 @@ async def test_scan_once_treats_missing_posted_at_as_not_historical(
     assert len(captured) >= 1
     payload = next(p for p in captured if p.message.id == "hist-nopost")
     assert payload.is_historical is False
+
+
+def test_historical_marker_does_not_misclassify_across_utc_beijing_date_boundary(
+    monkeypatch,
+) -> None:
+    """At Beijing Apr 28 03:02 (= UTC Apr 27 19:02), a Whop 'Today at 6 PM'
+    message means Beijing Apr 28 18:00 = UTC Apr 28 10:00. That instant is
+    in the FUTURE relative to listener start, so is_historical must be False.
+    Regression for the bug that surfaced when block_historical_messages was
+    enabled at 03:02 local time."""
+
+    # Anchor "now" so the parser sees Beijing Apr 28 03:02.
+    fake_now = datetime(2026, 4, 27, 19, 2, 0, tzinfo=UTC)
+
+    started_at = fake_now  # listener started "just now"
+    posted_at = parse_whop_timestamp("Today at 6:00 PM", now=fake_now)
+    assert posted_at == datetime(2026, 4, 28, 10, 0, 0, tzinfo=UTC)
+
+    # Replicate the listener's exact comparison.
+    is_historical = (
+        posted_at is not None
+        and posted_at.astimezone(UTC) < started_at
+    )
+    assert is_historical is False, (
+        f"Today's message (posted_at={posted_at}) wrongly marked historical "
+        f"vs started_at={started_at}"
+    )
