@@ -356,6 +356,22 @@
 .stage.order-submit + .stage { border-top: 0; }
 .stage.order-submit strong { color: var(--brand); }
 
+/* Failed-submit variant: red tint instead of brand cyan, so the broker
+   error stands out as the reason this signal didn't reach LongPort's
+   order book. status=SUBMIT_FAILED never produced an order_id, so the
+   stage shows the captured exception in place of the order_id row. */
+.stage.err.order-submit {
+  background: rgba(239, 91, 91, 0.06);
+}
+.stage.err.order-submit strong { color: var(--err); }
+
+.order-type-context {
+  font-size: 0.78rem;
+  color: var(--muted, #8b9199);
+  margin-top: 0.35rem;
+  line-height: 1.35;
+}
+
 .order-summary {
   display: flex;
   flex-wrap: wrap;

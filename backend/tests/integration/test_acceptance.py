@@ -209,7 +209,8 @@ def test_acceptance_per_page_settings_drive_trader(monkeypatch, tmp_path) -> Non
       add_page → update_settings → MESSAGE_RECEIVED →
         ParserService picks up watched tickers from page settings →
         Trader picks up trade_quantity + tolerance from page settings →
-        order submitted with computed qty (700 * 0.5 = 350) + LIMIT order_type.
+        order submitted with computed qty (700 * 0.5 = 350); order_type follows
+        quote vs signal (here: MARKET when last_done < signal).
     """
 
     # Isolate registry's pages_file from production data/whop_pages.json.
@@ -232,6 +233,8 @@ def test_acceptance_per_page_settings_drive_trader(monkeypatch, tmp_path) -> Non
 
     settings = _settings_for_test()
     fake_broker = FakeBrokerClient()
+    # BUY + last_done < signal (~16.02) → MARKET
+    fake_broker.quote_by_symbol["TSLL.US"] = 15.0
     # auto_trade defaults true via Settings(); FakeBrokerClient.is_paper=True.
     app = create_app(settings=settings, broker_override=fake_broker, skip_whop=True)
     app.dependency_overrides[get_settings] = lambda: settings
@@ -283,7 +286,7 @@ def test_acceptance_per_page_settings_drive_trader(monkeypatch, tmp_path) -> Non
         assert order["symbol"] == "TSLL.US"
         # 700 (trade_quantity) * 0.5 (常规仓的一半) = 350
         assert order["quantity"] == 350
-        assert order["order_type"] == "LIMIT"
+        assert order["order_type"] == "MARKET"
 
 
 def test_acceptance_unknown_ticker_skipped(monkeypatch, tmp_path) -> None:

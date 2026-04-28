@@ -139,7 +139,8 @@ export function PageSettingsModal({ page, onClose }: Props) {
               onChange={e => setTolerance(e.target.value)}
             />
             <p className="hint small">
-              市价偏离信号价 ≤ 此值 → 直接市价单；&gt; 此值 → 限价单 @ 信号价
+              自动下单时：买入若现价 &lt; 信号价 → 市价；否则限价 @ 信号价；卖出若现价 &gt; 信号价 → 市价；否则限价。
+              此百分比字段预留，当前不参与上述判断。
             </p>
           </section>
 

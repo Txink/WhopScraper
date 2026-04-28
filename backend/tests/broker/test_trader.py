@@ -112,6 +112,8 @@ async def test_stock_buy_happy_path() -> None:
     """Stock BUY task → broker receives stock order, TASK_ORDER_SUBMITTED emitted."""
     bus = EventBus()
     fake = FakeBrokerClient(next_order_id="ORDER-STK-001")
+    # last_done < signal 25 → MARKET for BUY
+    fake.quote_by_symbol["TSLA.US"] = 20.0
     register_trader(bus, fake, _config())
 
     received_events: list[Event] = []
@@ -130,12 +132,15 @@ async def test_stock_buy_happy_path() -> None:
     assert order["kind"] == "stock"
     assert order["side"] == "BUY"
     assert order["symbol"] == "TSLA.US"
-    assert order["price"] == 25.0
-    assert order["order_type"] == "LIMIT"
+    assert order["price"] is None
+    assert order["order_type"] == "MARKET"
 
     assert len(received_events) == 1
     submitted_task: Task = received_events[0].payload.task
     assert submitted_task.status == Status.PENDING
+    assert submitted_task.submit_order_type == "MARKET"
+    assert submitted_task.submit_order_context is not None
+    assert "市价" in (submitted_task.submit_order_context or "")
     assert submitted_task.order_id == "ORDER-STK-001"
     assert "submit" in submitted_task.stage_timings
 
@@ -145,6 +150,8 @@ async def test_option_buy_happy_path() -> None:
     """Option BUY task → broker receives option order, TASK_ORDER_SUBMITTED emitted."""
     bus = EventBus()
     fake = FakeBrokerClient(next_order_id="ORDER-OPT-001")
+    # last_done < signal 3.0 → MARKET for BUY
+    fake.quote_by_symbol["AAPL260117C150000.US"] = 2.0
     register_trader(bus, fake, _config())
 
     received_events: list[Event] = []
@@ -163,12 +170,13 @@ async def test_option_buy_happy_path() -> None:
     assert order["kind"] == "option"
     assert order["side"] == "BUY"
     assert order["symbol"] == "AAPL260117C150000.US"
-    assert order["price"] == 3.0
-    assert order["order_type"] == "LIMIT"
+    assert order["price"] is None
+    assert order["order_type"] == "MARKET"
 
     assert len(received_events) == 1
     submitted_task: Task = received_events[0].payload.task
     assert submitted_task.status == Status.PENDING
+    assert submitted_task.submit_order_type == "MARKET"
     assert submitted_task.order_id == "ORDER-OPT-001"
 
 
@@ -252,6 +260,8 @@ async def test_broker_exception_marks_submit_failed() -> None:
     failed_task: Task = failed_events[0].payload.task
     assert failed_task.status == Status.SUBMIT_FAILED
     assert "connection timeout" in (failed_task.reject_reason or "")
+    assert failed_task.submit_order_type is None
+    assert failed_task.submit_order_context is None
 
 
 @pytest.mark.asyncio
@@ -299,6 +309,7 @@ async def test_openapi_exception_reject_reason_drops_envelope() -> None:
     assert failed_task.reject_reason == (
         "broker [603301] The symbol currently does not support short selling."
     )
+    assert failed_task.submit_order_type is None
 
 
 @pytest.mark.asyncio

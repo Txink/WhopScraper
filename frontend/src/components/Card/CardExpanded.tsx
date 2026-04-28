@@ -19,7 +19,17 @@ export interface CardExpandedProps {
 export function CardExpanded({ task, pushEvents, autoTrade, onCollapse }: CardExpandedProps) {
   const [pushExpanded, setPushExpanded] = useState(false);
 
-  const { type, status, instruction, message, order_id, stage_timings, reject_reason } = task;
+  const {
+    type,
+    status,
+    instruction,
+    message,
+    order_id,
+    stage_timings,
+    reject_reason,
+    submit_order_type,
+    submit_order_context,
+  } = task;
   const badgeType = type === "option" ? "option" : "stock";
   const title = formatTitle(instruction);
 
@@ -167,6 +177,8 @@ export function CardExpanded({ task, pushEvents, autoTrade, onCollapse }: CardEx
             orderId={order_id ?? null}
             delta={stage_timings?.submit ?? null}
             error={status === "SUBMIT_FAILED" ? reject_reason : null}
+            submitOrderType={submit_order_type ?? null}
+            submitOrderContext={submit_order_context ?? null}
           />
         )}
       </div>

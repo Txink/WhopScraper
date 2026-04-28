@@ -688,6 +688,10 @@ export interface components {
             status: string;
             /** Order Id */
             order_id: string | null;
+            /** LIMIT or MARKET chosen at submit */
+            submit_order_type?: string | null;
+            /** Human-readable decision (CN) */
+            submit_order_context?: string | null;
             /** Stage Timings */
             stage_timings: {
                 [key: string]: number;
@@ -719,6 +723,10 @@ export interface components {
             status: string;
             /** Order Id */
             order_id: string | null;
+            /** LIMIT or MARKET chosen at submit */
+            submit_order_type?: string | null;
+            /** Human-readable decision (CN) */
+            submit_order_context?: string | null;
             /** Stage Timings */
             stage_timings: {
                 [key: string]: number;

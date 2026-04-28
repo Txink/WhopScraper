@@ -1,4 +1,4 @@
-"""Tests for Task G — trader 反查 page settings、数量规则与限价提交。"""
+"""Tests for Task G — trader 反查 page settings、数量规则与市价/限价（行情）决策。"""
 
 from __future__ import annotations
 
@@ -99,6 +99,8 @@ class _RecordingBroker:
 
     def __init__(self):
         self.submitted: list[dict] = []
+        #: symbol → last_done for ``get_quote`` (0 = no valid quote).
+        self.quote_last: dict[str, float] = {}
 
     def submit_stock_order(self, *, symbol, side, quantity, price, order_type, remark):
         self.submitted.append(
@@ -136,7 +138,7 @@ class _RecordingBroker:
         return None
 
     def get_quote(self, syms):
-        return {}
+        return {s: {"last_done": float(self.quote_last.get(s, 0.0))} for s in syms}
 
 
 def _config() -> LongPortConfig:
@@ -282,8 +284,8 @@ async def test_orphan_stock_no_qty_skipped():
 
 
 @pytest.mark.asyncio
-async def test_always_limit_at_signal_price():
-    """Policy: always LIMIT @ signal price regardless of tolerance settings."""
+async def test_buy_limit_when_quote_missing_or_zero():
+    """No valid last_done → LIMIT @ signal."""
     bus = EventBus()
     broker = _RecordingBroker()
     page_settings = PageSettings(
@@ -294,6 +296,96 @@ async def test_always_limit_at_signal_price():
     register_trader(bus, broker, _config(), registry=_registry_with(page_settings))
 
     task = _stock_task("TSLL", position_size="常规仓", price=10.0)
+    await bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
+    await bus.wait_idle()
+
+    assert broker.submitted[0]["order_type"] == "LIMIT"
+    assert broker.submitted[0]["price"] == 10.0
+    assert task.submit_order_type == "LIMIT"
+
+
+@pytest.mark.asyncio
+async def test_buy_market_when_quote_below_signal():
+    bus = EventBus()
+    broker = _RecordingBroker()
+    broker.quote_last["TSLL.US"] = 9.5
+    page_settings = PageSettings(
+        dedupe_processed_messages=True,
+        price_deviation_tolerance=1.0,
+        tickers={"TSLL": TickerConfig(trade_quantity=100)},
+    )
+    register_trader(bus, broker, _config(), registry=_registry_with(page_settings))
+
+    task = _stock_task("TSLL", position_size="常规仓", price=10.0)
+    await bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
+    await bus.wait_idle()
+
+    assert broker.submitted[0]["order_type"] == "MARKET"
+    assert broker.submitted[0]["price"] is None
+    assert task.submit_order_type == "MARKET"
+
+
+@pytest.mark.asyncio
+async def test_sell_market_when_quote_above_signal():
+    bus = EventBus()
+    broker = _RecordingBroker()
+    broker.quote_last["TSLL.US"] = 10.5
+    page_settings = PageSettings(
+        dedupe_processed_messages=True,
+        price_deviation_tolerance=1.0,
+        tickers={"TSLL": TickerConfig(trade_quantity=100)},
+    )
+    register_trader(bus, broker, _config(), registry=_registry_with(page_settings))
+
+    task = _stock_task("TSLL", position_size="常规仓", price=10.0)
+    task.instruction = StockInstruction(  # type: ignore[assignment]
+        instruction_type=InstructionType.SELL,
+        price=10.0,
+        price_range=None,
+        quantity=100,
+        position_size="常规仓",
+        stop_loss_price=None,
+        take_profit_price=None,
+        context_source=None,
+        parser_notes=[],
+        ticker="TSLL",
+        symbol="TSLL.US",
+        sell_quantity=None,
+    )
+    await bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
+    await bus.wait_idle()
+
+    assert broker.submitted[0]["order_type"] == "MARKET"
+    assert broker.submitted[0]["side"] == "SELL"
+
+
+@pytest.mark.asyncio
+async def test_sell_limit_when_quote_at_or_below_signal():
+    bus = EventBus()
+    broker = _RecordingBroker()
+    broker.quote_last["TSLL.US"] = 10.0
+    page_settings = PageSettings(
+        dedupe_processed_messages=True,
+        price_deviation_tolerance=1.0,
+        tickers={"TSLL": TickerConfig(trade_quantity=100)},
+    )
+    register_trader(bus, broker, _config(), registry=_registry_with(page_settings))
+
+    task = _stock_task("TSLL", position_size="常规仓", price=10.0)
+    task.instruction = StockInstruction(  # type: ignore[assignment]
+        instruction_type=InstructionType.SELL,
+        price=10.0,
+        price_range=None,
+        quantity=100,
+        position_size="常规仓",
+        stop_loss_price=None,
+        take_profit_price=None,
+        context_source=None,
+        parser_notes=[],
+        ticker="TSLL",
+        symbol="TSLL.US",
+        sell_quantity=None,
+    )
     await bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
     await bus.wait_idle()
 

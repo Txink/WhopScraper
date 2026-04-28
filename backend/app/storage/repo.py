@@ -162,6 +162,8 @@ def _task_to_row(task: Task) -> TaskRow:
         created_at=task.created_at,
         updated_at=task.updated_at,
         is_historical=task.is_historical,
+        submit_order_type=task.submit_order_type,
+        submit_order_context=task.submit_order_context,
     )
 
 
@@ -262,6 +264,8 @@ def _rows_to_task(
         updated_at=_ensure_utc(task_row.updated_at),
         reject_reason=task_row.reject_reason,
         is_historical=task_row.is_historical,
+        submit_order_type=task_row.submit_order_type,
+        submit_order_context=task_row.submit_order_context,
     )
 
 
@@ -290,6 +294,8 @@ _TASK_UPDATE_COLS = (
     "is_historical",
     "stage_timings_json",
     "updated_at",
+    "submit_order_type",
+    "submit_order_context",
 )
 
 _INSTRUCTION_UPDATE_COLS = (
@@ -344,6 +350,8 @@ async def save_task(session: AsyncSession, task: Task) -> None:
         "stage_timings_json": dict(task.stage_timings) if task.stage_timings else None,
         "created_at": task.created_at,
         "updated_at": task.updated_at,
+        "submit_order_type": task.submit_order_type,
+        "submit_order_context": task.submit_order_context,
     }
 
     # --- tasks UPSERT ---

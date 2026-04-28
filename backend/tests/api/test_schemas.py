@@ -168,6 +168,8 @@ def test_task_to_out_with_push_events() -> None:
         message=msg,
         instruction=inst,
         order_id="ord-99",
+        submit_order_type="LIMIT",
+        submit_order_context="买入：现价 ≥ 信号价 → 限价单",
         push_events=[
             _make_push_event("evt-1"),
             _make_push_event("evt-2"),
@@ -179,6 +181,8 @@ def test_task_to_out_with_push_events() -> None:
     assert out.id == "msg-1"
     assert out.status == "FILLED"
     assert out.order_id == "ord-99"
+    assert out.submit_order_type == "LIMIT"
+    assert out.submit_order_context is not None
     assert len(out.push_events) == 2
     assert out.push_events[0].id == "evt-1"
     assert out.push_events[1].id == "evt-2"

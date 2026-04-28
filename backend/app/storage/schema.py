@@ -62,6 +62,8 @@ class TaskRow(Base):
     is_historical: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default=text("0")
     )
+    submit_order_type: Mapped[str | None] = mapped_column(String, nullable=True)
+    submit_order_context: Mapped[str | None] = mapped_column(String, nullable=True)
 
 
 # ---------------------------------------------------------------------------

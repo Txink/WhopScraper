@@ -18,6 +18,8 @@ class FakeBrokerClient:
     dry_run: bool = False
     submitted_orders: list[dict[str, Any]] = field(default_factory=list)
     cancelled_orders: list[str] = field(default_factory=list)
+    #: ``last_done`` per symbol for ``get_quote`` (0 = missing quote → trader uses LIMIT).
+    quote_by_symbol: dict[str, float] = field(default_factory=dict)
     next_order_id: str = ""
     raise_on_submit: Exception | None = None
     raise_on_cancel: Exception | None = None
@@ -79,7 +81,7 @@ class FakeBrokerClient:
         self.cancelled_orders.append(order_id)
 
     def get_quote(self, symbols: list[str]) -> dict[str, Any]:
-        return {s: {"last_done": 0.0} for s in symbols}
+        return {s: {"last_done": float(self.quote_by_symbol.get(s, 0.0))} for s in symbols}
 
     def subscribe_order_push(self, handler: Callable[[Any], None]) -> None:
         self.push_handlers.append(handler)

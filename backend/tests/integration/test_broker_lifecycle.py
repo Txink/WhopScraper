@@ -121,7 +121,7 @@ def _wire_up(
 ) -> tuple[list[Callable[[], None]], Callable[[], None], PushListener]:
     """Wire all three components and return their unsubscribe handles + listener."""
     unsubs_storage = register_storage_listeners(bus, session_factory)
-    unsub_trader = register_trader(bus, client, config)
+    unsub_trader = register_trader(bus, client, config, session_factory=session_factory)
     listener = register_push_listener(bus, client, session_factory)
     return unsubs_storage, unsub_trader, listener
 
@@ -148,6 +148,7 @@ async def test_full_lifecycle_new_partial_filled(
     """Full broker lifecycle: INSTRUCTION_READY → submit → NEW push → PARTIAL → FILLED."""
     bus = EventBus()
     client = FakeBrokerClient(is_paper=True, dry_run=False, next_order_id="broker-order-42")
+    client.quote_by_symbol["TSLL.US"] = 25.0  # < signal 26.5 → BUY MARKET
     config = _make_config()
 
     unsubs_storage, unsub_trader, listener = _wire_up(bus, client, config, session_factory)
@@ -247,6 +248,7 @@ async def test_rejected_before_fill_marks_rejected(
     """Order rejected by broker: task should reach REJECTED with no fill data."""
     bus = EventBus()
     client = FakeBrokerClient(is_paper=True, dry_run=False, next_order_id="broker-order-rej")
+    client.quote_by_symbol["TSLL.US"] = 25.0
     config = _make_config()
 
     unsubs_storage, unsub_trader, listener = _wire_up(bus, client, config, session_factory)

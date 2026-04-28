@@ -3,19 +3,20 @@
 Behavior (Task G):
 - Looks up the per-page ``PageSettings`` by ``task.message.url`` via the
   ``WhopRegistry`` reverse-index. ``None`` => orphan task → use
-  ``instruction.quantity``. ``PageSettings.price_deviation_tolerance`` does not
-  affect order type (always LIMIT).
+  ``instruction.quantity``.
 - Stock whitelist gate: if page settings has tickers, ticker must be in whitelist
   or task is SKIPPED with a clear reason.
 - Stock qty: ``max(int(trade_quantity * position_size_to_fraction(position_size)), 1)``.
 - Option qty: derived from per-page option settings (quantity rule / total-limit
   rule, independently switchable). If both are disabled, task is SKIPPED.
-- Order type: **always LIMIT** at the signal price (``inst.price`` or the low
-  end of ``price_range``). No market orders.
+- Order type from **live quote** ``last_done`` vs **signal price**:
+  BUY → MARKET if ``last_done < signal`` else LIMIT @ signal;
+  SELL → MARKET if ``last_done > signal`` else LIMIT @ signal.
+  If quote is missing / invalid → LIMIT @ signal. ``submit_order_type`` and
+  ``submit_order_context`` on ``Task`` record the decision for API/UI.
 
 Deferred:
-- Optional future: deviation / quote-based policy (e.g. MARKET when within
-  tolerance) behind configuration if product needs it again.
+- Optional: revive ``price_deviation_tolerance`` for additional bands.
 - Stop-loss / take-profit follow-up orders.
 - MODIFY / CLOSE instruction types.
 - Cancel order API.
@@ -24,6 +25,7 @@ Deferred:
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from collections.abc import Callable
@@ -52,6 +54,67 @@ if TYPE_CHECKING:
     from app.whop.page_settings import PageSettings
 
 logger = logging.getLogger(__name__)
+
+
+def _last_done_from_quotes(quotes: dict[str, dict[str, Any]], symbol: str) -> float | None:
+    """Extract a positive last_done for *symbol* from ``get_quote`` output."""
+    row = quotes.get(symbol)
+    if not row:
+        return None
+    raw = row.get("last_done")
+    if raw is None:
+        return None
+    try:
+        v = float(raw)
+    except (TypeError, ValueError):
+        return None
+    if v <= 0.0:
+        return None
+    return v
+
+
+def _decide_order_type_and_context(
+    *,
+    side: InstructionType,
+    signal_price: float,
+    last_done: float | None,
+) -> tuple[OrderType, float | None, str]:
+    """Return ``(order_type, submit_price, rationale_cn)``.
+
+    ``submit_price`` is the limit price for LIMIT orders, or ``None`` for MARKET
+    (broker ignores it for MO).
+    """
+    if last_done is None:
+        return (
+            "LIMIT",
+            signal_price,
+            f"未取到有效现价 → 限价单 @ {signal_price:.4f}",
+        )
+    if side == InstructionType.BUY:
+        if last_done < signal_price:
+            return (
+                "MARKET",
+                None,
+                f"买入：现价 {last_done:.4f} < 信号价 {signal_price:.4f} → 市价单",
+            )
+        return (
+            "LIMIT",
+            signal_price,
+            f"买入：现价 {last_done:.4f} ≥ 信号价 {signal_price:.4f} → 限价单 @ {signal_price:.4f}",
+        )
+    if side == InstructionType.SELL:
+        if last_done > signal_price:
+            return (
+                "MARKET",
+                None,
+                f"卖出：现价 {last_done:.4f} > 信号价 {signal_price:.4f} → 市价单",
+            )
+        return (
+            "LIMIT",
+            signal_price,
+            f"卖出：现价 {last_done:.4f} ≤ 信号价 {signal_price:.4f} → 限价单 @ {signal_price:.4f}",
+        )
+    return "LIMIT", signal_price, f"未知方向 → 限价单 @ {signal_price:.4f}"
 
 
 def _format_broker_error(exc: BaseException) -> str:
@@ -166,8 +229,8 @@ def register_trader(
         WhopRegistry-like object exposing ``get_settings_for_url(url)`` →
         ``PageSettings | None``. If ``None``, every task is treated as an
         "orphan" (no page settings) and falls back to ``instruction.quantity``.
-        Per-page ``price_deviation_tolerance`` does not affect order type
-        (submissions are always LIMIT @ signal price).
+        Per-page ``price_deviation_tolerance`` is not used for LIMIT/MARKET
+        routing (decision uses broker ``get_quote`` vs signal price).
     task_query_repo:
         Optional ``TaskQueryRepo``. When provided, instructions carrying both
         ``referenced_lot_price`` and ``sell_quantity`` resolve qty via the
@@ -335,7 +398,7 @@ def register_trader(
         # API task payloads can render QTY/TOTAL consistently in the frontend.
         inst.quantity = computed_qty
 
-        # ---- Limit @ signal price (always LIMIT; no market orders) ----
+        # ---- Signal price + quote → LIMIT vs MARKET ----
         signal_price = (
             inst.price
             if inst.price is not None
@@ -345,8 +408,25 @@ def register_trader(
             await _publish_skip(task, "no price available for submission")
             return
 
-        order_type: OrderType = "LIMIT"
-        limit_price = signal_price
+        symbol = getattr(inst, "symbol", "") or getattr(inst, "ticker", "")
+        last_done: float | None = None
+        try:
+            quotes = await asyncio.to_thread(client.get_quote, [symbol])
+            last_done = _last_done_from_quotes(quotes, symbol)
+        except Exception as exc:  # noqa: BLE001 — quote failure is non-fatal
+            logger.warning(
+                "Trader: get_quote failed for %s (%s); falling back to LIMIT @ signal",
+                symbol,
+                exc,
+            )
+
+        order_type, submit_price, rationale = _decide_order_type_and_context(
+            side=inst.instruction_type,
+            signal_price=signal_price,
+            last_done=last_done,
+        )
+        task.submit_order_type = order_type
+        task.submit_order_context = rationale
 
         # ---- Submit ----
         task.mark_submitting()
@@ -357,12 +437,14 @@ def register_trader(
                 client,
                 inst,
                 quantity=computed_qty,
-                price=limit_price,
+                price=submit_price,
                 order_type=order_type,
             )
         except Exception as exc:
             elapsed = (time.perf_counter() - started) * 1000
             task.stage_timings["submit"] = elapsed
+            task.submit_order_type = None
+            task.submit_order_context = None
             task.mark_submit_failed(_format_broker_error(exc))
             logger.error(
                 "Trader: order submission failed for task %s: %s",
@@ -396,7 +478,7 @@ def _submit(
     inst: Instruction,
     *,
     quantity: int,
-    price: float,
+    price: float | None,
     order_type: OrderType,
 ) -> str:
     """Dispatch to the appropriate broker method based on instruction subtype."""
