@@ -46,6 +46,9 @@ frontend/vite.config.js
 # Brainstorm artifacts
 .superpowers/
 
+# Git worktrees (claude subagent-driven workflow)
+.worktrees/
+
 # Parser validation harness
 data/parser_validation_report.json
 data/golden_batches/
