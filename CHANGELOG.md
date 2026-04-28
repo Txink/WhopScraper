@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Fixed
+- Trader 在发布 `TASK_ORDER_SUBMITTED` 之前先 `await save_task`（`main` 注入 `session_factory`），保证 DB 已写入 `order_id` 再让事件循环处理并发推送，避免 PushListener 在 ~300ms 重试内仍查不到 Task 而丢弃 FILLED 推送、任务状态不更新
+
 ### Added
 - 监控看板二级 tab：每个 Whop 监听页独立 tab + 信息行 + 操作行（重启 / 设置 / 全展开 / 全收缩）
 - per-page 设置：去重开关、价格偏差容忍、（stock）ticker 白名单 + 常规仓数量；存 `data/whop_pages.json`

@@ -30,6 +30,8 @@ from collections.abc import Callable
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, cast
 
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
 from app.broker.broker_client import BrokerClient, OrderSide, OrderType
 from app.broker.config import LongPortConfig
 from app.broker.validation import validate_for_submission
@@ -42,7 +44,8 @@ from app.domain.instruction import (
     StockInstruction,
 )
 from app.domain.task import Task
-from app.storage.repo import TaskQueryRepo
+from app.storage.db import session_scope
+from app.storage.repo import TaskQueryRepo, save_task
 from app.whop.page_settings import position_size_to_fraction, sell_quantity_to_fraction
 
 if TYPE_CHECKING:
@@ -151,6 +154,7 @@ def register_trader(
     registry: Any | None = None,
     auto_trade_getter: Callable[[], bool] | None = None,
     task_query_repo: TaskQueryRepo | None = None,
+    session_factory: async_sessionmaker[AsyncSession] | None = None,
 ) -> Callable[[], None]:
     """Subscribe trader handler to TASK_INSTRUCTION_READY.
 
@@ -168,6 +172,12 @@ def register_trader(
         Optional ``TaskQueryRepo``. When provided, instructions carrying both
         ``referenced_lot_price`` and ``sell_quantity`` resolve qty via the
         prior reverse-side task. None disables the path entirely.
+    session_factory:
+        When provided, after a successful broker submit the trader awaits
+        ``save_task`` before publishing ``TASK_ORDER_SUBMITTED``. That way the
+        tasks row carries ``order_id`` before the event loop can run concurrent
+        PushListener lookups (avoids dropped FILLED pushes when storage lagged
+        behind fire-and-forget bus handlers).
 
     Returns the unsubscribe callable.
     """
@@ -373,6 +383,9 @@ def register_trader(
             order_type,
             computed_qty,
         )
+        if session_factory is not None:
+            async with session_scope(session_factory) as session:
+                await save_task(session, task)
         await bus.publish(Event(Topics.TASK_ORDER_SUBMITTED, TaskPayload(task)))
 
     return bus.subscribe(Topics.TASK_INSTRUCTION_READY, _handle_instruction_ready)

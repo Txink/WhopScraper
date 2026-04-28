@@ -205,6 +205,7 @@ def create_app(
                 registry=state.whop_registry,
                 auto_trade_getter=lambda: state.longport_runtime.get().auto_trade,
                 task_query_repo=SqlTaskQueryRepo(session_factory),
+                session_factory=session_factory,
             )
             state.push_listener = register_push_listener(
                 bus, state.broker, session_factory
