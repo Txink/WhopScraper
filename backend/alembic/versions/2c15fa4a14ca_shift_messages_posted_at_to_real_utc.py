@@ -5,7 +5,13 @@ Until this migration, posted_at was stored as the Whop wall-clock
 of the true moment. The parser now returns real UTC, so existing rows
 must be shifted back by 8 hours to preserve the correct instant.
 
-Reversible: downgrade adds 8 hours back.
+Rows where ``posted_at == received_at`` are preserved as-is. Those represent
+the parse-failure fallback path (``app/whop/extractor.py:_parse_timestamp``)
+where the parser couldn't decode Whop's timestamp string and the listener
+filled in ``posted_at`` with ``datetime.now(UTC)`` — i.e. real UTC, never
+the Beijing-as-UTC convention. Shifting those would make them wrong.
+
+Reversible: downgrade adds 8 hours back (with the same WHERE filter).
 
 Revision ID: 2c15fa4a14ca
 Revises: ceb9c732a26c
@@ -30,9 +36,15 @@ def upgrade() -> None:
     bind = op.get_bind()
     dialect = bind.dialect.name
     if dialect == "sqlite":
-        op.execute("UPDATE messages SET posted_at = datetime(posted_at, '-8 hours')")
+        op.execute(
+            "UPDATE messages SET posted_at = datetime(posted_at, '-8 hours') "
+            "WHERE posted_at != received_at"
+        )
     elif dialect == "postgresql":
-        op.execute("UPDATE messages SET posted_at = posted_at - INTERVAL '8 hours'")
+        op.execute(
+            "UPDATE messages SET posted_at = posted_at - INTERVAL '8 hours' "
+            "WHERE posted_at != received_at"
+        )
     else:
         raise NotImplementedError(
             f"shift migration not implemented for dialect {dialect!r}; "
@@ -41,13 +53,19 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    """Reverse: stored_value += 8h."""
+    """Reverse: stored_value += 8h (skipping fallback rows where posted_at == received_at)."""
     bind = op.get_bind()
     dialect = bind.dialect.name
     if dialect == "sqlite":
-        op.execute("UPDATE messages SET posted_at = datetime(posted_at, '+8 hours')")
+        op.execute(
+            "UPDATE messages SET posted_at = datetime(posted_at, '+8 hours') "
+            "WHERE posted_at != received_at"
+        )
     elif dialect == "postgresql":
-        op.execute("UPDATE messages SET posted_at = posted_at + INTERVAL '8 hours'")
+        op.execute(
+            "UPDATE messages SET posted_at = posted_at + INTERVAL '8 hours' "
+            "WHERE posted_at != received_at"
+        )
     else:
         raise NotImplementedError(
             f"shift migration not implemented for dialect {dialect!r}; "

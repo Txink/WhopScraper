@@ -5,12 +5,17 @@ Drives the real alembic CLI against a temp-file SQLite DB:
     1. ``upgrade ceb9c732a26c`` — applies every migration up to (but not
        including) the shift migration; this gives us the schema without
        the shift applied yet.
-    2. Insert three known ``messages`` rows (with their dependent
-       ``tasks`` rows, since ``messages.id`` is a FK).
+    2. Insert four known ``messages`` rows (with their dependent
+       ``tasks`` rows, since ``messages.id`` is a FK). The fourth row
+       has ``posted_at == received_at`` to simulate the parse-failure
+       fallback path in ``app/whop/extractor.py:_parse_timestamp`` —
+       those rows are already real UTC and must NOT be shifted.
     3. ``upgrade head`` (= ``2c15fa4a14ca``) — applies the shift.
-       Assert each ``posted_at`` is exactly 8 hours earlier.
+       Assert the first three ``posted_at`` values are exactly 8 hours
+       earlier, and the fallback row is unchanged.
     4. ``downgrade -1`` — reverses the shift.
-       Assert each ``posted_at`` is back to its original value.
+       Assert the first three ``posted_at`` values are back to their
+       originals, and the fallback row is still unchanged.
 
 This exercises the migration's SQL on a real SQLite engine, including
 the ``datetime(value, '-8 hours')`` string-arithmetic that SQLite uses
@@ -46,6 +51,13 @@ _FIXTURES = [
     ("t3", "2026-04-25 08:00:00+00:00", "2026-04-25 00:00:00"),
 ]
 
+# Fourth fixture: parse-failure fallback row where posted_at == received_at.
+# This row is REAL UTC (from datetime.now(UTC)) and the migration must
+# leave it untouched in both directions. Distinct from the three above so
+# a copy-paste error would surface immediately.
+_FALLBACK_ID = "t4_fallback"
+_FALLBACK_POSTED_AT = "2024-01-15 12:34:56+00:00"
+
 
 def _alembic_cfg(url: str) -> Config:
     cfg = Config(str(BACKEND_DIR / "alembic.ini"))
@@ -63,8 +75,8 @@ def _seed_rows(db_path: Path) -> None:
         for task_id, posted_at, _expected in _FIXTURES:
             conn.execute(
                 "INSERT INTO tasks (id, type, status, created_at, updated_at, is_historical) "
-                "VALUES (?, 'message', 'parsed', ?, ?, 0)",
-                (task_id, now, now),
+                "VALUES (?, 'message', 'parsed', ?, ?, ?)",
+                (task_id, now, now, False),
             )
             conn.execute(
                 "INSERT INTO messages "
@@ -72,6 +84,18 @@ def _seed_rows(db_path: Path) -> None:
                 "VALUES (?, 'c', 'rc', 'whop', ?, ?)",
                 (task_id, posted_at, now),
             )
+        # Fallback row: posted_at == received_at (parse-failure path).
+        conn.execute(
+            "INSERT INTO tasks (id, type, status, created_at, updated_at, is_historical) "
+            "VALUES (?, 'message', 'parsed', ?, ?, ?)",
+            (_FALLBACK_ID, now, now, False),
+        )
+        conn.execute(
+            "INSERT INTO messages "
+            "(id, content, raw_content, source, posted_at, received_at) "
+            "VALUES (?, 'c', 'rc', 'whop', ?, ?)",
+            (_FALLBACK_ID, _FALLBACK_POSTED_AT, _FALLBACK_POSTED_AT),
+        )
         conn.commit()
     finally:
         conn.close()
@@ -98,7 +122,7 @@ async def test_shift_migration_round_trip(tmp_path: Path) -> None:
     # 2. Seed known rows.
     _seed_rows(db_file)
     original = _read_posted_at(db_file)
-    assert set(original) == {"t1", "t2", "t3"}
+    assert set(original) == {"t1", "t2", "t3", _FALLBACK_ID}
 
     # 3. Apply the shift (upgrade to head).
     await asyncio.to_thread(command.upgrade, cfg, "head")
@@ -108,8 +132,15 @@ async def test_shift_migration_round_trip(tmp_path: Path) -> None:
     # That's the storage format SQLAlchemy reads back into a tz-aware datetime via
     # its DateTime(timezone=True) adapter.
     expected = {task_id: expected_str for task_id, _orig, expected_str in _FIXTURES}
+    # The fallback row (posted_at == received_at) must be untouched by the upgrade.
+    expected[_FALLBACK_ID] = _FALLBACK_POSTED_AT
     assert after_upgrade == expected, (
         f"upgrade did not shift -8h as expected:\n  got      {after_upgrade}\n  expected {expected}"
+    )
+    assert after_upgrade[_FALLBACK_ID] == _FALLBACK_POSTED_AT, (
+        "upgrade incorrectly shifted the parse-failure fallback row "
+        f"(posted_at == received_at): got {after_upgrade[_FALLBACK_ID]!r}, "
+        f"expected {_FALLBACK_POSTED_AT!r} (unchanged)"
     )
 
     # 4. Reverse: downgrade by one revision and confirm we get the originals back.
@@ -131,3 +162,11 @@ async def test_shift_migration_round_trip(tmp_path: Path) -> None:
             f"downgrade did not restore {task_id}: "
             f"got {after_downgrade[task_id]!r}, expected {original_str!r}"
         )
+
+    # The fallback row must STILL be unchanged after downgrade
+    # (the WHERE filter excludes it from both directions).
+    assert _parse(after_downgrade[_FALLBACK_ID]) == _parse(_FALLBACK_POSTED_AT), (
+        "downgrade incorrectly shifted the parse-failure fallback row "
+        f"(posted_at == received_at): got {after_downgrade[_FALLBACK_ID]!r}, "
+        f"expected {_FALLBACK_POSTED_AT!r} (unchanged)"
+    )
