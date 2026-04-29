@@ -400,6 +400,100 @@ async def test_sell_limit_when_quote_at_or_below_signal():
 
 
 @pytest.mark.asyncio
+async def test_buy_limit_floors_sub_cent_quote_to_cent_grid():
+    """BUY favorable + sub-cent live quote → LIMIT floor-snapped to $0.01.
+
+    Repro of broker rejection 602035 ("wrong bid size") seen when LongPort's
+    live quote returns a price like ``8.5234`` (sub-cent). The limit must land
+    on the symbol's tick grid; for US stocks that's $0.01.
+    """
+    bus = EventBus()
+    broker = _RecordingBroker()
+    broker.quote_last["TSLL.US"] = 8.5234  # sub-cent precision
+    page_settings = PageSettings(
+        dedupe_processed_messages=True,
+        price_deviation_tolerance=10.0,
+        tickers={"TSLL": TickerConfig(trade_quantity=100)},
+    )
+    register_trader(bus, broker, _config(), registry=_registry_with(page_settings))
+
+    task = _stock_task("TSLL", position_size="常规仓", price=10.0)
+    await bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
+    await bus.wait_idle()
+
+    assert broker.submitted[0]["order_type"] == "LIMIT"
+    assert broker.submitted[0]["price"] == pytest.approx(8.52)  # floored to cent
+    assert task.submit_quote_last_done == pytest.approx(8.5234)  # raw quote preserved
+
+
+@pytest.mark.asyncio
+async def test_sell_limit_ceils_sub_cent_quote_to_cent_grid():
+    """SELL favorable + sub-cent live quote → LIMIT ceil-snapped to $0.01."""
+    bus = EventBus()
+    broker = _RecordingBroker()
+    broker.quote_last["TSLL.US"] = 10.5034  # sub-cent precision
+    page_settings = PageSettings(
+        dedupe_processed_messages=True,
+        price_deviation_tolerance=10.0,
+        tickers={"TSLL": TickerConfig(trade_quantity=100)},
+    )
+    register_trader(bus, broker, _config(), registry=_registry_with(page_settings))
+
+    task = _stock_task("TSLL", position_size="常规仓", price=10.0)
+    task.instruction = StockInstruction(  # type: ignore[assignment]
+        instruction_type=InstructionType.SELL,
+        price=10.0,
+        price_range=None,
+        quantity=100,
+        position_size="常规仓",
+        stop_loss_price=None,
+        take_profit_price=None,
+        context_source=None,
+        parser_notes=[],
+        ticker="TSLL",
+        symbol="TSLL.US",
+        sell_quantity=None,
+    )
+    await bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
+    await bus.wait_idle()
+
+    assert broker.submitted[0]["order_type"] == "LIMIT"
+    assert broker.submitted[0]["side"] == "SELL"
+    assert broker.submitted[0]["price"] == pytest.approx(10.51)  # ceiled to cent
+    assert task.submit_quote_last_done == pytest.approx(10.5034)
+
+
+@pytest.mark.asyncio
+async def test_submit_decision_fields_preserved_on_broker_reject():
+    """When broker rejects the submit, decision fields stay populated for debug."""
+
+    class _RejectingBroker(_RecordingBroker):
+        def submit_stock_order(self, **kwargs: object) -> str:  # type: ignore[override]
+            raise RuntimeError("broker [602035] Wrong bid size, please change the price")
+
+    bus = EventBus()
+    broker = _RejectingBroker()
+    broker.quote_last["TSLL.US"] = 8.5234
+    page_settings = PageSettings(
+        dedupe_processed_messages=True,
+        price_deviation_tolerance=10.0,
+        tickers={"TSLL": TickerConfig(trade_quantity=100)},
+    )
+    register_trader(bus, broker, _config(), registry=_registry_with(page_settings))
+
+    task = _stock_task("TSLL", position_size="常规仓", price=10.0)
+    await bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
+    await bus.wait_idle()
+
+    assert task.status.value == "SUBMIT_FAILED"
+    # Decision fields must NOT be cleared — needed to diagnose the rejection.
+    assert task.submit_order_type == "LIMIT"
+    assert task.submit_order_context is not None
+    assert "限价单" in (task.submit_order_context or "")
+    assert task.submit_quote_last_done == pytest.approx(8.5234)
+
+
+@pytest.mark.asyncio
 async def test_block_historical_skips_stock_when_marker_true():
     """is_historical=True + block_historical_messages=True → SKIPPED, reason '历史消息'."""
     bus = EventBus()

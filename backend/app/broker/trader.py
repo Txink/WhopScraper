@@ -10,10 +10,12 @@ Behavior (Task G):
 - Option qty: derived from per-page option settings (quantity rule / total-limit
   rule, independently switchable). If both are disabled, task is SKIPPED.
 - Order type is always LIMIT. Limit price tracks the live ``last_done`` when
-  it's more favorable than the signal (lower for BUY, higher for SELL);
-  otherwise it stays at the signal price. If the quote is missing/invalid,
-  LIMIT @ signal. ``submit_order_type`` and ``submit_order_context`` on
-  ``Task`` record the decision for API/UI.
+  it's more favorable than the signal (lower for BUY, higher for SELL),
+  snapped to the $0.01 grid (floor for BUY, ceil for SELL) so the broker
+  accepts the price; otherwise it stays at the signal price. If the quote is
+  missing/invalid, LIMIT @ signal. ``submit_order_type``,
+  ``submit_order_context`` and ``submit_quote_last_done`` on ``Task`` record
+  the decision for API/UI and are kept on submission failure for debuggability.
 
 Deferred:
 - Optional: revive ``price_deviation_tolerance`` for additional bands.
@@ -30,6 +32,7 @@ import logging
 import time
 from collections.abc import Callable
 from datetime import datetime
+from decimal import ROUND_DOWN, ROUND_UP, Decimal
 from typing import TYPE_CHECKING, Any, cast
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -56,6 +59,19 @@ if TYPE_CHECKING:
     from app.whop.page_settings import PageSettings
 
 logger = logging.getLogger(__name__)
+
+
+_CENT = Decimal("0.01")
+
+
+def _floor_to_cent(price: float) -> float:
+    """Round *price* DOWN to the $0.01 grid (BUY-side snap)."""
+    return float(Decimal(str(price)).quantize(_CENT, rounding=ROUND_DOWN))
+
+
+def _ceil_to_cent(price: float) -> float:
+    """Round *price* UP to the $0.01 grid (SELL-side snap)."""
+    return float(Decimal(str(price)).quantize(_CENT, rounding=ROUND_UP))
 
 
 def _last_done_from_quotes(quotes: dict[str, dict[str, Any]], symbol: str) -> float | None:
@@ -98,11 +114,12 @@ def _decide_order_type_and_context(
         )
     if side == InstructionType.BUY:
         if last_done < signal_price:
+            snapped = _floor_to_cent(last_done)
             return (
                 "LIMIT",
-                last_done,
+                snapped,
                 f"买入：现价 {last_done:.3f} < 信号价 {signal_price:.3f}"
-                f" → 限价单 @ {last_done:.3f}（取更低价）",
+                f" → 限价单 @ {snapped:.2f}（取更低价，向下取整到分）",
             )
         return (
             "LIMIT",
@@ -111,11 +128,12 @@ def _decide_order_type_and_context(
         )
     if side == InstructionType.SELL:
         if last_done > signal_price:
+            snapped = _ceil_to_cent(last_done)
             return (
                 "LIMIT",
-                last_done,
+                snapped,
                 f"卖出：现价 {last_done:.3f} > 信号价 {signal_price:.3f}"
-                f" → 限价单 @ {last_done:.3f}（取更高价）",
+                f" → 限价单 @ {snapped:.2f}（取更高价，向上取整到分）",
             )
         return (
             "LIMIT",
@@ -459,9 +477,6 @@ def register_trader(
         except Exception as exc:
             elapsed = (time.perf_counter() - started) * 1000
             task.stage_timings["submit"] = elapsed
-            task.submit_order_type = None
-            task.submit_order_context = None
-            task.submit_quote_last_done = None
             task.mark_submit_failed(_format_broker_error(exc))
             logger.error(
                 "Trader: order submission failed for task %s: %s",
@@ -476,9 +491,6 @@ def register_trader(
         order_id_str = normalize_broker_order_id(order_id)
         if not order_id_str:
             task.stage_timings["submit"] = elapsed_ms
-            task.submit_order_type = None
-            task.submit_order_context = None
-            task.submit_quote_last_done = None
             task.mark_submit_failed("broker returned empty order_id")
             logger.error("Trader: broker returned empty order_id for task %s", task.id)
             await bus.publish(Event(Topics.TASK_SUBMIT_FAILED, TaskPayload(task)))

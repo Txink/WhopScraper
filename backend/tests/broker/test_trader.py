@@ -262,8 +262,9 @@ async def test_broker_exception_marks_submit_failed() -> None:
     failed_task: Task = failed_events[0].payload.task
     assert failed_task.status == Status.SUBMIT_FAILED
     assert "connection timeout" in (failed_task.reject_reason or "")
-    assert failed_task.submit_order_type is None
-    assert failed_task.submit_order_context is None
+    # Submit-decision fields are preserved on failure for debuggability.
+    assert failed_task.submit_order_type == "LIMIT"
+    assert failed_task.submit_order_context is not None
 
 
 @pytest.mark.asyncio
@@ -311,7 +312,8 @@ async def test_openapi_exception_reject_reason_drops_envelope() -> None:
     assert failed_task.reject_reason == (
         "broker [603301] The symbol currently does not support short selling."
     )
-    assert failed_task.submit_order_type is None
+    # Submit-decision fields are preserved on failure for debuggability.
+    assert failed_task.submit_order_type == "LIMIT"
 
 
 @pytest.mark.asyncio
