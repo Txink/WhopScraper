@@ -2,9 +2,6 @@
 
 ## Unreleased
 
-### Changed
-- **BREAKING**: `messages.posted_at` semantics changed. Previously stored as Whop wall-clock (Beijing) tagged with UTC tzinfo (off by 8h from the real instant). Now stored as real UTC. A one-off Alembic migration (`2c15fa4a14ca`) shifts existing rows by -8h; new rows are written by the parser already in real UTC. Frontend display helpers (`fmtTime`, `fmtBeijingFull`, `weekKeyOf`, `DatabaseRecordsPanel.fmtTime`) now project to Asia/Shanghai via `Intl.DateTimeFormat` instead of `getUTC*` / host-locale.
-
 ### Added
 - 监控看板二级 tab：每个 Whop 监听页独立 tab + 信息行 + 操作行（重启 / 设置 / 全展开 / 全收缩）
 - per-page 设置：去重开关、价格偏差容忍、（stock）ticker 白名单 + 常规仓数量；存 `data/whop_pages.json`
@@ -16,6 +13,7 @@
 - domain: `Message.url`；listener `_scan_once` 自动注入
 
 ### Changed
+- **BREAKING**: `messages.posted_at` semantics changed. Previously stored as Whop wall-clock (Beijing) tagged with UTC tzinfo (off by 8h from the real instant). Now stored as real UTC. A one-off Alembic migration (`2c15fa4a14ca`) shifts existing rows by -8h; new rows are written by the parser already in real UTC. Frontend display helpers (`fmtTime`, `fmtBeijingFull`, `weekKeyOf`, `DatabaseRecordsPanel.fmtTime`) now project to Asia/Shanghai via `Intl.DateTimeFormat` instead of `getUTC*` / host-locale.
 - **BREAKING**: trader 价格偏差行为从"超阈拒单"改成"超阈降级到 LIMIT @ 信号价"。永不拒单（除非白名单 / 缺价格）。当前实现 first-pass 用 `market_price = signal_price` → 总是 MARKET，待真实 quote 集成后偏差才生效
 - **BREAKING**: stock ticker 白名单 gate—— 不在 page settings.tickers 中的 ticker SKIPPED 不下单
 - **BREAKING**: 替换"非当天消息拦截"为更细的"历史消息拦截"——消息 `posted_at < listener.started_at` 即被 trader SKIPPED（reason 含「历史消息」）。比按日期更细：当天但启动前发布的消息也被拦。
