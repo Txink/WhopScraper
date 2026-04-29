@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import type { TaskSummary } from "../../api/domain-types";
 import { api, HttpError } from "../../api/http";
+import { fmtBeijingFull } from "../Card/cardHelpers";
 
 const PAGE_SIZE = 15;
 
 function fmtTime(ts: string): string {
   const d = new Date(ts);
   if (Number.isNaN(d.getTime())) return ts;
-  return d.toLocaleString();
+  return fmtBeijingFull(ts);
 }
 
 function getMessageTime(task: TaskSummary): string {
