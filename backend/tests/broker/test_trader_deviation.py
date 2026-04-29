@@ -306,7 +306,8 @@ async def test_buy_limit_when_quote_missing_or_zero():
 
 
 @pytest.mark.asyncio
-async def test_buy_market_when_quote_below_signal():
+async def test_buy_limit_at_last_done_when_quote_below_signal():
+    """BUY + last_done < signal → LIMIT @ last_done (取更低价)."""
     bus = EventBus()
     broker = _RecordingBroker()
     broker.quote_last["TSLL.US"] = 9.5
@@ -321,14 +322,15 @@ async def test_buy_market_when_quote_below_signal():
     await bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
     await bus.wait_idle()
 
-    assert broker.submitted[0]["order_type"] == "MARKET"
-    assert broker.submitted[0]["price"] is None
-    assert task.submit_order_type == "MARKET"
+    assert broker.submitted[0]["order_type"] == "LIMIT"
+    assert broker.submitted[0]["price"] == pytest.approx(9.5)
+    assert task.submit_order_type == "LIMIT"
     assert task.submit_quote_last_done == pytest.approx(9.5)
 
 
 @pytest.mark.asyncio
-async def test_sell_market_when_quote_above_signal():
+async def test_sell_limit_at_last_done_when_quote_above_signal():
+    """SELL + last_done > signal → LIMIT @ last_done (取更高价)."""
     bus = EventBus()
     broker = _RecordingBroker()
     broker.quote_last["TSLL.US"] = 10.5
@@ -357,8 +359,10 @@ async def test_sell_market_when_quote_above_signal():
     await bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
     await bus.wait_idle()
 
-    assert broker.submitted[0]["order_type"] == "MARKET"
+    assert broker.submitted[0]["order_type"] == "LIMIT"
     assert broker.submitted[0]["side"] == "SELL"
+    assert broker.submitted[0]["price"] == pytest.approx(10.5)
+    assert task.submit_order_type == "LIMIT"
 
 
 @pytest.mark.asyncio

@@ -148,7 +148,7 @@ async def test_full_lifecycle_new_partial_filled(
     """Full broker lifecycle: INSTRUCTION_READY → submit → NEW push → PARTIAL → FILLED."""
     bus = EventBus()
     client = FakeBrokerClient(is_paper=True, dry_run=False, next_order_id="broker-order-42")
-    client.quote_by_symbol["TSLL.US"] = 25.0  # < signal 26.5 → BUY MARKET
+    client.quote_by_symbol["TSLL.US"] = 25.0  # < signal 26.5 → BUY LIMIT @ 25.0
     config = _make_config()
 
     unsubs_storage, unsub_trader, listener = _wire_up(bus, client, config, session_factory)

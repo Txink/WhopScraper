@@ -9,11 +9,11 @@ Behavior (Task G):
 - Stock qty: ``max(int(trade_quantity * position_size_to_fraction(position_size)), 1)``.
 - Option qty: derived from per-page option settings (quantity rule / total-limit
   rule, independently switchable). If both are disabled, task is SKIPPED.
-- Order type from **live quote** ``last_done`` vs **signal price**:
-  BUY → MARKET if ``last_done < signal`` else LIMIT @ signal;
-  SELL → MARKET if ``last_done > signal`` else LIMIT @ signal.
-  If quote is missing / invalid → LIMIT @ signal. ``submit_order_type`` and
-  ``submit_order_context`` on ``Task`` record the decision for API/UI.
+- Order type is always LIMIT. Limit price tracks the live ``last_done`` when
+  it's more favorable than the signal (lower for BUY, higher for SELL);
+  otherwise it stays at the signal price. If the quote is missing/invalid,
+  LIMIT @ signal. ``submit_order_type`` and ``submit_order_context`` on
+  ``Task`` record the decision for API/UI.
 
 Deferred:
 - Optional: revive ``price_deviation_tolerance`` for additional bands.
@@ -83,8 +83,12 @@ def _decide_order_type_and_context(
 ) -> tuple[OrderType, float | None, str]:
     """Return ``(order_type, submit_price, rationale_cn)``.
 
-    ``submit_price`` is the limit price for LIMIT orders, or ``None`` for MARKET
-    (broker ignores it for MO).
+    Always emits LIMIT orders. When the live quote is more favorable than the
+    signal price (lower for BUY, higher for SELL), the limit price tracks the
+    live quote — otherwise it stays at the signal price. ``submit_price`` is
+    the limit price (always non-None on the live path; the ``float | None`` return
+    shape is preserved only because ``OrderType`` still permits ``"MARKET"`` for
+    protocol-layer compatibility).
     """
     if last_done is None:
         return (
@@ -95,9 +99,10 @@ def _decide_order_type_and_context(
     if side == InstructionType.BUY:
         if last_done < signal_price:
             return (
-                "MARKET",
-                None,
-                f"买入：现价 {last_done:.3f} < 信号价 {signal_price:.3f} → 市价单",
+                "LIMIT",
+                last_done,
+                f"买入：现价 {last_done:.3f} < 信号价 {signal_price:.3f}"
+                f" → 限价单 @ {last_done:.3f}（取更低价）",
             )
         return (
             "LIMIT",
@@ -107,9 +112,10 @@ def _decide_order_type_and_context(
     if side == InstructionType.SELL:
         if last_done > signal_price:
             return (
-                "MARKET",
-                None,
-                f"卖出：现价 {last_done:.3f} > 信号价 {signal_price:.3f} → 市价单",
+                "LIMIT",
+                last_done,
+                f"卖出：现价 {last_done:.3f} > 信号价 {signal_price:.3f}"
+                f" → 限价单 @ {last_done:.3f}（取更高价）",
             )
         return (
             "LIMIT",
@@ -232,8 +238,8 @@ def register_trader(
         WhopRegistry-like object exposing ``get_settings_for_url(url)`` →
         ``PageSettings | None``. If ``None``, every task is treated as an
         "orphan" (no page settings) and falls back to ``instruction.quantity``.
-        Per-page ``price_deviation_tolerance`` is not used for LIMIT/MARKET
-        routing (decision uses broker ``get_quote`` vs signal price).
+        Per-page ``price_deviation_tolerance`` is not used for LIMIT submit-price selection
+        (decision uses broker ``get_quote`` vs signal price).
     task_query_repo:
         Optional ``TaskQueryRepo``. When provided, instructions carrying both
         ``referenced_lot_price`` and ``sell_quantity`` resolve qty via the
@@ -407,7 +413,7 @@ def register_trader(
         # API task payloads can render QTY/TOTAL consistently in the frontend.
         inst.quantity = computed_qty
 
-        # ---- Signal price + quote → LIMIT vs MARKET ----
+        # ---- Signal price + quote → LIMIT submit price ----
         signal_price = (
             inst.price
             if inst.price is not None
