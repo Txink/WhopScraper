@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Changed
+- **BREAKING**: `messages.posted_at` semantics changed. Previously stored as Whop wall-clock (Beijing) tagged with UTC tzinfo (off by 8h from the real instant). Now stored as real UTC. A one-off Alembic migration (`2c15fa4a14ca`) shifts existing rows by -8h; new rows are written by the parser already in real UTC. Frontend display helpers (`fmtTime`, `fmtBeijingFull`, `weekKeyOf`, `DatabaseRecordsPanel.fmtTime`) now project to Asia/Shanghai via `Intl.DateTimeFormat` instead of `getUTC*` / host-locale.
+
 ### Added
 - 监控看板二级 tab：每个 Whop 监听页独立 tab + 信息行 + 操作行（重启 / 设置 / 全展开 / 全收缩）
 - per-page 设置：去重开关、价格偏差容忍、（stock）ticker 白名单 + 常规仓数量；存 `data/whop_pages.json`
