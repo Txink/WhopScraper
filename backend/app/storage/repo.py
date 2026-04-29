@@ -35,6 +35,7 @@ from app.domain.instruction import (
     OptionInstruction,
     StockInstruction,
 )
+from app.broker.order_id_norm import normalize_broker_order_id
 from app.domain.message import Message
 from app.domain.push_event import PushEvent, PushState
 from app.domain.status import TERMINAL, Status
@@ -266,6 +267,7 @@ def _rows_to_task(
         is_historical=task_row.is_historical,
         submit_order_type=task_row.submit_order_type,
         submit_order_context=task_row.submit_order_context,
+        submit_quote_last_done=task_row.submit_quote_last_done,
     )
 
 
@@ -296,6 +298,7 @@ _TASK_UPDATE_COLS = (
     "updated_at",
     "submit_order_type",
     "submit_order_context",
+    "submit_quote_last_done",
 )
 
 _INSTRUCTION_UPDATE_COLS = (
@@ -352,6 +355,7 @@ async def save_task(session: AsyncSession, task: Task) -> None:
         "updated_at": task.updated_at,
         "submit_order_type": task.submit_order_type,
         "submit_order_context": task.submit_order_context,
+        "submit_quote_last_done": task.submit_quote_last_done,
     }
 
     # --- tasks UPSERT ---
@@ -455,7 +459,10 @@ async def load_task_by_order_id(session: AsyncSession, order_id: str) -> Task | 
 
     Returns None if no Task with the given order_id exists.
     """
-    result = await session.execute(select(TaskRow).where(TaskRow.order_id == order_id))
+    oid = normalize_broker_order_id(order_id)
+    if not oid:
+        return None
+    result = await session.execute(select(TaskRow).where(TaskRow.order_id == oid))
     task_row = result.scalar_one_or_none()
     if task_row is None:
         return None

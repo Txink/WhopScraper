@@ -36,6 +36,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.broker.broker_client import BrokerClient, OrderSide, OrderType
 from app.broker.config import LongPortConfig
+from app.broker.order_id_norm import normalize_broker_order_id
 from app.broker.validation import validate_for_submission
 from app.core.event_bus import Event, EventBus
 from app.core.events import TaskPayload, Topics
@@ -51,6 +52,7 @@ from app.storage.repo import TaskQueryRepo, save_task
 from app.whop.page_settings import position_size_to_fraction, sell_quantity_to_fraction
 
 if TYPE_CHECKING:
+    from app.broker.push_listener import PushListener
     from app.whop.page_settings import PageSettings
 
 logger = logging.getLogger(__name__)
@@ -88,33 +90,33 @@ def _decide_order_type_and_context(
         return (
             "LIMIT",
             signal_price,
-            f"未取到有效现价 → 限价单 @ {signal_price:.4f}",
+            f"未取到有效现价 → 限价单 @ {signal_price:.3f}",
         )
     if side == InstructionType.BUY:
         if last_done < signal_price:
             return (
                 "MARKET",
                 None,
-                f"买入：现价 {last_done:.4f} < 信号价 {signal_price:.4f} → 市价单",
+                f"买入：现价 {last_done:.3f} < 信号价 {signal_price:.3f} → 市价单",
             )
         return (
             "LIMIT",
             signal_price,
-            f"买入：现价 {last_done:.4f} ≥ 信号价 {signal_price:.4f} → 限价单 @ {signal_price:.4f}",
+            f"买入：现价 {last_done:.3f} ≥ 信号价 {signal_price:.3f} → 限价单 @ {signal_price:.3f}",
         )
     if side == InstructionType.SELL:
         if last_done > signal_price:
             return (
                 "MARKET",
                 None,
-                f"卖出：现价 {last_done:.4f} > 信号价 {signal_price:.4f} → 市价单",
+                f"卖出：现价 {last_done:.3f} > 信号价 {signal_price:.3f} → 市价单",
             )
         return (
             "LIMIT",
             signal_price,
-            f"卖出：现价 {last_done:.4f} ≤ 信号价 {signal_price:.4f} → 限价单 @ {signal_price:.4f}",
+            f"卖出：现价 {last_done:.3f} ≤ 信号价 {signal_price:.3f} → 限价单 @ {signal_price:.3f}",
         )
-    return "LIMIT", signal_price, f"未知方向 → 限价单 @ {signal_price:.4f}"
+    return "LIMIT", signal_price, f"未知方向 → 限价单 @ {signal_price:.3f}"
 
 
 def _format_broker_error(exc: BaseException) -> str:
@@ -218,6 +220,7 @@ def register_trader(
     auto_trade_getter: Callable[[], bool] | None = None,
     task_query_repo: TaskQueryRepo | None = None,
     session_factory: async_sessionmaker[AsyncSession] | None = None,
+    push_listener: "PushListener | None" = None,
 ) -> Callable[[], None]:
     """Subscribe trader handler to TASK_INSTRUCTION_READY.
 
@@ -241,6 +244,12 @@ def register_trader(
         tasks row carries ``order_id`` before the event loop can run concurrent
         PushListener lookups (avoids dropped FILLED pushes when storage lagged
         behind fire-and-forget bus handlers).
+    push_listener:
+        When provided, the trader calls ``push_listener.replay_for_order(...)``
+        right after ``save_task`` commits. This drains any pushes the SDK fired
+        while ``_submit`` was blocking the loop — the buffer in PushListener
+        holds them under ``order_id`` precisely so they survive the gap between
+        broker submit and DB commit, with no in-process registry needed.
 
     Returns the unsubscribe callable.
     """
@@ -427,6 +436,7 @@ def register_trader(
         )
         task.submit_order_type = order_type
         task.submit_order_context = rationale
+        task.submit_quote_last_done = last_done
 
         # ---- Submit ----
         task.mark_submitting()
@@ -445,6 +455,7 @@ def register_trader(
             task.stage_timings["submit"] = elapsed
             task.submit_order_type = None
             task.submit_order_context = None
+            task.submit_quote_last_done = None
             task.mark_submit_failed(_format_broker_error(exc))
             logger.error(
                 "Trader: order submission failed for task %s: %s",
@@ -456,18 +467,36 @@ def register_trader(
             return
 
         elapsed_ms = (time.perf_counter() - started) * 1000
-        task.mark_submitted(order_id=order_id, timing_ms=elapsed_ms)
+        order_id_str = normalize_broker_order_id(order_id)
+        if not order_id_str:
+            task.stage_timings["submit"] = elapsed_ms
+            task.submit_order_type = None
+            task.submit_order_context = None
+            task.submit_quote_last_done = None
+            task.mark_submit_failed("broker returned empty order_id")
+            logger.error("Trader: broker returned empty order_id for task %s", task.id)
+            await bus.publish(Event(Topics.TASK_SUBMIT_FAILED, TaskPayload(task)))
+            return
+        task.mark_submitted(order_id=order_id_str, timing_ms=elapsed_ms)
         logger.info(
             "Trader: submitted order %s for task %s in %.1f ms (type=%s, qty=%d)",
-            order_id,
+            order_id_str,
             task.id,
             elapsed_ms,
             order_type,
             computed_qty,
         )
+        # Persist the order_id ↔ task_id binding before letting the loop run
+        # other coroutines, so PushListener.replay_for_order (and any later
+        # live push) can resolve the task by order_id from a fresh DB session.
         if session_factory is not None:
             async with session_scope(session_factory) as session:
                 await save_task(session, task)
+        # Drain any pushes that arrived while _submit was blocking the loop.
+        # They were buffered by order_id in PushListener; replay processes
+        # them in arrival order against the now-committed task row.
+        if push_listener is not None:
+            await push_listener.replay_for_order(order_id_str)
         await bus.publish(Event(Topics.TASK_ORDER_SUBMITTED, TaskPayload(task)))
 
     return bus.subscribe(Topics.TASK_INSTRUCTION_READY, _handle_instruction_ready)

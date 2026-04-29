@@ -42,6 +42,8 @@ class Task:
     submit_order_type: str | None = None
     #: Human-readable reason (CN) for UI: quote vs signal price rule.
     submit_order_context: str | None = None
+    #: Broker ``last_done`` from quote at submit decision (UI / MARKET reference).
+    submit_quote_last_done: float | None = None
 
     @classmethod
     def new_from_message(cls, msg: Message, *, is_historical: bool = False) -> Task:

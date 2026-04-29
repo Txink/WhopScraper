@@ -104,6 +104,7 @@ async def test_task_row_insert_roundtrip(
         updated_at=_NOW,
         submit_order_type="MARKET",
         submit_order_context="买入：现价 1.0 < 信号价 1.25 → 市价单",
+        submit_quote_last_done=1.0,
     )
     async with session_factory() as session:
         session.add(row)
@@ -125,6 +126,7 @@ async def test_task_row_insert_roundtrip(
         assert fetched.stage_timings_json == {"parse": 18, "submit": 42}
         assert fetched.submit_order_type == "MARKET"
         assert "市价" in (fetched.submit_order_context or "")
+        assert fetched.submit_quote_last_done == pytest.approx(1.0)
         # SQLite (via aiosqlite) stores timestamps as naive UTC strings and
         # returns them as naive datetime objects.  Compare the UTC wall-clock
         # value, ignoring tzinfo, so the test works with both SQLite and

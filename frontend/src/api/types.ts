@@ -692,6 +692,8 @@ export interface components {
             submit_order_type?: string | null;
             /** Human-readable decision (CN) */
             submit_order_context?: string | null;
+            /** last_done from quote at submit decision */
+            submit_quote_last_done?: number | null;
             /** Stage Timings */
             stage_timings: {
                 [key: string]: number;
@@ -727,6 +729,8 @@ export interface components {
             submit_order_type?: string | null;
             /** Human-readable decision (CN) */
             submit_order_context?: string | null;
+            /** last_done from quote at submit decision */
+            submit_quote_last_done?: number | null;
             /** Stage Timings */
             stage_timings: {
                 [key: string]: number;

@@ -302,6 +302,7 @@ async def test_buy_limit_when_quote_missing_or_zero():
     assert broker.submitted[0]["order_type"] == "LIMIT"
     assert broker.submitted[0]["price"] == 10.0
     assert task.submit_order_type == "LIMIT"
+    assert task.submit_quote_last_done is None
 
 
 @pytest.mark.asyncio
@@ -323,6 +324,7 @@ async def test_buy_market_when_quote_below_signal():
     assert broker.submitted[0]["order_type"] == "MARKET"
     assert broker.submitted[0]["price"] is None
     assert task.submit_order_type == "MARKET"
+    assert task.submit_quote_last_done == pytest.approx(9.5)
 
 
 @pytest.mark.asyncio

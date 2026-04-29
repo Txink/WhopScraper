@@ -3,7 +3,10 @@
 ## Unreleased
 
 ### Fixed
-- Trader 在发布 `TASK_ORDER_SUBMITTED` 之前先 `await save_task`（`main` 注入 `session_factory`），保证 DB 已写入 `order_id` 再让事件循环处理并发推送，避免 PushListener 在 ~300ms 重试内仍查不到 Task 而丢弃 FILLED 推送、任务状态不更新
+- 补全领域模型与 ORM：`Task`、`TaskRow`、`repo.save_task` / `_rows_to_task` 对 `submit_quote_last_done` 的字段与读写（此前仅 trader/API 引用，导致 `GET /api/tasks` 序列化时报 `AttributeError`）
+- **PushListener 改为 buffer + replay 模型**，彻底替换原来的 "DB 多次重试 + 进程内 pending 表 + finally clear" 方案。新流程：(1) 每条推送先按 `order_id` 查库；(2) 命中 → 直接发 `TASK_PUSH_EVENT`；(3) 未命中 → 进 `_buffer[order_id]`（按到达时间排序，附 monotonic 时间戳）。Trader 在 broker submit 成功并 `await save_task` 落库后，调用 `push_listener.replay_for_order(order_id)` 将 buffer 里属于这条 order 的推送一次性按到达顺序排干。外来 order（手机/网页另起的单）的推送在 `BUFFER_TTL_S=60s` 后被 GC 并 WARN，避免 buffer 无限增长。删除 `pending_order_registry.py`、`_LOOKUP_RETRY_ATTEMPTS` 重试循环、trader 中 `register_pending_order/clear_pending_order/finally` 串接
+- **order_id 规范化**（`app/broker/order_id_norm.py`）：提交/推送/`load_task_by_order_id` 统一为十进制字符串，正确处理大整数与 `Integral` 子类，避免与 DB 键不一致
+- 任务卡片折叠行价格：市价单展示 `submit_quote_last_done`（与展开区提交订单一致），三位小数
 
 ### Added
 - 监控看板二级 tab：每个 Whop 监听页独立 tab + 信息行 + 操作行（重启 / 设置 / 全展开 / 全收缩）
@@ -16,7 +19,7 @@
 - domain: `Message.url`；listener `_scan_once` 自动注入
 
 ### Changed
-- **BREAKING**: trader 按**实时现价**（`get_quote` 的 `last_done`）与**信号价**比较决定 LIMIT/MARKET：买入若现价 &lt; 信号价 → 市价，否则限价 @ 信号价；卖出若现价 &gt; 信号价 → 市价，否则限价；行情无效则限价。任务上持久化 `submit_order_type` / `submit_order_context`，API 与任务流 UI 展示实际类型与中文说明
+- **BREAKING**: trader 按**实时现价**（`get_quote` 的 `last_done`）与**信号价**比较决定 LIMIT/MARKET：买入若现价 &lt; 信号价 → 市价，否则限价 @ 信号价；卖出若现价 &gt; 信号价 → 市价，否则限价；行情无效则限价。任务上持久化 `submit_order_type` / `submit_order_context` / `submit_quote_last_done`（Alembic `b3e4f5a6c7d8`）；API 与任务流展示类型、中文说明（黄色）、市价参考价与阶段耗时/UTC 时间戳（`received_at` + stage_timings 近似）
 - **BREAKING**: stock ticker 白名单 gate—— 不在 page settings.tickers 中的 ticker SKIPPED 不下单
 - **BREAKING**: 替换"非当天消息拦截"为更细的"历史消息拦截"——消息 `posted_at < listener.started_at` 即被 trader SKIPPED（reason 含「历史消息」）。比按日期更细：当天但启动前发布的消息也被拦。
 - **DB**: 新增列 `tasks.is_historical bool default 0`（alembic migration `ceb9c732a26c`）。listener 在 `_scan_once` 计算并写到 `MessagePayload.is_historical`；parser handler 把 flag 拷到 `Task.is_historical`；trader 在 gate ① b 同时检查 `page_settings.block_historical_messages` + `task.is_historical`，二者皆 true 才 SKIP。同时支持股票和期权页面。

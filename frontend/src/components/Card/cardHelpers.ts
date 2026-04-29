@@ -44,6 +44,20 @@ export function fmtTime(iso: string): string {
 }
 
 /**
+ * UTC wall time HH:MM:SS.mmm from an ISO instant + offset milliseconds.
+ * Used for stage footers (approximate completion from received_at + stage timings).
+ */
+export function fmtUtcTimeWithMsFromOffset(baseIso: string, offsetMs: number): string {
+  const t = new Date(baseIso).getTime() + offsetMs;
+  const d = new Date(t);
+  const hh = String(d.getUTCHours()).padStart(2, "0");
+  const mm = String(d.getUTCMinutes()).padStart(2, "0");
+  const ss = String(d.getUTCSeconds()).padStart(2, "0");
+  const ms = String(d.getUTCMilliseconds()).padStart(3, "0");
+  return `${hh}:${mm}:${ss}.${ms}`;
+}
+
+/**
  * Format elapsed milliseconds as a compact string.
  */
 export function fmtElapsed(ms: number): string {
@@ -56,4 +70,25 @@ export function fmtElapsed(ms: number): string {
  */
 export function elapsedMs(from: string, to: string): number {
   return new Date(to).getTime() - new Date(from).getTime();
+}
+
+/**
+ * Dollar price shown for compact card / totals: MARKET uses
+ * ``submit_quote_last_done`` when present (same rule as expanded OrderSubmit),
+ * otherwise the parsed instruction price.
+ */
+export function displaySubmitPriceDollars(
+  instruction: Instruction,
+  submitOrderType?: string | null,
+  submitQuoteLastDone?: number | null,
+): number | null {
+  const isMarket = submitOrderType === "MARKET";
+  const ref = submitQuoteLastDone;
+  if (isMarket && ref != null && Number.isFinite(ref)) {
+    return ref;
+  }
+  if (instruction.price != null) {
+    return instruction.price;
+  }
+  return null;
 }

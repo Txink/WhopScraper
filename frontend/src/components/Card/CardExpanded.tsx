@@ -6,7 +6,7 @@ import { OrderSubmit } from "./OrderSubmit";
 import { PushChain } from "./PushChain";
 import { PushDetail } from "./PushDetail";
 import { ConfirmActions } from "./ConfirmActions";
-import { formatTitle, fmtElapsed, elapsedMs } from "./cardHelpers";
+import { formatTitle, fmtElapsed, elapsedMs, fmtUtcTimeWithMsFromOffset } from "./cardHelpers";
 import "./Card.css";
 
 export interface CardExpandedProps {
@@ -29,6 +29,7 @@ export function CardExpanded({ task, pushEvents, autoTrade, onCollapse }: CardEx
     reject_reason,
     submit_order_type,
     submit_order_context,
+    submit_quote_last_done,
   } = task;
   const badgeType = type === "option" ? "option" : "stock";
   const title = formatTitle(instruction);
@@ -64,6 +65,18 @@ export function CardExpanded({ task, pushEvents, autoTrade, onCollapse }: CardEx
   const lastPartial = [...pushEvents].reverse().find((e) => e.state === "PARTIAL");
   const cumQty = lastPartial?.cumulative_qty;
   const cumAvg = lastPartial?.cumulative_avg_price;
+
+  const parseMs = stage_timings?.parse ?? null;
+  const submitMs = stage_timings?.submit ?? null;
+  const anchorIso = message.received_at ?? message.posted_at;
+  const parseEndClock =
+    parseMs != null ? fmtUtcTimeWithMsFromOffset(anchorIso, parseMs) : "—";
+  const submitEndClock =
+    parseMs != null && submitMs != null
+      ? fmtUtcTimeWithMsFromOffset(anchorIso, parseMs + submitMs)
+      : submitMs != null
+        ? fmtUtcTimeWithMsFromOffset(anchorIso, submitMs)
+        : "—";
 
   return (
     <article className="card expanded">
@@ -120,7 +133,14 @@ export function CardExpanded({ task, pushEvents, autoTrade, onCollapse }: CardEx
           <div className={`stage ${parseMarkerClass}`}>
             <div className="stage-marker" />
             <div className="stage-body">
-              <strong>解析指令</strong>
+              <div className="stage-title-line">
+                <span>
+                  <strong>解析指令</strong>
+                  {parseMs != null && (
+                    <span className="stage-title-timing">[+{parseMs.toFixed(3)}ms]</span>
+                  )}
+                </span>
+              </div>
               {instruction && (
                 <div className="parse-inline">
                   {(instruction.ticker || instruction.symbol) && (
@@ -159,9 +179,7 @@ export function CardExpanded({ task, pushEvents, autoTrade, onCollapse }: CardEx
                 </div>
               )}
             </div>
-            <div className="stage-delta">
-              {stage_timings?.parse != null ? `+${stage_timings.parse}ms` : "—"}
-            </div>
+            <div className="stage-delta stage-delta-clock">{parseEndClock}</div>
           </div>
         )}
 
@@ -179,6 +197,8 @@ export function CardExpanded({ task, pushEvents, autoTrade, onCollapse }: CardEx
             error={status === "SUBMIT_FAILED" ? reject_reason : null}
             submitOrderType={submit_order_type ?? null}
             submitOrderContext={submit_order_context ?? null}
+            submitQuoteLastDone={submit_quote_last_done ?? null}
+            wallClockAtSubmitEnd={submitEndClock}
           />
         )}
       </div>

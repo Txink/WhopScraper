@@ -31,6 +31,7 @@ from longport.openapi import (
 
 from app.broker.broker_client import OrderSide, OrderType
 from app.broker.config import LongPortConfig
+from app.broker.order_id_norm import normalize_broker_order_id
 
 logger = logging.getLogger(__name__)
 
@@ -288,5 +289,5 @@ class LongPortClient:
             remark=remark,
         )
 
-        order_id: str = getattr(resp, "order_id", None) or getattr(resp, "id", None) or str(resp)
-        return order_id
+        raw_id = getattr(resp, "order_id", None) or getattr(resp, "id", None) or str(resp)
+        return normalize_broker_order_id(raw_id)

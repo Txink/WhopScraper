@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from datetime import UTC, date, datetime
 
+import pytest
+
 from app.api.schemas import (
     TaskSummaryOut,
     instruction_to_out,
@@ -170,6 +172,7 @@ def test_task_to_out_with_push_events() -> None:
         order_id="ord-99",
         submit_order_type="LIMIT",
         submit_order_context="买入：现价 ≥ 信号价 → 限价单",
+        submit_quote_last_done=194.5,
         push_events=[
             _make_push_event("evt-1"),
             _make_push_event("evt-2"),
@@ -183,6 +186,7 @@ def test_task_to_out_with_push_events() -> None:
     assert out.order_id == "ord-99"
     assert out.submit_order_type == "LIMIT"
     assert out.submit_order_context is not None
+    assert out.submit_quote_last_done == pytest.approx(194.5)
     assert len(out.push_events) == 2
     assert out.push_events[0].id == "evt-1"
     assert out.push_events[1].id == "evt-2"

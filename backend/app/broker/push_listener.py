@@ -7,6 +7,19 @@ callback.  ``PushListener.start()`` captures the running asyncio event-loop and
 schedules ``_handle_raw_push`` on it using ``asyncio.run_coroutine_threadsafe``,
 keeping all domain logic safely in async context.
 
+Push routing
+------------
+On each push, look up the Task by ``order_id`` in the DB. If found, build the
+PushEvent and publish it. If NOT found, the task hasn't been registered yet
+(the trader is still in the middle of its submit → save_task path, or the
+push belongs to a foreign order). Buffer the raw push under ``order_id`` and
+expect the trader to call :meth:`replay_for_order` once it commits the
+order_id to the DB.
+
+Buffered pushes that age past :attr:`BUFFER_TTL_S` are dropped on the next
+GC sweep with a WARN log — protects against unbounded growth from foreign
+orders (mobile app, other processes) that the trader will never claim.
+
 State mapping
 -------------
 LongPort ``OrderStatus`` is a C-extension enum whose instances have no ``.name``
@@ -20,7 +33,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 import uuid
+from collections.abc import Callable
 from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
@@ -28,6 +43,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.broker.broker_client import BrokerClient
+from app.broker.order_id_norm import normalize_broker_order_id
 from app.core.event_bus import Event, EventBus
 from app.core.events import TaskPushPayload, Topics
 from app.domain.push_event import PushEvent, PushState
@@ -288,7 +304,21 @@ class PushListener:
     event loop).  It captures the loop reference at that time.  The SDK then
     fires callbacks on its own thread; ``_sync_callback`` uses
     ``asyncio.run_coroutine_threadsafe`` to hop back onto the captured loop.
+
+    Buffering contract
+    ------------------
+    Pushes whose ``order_id`` is not yet bound to a Task in the DB are held
+    in :attr:`_buffer` (a per-order_id list of raw pushes). The trader is
+    expected to call :meth:`replay_for_order` once it has committed the
+    binding, draining the buffer in arrival order. Entries older than
+    :attr:`BUFFER_TTL_S` are GC'd on the next push arrival to bound memory.
     """
+
+    #: Maximum age (seconds) for a buffered push before it is dropped with
+    #: a WARN log. Tuned so a normal trader submit (~120ms broker call +
+    #: save_task) finishes well within this window, while genuinely foreign
+    #: pushes (mobile-app orders, other processes) don't pile up forever.
+    BUFFER_TTL_S = 60.0
 
     def __init__(
         self,
@@ -300,6 +330,11 @@ class PushListener:
         self._client = client
         self._session_factory = session_factory
         self._loop: asyncio.AbstractEventLoop | None = None
+        # order_id -> [(monotonic_ts, raw_push), ...] in arrival order.
+        self._buffer: dict[str, list[tuple[float, Any]]] = {}
+        # Indirected for test injection. Keep monotonic so manual clock
+        # changes (e.g. NTP) cannot resurrect or expire entries unexpectedly.
+        self._clock: Callable[[], float] = time.monotonic
 
     def start(self) -> None:
         """Subscribe to broker push.  Must be called from a running event loop."""
@@ -313,49 +348,24 @@ class PushListener:
         self._client.subscribe_order_push(_sync_callback)
         logger.info("PushListener started — subscribed to broker order push")
 
-    # Race-safe lookup config: in production we have observed pushes for
-    # an order arrive BEFORE the trader's storage listener has committed
-    # the task row carrying that order_id. submit_order returns an id at
-    # T+~120ms; LongPort can push NotReported within a few ms of that;
-    # the storage save runs on the same event loop and finishes shortly
-    # after. A blind first lookup races with the commit. Retrying gives
-    # the in-flight save a chance to finish.
-    _LOOKUP_RETRY_ATTEMPTS = 4
-    _LOOKUP_RETRY_DELAY_S = 0.1
+    # ------------------------------------------------------------------ #
+    # Buffer introspection (test-only)                                    #
+    # ------------------------------------------------------------------ #
 
-    async def _load_task_with_retry(self, order_id: str) -> Task | None:
-        """Look up the Task by order_id, retrying briefly to absorb the
-        trader→storage commit race. Returns None only after all retries fail.
-        """
-        last_attempt = self._LOOKUP_RETRY_ATTEMPTS - 1
-        for attempt in range(self._LOOKUP_RETRY_ATTEMPTS):
-            async with self._session_factory() as session:
-                task = await load_task_by_order_id(session, order_id)
-            if task is not None:
-                if attempt > 0:
-                    logger.info(
-                        "PushListener: task lookup succeeded on retry %d/%d for "
-                        "order_id=%s — absorbed trader→storage commit race",
-                        attempt + 1,
-                        self._LOOKUP_RETRY_ATTEMPTS,
-                        order_id,
-                    )
-                return task
-            if attempt < last_attempt:
-                logger.debug(
-                    "PushListener: task lookup miss attempt %d/%d for order_id=%s; "
-                    "retrying in %.0fms",
-                    attempt + 1,
-                    self._LOOKUP_RETRY_ATTEMPTS,
-                    order_id,
-                    self._LOOKUP_RETRY_DELAY_S * 1000,
-                )
-                await asyncio.sleep(self._LOOKUP_RETRY_DELAY_S)
-        return None
+    def buffered_count(self, order_id: str) -> int:
+        """Return the number of buffered pushes for ``order_id`` (0 if none)."""
+        oid = normalize_broker_order_id(order_id)
+        if not oid:
+            return 0
+        return len(self._buffer.get(oid, []))
+
+    # ------------------------------------------------------------------ #
+    # Core handlers                                                       #
+    # ------------------------------------------------------------------ #
 
     async def _handle_raw_push(self, raw: Any) -> None:
-        """Async handler.  Looks up Task, builds PushEvent, publishes to bus."""
-        order_id: str = str(getattr(raw, "order_id", "") or "")
+        """Async handler.  DB hit → publish; miss → buffer for later replay."""
+        order_id: str = normalize_broker_order_id(getattr(raw, "order_id", None))
         sdk_status = getattr(raw, "status", None)
         if not order_id:
             logger.warning(
@@ -370,24 +380,75 @@ class PushListener:
             sdk_status,
         )
 
-        task = await self._load_task_with_retry(order_id)
-        if task is None:
-            # All retries failed. This is either a push for a foreign
-            # order_id (we never submitted it — possibly residual broker
-            # session leftovers) or our trader was so slow to commit that
-            # even the retry window was not enough. Logging the raw event
-            # at WARNING gives the operator something to grep for.
-            logger.warning(
-                "PushListener: no Task found for order_id=%s after %d attempts "
-                "(total wait ≈ %dms) — DROPPING push; sdk_status=%r raw=%r",
-                order_id,
-                self._LOOKUP_RETRY_ATTEMPTS,
-                int(self._LOOKUP_RETRY_DELAY_S * 1000 * (self._LOOKUP_RETRY_ATTEMPTS - 1)),
-                sdk_status,
-                repr(raw)[:200],
-            )
+        async with self._session_factory() as session:
+            task = await load_task_by_order_id(session, order_id)
+
+        if task is not None:
+            await self._publish_push(raw, task)
             return
 
+        # No task yet — trader may still be mid-submit, or this is a foreign
+        # order. Buffer it and let the trader call replay_for_order once it
+        # commits the binding. Stale entries are dropped here too so a flood
+        # of foreign pushes can't grow the buffer indefinitely.
+        self._gc_buffer()
+        self._buffer.setdefault(order_id, []).append((self._clock(), raw))
+        logger.info(
+            "PushListener: no Task in DB for order_id=%s — buffered (size=%d) "
+            "awaiting replay_for_order; sdk_status=%r",
+            order_id,
+            len(self._buffer[order_id]),
+            sdk_status,
+        )
+
+    async def replay_for_order(self, order_id: str) -> int:
+        """Drain buffered pushes for ``order_id``; publish each as TASK_PUSH_EVENT.
+
+        Called by the trader after ``save_task`` commits the order_id↔task_id
+        binding to the DB. Returns the number of pushes drained.
+        """
+        oid = normalize_broker_order_id(order_id)
+        if not oid:
+            return 0
+
+        # Sweep first so any expired entries are dropped before we drain
+        # (keeps "buffered then forgotten" pushes from being silently
+        # processed minutes after they arrived).
+        self._gc_buffer()
+        entries = self._buffer.pop(oid, [])
+        if not entries:
+            return 0
+
+        logger.info(
+            "PushListener: replaying %d buffered push(es) for order_id=%s",
+            len(entries),
+            oid,
+        )
+        published = 0
+        for _ts, raw in entries:
+            async with self._session_factory() as session:
+                task = await load_task_by_order_id(session, oid)
+            if task is None:
+                # Trader claimed this order but the DB row is gone (e.g. the
+                # task was deleted between commit and replay). Nothing useful
+                # to do but warn — the push event has nowhere to attach.
+                logger.warning(
+                    "PushListener: replay_for_order=%s drained 1 buffered push "
+                    "but DB has no matching task — dropping; sdk_status=%r",
+                    oid,
+                    getattr(raw, "status", None),
+                )
+                continue
+            await self._publish_push(raw, task)
+            published += 1
+        return published
+
+    # ------------------------------------------------------------------ #
+    # Internals                                                           #
+    # ------------------------------------------------------------------ #
+
+    async def _publish_push(self, raw: Any, task: Task) -> None:
+        """Build and publish a TASK_PUSH_EVENT for the given raw + task."""
         logger.info(
             "PushListener: task loaded id=%s prior_status=%s prior_push_count=%d",
             task.id,
@@ -419,6 +480,26 @@ class PushListener:
             evt.delta_qty,
             evt.cumulative_qty,
         )
+
+    def _gc_buffer(self) -> None:
+        """Drop buffered entries older than :attr:`BUFFER_TTL_S` with a WARN."""
+        cutoff = self._clock() - self.BUFFER_TTL_S
+        for order_id in list(self._buffer.keys()):
+            entries = self._buffer[order_id]
+            kept = [(ts, raw) for ts, raw in entries if ts >= cutoff]
+            dropped = len(entries) - len(kept)
+            if dropped > 0:
+                logger.warning(
+                    "PushListener: dropping %d expired push(es) for order_id=%s "
+                    "(buffered > %.0fs without trader claim — likely foreign order)",
+                    dropped,
+                    order_id,
+                    self.BUFFER_TTL_S,
+                )
+            if kept:
+                self._buffer[order_id] = kept
+            else:
+                del self._buffer[order_id]
 
 
 # ---------------------------------------------------------------------------

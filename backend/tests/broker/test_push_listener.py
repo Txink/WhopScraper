@@ -218,100 +218,15 @@ async def test_push_filled_emits_with_cumulative_deltas(
 
 
 # ---------------------------------------------------------------------------
-# 3. Unknown order_id → no crash, no event emitted
+# 3. Task already in DB → published on first lookup, no buffering
 # ---------------------------------------------------------------------------
 
 
-async def test_push_for_unknown_order_id_logs_and_skips(
+async def test_handle_raw_push_publishes_immediately_when_task_in_db(
     session_factory: async_sessionmaker[AsyncSession],
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A push for an order_id that never appears in DB is dropped after
-    all retries — the listener emits a WARNING and does NOT publish
-    TASK_PUSH_EVENT. Use a tiny retry delay so the test stays fast.
-    """
-    monkeypatch.setattr(PushListener, "_LOOKUP_RETRY_DELAY_S", 0.005)
-
-    bus = EventBus()
-    client = FakeBrokerClient()
-
-    received_events: list[Event] = []
-
-    async def _capture(evt: Event) -> None:
-        received_events.append(evt)
-
-    bus.subscribe(Topics.TASK_PUSH_EVENT, _capture)
-
-    listener = _make_listener(bus, client, session_factory)
-
-    # Call handler directly — order_id has no matching Task
-    await listener._handle_raw_push(FakePushEvent(order_id="does-not-exist", status="NEW"))
-    await bus.wait_idle(timeout=2.0)
-
-    assert len(received_events) == 0
-
-
-# ---------------------------------------------------------------------------
-# Race recovery: push arrives BEFORE the trader's storage commit
-# ---------------------------------------------------------------------------
-# Reproduces the production bug where the first push for a freshly-submitted
-# order arrived faster than the storage listener could commit the task row.
-# Without retry, ``load_task_by_order_id`` returned None on the first lookup
-# and the push was silently dropped — explaining tasks stuck at PENDING with
-# zero push_events while sibling orders submitted milliseconds later got
-# their full push trail.
-
-
-async def test_handle_raw_push_retries_lookup_when_task_not_yet_committed(
-    session_factory: async_sessionmaker[AsyncSession],
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """If the task lands in DB AFTER the first lookup miss but BEFORE the
-    last retry, the listener should still find it and publish the event."""
-    # 50ms retry × 4 attempts = up to 150ms total wait.
-    monkeypatch.setattr(PushListener, "_LOOKUP_RETRY_DELAY_S", 0.05)
-
-    bus = EventBus()
-    client = FakeBrokerClient()
-    listener = _make_listener(bus, client, session_factory)
-
-    received_events: list[Event] = []
-
-    async def _capture(evt: Event) -> None:
-        received_events.append(evt)
-
-    bus.subscribe(Topics.TASK_PUSH_EVENT, _capture)
-
-    task = _make_pending_task("task-race", "ord-race")
-
-    # Schedule the save to happen ~80ms in — between the first miss
-    # (immediate) and second retry (at 50ms). The third retry at 100ms
-    # will succeed.
-    async def _delayed_save() -> None:
-        await asyncio.sleep(0.08)
-        await _save(session_factory, task)
-
-    save_coro = asyncio.create_task(_delayed_save())
-    raw = FakePushEvent(order_id="ord-race", status="NEW")
-    await listener._handle_raw_push(raw)
-    await save_coro
-    await bus.wait_idle(timeout=2.0)
-
-    assert len(received_events) == 1
-    payload = received_events[0].payload
-    assert isinstance(payload, TaskPushPayload)
-    assert payload.task.id == "task-race"
-    assert payload.push_event.state == PushState.NEW
-
-
-async def test_handle_raw_push_succeeds_first_try_when_task_already_committed(
-    session_factory: async_sessionmaker[AsyncSession],
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Sanity check: when the task is already in DB at lookup time, the
-    handler succeeds on the first attempt — no extra delay incurred."""
-    monkeypatch.setattr(PushListener, "_LOOKUP_RETRY_DELAY_S", 1.0)  # would block forever if a retry were needed
-
+    """When the task already exists in DB at lookup time, the handler
+    publishes TASK_PUSH_EVENT directly without buffering."""
     bus = EventBus()
     client = FakeBrokerClient()
     listener = _make_listener(bus, client, session_factory)
@@ -319,15 +234,18 @@ async def test_handle_raw_push_succeeds_first_try_when_task_already_committed(
     await _save(session_factory, task)
 
     received: list[Event] = []
-    bus.subscribe(Topics.TASK_PUSH_EVENT, lambda e: received.append(e) or asyncio.sleep(0))  # type: ignore
+
+    async def _capture(evt: Event) -> None:
+        received.append(evt)
+
+    bus.subscribe(Topics.TASK_PUSH_EVENT, _capture)
 
     raw = FakePushEvent(order_id="ord-fast", status="FILLED", executed_quantity=100)
-    # Wrap with a wall-clock budget so a stuck retry is surfaced as a
-    # test failure rather than a hang.
     await asyncio.wait_for(listener._handle_raw_push(raw), timeout=0.5)
     await bus.wait_idle(timeout=2.0)
 
     assert len(received) == 1
+    assert listener.buffered_count("ord-fast") == 0
 
 
 # ---------------------------------------------------------------------------
@@ -775,3 +693,180 @@ async def test_filled_push_with_msg_does_not_set_reject_reason(
     assert payload.push_event.note == "info: full fill"
     # …but reject_reason stays clean.
     assert payload.task.reject_reason is None
+
+
+# ---------------------------------------------------------------------------
+# Buffer + replay model — pushes for unknown order_ids are held until claimed
+# ---------------------------------------------------------------------------
+# Replaces the old "retry-then-drop" + pending_order_registry approach.
+# Trader calls ``listener.replay_for_order(order_id)`` after committing the
+# order_id to DB. Pushes that arrived earlier are then drained and processed.
+
+
+async def test_handle_raw_push_buffers_when_task_not_in_db(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """Push for unknown order_id must NOT publish a TASK_PUSH_EVENT —
+    it should be buffered for later replay."""
+    bus = EventBus()
+    client = FakeBrokerClient()
+    listener = _make_listener(bus, client, session_factory)
+
+    captured: list[Event] = []
+
+    async def _capture(evt: Event) -> None:
+        captured.append(evt)
+
+    bus.subscribe(Topics.TASK_PUSH_EVENT, _capture)
+
+    raw = FakePushEvent(order_id="ord-buf-1", status="NEW")
+    await listener._handle_raw_push(raw)
+    await bus.wait_idle(timeout=2.0)
+
+    # No event published yet — push is in the buffer
+    assert len(captured) == 0
+    assert listener.buffered_count("ord-buf-1") == 1
+
+
+async def test_replay_for_order_drains_buffer_in_arrival_order(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """Three pushes arrive before the task lands in DB. Once the task is
+    saved and ``replay_for_order`` is called, all three drain in arrival
+    order and produce TASK_PUSH_EVENTs."""
+    bus = EventBus()
+    client = FakeBrokerClient()
+    listener = _make_listener(bus, client, session_factory)
+
+    # storage listener so push_events persist between handler runs
+    register_storage_listeners(bus, session_factory)
+
+    captured: list[TaskPushPayload] = []
+
+    async def _capture(evt: Event) -> None:
+        captured.append(evt.payload)
+
+    bus.subscribe(Topics.TASK_PUSH_EVENT, _capture)
+
+    # Three pushes arrive before any task exists in DB → all buffered
+    await listener._handle_raw_push(FakePushEvent(order_id="ord-replay", status="NEW"))
+    await listener._handle_raw_push(
+        FakePushEvent(order_id="ord-replay", status="PARTIAL", executed_quantity=10)
+    )
+    await listener._handle_raw_push(
+        FakePushEvent(order_id="ord-replay", status="FILLED", executed_quantity=50)
+    )
+    await bus.wait_idle(timeout=2.0)
+    assert captured == []  # nothing published yet
+    assert listener.buffered_count("ord-replay") == 3
+
+    # Trader does its thing: persist task with order_id, then replay
+    task = _make_pending_task("task-replay", "ord-replay")
+    await _save(session_factory, task)
+    drained = await listener.replay_for_order("ord-replay")
+    await bus.wait_idle(timeout=2.0)
+
+    assert drained == 3
+    assert listener.buffered_count("ord-replay") == 0
+    assert [p.push_event.state for p in captured] == [
+        PushState.NEW,
+        PushState.PARTIAL,
+        PushState.FILLED,
+    ]
+    # Cumulative deltas are computed against persisted prior events
+    assert captured[1].push_event.delta_qty == 10
+    assert captured[2].push_event.delta_qty == 40
+
+
+async def test_replay_for_order_is_noop_when_buffer_empty(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """``replay_for_order`` for an order with no buffered pushes returns 0
+    and publishes nothing (the common happy path: trader replays after
+    submit but no push arrived early)."""
+    bus = EventBus()
+    client = FakeBrokerClient()
+    listener = _make_listener(bus, client, session_factory)
+
+    captured: list[Event] = []
+
+    async def _capture(evt: Event) -> None:
+        captured.append(evt)
+
+    bus.subscribe(Topics.TASK_PUSH_EVENT, _capture)
+
+    drained = await listener.replay_for_order("ord-nothing-here")
+    await bus.wait_idle(timeout=2.0)
+
+    assert drained == 0
+    assert captured == []
+
+
+async def test_buffer_drops_entries_older_than_ttl(
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Buffered pushes that have aged past ``BUFFER_TTL_S`` are dropped
+    on the next GC sweep (which runs lazily on every push arrival).
+
+    This protects against unbounded growth when foreign orders (submitted
+    via mobile app, other processes) push to our SDK connection without
+    a corresponding task ever appearing.
+    """
+    monkeypatch.setattr(PushListener, "BUFFER_TTL_S", 30.0)
+
+    bus = EventBus()
+    client = FakeBrokerClient()
+    listener = _make_listener(bus, client, session_factory)
+
+    # Inject a deterministic clock so we don't have to sleep.
+    fake_now = [1000.0]
+    listener._clock = lambda: fake_now[0]  # type: ignore[assignment]
+
+    # Push at t=1000 — buffered
+    await listener._handle_raw_push(FakePushEvent(order_id="ord-stale", status="NEW"))
+    assert listener.buffered_count("ord-stale") == 1
+
+    # Advance clock 31s; next push arrival triggers GC of stale entries
+    fake_now[0] = 1031.0
+    await listener._handle_raw_push(FakePushEvent(order_id="ord-other", status="NEW"))
+
+    # Stale entry was swept; new one is buffered
+    assert listener.buffered_count("ord-stale") == 0
+    assert listener.buffered_count("ord-other") == 1
+
+
+async def test_replay_after_buffer_ttl_returns_zero(
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """If trader claims an order whose buffered pushes have already expired,
+    replay returns 0 and nothing is published (the pushes are simply lost,
+    which is a deliberate trade-off — they were probably foreign)."""
+    monkeypatch.setattr(PushListener, "BUFFER_TTL_S", 10.0)
+
+    bus = EventBus()
+    client = FakeBrokerClient()
+    listener = _make_listener(bus, client, session_factory)
+
+    fake_now = [2000.0]
+    listener._clock = lambda: fake_now[0]  # type: ignore[assignment]
+
+    captured: list[Event] = []
+
+    async def _capture(evt: Event) -> None:
+        captured.append(evt)
+
+    bus.subscribe(Topics.TASK_PUSH_EVENT, _capture)
+
+    await listener._handle_raw_push(FakePushEvent(order_id="ord-late", status="NEW"))
+    fake_now[0] = 2020.0  # 20s past TTL
+
+    # Save task and replay — buffered entry was eligible for GC at lookup
+    task = _make_pending_task("task-late", "ord-late")
+    await _save(session_factory, task)
+    drained = await listener.replay_for_order("ord-late")
+    await bus.wait_idle(timeout=2.0)
+
+    assert drained == 0
+    assert captured == []

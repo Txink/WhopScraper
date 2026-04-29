@@ -14,6 +14,10 @@ export interface OrderSubmitProps {
   submitOrderType?: string | null;
   /** Backend rationale (Chinese), e.g. quote vs signal price. */
   submitOrderContext?: string | null;
+  /** Broker last_done at decision (shown for PRICE when MARKET). */
+  submitQuoteLastDone?: number | null;
+  /** Precomputed UTC clock string for right column (HH:MM:SS.mmm). */
+  wallClockAtSubmitEnd?: string;
 }
 
 export function OrderSubmit({
@@ -23,24 +27,46 @@ export function OrderSubmit({
   error,
   submitOrderType,
   submitOrderContext,
+  submitQuoteLastDone,
+  wallClockAtSubmitEnd,
 }: OrderSubmitProps) {
   const side = instruction.instruction_type?.toUpperCase() ?? "—";
-  const price = instruction.price != null ? `$${instruction.price.toFixed(2)}` : "—";
+  const isMarket = submitOrderType === "MARKET";
+  const ref = submitQuoteLastDone;
+  const price =
+    isMarket && ref != null && Number.isFinite(ref)
+      ? `市价 @$${ref.toFixed(3)}`
+      : instruction.price != null
+        ? `$${instruction.price.toFixed(3)}`
+        : "—";
   const qty = instruction.quantity ?? "—";
+  const priceForTotal =
+    isMarket && ref != null && Number.isFinite(ref) ? ref : instruction.price ?? null;
   const total =
-    instruction.price != null && instruction.quantity != null
-      ? `$${(instruction.price * instruction.quantity).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    priceForTotal != null && instruction.quantity != null
+      ? `$${(priceForTotal * instruction.quantity).toLocaleString("en-US", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })}`
       : "—";
 
   const failed = !!error || !orderId;
   const stageClass = failed ? "stage err order-submit" : "stage done order-submit";
   const typeLabel = submitOrderType ?? "—";
+  const submitTiming =
+    delta != null ? <span className="stage-title-timing">[+{delta.toFixed(3)}ms]</span> : null;
+  const rightClock = wallClockAtSubmitEnd && wallClockAtSubmitEnd !== "—" ? wallClockAtSubmitEnd : "—";
 
   return (
     <div className={stageClass}>
       <div className="stage-marker" />
       <div className="stage-body">
-        <strong>提交订单</strong>
+        <div className="stage-title-line">
+          <span>
+            <strong>提交订单</strong>
+            {submitTiming}
+          </span>
+        </div>
         <div className="order-summary">
           <span className="order-tag">
             <span className="k">SIDE</span>
@@ -80,9 +106,7 @@ export function OrderSubmit({
           </div>
         )}
       </div>
-      <div className="stage-delta">
-        {delta != null ? `+${delta}ms` : "—"}
-      </div>
+      <div className="stage-delta stage-delta-clock">{rightClock}</div>
     </div>
   );
 }

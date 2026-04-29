@@ -198,6 +198,13 @@ def create_app(
         def _register_trader_and_push() -> None:
             from app.storage.repo import SqlTaskQueryRepo
 
+            # Order matters: build the push_listener first so the trader can
+            # call ``replay_for_order`` on it after each successful submit.
+            # The buffer in push_listener is what catches pushes that arrive
+            # while the trader's synchronous _submit is blocking the loop.
+            state.push_listener = register_push_listener(
+                bus, state.broker, session_factory
+            )
             state.trader_unsub = register_trader(
                 bus,
                 state.broker,
@@ -206,9 +213,7 @@ def create_app(
                 auto_trade_getter=lambda: state.longport_runtime.get().auto_trade,
                 task_query_repo=SqlTaskQueryRepo(session_factory),
                 session_factory=session_factory,
-            )
-            state.push_listener = register_push_listener(
-                bus, state.broker, session_factory
+                push_listener=state.push_listener,
             )
 
         _register_trader_and_push()

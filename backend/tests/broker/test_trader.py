@@ -141,6 +141,7 @@ async def test_stock_buy_happy_path() -> None:
     assert submitted_task.submit_order_type == "MARKET"
     assert submitted_task.submit_order_context is not None
     assert "市价" in (submitted_task.submit_order_context or "")
+    assert submitted_task.submit_quote_last_done == pytest.approx(20.0)
     assert submitted_task.order_id == "ORDER-STK-001"
     assert "submit" in submitted_task.stage_timings
 
@@ -177,6 +178,7 @@ async def test_option_buy_happy_path() -> None:
     submitted_task: Task = received_events[0].payload.task
     assert submitted_task.status == Status.PENDING
     assert submitted_task.submit_order_type == "MARKET"
+    assert submitted_task.submit_quote_last_done == pytest.approx(2.0)
     assert submitted_task.order_id == "ORDER-OPT-001"
 
 
@@ -491,3 +493,37 @@ async def test_trader_accepts_whitelisted_stock_without_qty_or_position_size() -
     assert task.status in (Status.PENDING, Status.SUBMITTING, Status.FILLED), (
         f"expected submission, got {task.status} with reason={task.reject_reason}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Push-buffer replay integration: trader must drain the listener's buffer
+# after committing the order_id, so pushes that arrived during _submit are
+# not lost.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_trader_calls_replay_for_order_after_save_task() -> None:
+    """If a ``push_listener`` is wired in, the trader must call
+    ``listener.replay_for_order(order_id)`` after the broker submit succeeds
+    so any pushes that arrived while ``_submit`` was blocking get processed.
+    """
+    bus = EventBus()
+    fake = FakeBrokerClient(next_order_id="ORDER-REPLAY-1")
+    fake.quote_by_symbol["TSLA.US"] = 20.0
+
+    replay_calls: list[str] = []
+
+    class _StubListener:
+        async def replay_for_order(self, order_id: str) -> int:
+            replay_calls.append(order_id)
+            return 0
+
+    register_trader(bus, fake, _config(), push_listener=_StubListener())
+
+    task = _stock_task()
+    await bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
+    await bus.wait_idle(timeout=2.0)
+
+    assert replay_calls == ["ORDER-REPLAY-1"]
+    assert task.order_id == "ORDER-REPLAY-1"

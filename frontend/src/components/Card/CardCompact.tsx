@@ -2,7 +2,7 @@ import type { TaskSummary } from "../../api/domain-types";
 import { TypeBadge } from "../common/TypeBadge";
 import { StatusPill } from "../common/StatusPill";
 import { ConfirmActions } from "./ConfirmActions";
-import { formatTitle, fmtTime, fmtElapsed, elapsedMs } from "./cardHelpers";
+import { formatTitle, fmtTime, fmtElapsed, elapsedMs, displaySubmitPriceDollars } from "./cardHelpers";
 import "./Card.css";
 
 export interface CardCompactProps {
@@ -41,7 +41,12 @@ export function CardCompact({ task, autoTrade, onExpand }: CardCompactProps) {
   if (isSkipped && task.reject_reason) {
     detailContent = task.reject_reason;
   } else if (parsedSymbol && instruction) {
-    const price = instruction.price != null ? `$${instruction.price.toFixed(2)}` : null;
+    const px = displaySubmitPriceDollars(
+      instruction,
+      task.submit_order_type,
+      task.submit_quote_last_done,
+    );
+    const price = px != null ? `$${px.toFixed(3)}` : null;
     const qty = instruction.quantity != null ? String(instruction.quantity) : null;
     if (price || qty) {
       detailContent = (

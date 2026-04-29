@@ -100,7 +100,19 @@ describe("CardCompact", () => {
 
   it("renders price in details", () => {
     render(<CardCompact task={stockTask} autoTrade={true} onExpand={vi.fn()} />);
-    expect(screen.getByText("$26.50")).toBeInTheDocument();
+    expect(screen.getByText("$26.500")).toBeInTheDocument();
+  });
+
+  it("compact price uses quote ref for MARKET not signal price", () => {
+    const marketTask: TaskSummary = {
+      ...stockTask,
+      submit_order_type: "MARKET",
+      submit_quote_last_done: 9.792,
+      instruction: { ...stockTask.instruction!, price: 8.52 },
+    };
+    render(<CardCompact task={marketTask} autoTrade={true} onExpand={vi.fn()} />);
+    expect(screen.getByText("$9.792")).toBeInTheDocument();
+    expect(screen.queryByText("$8.520")).not.toBeInTheDocument();
   });
 
   it("option task renders formatted title with ticker, strike, type, and expiry", () => {
@@ -125,7 +137,7 @@ describe("CardCompact", () => {
       instruction: { ...stockTask.instruction!, quantity: null },
     };
     render(<CardCompact task={priceOnly} autoTrade={true} onExpand={vi.fn()} />);
-    expect(screen.getByText("$26.50")).toBeInTheDocument();
+    expect(screen.getByText("$26.500")).toBeInTheDocument();
     // No "×" separator should appear
     expect(screen.queryByText(/×/)).not.toBeInTheDocument();
   });
@@ -145,7 +157,7 @@ describe("CardCompact", () => {
   it("renders price × qty when both exist", () => {
     const { container } = render(<CardCompact task={stockTask} autoTrade={true} onExpand={vi.fn()} />);
     const details = container.querySelector(".details");
-    expect(details?.textContent).toContain("$26.50");
+    expect(details?.textContent).toContain("$26.500");
     expect(details?.textContent).toContain("×");
     expect(details?.textContent).toContain("500");
   });
@@ -161,7 +173,7 @@ describe("CardCompact", () => {
   });
 
   it("renders raw message preview in its own cell alongside the parsed cluster", () => {
-    // Layout: 正股 | 原始文本 | TSLL.US | BUY | $26.50 × 500 | ts | elapsed | status | ▸
+    // Layout: 正股 | 原始文本 | TSLL.US | BUY | $26.500 × 500 | ts | elapsed | status | ▸
     // — the raw text cell is always visible, even when the signal parsed cleanly.
     const { container } = render(
       <CardCompact task={stockTask} autoTrade={true} onExpand={vi.fn()} />

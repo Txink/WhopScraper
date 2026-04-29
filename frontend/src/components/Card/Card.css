@@ -324,6 +324,24 @@
   color: var(--fg-1);
   font-size: 13px;
 }
+
+.stage-title-line {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin-bottom: 2px;
+}
+.stage-title-timing {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-3);
+  font-weight: 400;
+}
+.stage-delta.stage-delta-clock {
+  font-size: 11px;
+  color: var(--fg-2);
+}
 .stage-meta {
   color: var(--fg-3);
   font-size: 11px;
@@ -367,7 +385,7 @@
 
 .order-type-context {
   font-size: 0.78rem;
-  color: var(--muted, #8b9199);
+  color: #c9a227;
   margin-top: 0.35rem;
   line-height: 1.35;
 }
