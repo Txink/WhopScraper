@@ -26,6 +26,11 @@ export function weekKeyOf(ts: string): string {
   const weekdayShort = get("weekday"); // "Sun" | "Mon" | ...
   const wdMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
   const wd = wdMap[weekdayShort] ?? 0;
+
+  if (!y || !mo || !dd || !(weekdayShort in wdMap)) {
+    throw new Error(`weekKeyOf: bad parts for "${ts}"`);
+  }
+
   // Walk back `wd` days using a date-only UTC anchor (avoids host-tz drift).
   const anchor = new Date(Date.UTC(y, mo - 1, dd));
   anchor.setUTCDate(anchor.getUTCDate() - wd);

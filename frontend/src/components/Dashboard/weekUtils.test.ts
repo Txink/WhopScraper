@@ -127,4 +127,10 @@ describe("weekKeyOf — Beijing-pinned", () => {
     // Beijing-Saturday belongs to the week starting on the prior Sunday Apr 19.
     expect(weekKeyOf("2026-04-25T01:00:00Z")).toBe("2026-04-19");
   });
+
+  it("handles year-boundary cross (UTC Dec 31 → Beijing Jan 1)", () => {
+    // Real UTC 2025-12-31T20:00:00Z = Beijing 2026-01-01T04:00 (Thursday).
+    // Beijing-Thursday Jan 1 → walk back 4 days → Sunday Dec 28 2025.
+    expect(weekKeyOf("2025-12-31T20:00:00Z")).toBe("2025-12-28");
+  });
 });
