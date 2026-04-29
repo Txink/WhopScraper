@@ -8,11 +8,14 @@ is needed.
 from __future__ import annotations
 
 import asyncio
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
 from app.core.event_bus import Event, EventBus
-from app.core.events import Topics
+from app.core.events import MessagePayload, Topics
+from app.domain.message import Message
+from app.whop.extractor import parse_whop_timestamp
 from app.whop.listener import WhopListener  # noqa: E402
 
 # ---------------------------------------------------------------------------
@@ -285,13 +288,6 @@ def test_register_creates_listeners_for_real_urls() -> None:
 # ---------------------------------------------------------------------------
 # is_historical tagging (T5)
 # ---------------------------------------------------------------------------
-
-
-from datetime import UTC, datetime, timedelta
-
-from app.core.events import MessagePayload
-from app.domain.message import Message
-from app.whop.extractor import parse_whop_timestamp
 
 
 def _historical_test_msg(mid: str, posted_at: datetime | None) -> Message:
