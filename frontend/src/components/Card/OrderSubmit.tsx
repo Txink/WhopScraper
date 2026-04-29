@@ -16,6 +16,11 @@ export interface OrderSubmitProps {
   submitOrderContext?: string | null;
   /** Broker last_done at decision (shown for PRICE when MARKET). */
   submitQuoteLastDone?: number | null;
+  /** Actual LIMIT price submitted to broker (post quote-vs-signal decision).
+   *  May differ from ``instruction.price`` when the live quote was more
+   *  favorable (BUY: lower; SELL: higher). Falls back to ``instruction.price``
+   *  for older tasks predating this field. */
+  submitPrice?: number | null;
   /** Precomputed UTC clock string for right column (HH:MM:SS.mmm). */
   wallClockAtSubmitEnd?: string;
 }
@@ -28,20 +33,25 @@ export function OrderSubmit({
   submitOrderType,
   submitOrderContext,
   submitQuoteLastDone,
+  submitPrice,
   wallClockAtSubmitEnd,
 }: OrderSubmitProps) {
   const side = instruction.instruction_type?.toUpperCase() ?? "—";
   const isMarket = submitOrderType === "MARKET";
   const ref = submitQuoteLastDone;
+  // Actual LIMIT price the trader submitted to the broker — falls back to
+  // the parsed signal price for tasks that pre-date the submit_price field.
+  const limitPrice =
+    submitPrice != null && Number.isFinite(submitPrice) ? submitPrice : instruction.price;
   const price =
     isMarket && ref != null && Number.isFinite(ref)
       ? `市价 @$${ref.toFixed(3)}`
-      : instruction.price != null
-        ? `$${instruction.price.toFixed(3)}`
+      : limitPrice != null
+        ? `$${limitPrice.toFixed(3)}`
         : "—";
   const qty = instruction.quantity ?? "—";
   const priceForTotal =
-    isMarket && ref != null && Number.isFinite(ref) ? ref : instruction.price ?? null;
+    isMarket && ref != null && Number.isFinite(ref) ? ref : (limitPrice ?? null);
   const total =
     priceForTotal != null && instruction.quantity != null
       ? `$${(priceForTotal * instruction.quantity).toLocaleString("en-US", {

@@ -44,6 +44,11 @@ class Task:
     submit_order_context: str | None = None
     #: Broker ``last_done`` from quote at submit decision (UI / MARKET reference).
     submit_quote_last_done: float | None = None
+    #: Actual LIMIT price submitted to the broker (post quote-vs-signal decision).
+    #: Distinct from ``submit_quote_last_done``: when quote is more favorable
+    #: than signal, this is the snapped (floor/ceil to cents) quote; otherwise
+    #: it equals ``signal_price``. Frontend uses this for PRICE/TOTAL display.
+    submit_price: float | None = None
 
     @classmethod
     def new_from_message(cls, msg: Message, *, is_historical: bool = False) -> Task:

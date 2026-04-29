@@ -97,6 +97,7 @@ class TaskOut(BaseModel):
     submit_order_type: str | None = None
     submit_order_context: str | None = None
     submit_quote_last_done: float | None = None
+    submit_price: float | None = None
     stage_timings: dict[str, float]
     created_at: datetime
     updated_at: datetime
@@ -119,6 +120,7 @@ class TaskSummaryOut(BaseModel):
     submit_order_type: str | None = None
     submit_order_context: str | None = None
     submit_quote_last_done: float | None = None
+    submit_price: float | None = None
     stage_timings: dict[str, float]
     created_at: datetime
     updated_at: datetime
@@ -421,6 +423,7 @@ def task_to_out(task: Task) -> TaskOut:
         submit_order_type=task.submit_order_type,
         submit_order_context=task.submit_order_context,
         submit_quote_last_done=task.submit_quote_last_done,
+        submit_price=task.submit_price,
         stage_timings=dict(task.stage_timings),
         created_at=task.created_at,
         updated_at=task.updated_at,
@@ -441,6 +444,7 @@ def task_to_summary(task: Task) -> TaskSummaryOut:
         submit_order_type=task.submit_order_type,
         submit_order_context=task.submit_order_context,
         submit_quote_last_done=task.submit_quote_last_done,
+        submit_price=task.submit_price,
         stage_timings=dict(task.stage_timings),
         created_at=task.created_at,
         updated_at=task.updated_at,

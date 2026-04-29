@@ -36,6 +36,7 @@ export function CardExpanded({ task, pushEvents, autoTrade, onCollapse }: CardEx
     submit_order_type,
     submit_order_context,
     submit_quote_last_done,
+    submit_price,
   } = task;
   const badgeType = type === "option" ? "option" : "stock";
   const title = formatTitle(instruction);
@@ -214,6 +215,7 @@ export function CardExpanded({ task, pushEvents, autoTrade, onCollapse }: CardEx
             submitOrderType={submit_order_type ?? null}
             submitOrderContext={submit_order_context ?? null}
             submitQuoteLastDone={submit_quote_last_done ?? null}
+            submitPrice={submit_price ?? null}
             wallClockAtSubmitEnd={submitEndClock}
           />
         )}

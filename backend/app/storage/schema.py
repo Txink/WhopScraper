@@ -65,6 +65,7 @@ class TaskRow(Base):
     submit_order_type: Mapped[str | None] = mapped_column(String, nullable=True)
     submit_order_context: Mapped[str | None] = mapped_column(String, nullable=True)
     submit_quote_last_done: Mapped[float | None] = mapped_column(nullable=True)
+    submit_price: Mapped[float | None] = mapped_column(nullable=True)
 
 
 # ---------------------------------------------------------------------------

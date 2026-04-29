@@ -44,6 +44,7 @@ export function CardCompact({ task, autoTrade, onExpand }: CardCompactProps) {
     const px = displaySubmitPriceDollars(
       instruction,
       task.submit_order_type,
+      task.submit_price,
       task.submit_quote_last_done,
     );
     const price = px != null ? `$${px.toFixed(3)}` : null;

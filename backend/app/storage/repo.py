@@ -268,6 +268,7 @@ def _rows_to_task(
         submit_order_type=task_row.submit_order_type,
         submit_order_context=task_row.submit_order_context,
         submit_quote_last_done=task_row.submit_quote_last_done,
+        submit_price=task_row.submit_price,
     )
 
 
@@ -299,6 +300,7 @@ _TASK_UPDATE_COLS = (
     "submit_order_type",
     "submit_order_context",
     "submit_quote_last_done",
+    "submit_price",
 )
 
 _INSTRUCTION_UPDATE_COLS = (
@@ -356,6 +358,7 @@ async def save_task(session: AsyncSession, task: Task) -> None:
         "submit_order_type": task.submit_order_type,
         "submit_order_context": task.submit_order_context,
         "submit_quote_last_done": task.submit_quote_last_done,
+        "submit_price": task.submit_price,
     }
 
     # --- tasks UPSERT ---

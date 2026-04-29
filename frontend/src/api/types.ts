@@ -694,6 +694,8 @@ export interface components {
             submit_order_context?: string | null;
             /** last_done from quote at submit decision */
             submit_quote_last_done?: number | null;
+            /** Actual LIMIT price submitted to broker (post quote-vs-signal decision) */
+            submit_price?: number | null;
             /** Stage Timings */
             stage_timings: {
                 [key: string]: number;
@@ -731,6 +733,8 @@ export interface components {
             submit_order_context?: string | null;
             /** last_done from quote at submit decision */
             submit_quote_last_done?: number | null;
+            /** Actual LIMIT price submitted to broker (post quote-vs-signal decision) */
+            submit_price?: number | null;
             /** Stage Timings */
             stage_timings: {
                 [key: string]: number;

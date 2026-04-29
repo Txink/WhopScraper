@@ -461,6 +461,7 @@ def register_trader(
         task.submit_order_type = order_type
         task.submit_order_context = rationale
         task.submit_quote_last_done = last_done
+        task.submit_price = submit_price
 
         # ---- Submit ----
         task.mark_submitting()

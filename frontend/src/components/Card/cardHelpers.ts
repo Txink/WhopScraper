@@ -85,19 +85,26 @@ export function elapsedMs(from: string, to: string): number {
 }
 
 /**
- * Dollar price shown for compact card / totals: MARKET uses
- * ``submit_quote_last_done`` when present (same rule as expanded OrderSubmit),
- * otherwise the parsed instruction price.
+ * Dollar price shown for compact card / totals.
+ *
+ * Priority:
+ * 1. MARKET → ``submit_quote_last_done`` (the broker reference quote)
+ * 2. ``submit_price`` (actual LIMIT price the trader submitted; may differ
+ *    from the parsed signal price when the live quote was more favorable)
+ * 3. ``instruction.price`` fallback (older tasks predating ``submit_price``)
  */
 export function displaySubmitPriceDollars(
   instruction: Instruction,
   submitOrderType?: string | null,
+  submitPrice?: number | null,
   submitQuoteLastDone?: number | null,
 ): number | null {
   const isMarket = submitOrderType === "MARKET";
-  const ref = submitQuoteLastDone;
-  if (isMarket && ref != null && Number.isFinite(ref)) {
-    return ref;
+  if (isMarket && submitQuoteLastDone != null && Number.isFinite(submitQuoteLastDone)) {
+    return submitQuoteLastDone;
+  }
+  if (submitPrice != null && Number.isFinite(submitPrice)) {
+    return submitPrice;
   }
   if (instruction.price != null) {
     return instruction.price;
