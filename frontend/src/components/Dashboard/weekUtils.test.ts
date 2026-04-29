@@ -109,3 +109,22 @@ describe("computeWeeks", () => {
     expect(r.weeks[0]?.key).toBe("2026-04-19");
   });
 });
+
+describe("weekKeyOf — Beijing-pinned", () => {
+  it("places a UTC-Saturday late-night moment in the correct Beijing week", () => {
+    // Real UTC 2026-04-25T20:00:00Z = Beijing 2026-04-26T04:00 (Sunday).
+    // In Beijing, Sunday Apr 26 is the start of the week containing Apr 26.
+    expect(weekKeyOf("2026-04-25T20:00:00Z")).toBe("2026-04-26");
+  });
+
+  it("rolls a UTC-late-Saturday into the Beijing-Sunday week", () => {
+    // Real UTC 2026-04-25T16:00:00Z = Beijing 2026-04-26T00:00 exactly.
+    expect(weekKeyOf("2026-04-25T16:00:00Z")).toBe("2026-04-26");
+  });
+
+  it("treats early Beijing Saturday as still the previous Sunday's week", () => {
+    // Real UTC 2026-04-25T01:00:00Z = Beijing 2026-04-25T09:00 (Saturday).
+    // Beijing-Saturday belongs to the week starting on the prior Sunday Apr 19.
+    expect(weekKeyOf("2026-04-25T01:00:00Z")).toBe("2026-04-19");
+  });
+});
