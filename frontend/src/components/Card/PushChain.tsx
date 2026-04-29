@@ -52,7 +52,7 @@ export function PushChain({ events, taskStatus, totalQty, submitOrderId, submitE
     <div className="push-chain">
       {showSubmitNode && (
         <span key="__submit__">
-          <span className="node info" data-ts={submitEndIso ? fmtBeijingHmsMs(submitEndIso) : ""}>
+          <span className="node info" data-ts={submitEndIso ? fmtBeijingHmsMs(submitEndIso) : "?"}>
             <span className="dot" />
             <span className="name">已提交</span>
           </span>
@@ -61,14 +61,18 @@ export function PushChain({ events, taskStatus, totalQty, submitOrderId, submitE
       {events.map((evt, idx) => {
         const cls = nodeClass(evt.state);
         const ts = fmtBeijingHmsMs(evt.received_at);
-        // Build delta vs previous (synthetic submit node counts as "previous" for idx=0).
-        const prevTs =
+        // A "previous" node exists if this isn't the first event OR if the
+        // synthetic submit node is rendered before us. The connector should
+        // always render when there is a prev — fall back to "?" if the
+        // timestamp arithmetic isn't possible (synthetic node missing iso).
+        const hasPrev = idx > 0 || showSubmitNode;
+        const prevIso =
           idx > 0
             ? events[idx - 1].received_at
-            : showSubmitNode && submitEndIso
-              ? submitEndIso
+            : showSubmitNode
+              ? (submitEndIso ?? null)
               : null;
-        const deltaMs = prevTs != null ? msDiff(prevTs, evt.received_at) : null;
+        const deltaMs = prevIso != null ? msDiff(prevIso, evt.received_at) : null;
 
         // Build inline content
         let inlineContent: React.ReactNode = null;
@@ -89,9 +93,9 @@ export function PushChain({ events, taskStatus, totalQty, submitOrderId, submitE
 
         return (
           <span key={evt.id}>
-            {deltaMs != null && (
-              <span className={`delta${deltaMs > 1000 ? " slow" : ""}`}>
-                {formatDelta(deltaMs)}
+            {hasPrev && (
+              <span className={`delta${deltaMs != null && deltaMs > 1000 ? " slow" : ""}`}>
+                {deltaMs != null ? formatDelta(deltaMs) : "?"}
               </span>
             )}
             <span
@@ -105,23 +109,31 @@ export function PushChain({ events, taskStatus, totalQty, submitOrderId, submitE
           </span>
         );
       })}
-      {isWaiting && (
-        <>
-          {events.length > 0 && (() => {
-            const lastEvt = events[events.length - 1];
-            const waitMs = Date.now() - new Date(lastEvt.received_at).getTime();
-            return (
-              <span className={`delta${waitMs > 1000 ? " slow" : ""}`}>
-                {formatDelta(waitMs)}…
+      {isWaiting && (() => {
+        // Waiting indicator: hook up a connector + delta against the last
+        // anchor point — the most recent push event, falling back to the
+        // synthetic submit node if no events yet.
+        const hasPrev = events.length > 0 || showSubmitNode;
+        let waitMs: number | null = null;
+        if (events.length > 0) {
+          waitMs = Date.now() - new Date(events[events.length - 1].received_at).getTime();
+        } else if (showSubmitNode && submitEndIso) {
+          waitMs = Date.now() - new Date(submitEndIso).getTime();
+        }
+        return (
+          <>
+            {hasPrev && (
+              <span className={`delta${waitMs != null && waitMs > 1000 ? " slow" : ""}`}>
+                {waitMs != null ? `${formatDelta(waitMs)}…` : "?…"}
               </span>
-            );
-          })()}
-          <span className="node waiting">
-            <span className="dot" />
-            <span className="name">等待成交</span>
-          </span>
-        </>
-      )}
+            )}
+            <span className="node waiting">
+              <span className="dot" />
+              <span className="name">等待成交</span>
+            </span>
+          </>
+        );
+      })()}
     </div>
   );
 }

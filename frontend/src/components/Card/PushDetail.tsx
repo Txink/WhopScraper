@@ -57,7 +57,7 @@ export function PushDetail({ events, taskStatus, totalQty, submitOrderId, submit
             <span className="k">ord</span>{" "}
             <span className="v">{submitOrderId}</span>
           </span>
-          <span className="row-ts">{submitEndIso ? fmtBeijingHmsMs(submitEndIso) : "—"}</span>
+          <span className="row-ts">{submitEndIso ? fmtBeijingHmsMs(submitEndIso) : "?"}</span>
         </div>
       )}
       {events.map((evt, idx) => {
