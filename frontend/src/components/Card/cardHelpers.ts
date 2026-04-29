@@ -63,3 +63,24 @@ export function fmtElapsed(ms: number): string {
 export function elapsedMs(from: string, to: string): number {
   return new Date(to).getTime() - new Date(from).getTime();
 }
+
+const _BJ_FULL = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Shanghai",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hour12: false,
+});
+
+/**
+ * Format a real-UTC ISO timestamp as Beijing "YYYY-MM-DD HH:MM:SS".
+ * Use for display contexts where the full date+time is shown verbatim.
+ */
+export function fmtBeijingFull(iso: string): string {
+  const d = new Date(iso);
+  // en-CA gives "YYYY-MM-DD, HH:mm:ss"; normalize separator to a space.
+  return _BJ_FULL.format(d).replace(", ", " ").replace(/^24:/, "00:");
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fmtTime, elapsedMs } from "./cardHelpers";
+import { fmtTime, elapsedMs, fmtBeijingFull } from "./cardHelpers";
 
 describe("fmtTime", () => {
   it("renders a real-UTC timestamp as Beijing HH:MM:SS", () => {
@@ -28,5 +28,15 @@ describe("fmtTime", () => {
 describe("elapsedMs", () => {
   it("computes positive elapsed milliseconds for forward intervals", () => {
     expect(elapsedMs("2026-04-25T06:30:00Z", "2026-04-25T06:30:01Z")).toBe(1000);
+  });
+});
+
+describe("fmtBeijingFull", () => {
+  it("renders a real-UTC ISO as Beijing YYYY-MM-DD HH:MM:SS", () => {
+    expect(fmtBeijingFull("2026-04-25T06:30:00Z")).toBe("2026-04-25 14:30:00");
+  });
+
+  it("crosses the date boundary forwards", () => {
+    expect(fmtBeijingFull("2026-04-24T16:30:00Z")).toBe("2026-04-25 00:30:00");
   });
 });
