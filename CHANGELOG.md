@@ -19,6 +19,7 @@
 - domain: `Message.url`；listener `_scan_once` 自动注入
 
 ### Changed
+- **BREAKING**: `messages.posted_at` semantics changed. Previously stored as Whop wall-clock (Beijing) tagged with UTC tzinfo (off by 8h from the real instant). Now stored as real UTC. A one-off Alembic migration (`2c15fa4a14ca`) shifts existing rows by -8h; new rows are written by the parser already in real UTC. Frontend display helpers (`fmtTime`, `fmtBeijingFull`, `weekKeyOf`, `DatabaseRecordsPanel.fmtTime`) now project to Asia/Shanghai via `Intl.DateTimeFormat` instead of `getUTC*` / host-locale.
 - **BREAKING**: trader 按**实时现价**（`get_quote` 的 `last_done`）与**信号价**比较决定 LIMIT/MARKET：买入若现价 &lt; 信号价 → 市价，否则限价 @ 信号价；卖出若现价 &gt; 信号价 → 市价，否则限价；行情无效则限价。任务上持久化 `submit_order_type` / `submit_order_context` / `submit_quote_last_done`（Alembic `b3e4f5a6c7d8`）；API 与任务流展示类型、中文说明（黄色）、市价参考价与阶段耗时/UTC 时间戳（`received_at` + stage_timings 近似）
 - **BREAKING**: stock ticker 白名单 gate—— 不在 page settings.tickers 中的 ticker SKIPPED 不下单
 - **BREAKING**: 替换"非当天消息拦截"为更细的"历史消息拦截"——消息 `posted_at < listener.started_at` 即被 trader SKIPPED（reason 含「历史消息」）。比按日期更细：当天但启动前发布的消息也被拦。

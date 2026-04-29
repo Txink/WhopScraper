@@ -6,7 +6,13 @@ import { OrderSubmit } from "./OrderSubmit";
 import { PushChain } from "./PushChain";
 import { PushDetail } from "./PushDetail";
 import { ConfirmActions } from "./ConfirmActions";
-import { formatTitle, fmtElapsed, elapsedMs, fmtUtcTimeWithMsFromOffset } from "./cardHelpers";
+import {
+  formatTitle,
+  fmtElapsed,
+  elapsedMs,
+  fmtUtcTimeWithMsFromOffset,
+  fmtBeijingFull,
+} from "./cardHelpers";
 import "./Card.css";
 
 export interface CardExpandedProps {
@@ -120,7 +126,7 @@ export function CardExpanded({ task, pushEvents, autoTrade, onCollapse }: CardEx
             <strong>原始消息</strong>
             <div className="msg-meta">
               <span className="k">ts</span>
-              <span className="v">{message.posted_at.replace("T", " ").replace("Z", "")}</span>
+              <span className="v">{fmtBeijingFull(message.posted_at)}</span>
               <span className="k">domID</span>
               <span className="v">{message.id}</span>
             </div>

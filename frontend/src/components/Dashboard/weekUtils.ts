@@ -1,14 +1,43 @@
 import type { TaskSummary } from "../../api/domain-types";
 
+const _BJ_PARTS = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Shanghai",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  weekday: "short",
+});
+
+/**
+ * Sunday-of-week key (YYYY-MM-DD) computed in Asia/Shanghai.
+ *
+ * Backend timestamps are real UTC; the user thinks in Beijing. We project
+ * the moment into Beijing, find that day's calendar date, then walk back
+ * to the most recent Sunday — purely as date arithmetic, never as
+ * tz-sensitive Date math.
+ */
 export function weekKeyOf(ts: string): string {
   const d = new Date(ts);
-  const sunday = new Date(d);
-  sunday.setHours(0, 0, 0, 0);
-  sunday.setDate(d.getDate() - d.getDay());
-  const yyyy = sunday.getFullYear();
-  const mm = String(sunday.getMonth() + 1).padStart(2, "0");
-  const dd = String(sunday.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
+  const parts = _BJ_PARTS.formatToParts(d);
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+  const y = Number(get("year"));
+  const mo = Number(get("month"));
+  const dd = Number(get("day"));
+  const weekdayShort = get("weekday"); // "Sun" | "Mon" | ...
+  const wdMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  const wd = wdMap[weekdayShort] ?? 0;
+
+  if (!y || !mo || !dd || !(weekdayShort in wdMap)) {
+    throw new Error(`weekKeyOf: bad parts for "${ts}"`);
+  }
+
+  // Walk back `wd` days using a date-only UTC anchor (avoids host-tz drift).
+  const anchor = new Date(Date.UTC(y, mo - 1, dd));
+  anchor.setUTCDate(anchor.getUTCDate() - wd);
+  const yyyy = anchor.getUTCFullYear();
+  const mm = String(anchor.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(anchor.getUTCDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${day}`;
 }
 
 export interface WeekRange {

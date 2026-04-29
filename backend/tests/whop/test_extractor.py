@@ -161,7 +161,8 @@ def test_extract_single_stock_message() -> None:
     assert "nvda" in m.content.lower() or "nvda" in m.raw_content.lower()
     assert m.author == "xiaozhaolucky"
     assert m.source == "stock"
-    assert m.posted_at == datetime(2026, 1, 23, 0, 51, tzinfo=UTC)  # 12:51 AM
+    # Beijing 12:51 AM Jan 23 → UTC 4:51 PM Jan 22
+    assert m.posted_at == datetime(2026, 1, 22, 16, 51, tzinfo=UTC)
     assert m.quoted is None
 
 
@@ -257,10 +258,10 @@ def test_extract_message_group_inherits_author_and_timestamp() -> None:
     # Both from the same group — continuation inherits author
     assert first.author == "groupauthor"
     assert second.author == "groupauthor"
-    # Both share the same minute (parsed from "Apr 24, 2026 9:00 AM");
+    # Both share the same minute (parsed from "Apr 24, 2026 9:00 AM" Beijing → 01:00 UTC);
     # subminute seconds are 0, 1 respectively.
-    assert first.posted_at == datetime(2026, 4, 24, 9, 0, 0, tzinfo=UTC)
-    assert second.posted_at == datetime(2026, 4, 24, 9, 0, 1, tzinfo=UTC)
+    assert first.posted_at == datetime(2026, 4, 24, 1, 0, 0, tzinfo=UTC)
+    assert second.posted_at == datetime(2026, 4, 24, 1, 0, 1, tzinfo=UTC)
 
 
 def test_extract_source_tagged_correctly() -> None:
@@ -294,17 +295,17 @@ def test_history_hint_always_empty() -> None:
 
 
 def test_absolute_timestamp_pm_parsed_correctly() -> None:
-    """12-hour PM timestamps correctly converted to 24-hour UTC."""
-    # "Jan 23, 2026 12:51 AM" → midnight → hour=0
+    """12-hour AM/PM timestamps converted as Beijing wall-clock → real UTC."""
+    # "Jan 23, 2026 12:51 AM" Beijing → midnight BJT → UTC 16:51 the previous day
     html_am = _whop_page(_single_message("post_am", "a", "Jan 23, 2026 12:51 AM", "am msg"))
     msgs_am = extract_messages(html_am, source="stock")
-    assert msgs_am[0].posted_at.hour == 0
+    assert msgs_am[0].posted_at.hour == 16
     assert msgs_am[0].posted_at.minute == 51
 
-    # "Jan 23, 2026 12:51 PM" → noon → hour=12
+    # "Jan 23, 2026 12:51 PM" Beijing → noon BJT → UTC 04:51 same day
     html_pm = _whop_page(_single_message("post_pm", "a", "Jan 23, 2026 12:51 PM", "pm msg"))
     msgs_pm = extract_messages(html_pm, source="stock")
-    assert msgs_pm[0].posted_at.hour == 12
+    assert msgs_pm[0].posted_at.hour == 4
     assert msgs_pm[0].posted_at.minute == 51
 
 
@@ -325,76 +326,100 @@ def test_system_notification_no_data_message_id_skipped() -> None:
 from app.domain.message import Message  # noqa: E402
 from app.whop.extractor import _assign_subminute_seconds, parse_whop_timestamp  # noqa: E402
 
-# Pin "now" for deterministic tests — Saturday Apr 25 2026 at 12:00 UTC
+# Pin "now" deterministically. _NOW is Saturday 2026-04-25 20:00 Beijing
+# (= 12:00 UTC). Beijing "today" therefore = Apr 25 2026.
 _NOW = datetime(2026, 4, 25, 12, 0, 0, tzinfo=UTC)
 
 
 def test_parse_today_at() -> None:
+    # Beijing 14:30 Apr 25 → UTC 06:30 Apr 25
     got = parse_whop_timestamp("Today at 2:30 PM", now=_NOW)
-    assert got == datetime(2026, 4, 25, 14, 30, 0, tzinfo=UTC)
+    assert got == datetime(2026, 4, 25, 6, 30, 0, tzinfo=UTC)
 
 
 def test_parse_today_no_at() -> None:
     got = parse_whop_timestamp("Today 2:30 PM", now=_NOW)
-    assert got == datetime(2026, 4, 25, 14, 30, 0, tzinfo=UTC)
+    assert got == datetime(2026, 4, 25, 6, 30, 0, tzinfo=UTC)
 
 
 def test_parse_yesterday_at() -> None:
+    # Beijing 23:24 Apr 24 → UTC 15:24 Apr 24
     got = parse_whop_timestamp("Yesterday at 11:24 PM", now=_NOW)
-    assert got == datetime(2026, 4, 24, 23, 24, 0, tzinfo=UTC)
+    assert got == datetime(2026, 4, 24, 15, 24, 0, tzinfo=UTC)
 
 
 def test_parse_yesterday_no_at() -> None:
     got = parse_whop_timestamp("Yesterday 11:24 PM", now=_NOW)
-    assert got == datetime(2026, 4, 24, 23, 24, 0, tzinfo=UTC)
+    assert got == datetime(2026, 4, 24, 15, 24, 0, tzinfo=UTC)
 
 
 def test_parse_thursday_at() -> None:
-    # NOW is Saturday Apr 25 2026; Thursday is Apr 23
+    # Beijing now is Sat Apr 25; Thursday = Apr 23. Beijing 11:35 → UTC 03:35
     got = parse_whop_timestamp("Thursday at 11:35 AM", now=_NOW)
-    assert got == datetime(2026, 4, 23, 11, 35, 0, tzinfo=UTC)
+    assert got == datetime(2026, 4, 23, 3, 35, 0, tzinfo=UTC)
 
 
 def test_parse_weekday_no_at() -> None:
     got = parse_whop_timestamp("Thursday 11:35 AM", now=_NOW)
-    assert got == datetime(2026, 4, 23, 11, 35, 0, tzinfo=UTC)
+    assert got == datetime(2026, 4, 23, 3, 35, 0, tzinfo=UTC)
 
 
 def test_parse_full_date_with_year() -> None:
+    # Beijing 17:43 Apr 13 → UTC 09:43 Apr 13
     got = parse_whop_timestamp("Apr 13, 2026 5:43 PM", now=_NOW)
-    assert got == datetime(2026, 4, 13, 17, 43, 0, tzinfo=UTC)
+    assert got == datetime(2026, 4, 13, 9, 43, 0, tzinfo=UTC)
 
 
 def test_parse_full_date_implicit_year() -> None:
     got = parse_whop_timestamp("Apr 13 5:43 PM", now=_NOW)
-    assert got == datetime(2026, 4, 13, 17, 43, 0, tzinfo=UTC)
+    assert got == datetime(2026, 4, 13, 9, 43, 0, tzinfo=UTC)
 
 
 def test_parse_weekday_when_today_same_weekday() -> None:
-    # NOW is Saturday Apr 25; "Saturday at ..." should mean LAST Saturday (Apr 18)
+    # Beijing now = Sat Apr 25; "Saturday" must mean LAST Saturday (Apr 18).
+    # Beijing 09:00 Apr 18 → UTC 01:00 Apr 18
     got = parse_whop_timestamp("Saturday at 9:00 AM", now=_NOW)
-    assert got == datetime(2026, 4, 18, 9, 0, 0, tzinfo=UTC)
+    assert got == datetime(2026, 4, 18, 1, 0, 0, tzinfo=UTC)
 
 
 def test_parse_midnight_am() -> None:
-    # 12:51 AM → hour 0 (midnight)
+    # 12:51 AM Beijing → 16:51 UTC the previous day
     got = parse_whop_timestamp("Apr 13, 2026 12:51 AM", now=_NOW)
     assert got is not None
-    assert got.hour == 0
-    assert got.minute == 51
+    assert got == datetime(2026, 4, 12, 16, 51, 0, tzinfo=UTC)
 
 
 def test_parse_noon_pm() -> None:
-    # 12:00 PM → hour 12 (noon)
+    # 12:00 PM Beijing → 04:00 UTC same day
     got = parse_whop_timestamp("Apr 13, 2026 12:00 PM", now=_NOW)
     assert got is not None
-    assert got.hour == 12
-    assert got.minute == 0
+    assert got == datetime(2026, 4, 13, 4, 0, 0, tzinfo=UTC)
 
 
 def test_parse_garbage_returns_none() -> None:
     assert parse_whop_timestamp("not a real timestamp", now=_NOW) is None
     assert parse_whop_timestamp("", now=_NOW) is None
+
+
+def test_parse_today_when_utc_and_beijing_dates_differ() -> None:
+    """Regression: real-world bug.
+
+    At 2026-04-28 03:02 Beijing the UTC clock still reads 2026-04-27 19:02.
+    A Whop "Today at 6:00 PM" message must resolve to Beijing Apr 28 18:00,
+    not Apr 27 18:00. (The old UTC-date logic produced the wrong day.)
+    """
+    now = datetime(2026, 4, 27, 19, 2, 0, tzinfo=UTC)  # = 2026-04-28 03:02 Beijing
+    got = parse_whop_timestamp("Today at 6:00 PM", now=now)
+    # Beijing 18:00 Apr 28 → UTC 10:00 Apr 28
+    assert got == datetime(2026, 4, 28, 10, 0, 0, tzinfo=UTC)
+
+
+def test_parse_yesterday_when_utc_and_beijing_dates_differ() -> None:
+    """At Beijing Apr 28 03:02 (UTC Apr 27 19:02), "Yesterday" = Beijing Apr 27."""
+    now = datetime(2026, 4, 27, 19, 2, 0, tzinfo=UTC)
+    got = parse_whop_timestamp("Yesterday at 11:00 AM", now=now)
+    # Beijing 11:00 Apr 27 → UTC 03:00 Apr 27
+    assert got == datetime(2026, 4, 27, 3, 0, 0, tzinfo=UTC)
 
 
 # ---------------------------------------------------------------------------
@@ -445,34 +470,39 @@ def test_subminute_seconds_single_message() -> None:
 
 def test_extract_today_timestamp() -> None:
     """Messages with 'Today at H:MM AM/PM' get correct posted_at date."""
+    # received Apr 25 15:00 UTC = Apr 25 23:00 Beijing → Beijing "today" = Apr 25
     received = datetime(2026, 4, 25, 15, 0, 0, tzinfo=UTC)
     html = _whop_page(_single_message("post_today", "author", "Today at 10:30 AM", "hello today"))
     msgs = extract_messages(html, source="stock", received_at=received)
     assert len(msgs) == 1
-    assert msgs[0].posted_at == datetime(2026, 4, 25, 10, 30, 0, tzinfo=UTC)
+    # Beijing 10:30 AM Apr 25 → UTC 02:30 Apr 25
+    assert msgs[0].posted_at == datetime(2026, 4, 25, 2, 30, 0, tzinfo=UTC)
 
 
 def test_extract_yesterday_timestamp() -> None:
     """Messages with 'Yesterday at H:MM PM' go back one day."""
+    # received Apr 25 15:00 UTC = Apr 25 23:00 Beijing → Beijing "yesterday" = Apr 24
     received = datetime(2026, 4, 25, 15, 0, 0, tzinfo=UTC)
     html = _whop_page(
         _single_message("post_yest", "author", "Yesterday at 11:24 PM", "hello yesterday")
     )
     msgs = extract_messages(html, source="stock", received_at=received)
     assert len(msgs) == 1
-    assert msgs[0].posted_at == datetime(2026, 4, 24, 23, 24, 0, tzinfo=UTC)
+    # Beijing 11:24 PM Apr 24 → UTC 15:24 Apr 24
+    assert msgs[0].posted_at == datetime(2026, 4, 24, 15, 24, 0, tzinfo=UTC)
 
 
 def test_extract_weekday_timestamp() -> None:
     """Messages with 'Thursday at H:MM AM' resolve to most recent Thursday."""
-    # received on Saturday Apr 25 2026 — Thursday is Apr 23
+    # received Apr 25 15:00 UTC = Apr 25 23:00 Beijing (Saturday) — Thursday = Apr 23
     received = datetime(2026, 4, 25, 15, 0, 0, tzinfo=UTC)
     html = _whop_page(
         _single_message("post_thu", "author", "Thursday at 11:35 AM", "hello thursday")
     )
     msgs = extract_messages(html, source="stock", received_at=received)
     assert len(msgs) == 1
-    assert msgs[0].posted_at == datetime(2026, 4, 23, 11, 35, 0, tzinfo=UTC)
+    # Beijing 11:35 AM Apr 23 → UTC 03:35 Apr 23
+    assert msgs[0].posted_at == datetime(2026, 4, 23, 3, 35, 0, tzinfo=UTC)
 
 
 def test_extract_same_minute_subminute_seconds() -> None:
