@@ -109,7 +109,10 @@ export function PushDetail({ events, taskStatus, totalQty, submitOrderId, submit
           </div>
         );
       })}
-      {isWaiting && (
+      {/* Suppress '等待成交' row when only the synthetic '已提交' row exists
+          with no real broker pushes — it's redundant with 已提交 in that
+          state. See PushChain for the full rationale. */}
+      {isWaiting && events.length > 0 && (
         <div className="push-row waiting">
           <span className="spacer" />
           <span className="row-state">等待成交</span>
