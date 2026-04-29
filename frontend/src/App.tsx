@@ -17,6 +17,7 @@ import { PageWhitelistBar } from "./components/Dashboard/PageWhitelistBar";
 import { PageActionBar } from "./components/Dashboard/PageActionBar";
 import { PageSettingsModal } from "./components/Dashboard/PageSettingsModal";
 import { TaskStream } from "./components/Dashboard/TaskStream";
+import { WeekPaginator } from "./components/Dashboard/WeekPaginator";
 import { computeWeeks, weekKeyOf } from "./components/Dashboard/weekUtils";
 import { OrphanCleanupBar } from "./components/Dashboard/OrphanCleanupBar";
 import { DatabaseRecordsPanel } from "./components/Dashboard/DatabaseRecordsPanel";
@@ -227,8 +228,16 @@ function Dashboard({ token }: { token: string }) {
   // remounts on Dashboard remount.
   const realCurrentWeekKey = useMemo(() => weekKeyOf(new Date().toISOString()), []);
   const onPastWeek = currentWeekKey !== null && currentWeekKey !== realCurrentWeekKey;
+  const realCurrentCount = groups.get(realCurrentWeekKey)?.length ?? 0;
+  // Baseline: count of tasks in the real-current week last time the user was
+  // viewing it. While on a past week the baseline is frozen, so newMessageCount
+  // reflects only tasks that arrived AFTER the user navigated away.
+  const seenCurrentRef = useRef<number>(realCurrentCount);
+  useEffect(() => {
+    if (!onPastWeek) seenCurrentRef.current = realCurrentCount;
+  }, [onPastWeek, realCurrentCount]);
   const newMessageCount =
-    onPastWeek ? (groups.get(realCurrentWeekKey)?.length ?? 0) : 0;
+    onPastWeek ? Math.max(0, realCurrentCount - seenCurrentRef.current) : 0;
 
   if (pages.length === 0 && orphanCount === 0) {
     return <main className="main"><EmptyState /></main>;
@@ -251,6 +260,13 @@ function Dashboard({ token }: { token: string }) {
               <PageWhitelistBar page={activePage} />
             )}
           </div>
+          {weeks.length > 0 && currentWeekKey && (
+            <WeekPaginator
+              weeks={weeks}
+              currentWeekKey={currentWeekKey}
+              onSelect={setCurrentWeekKey}
+            />
+          )}
           <PageActionBar
             page={activePage}
             mode={isOrphanTab ? "orphan" : "page"}
@@ -265,10 +281,8 @@ function Dashboard({ token }: { token: string }) {
             pushEventsByTask={pushEventsByTask}
             expandMode={expandMode}
             autoTrade={autoTrade}
-            weeks={weeks}
             groups={groups}
             currentWeekKey={currentWeekKey}
-            onSelectWeek={setCurrentWeekKey}
           />
         )}
       </section>

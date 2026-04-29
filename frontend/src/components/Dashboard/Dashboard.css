@@ -530,29 +530,25 @@
 }
 
 /* ──────────────────────────────────────────────────────────────────────
- * Week bar — sticky row above the task stream, holds WeekPaginator.
+ * WeekPaginator — week selector chip, rendered inline inside
+ * .page-meta-row alongside PageInfoBar/PageActionBar.
+ * Click the chip to expand a vertical wheel picker (3 rows visible,
+ * the centered row is the "to-be-confirmed" slot). Click the chip
+ * again to commit the centered row and collapse.
  * The "new messages" indicator is NOT here; it lives on PageInfoBar.
  * ────────────────────────────────────────────────────────────────────── */
-.week-bar {
-  position: sticky;
-  top: 0;
-  z-index: 5;
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-2) var(--space-3);
-  background: var(--bg-1);
-  border-bottom: 1px solid var(--line);
+.week-paginator {
+  position: relative;
+  flex-shrink: 0;
 }
-
 .week-paginator-chip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  height: 28px;
-  padding: 0 12px;
+  gap: 6px;
+  height: 26px;
+  padding: 0 10px;
   border: 1px solid var(--line-strong);
-  border-radius: 14px;
+  border-radius: var(--radius-chip);
   background: var(--bg-2);
   color: var(--fg-2);
   font: inherit;
@@ -560,37 +556,160 @@
   font-variant-numeric: tabular-nums;
   cursor: pointer;
   white-space: nowrap;
-  scroll-snap-align: start;
+  flex-shrink: 0;
+  transition: background var(--dur) var(--ease),
+              border-color var(--dur) var(--ease),
+              color var(--dur) var(--ease);
+}
+.week-paginator-chip .week-paginator-range {
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+}
+.week-paginator-chip .week-paginator-cal {
+  color: var(--fg-3);
+  flex-shrink: 0;
+  transition: color var(--dur) var(--ease);
 }
 .week-paginator-chip:hover:not(:disabled) {
-  border-color: var(--brand);
+  border-color: rgba(63, 181, 197, 0.42);
   color: var(--fg-1);
+  background: rgba(63, 181, 197, 0.06);
+}
+.week-paginator-chip:hover:not(:disabled) .week-paginator-cal {
+  color: var(--brand);
 }
 .week-paginator-chip.current {
-  background: var(--bg-3);
-  color: var(--fg-1);
-  border-color: var(--line-strong);
+  background: rgba(63, 181, 197, 0.10);
+  color: var(--brand);
+  border-color: rgba(63, 181, 197, 0.42);
+}
+.week-paginator-chip.current .week-paginator-cal {
+  color: var(--brand);
+}
+/* Expanded chip — the floating "selection window" of the glass picker.
+ * Solid bg-2 fully covers the wheel row behind so partial mid-scroll text
+ * cannot leak through; brand border + soft halo + inset double-line make
+ * it read as the active slot. */
+.week-paginator-chip.open {
+  position: relative;
+  z-index: 22;
+  background: var(--bg-2);
+  border-color: var(--brand);
+  color: var(--brand);
+  box-shadow:
+    0 0 0 1px var(--brand) inset,
+    0 0 14px rgba(63, 181, 197, 0.30),
+    0 1px 2px rgba(0, 0, 0, 0.45);
 }
 .week-paginator-chip:disabled {
   cursor: default;
-  opacity: 0.85;
+  opacity: 0.9;
 }
 .week-paginator-caret {
-  font-size: 10px;
   opacity: 0.7;
+  flex-shrink: 0;
+  transition: transform var(--dur) var(--ease), opacity var(--dur) var(--ease);
+}
+.week-paginator-caret[data-open="true"] {
+  transform: rotate(180deg);
+}
+.week-paginator-chip:hover:not(:disabled) .week-paginator-caret {
+  opacity: 1;
 }
 
-.week-paginator-strip {
-  display: flex;
-  gap: var(--space-2);
-  /* Width = 3 chips (~110px each) + 2 gaps. */
-  max-width: calc(110px * 3 + var(--space-2) * 2);
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  scrollbar-width: none;
+/* iOS-style picker frame — variant (c): glass / floating-island.
+ * The frame is a translucent panel that vertically centers on the chip,
+ * with a `backdrop-filter` blur so whatever is behind reads as soft and
+ * out of focus. The chip stays opaque on top — it acts as the wheel's
+ * "selection window", floating above the glass plate.
+ * Geometry: 3 × ITEM_H tall + a touch of padding so the chip has visible
+ * "shoulders" of glass above and below. Frame width matches the chip so
+ * the picker stays visually compact in its row. */
+.week-paginator-frame {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 20;
+  height: calc(26px * 3 + 10px);
+  padding-block: 5px;
+  border-radius: 8px;
+  background: rgba(28, 38, 53, 0.62);
+  backdrop-filter: blur(18px) saturate(180%);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 0 0 1px rgba(255, 255, 255, 0.06),
+    0 18px 44px rgba(0, 0, 0, 0.50),
+    0 4px 12px rgba(0, 0, 0, 0.28);
+  overflow: hidden;
 }
-.week-paginator-strip::-webkit-scrollbar {
+.week-paginator-wheel {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  /* padding-block = ITEM_H so the first/last items can scroll into the
+   * (chip-aligned) middle slot. */
+  padding-block: 26px;
+  overflow-y: auto;
+  /* Keep wheel events local — never chain to the page. */
+  overscroll-behavior: contain;
+  /* No CSS scroll-snap — JS step-based handler in WeekPaginator.tsx keeps
+   * scrollTop on integer ITEM_H multiples directly, which avoids fights
+   * between programmatic scrollTop updates and CSS mandatory snap. */
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.35) 0%,
+    #000 18%,
+    #000 82%,
+    rgba(0, 0, 0, 0.35) 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.35) 0%,
+    #000 18%,
+    #000 82%,
+    rgba(0, 0, 0, 0.35) 100%
+  );
+}
+.week-paginator-wheel::-webkit-scrollbar {
   display: none;
+}
+.week-paginator-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  width: 100%;
+  flex-shrink: 0;
+  height: 26px;
+  /* Frame is exactly chip-width, so chip text origin = frame text origin =
+   * chip-padding 10 + cal-icon 12 + gap 6 = 28px from frame left. */
+  padding: 0 10px 0 28px;
+  border: 0;
+  background: transparent;
+  color: var(--fg-3);
+  font: inherit;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  white-space: nowrap;
+  text-align: left;
+  transition: color var(--dur) var(--ease);
+}
+.week-paginator-row:hover {
+  color: var(--fg-1);
+}
+/* The centered row's text is hidden by the chip overlay; this style mostly
+ * exists so the wheel's "logical" selection is in sync should the mask /
+ * chip ever fail to fully cover (e.g. mid-snap repaint). */
+.week-paginator-row.centered {
+  color: var(--brand);
+  font-weight: 500;
 }
 
 /* ──────────────────────────────────────────────────────────────────────

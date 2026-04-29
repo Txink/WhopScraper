@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { render, screen, fireEvent, within } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { TaskStream } from "./TaskStream";
 import { computeWeeks } from "./weekUtils";
 import type { TaskSummary } from "../../api/domain-types";
@@ -32,19 +32,15 @@ const mkTask = (id: string, postedAt: Date, content = "msg"): TaskSummary =>
 
 function renderControlled(tasks: TaskSummary[], currentKey?: string) {
   const { weeks, groups } = computeWeeks(tasks);
-  const onSelect = vi.fn();
-  const result = render(
+  return render(
     <TaskStream
       pushEventsByTask={{}}
       expandMode="smart"
       autoTrade={false}
-      weeks={weeks}
       groups={groups}
       currentWeekKey={currentKey ?? weeks[0]?.key ?? null}
-      onSelectWeek={onSelect}
     />,
   );
-  return { ...result, onSelect, weeks, groups };
 }
 
 describe("<TaskStream> weekly pagination (controlled)", () => {
@@ -56,22 +52,6 @@ describe("<TaskStream> weekly pagination (controlled)", () => {
     renderControlled(tasks); // defaults to newest week
     expect(screen.getByText("this week")).toBeInTheDocument();
     expect(screen.queryByText("last week")).toBeNull();
-  });
-
-  it("shows the WeekPaginator chip with the current week's range", () => {
-    renderControlled([mkTask("a", new Date(2026, 3, 22, 10))]);
-    expect(screen.getByRole("button", { name: /04\/19 ~ 04\/25/ })).toBeInTheDocument();
-  });
-
-  it("calls onSelectWeek when a different chip is clicked", () => {
-    const tasks = [
-      mkTask("this-1", new Date(2026, 3, 22, 10)),
-      mkTask("last-1", new Date(2026, 3, 15, 10)),
-    ];
-    const { onSelect } = renderControlled(tasks);
-    fireEvent.click(screen.getByRole("button", { name: /04\/19 ~ 04\/25/ }));
-    fireEvent.click(screen.getByRole("option", { name: /04\/12 ~ 04\/18/ }));
-    expect(onSelect).toHaveBeenCalledWith("2026-04-12");
   });
 
   it("renders the previous week's tasks when the controller selects it", () => {
@@ -94,16 +74,14 @@ describe("<TaskStream> weekly pagination (controlled)", () => {
     expect(within(document.body).getByText(/昨天 2026-04-21/)).toBeInTheDocument();
   });
 
-  it("renders nothing when weeks is empty", () => {
+  it("renders nothing when currentWeekKey is null", () => {
     const { container } = render(
       <TaskStream
         pushEventsByTask={{}}
         expandMode="smart"
         autoTrade={false}
-        weeks={[]}
         groups={new Map()}
         currentWeekKey={null}
-        onSelectWeek={vi.fn()}
       />,
     );
     expect(container.firstChild).toBeNull();

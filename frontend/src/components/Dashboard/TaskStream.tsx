@@ -1,8 +1,6 @@
 import { Card } from "../Card/Card";
 import type { TaskSummary, PushEvent } from "../../api/domain-types";
 import type { ExpandMode } from "../../stores/pageTabs";
-import { WeekPaginator } from "./WeekPaginator";
-import type { WeekInfo } from "./weekUtils";
 
 const ACTIVE_STATUSES = new Set([
   "RECEIVED", "PARSING", "INSTRUCTION_READY",
@@ -30,24 +28,18 @@ interface Props {
   pushEventsByTask: Record<string, PushEvent[]>;
   expandMode: ExpandMode;
   autoTrade: boolean;
-  weeks: WeekInfo[];
   groups: Map<string, TaskSummary[]>;
   currentWeekKey: string | null;
-  onSelectWeek: (key: string) => void;
 }
 
 export function TaskStream({
   pushEventsByTask,
   expandMode,
   autoTrade,
-  weeks,
   groups,
   currentWeekKey,
-  onSelectWeek,
 }: Props) {
-  if (weeks.length === 0 || currentWeekKey == null) {
-    return null;
-  }
+  if (currentWeekKey == null) return null;
 
   const weekTasks = groups.get(currentWeekKey) ?? [];
 
@@ -62,14 +54,6 @@ export function TaskStream({
 
   return (
     <>
-      <div className="week-bar">
-        <WeekPaginator
-          weeks={weeks}
-          currentWeekKey={currentWeekKey}
-          onSelect={onSelectWeek}
-        />
-      </div>
-
       {dateKeys.map((dateKey) => {
         const dayTasks = dayGroups.get(dateKey)!;
         return (
