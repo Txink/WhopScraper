@@ -50,17 +50,16 @@ export function fmtTime(iso: string): string {
 }
 
 /**
- * UTC wall time HH:MM:SS.mmm from an ISO instant + offset milliseconds.
+ * Beijing wall time HH:MM:SS.mmm from a real-UTC ISO instant + offset milliseconds.
  * Used for stage footers (approximate completion from received_at + stage timings).
+ * Milliseconds come from getUTCMilliseconds (timezone-independent).
  */
-export function fmtUtcTimeWithMsFromOffset(baseIso: string, offsetMs: number): string {
+export function fmtBeijingTimeWithMsFromOffset(baseIso: string, offsetMs: number): string {
   const t = new Date(baseIso).getTime() + offsetMs;
   const d = new Date(t);
-  const hh = String(d.getUTCHours()).padStart(2, "0");
-  const mm = String(d.getUTCMinutes()).padStart(2, "0");
-  const ss = String(d.getUTCSeconds()).padStart(2, "0");
+  const hms = _BJ_HMS.format(d).replace(/^24:/, "00:");
   const ms = String(d.getUTCMilliseconds()).padStart(3, "0");
-  return `${hh}:${mm}:${ss}.${ms}`;
+  return `${hms}.${ms}`;
 }
 
 /**
@@ -118,4 +117,20 @@ export function fmtBeijingFull(iso: string): string {
   const d = new Date(iso);
   // en-CA gives "YYYY-MM-DD, HH:mm:ss"; normalize separator to a space.
   return _BJ_FULL.format(d).replace(", ", " ").replace(/^24:/, "00:");
+}
+
+const _BJ_DATE = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Shanghai",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+/**
+ * Format a real-UTC ISO timestamp as Beijing "YYYY-MM-DD".
+ * Use for date-only grouping and labels — "today" / "yesterday" comparisons
+ * must use this so they reflect the user's Beijing calendar day, not UTC.
+ */
+export function fmtBeijingDate(iso: string): string {
+  return _BJ_DATE.format(new Date(iso));
 }

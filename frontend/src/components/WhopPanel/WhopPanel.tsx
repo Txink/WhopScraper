@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { WhopPage, WhopCookieStatus } from "../../api/domain-types";
 import { api, HttpError } from "../../api/http";
+import { fmtBeijingFull } from "../Card/cardHelpers";
 import "./WhopPanel.css";
 
 export function WhopPanel() {
@@ -60,7 +61,7 @@ function CookieSection({ cookie, onRefresh }: { cookie: WhopCookieStatus | null;
   }
 
   const ageStr = cookie.age_seconds != null ? formatAge(cookie.age_seconds) : "-";
-  const lastMod = cookie.last_modified ? new Date(cookie.last_modified).toLocaleString() : "-";
+  const lastMod = cookie.last_modified ? fmtBeijingFull(cookie.last_modified) : "-";
 
   return (
     <section className="panel-card">

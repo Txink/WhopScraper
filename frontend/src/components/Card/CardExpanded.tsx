@@ -10,7 +10,7 @@ import {
   formatTitle,
   fmtElapsed,
   elapsedMs,
-  fmtUtcTimeWithMsFromOffset,
+  fmtBeijingTimeWithMsFromOffset,
   fmtBeijingFull,
 } from "./cardHelpers";
 import "./Card.css";
@@ -76,12 +76,12 @@ export function CardExpanded({ task, pushEvents, autoTrade, onCollapse }: CardEx
   const submitMs = stage_timings?.submit ?? null;
   const anchorIso = message.received_at ?? message.posted_at;
   const parseEndClock =
-    parseMs != null ? fmtUtcTimeWithMsFromOffset(anchorIso, parseMs) : "—";
+    parseMs != null ? fmtBeijingTimeWithMsFromOffset(anchorIso, parseMs) : "—";
   const submitEndClock =
     parseMs != null && submitMs != null
-      ? fmtUtcTimeWithMsFromOffset(anchorIso, parseMs + submitMs)
+      ? fmtBeijingTimeWithMsFromOffset(anchorIso, parseMs + submitMs)
       : submitMs != null
-        ? fmtUtcTimeWithMsFromOffset(anchorIso, submitMs)
+        ? fmtBeijingTimeWithMsFromOffset(anchorIso, submitMs)
         : "—";
 
   return (

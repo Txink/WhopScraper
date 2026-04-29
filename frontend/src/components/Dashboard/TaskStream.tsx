@@ -1,4 +1,5 @@
 import { Card } from "../Card/Card";
+import { fmtBeijingDate } from "../Card/cardHelpers";
 import type { TaskSummary, PushEvent } from "../../api/domain-types";
 import type { ExpandMode } from "../../stores/pageTabs";
 
@@ -17,8 +18,9 @@ function isActiveExpanded(task: TaskSummary): boolean {
 }
 
 function formatDateLabel(dateKey: string): string {
-  const today = new Date().toISOString().slice(0, 10);
-  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  const nowIso = new Date().toISOString();
+  const today = fmtBeijingDate(nowIso);
+  const yesterday = fmtBeijingDate(new Date(Date.now() - 86400000).toISOString());
   if (dateKey === today) return `今天 ${dateKey}`;
   if (dateKey === yesterday) return `昨天 ${dateKey}`;
   return dateKey;
@@ -46,7 +48,7 @@ export function TaskStream({
   const dayGroups = new Map<string, TaskSummary[]>();
   for (const t of weekTasks) {
     const ts = t.message?.posted_at ?? t.created_at;
-    const dateKey = ts.slice(0, 10);
+    const dateKey = fmtBeijingDate(ts);
     if (!dayGroups.has(dateKey)) dayGroups.set(dateKey, []);
     dayGroups.get(dateKey)!.push(t);
   }
