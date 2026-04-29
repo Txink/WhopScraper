@@ -54,7 +54,11 @@ export function OrderSubmit({
   const stageClass = failed ? "stage err order-submit" : "stage done order-submit";
   const typeLabel = submitOrderType ?? "—";
   const submitTiming =
-    delta != null ? <span className="stage-title-timing">[+{delta.toFixed(3)}ms]</span> : null;
+    delta != null ? (
+      <span className={`stage-title-timing${delta > 500 ? " slow" : ""}`}>
+        [+{delta.toFixed(3)}ms]
+      </span>
+    ) : null;
   const rightClock = wallClockAtSubmitEnd && wallClockAtSubmitEnd !== "—" ? wallClockAtSubmitEnd : "—";
 
   return (

@@ -143,7 +143,9 @@ export function CardExpanded({ task, pushEvents, autoTrade, onCollapse }: CardEx
                 <span>
                   <strong>解析指令</strong>
                   {parseMs != null && (
-                    <span className="stage-title-timing">[+{parseMs.toFixed(3)}ms]</span>
+                    <span className={`stage-title-timing${parseMs > 500 ? " slow" : ""}`}>
+                      [+{parseMs.toFixed(3)}ms]
+                    </span>
                   )}
                 </span>
               </div>
