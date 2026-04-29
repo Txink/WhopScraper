@@ -109,21 +109,19 @@ export function PushChain({ events, taskStatus, totalQty, submitOrderId, submitE
           </span>
         );
       })}
-      {/* "等待成交" is only meaningful when at least one broker push has
-          arrived (NEW/PARTIAL/etc) and we're waiting for the next one.
-          When only the synthetic '已提交' node exists with zero broker
-          events, the synthetic node itself implies "still waiting for
-          broker"; rendering '等待成交' next to it would be redundant and
-          its delta against the synthetic anchor isn't a meaningful wait
-          time (it would just be Date.now() − submit, which doesn't tell
-          the user anything they don't see by hovering 已提交). */}
-      {isWaiting && events.length > 0 && (() => {
-        const lastEvt = events[events.length - 1];
-        const waitMs = Date.now() - new Date(lastEvt.received_at).getTime();
+      {isWaiting && (events.length > 0 || showSubmitNode) && (() => {
+        // Wait time is meaningful only when measured against a real broker
+        // event (the latest push). When the only "previous" anchor is the
+        // synthetic '已提交' node, Date.now() − submit isn't a real wait
+        // for a fill — show "?" instead so the user isn't misled.
+        let waitMs: number | null = null;
+        if (events.length > 0) {
+          waitMs = Date.now() - new Date(events[events.length - 1].received_at).getTime();
+        }
         return (
           <>
-            <span className={`delta${waitMs > 1000 ? " slow" : ""}`}>
-              {formatDelta(waitMs)}…
+            <span className={`delta${waitMs != null && waitMs > 1000 ? " slow" : ""}`}>
+              {waitMs != null ? `${formatDelta(waitMs)}…` : "?"}
             </span>
             <span className="node waiting">
               <span className="dot" />
