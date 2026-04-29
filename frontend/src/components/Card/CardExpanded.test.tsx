@@ -155,9 +155,13 @@ describe("CardExpanded", () => {
     expect(onCollapse).toHaveBeenCalledOnce();
   });
 
-  it("renders order_id in submit stage", () => {
+  it("renders order_id in submit stage and shows the synthetic '已提交' push node", () => {
     render(<CardExpanded task={task} pushEvents={[]} autoTrade={true} onCollapse={vi.fn()} />);
+    // Default view is collapsed (PushChain); order_id renders only in OrderSubmit
+    // there — the synthetic '已提交' node intentionally omits the id when collapsed
+    // and only surfaces it in the expanded PushDetail view.
     expect(screen.getByText("729308570398740480")).toBeInTheDocument();
+    expect(screen.getByText("已提交")).toBeInTheDocument();
   });
 
   it("shows skip reason in parse stage for SKIPPED tasks", () => {

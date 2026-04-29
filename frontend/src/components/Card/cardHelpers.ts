@@ -50,16 +50,23 @@ export function fmtTime(iso: string): string {
 }
 
 /**
- * Beijing wall time HH:MM:SS.mmm from a real-UTC ISO instant + offset milliseconds.
- * Used for stage footers (approximate completion from received_at + stage timings).
+ * Beijing wall time HH:MM:SS.mmm from a real-UTC ISO instant.
  * Milliseconds come from getUTCMilliseconds (timezone-independent).
  */
-export function fmtBeijingTimeWithMsFromOffset(baseIso: string, offsetMs: number): string {
-  const t = new Date(baseIso).getTime() + offsetMs;
-  const d = new Date(t);
+export function fmtBeijingHmsMs(iso: string): string {
+  const d = new Date(iso);
   const hms = _BJ_HMS.format(d).replace(/^24:/, "00:");
   const ms = String(d.getUTCMilliseconds()).padStart(3, "0");
   return `${hms}.${ms}`;
+}
+
+/**
+ * Beijing wall time HH:MM:SS.mmm from a real-UTC ISO instant + offset milliseconds.
+ * Used for stage footers (approximate completion from received_at + stage timings).
+ */
+export function fmtBeijingTimeWithMsFromOffset(baseIso: string, offsetMs: number): string {
+  const t = new Date(baseIso).getTime() + offsetMs;
+  return fmtBeijingHmsMs(new Date(t).toISOString());
 }
 
 /**

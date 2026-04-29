@@ -1,4 +1,5 @@
 import type { PushEvent } from "../../api/domain-types";
+import { fmtBeijingHmsMs } from "./cardHelpers";
 
 // PushState → node color class
 function nodeClass(state: string): string {
@@ -20,15 +21,6 @@ function nodeClass(state: string): string {
   }
 }
 
-function formatTime(iso: string): string {
-  const d = new Date(iso);
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mm = String(d.getMinutes()).padStart(2, "0");
-  const ss = String(d.getSeconds()).padStart(2, "0");
-  const ms = String(d.getMilliseconds()).padStart(3, "0");
-  return `${hh}:${mm}:${ss}.${ms}`;
-}
-
 function msDiff(a: string, b: string): number {
   return new Date(b).getTime() - new Date(a).getTime();
 }
@@ -46,18 +38,36 @@ export interface PushChainProps {
   events: PushEvent[];
   taskStatus: string;
   totalQty?: number | null;
+  /** Order id returned by the broker after submit; renders a "已提交" node before the broker push events. */
+  submitOrderId?: string | null;
+  /** ISO instant of the submit-completion moment (received_at + parseMs + submitMs); drives the synthetic node's timestamp. */
+  submitEndIso?: string | null;
 }
 
-export function PushChain({ events, taskStatus, totalQty }: PushChainProps) {
+export function PushChain({ events, taskStatus, totalQty, submitOrderId, submitEndIso }: PushChainProps) {
   const isWaiting = ["PENDING", "PARTIAL", "SUBMITTED", "NEW"].includes(taskStatus);
+  const showSubmitNode = !!submitOrderId;
 
   return (
     <div className="push-chain">
+      {showSubmitNode && (
+        <span key="__submit__">
+          <span className="node info" data-ts={submitEndIso ? fmtBeijingHmsMs(submitEndIso) : ""}>
+            <span className="dot" />
+            <span className="name">已提交</span>
+          </span>
+        </span>
+      )}
       {events.map((evt, idx) => {
         const cls = nodeClass(evt.state);
-        const ts = formatTime(evt.received_at);
-        // Build delta vs previous
-        const prevTs = idx > 0 ? events[idx - 1].received_at : null;
+        const ts = fmtBeijingHmsMs(evt.received_at);
+        // Build delta vs previous (synthetic submit node counts as "previous" for idx=0).
+        const prevTs =
+          idx > 0
+            ? events[idx - 1].received_at
+            : showSubmitNode && submitEndIso
+              ? submitEndIso
+              : null;
         const deltaMs = prevTs != null ? msDiff(prevTs, evt.received_at) : null;
 
         // Build inline content

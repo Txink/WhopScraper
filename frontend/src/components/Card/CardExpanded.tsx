@@ -77,12 +77,20 @@ export function CardExpanded({ task, pushEvents, autoTrade, onCollapse }: CardEx
   const anchorIso = message.received_at ?? message.posted_at;
   const parseEndClock =
     parseMs != null ? fmtBeijingTimeWithMsFromOffset(anchorIso, parseMs) : "—";
-  const submitEndClock =
+  const submitEndOffsetMs =
     parseMs != null && submitMs != null
-      ? fmtBeijingTimeWithMsFromOffset(anchorIso, parseMs + submitMs)
+      ? parseMs + submitMs
       : submitMs != null
-        ? fmtBeijingTimeWithMsFromOffset(anchorIso, submitMs)
-        : "—";
+        ? submitMs
+        : null;
+  const submitEndClock =
+    submitEndOffsetMs != null
+      ? fmtBeijingTimeWithMsFromOffset(anchorIso, submitEndOffsetMs)
+      : "—";
+  const submitEndIso =
+    submitEndOffsetMs != null
+      ? new Date(new Date(anchorIso).getTime() + submitEndOffsetMs).toISOString()
+      : null;
 
   return (
     <article className="card expanded">
@@ -245,9 +253,21 @@ export function CardExpanded({ task, pushEvents, autoTrade, onCollapse }: CardEx
           </div>
 
           {pushExpanded ? (
-            <PushDetail events={pushEvents} taskStatus={status} totalQty={totalQty} />
+            <PushDetail
+              events={pushEvents}
+              taskStatus={status}
+              totalQty={totalQty}
+              submitOrderId={order_id ?? null}
+              submitEndIso={submitEndIso}
+            />
           ) : (
-            <PushChain events={pushEvents} taskStatus={status} totalQty={totalQty} />
+            <PushChain
+              events={pushEvents}
+              taskStatus={status}
+              totalQty={totalQty}
+              submitOrderId={order_id ?? null}
+              submitEndIso={submitEndIso}
+            />
           )}
         </div>
       )}
