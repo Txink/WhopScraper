@@ -335,8 +335,12 @@
 .stage-title-timing {
   font-family: var(--font-mono);
   font-size: 11px;
-  color: var(--fg-3);
+  color: var(--ok);
   font-weight: 400;
+  margin-left: 12px;
+}
+.order-submit .stage-title-timing {
+  color: var(--warn);
 }
 .stage-delta.stage-delta-clock {
   font-size: 11px;
