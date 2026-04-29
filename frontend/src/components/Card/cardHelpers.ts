@@ -27,20 +27,26 @@ export function formatTitle(inst: Instruction | null): string {
 }
 
 /**
- * Format HH:MM:SS from ISO date string.
+ * Format a real-UTC ISO timestamp as Beijing HH:MM:SS.
  *
- * Uses UTC methods because backend stores Whop's wall-clock time as
- * a UTC ISO string (e.g. "Yesterday 11:24 PM" → "2026-04-24T23:24:00Z").
- * Local timezone conversion would shift the displayed hour by tz offset
- * and no longer match what the user sees in Whop. CardExpanded does the
- * same — it strips T/Z without conversion.
+ * Backend stores all timestamps as real UTC (e.g. "2026-04-25T06:30:00Z").
+ * We render in Asia/Shanghai because the project is operated from Beijing
+ * and the user reads Whop wall-clock in that zone — pinning the formatter
+ * keeps the display consistent regardless of the browser's local timezone.
  */
+const _BJ_HMS = new Intl.DateTimeFormat("en-GB", {
+  timeZone: "Asia/Shanghai",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hour12: false,
+});
+
 export function fmtTime(iso: string): string {
   const d = new Date(iso);
-  const hh = String(d.getUTCHours()).padStart(2, "0");
-  const mm = String(d.getUTCMinutes()).padStart(2, "0");
-  const ss = String(d.getUTCSeconds()).padStart(2, "0");
-  return `${hh}:${mm}:${ss}`;
+  // en-GB with hour12=false yields "HH:mm:ss"; some Node/JSC builds emit
+  // "24:00:00" for midnight — normalize to "00:00:00".
+  return _BJ_HMS.format(d).replace(/^24:/, "00:");
 }
 
 /**
