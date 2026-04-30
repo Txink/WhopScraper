@@ -18,20 +18,24 @@ from __future__ import annotations
 # ----------------------------------------------------------------------------
 
 IMPERATIVE_VERBS_BUY: frozenset[str] = frozenset({
-    "买", "买入", "买点",
-    "吸", "回吸", "低吸", "吸点",
-    "加", "加点", "加仓", "加了", "再加",
-    "开", "开仓", "开点", "建仓", "建了",
+    "买", "买入",
+    "吸", "回吸", "低吸",
+    "加", "加仓", "加了", "再加",
+    "开", "开仓", "建仓", "建了",
     "接", "接回", "补", "补仓", "补了",
     "进了",
 })
 
 IMPERATIVE_VERBS_SELL: frozenset[str] = frozenset({
     "卖", "卖出",
-    "出", "出掉", "出了", "出点",
-    "减", "减点", "减仓", "减了",
+    "出", "出掉", "出了",
+    "减", "减仓", "减了",
     "兑现", "平仓", "清仓",
 })
+
+# NOTE: Compound "X点" forms (买点 / 吸点 / 加点 / 出点 / 减点) are NOT compound
+# verbs. They split into the verb + standalone QUANTIFIER '点' (weak) so that
+# slot-fill can ignore the weak quantifier (see test_weak_quantifier_ignored).
 
 # ----------------------------------------------------------------------------
 # Descriptive verbs (ACTION_DESC — never anchor)
