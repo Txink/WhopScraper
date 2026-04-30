@@ -49,6 +49,58 @@ class _FakeBrowser:
         self.closed = True
 
 
+class _ScriptedBrowser:
+    """A WhopBrowser stand-in that runs a scripted sequence per scrape call.
+
+    Each scrape consumes one entry from the script. Each entry is either:
+        ("html", "<some html>")   — return that string
+        ("raise", Exception)      — raise that exception
+
+    Once the script is exhausted, the LAST entry is repeated forever — so a
+    one-element ``[("raise", RuntimeError(...))]`` script gives an always-failing
+    browser, and ``[("raise", err), ("html", "<html></html>")]`` fails once
+    then succeeds forever.
+    """
+
+    def __init__(self, script: list[tuple[str, object]]) -> None:
+        self._script = list(script)
+        self._idx = 0
+        self.closed = False
+
+    async def start(self) -> None:
+        return None
+
+    async def navigate(self, url: str) -> bool:  # noqa: ARG002
+        return True
+
+    async def scrape_html(self) -> str:
+        if self._idx < len(self._script):
+            kind, val = self._script[self._idx]
+            self._idx += 1
+        else:
+            kind, val = self._script[-1]
+        if kind == "raise":
+            raise val if isinstance(val, Exception) else RuntimeError(str(val))
+        return str(val)
+
+    async def close(self) -> None:
+        self.closed = True
+
+
+@pytest.fixture
+def patch_scripted_browser(monkeypatch):
+    """Install a _ScriptedBrowser as the listener's WhopBrowser.
+
+    Usage:
+        patch_scripted_browser([("raise", RuntimeError("boom"))])
+    """
+    def _setup(script: list[tuple[str, object]]) -> None:
+        def _factory(*args, **kwargs) -> _ScriptedBrowser:  # noqa: ARG001
+            return _ScriptedBrowser(script)
+        monkeypatch.setattr("app.whop.listener.WhopBrowser", _factory)
+    return _setup
+
+
 # ---------------------------------------------------------------------------
 # HTML helpers
 # ---------------------------------------------------------------------------
@@ -444,3 +496,36 @@ async def test_safe_status_callback_swallows_exceptions(caplog: pytest.LogCaptur
     with caplog.at_level("WARNING"):
         await listener._safe_status_callback("errored")
     assert any("status callback failed" in r.getMessage() for r in caplog.records)
+
+
+@pytest.mark.asyncio
+async def test_errored_callback_fires_once_on_first_failure(patch_scripted_browser) -> None:
+    """A failing scrape transitions healthy → errored and fires the callback exactly once.
+
+    Subsequent failures inside the same error streak must NOT fire again, because
+    nothing has actually transitioned.
+    """
+    patch_scripted_browser([("raise", RuntimeError("net down"))])
+
+    actions: list[str] = []
+
+    async def record(action: str) -> None:
+        actions.append(action)
+
+    listener = WhopListener(
+        bus=EventBus(),
+        url="http://test",
+        source="stock",
+        poll_interval=0.05,
+        skip_initial=False,
+        dedupe_processed_messages=False,
+        on_status_change=record,
+    )
+    await listener.start()
+    # 0.3s lets the first scan run + sets last_error; backoff is 1.0s so the
+    # second attempt has not started yet.
+    await asyncio.sleep(0.3)
+    await listener.stop()
+
+    assert actions == ["errored"], f"expected ['errored'], got {actions}"
+    assert listener.last_error == "net down"
