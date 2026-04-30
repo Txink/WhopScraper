@@ -80,6 +80,7 @@ MODAL_MARKERS: frozenset[str] = frozenset({
 CONDITIONAL_MARKERS: frozenset[str] = frozenset({
     "等", "如果", "假如", "万一",
     "没破", "没跌破", "没站稳", "才",
+    "没接到", "没买到", "没接", "的话",
 })
 
 # ----------------------------------------------------------------------------
@@ -155,7 +156,7 @@ CONJUNCTIONS: frozenset[str] = frozenset({"和", "与", "或者", "或", "再"})
 SOFT_CLAUSE_STARTS: tuple[str, ...] = tuple(sorted([
     "今天", "明天", "后天", "后面", "后续", "后市",
     "早上", "晚上", "上午", "下午", "之后", "主要",
-    "盘前", "盘后", "盘中", "剩下",
+    "盘前", "盘后", "盘中", "剩下", "收盘", "尾盘", "夜盘",
     "等", "下周", "本周", "下个", "下一",
 ], key=len, reverse=True))
 # NOTE: '上周' kept OUT — it's a PAST_REF that should reach chatter Layer 2,

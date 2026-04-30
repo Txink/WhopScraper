@@ -30,12 +30,26 @@ def is_chatter(anchor: Anchor) -> bool:
 
     # Layer 1: clause-level MODAL / CONDITIONAL / OBSERVATION.
     # If any of these markers appears anywhere in the clause, the clause is
-    # forecast/example/observation, not directive. Long paragraphs that mix
-    # a directive with afterword commentary should be split into separate
-    # clauses (clause-split rules handle this; see clauses.py).
-    clause_tags = {t.tag for t in tokens}
-    if "MODAL" in clause_tags or "CONDITIONAL" in clause_tags or "OBSERVATION" in clause_tags:
-        return True
+    # forecast/example/observation, not directive.
+    # GLOBAL EXEMPTION: when the clause has a non-weak POSITION_SIZE token,
+    # the directive is concrete enough to survive afterword observations
+    # ('低吸回...常规仓的一半下面4.19有个缺口 看下会不会补缺口 ...再加剩下一半').
+    has_position_size = any(t.tag == "POSITION_SIZE" and not t.weak for t in tokens)
+    if not has_position_size:
+        if any(t.tag in {"MODAL", "CONDITIONAL"} for t in tokens):
+            return True
+        for j, t in enumerate(tokens):
+            if t.tag != "OBSERVATION":
+                continue
+            # Exemption: '注意再X' — '注意' as directive softener.
+            if t.value == "注意":
+                for k in range(j + 1, min(j + 3, len(tokens))):
+                    if tokens[k].value == "再":
+                        break
+                else:
+                    return True
+                continue
+            return True
 
     # Layer 2: BEFORE-verb PAST_REF (clause-scoped) with R3 exemption.
     # PAST_REF before the verb = past-tense talk ('昨天是106吸的',
@@ -48,9 +62,22 @@ def is_chatter(anchor: Anchor) -> bool:
         for t in tokens
     )
     if not has_quant_or_size:
-        for t in tokens[:i]:
-            if t.tag == "PAST_REF":
-                return True
+        for j, t in enumerate(tokens[:i]):
+            if t.tag != "PAST_REF":
+                continue
+            # Exemption: PAST_REF + 抛/卖出/卖 + 的 = past-sale noun phrase
+            # ('cifr昨天抛的可以在17.1附近回吸' = "buy back what was sold
+            # yesterday"). Not chatter for the current verb.
+            past_noun_phrase = False
+            for k in range(j + 1, min(j + 4, len(tokens))):
+                tk = tokens[k]
+                if tk.tag == "OTHER" and tk.value in {"抛", "卖", "卖出"}:
+                    if k + 1 < len(tokens) and tokens[k + 1].tag == "OTHER" and tokens[k + 1].value == "的":
+                        past_noun_phrase = True
+                        break
+            if past_noun_phrase:
+                continue
+            return True
 
     # Layer 2c: verb is a 了-ending compound ('入了', '加了', '开了', '补了',
     # '出了') AND clause has PAST_REF anywhere — past-completion status update,

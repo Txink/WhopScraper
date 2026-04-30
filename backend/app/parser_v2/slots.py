@@ -67,6 +67,13 @@ def fill_slots(anchor: Anchor) -> dict[str, Any]:
             # sell-all marker. Canonical form '全部' so canonicalize maps to
             # the same string the golden curator wrote.
             out["sell_quantity"] = "全部"
+        else:
+            # '全X了' / '全止盈了' pattern — '全' OTHER anywhere AFTER the verb
+            # signals "fully [closed/took profit]". Canonical to '全部'.
+            for j in range(verb_idx + 1, len(tokens)):
+                if tokens[j].tag == "OTHER" and tokens[j].value == "全":
+                    out["sell_quantity"] = "全部"
+                    break
     else:  # BUY
         ps = _nearest(tokens, verb_idx, lambda t: t.tag == "POSITION_SIZE")
         if ps is None:
@@ -117,6 +124,10 @@ def _find_lot_ref(
 
     for i, t in enumerate(tokens):
         if t.tag != "PRICE" or id(t) == main_id:
+            continue
+        # Conj-list exemption for R2/R5: 'PRICE 和 PRICE 的 部分' is a list
+        # describing position composition, not a single lot reference.
+        if i >= 2 and tokens[i - 1].tag == "CONJ" and tokens[i - 2].tag == "PRICE":
             continue
         if has_cancel:
             # Skip 的-based rules; only R3 (PAST_REF before PRICE) and R5 still
