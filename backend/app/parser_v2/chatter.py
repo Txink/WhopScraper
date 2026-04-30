@@ -35,17 +35,13 @@ def is_chatter(anchor: Anchor) -> bool:
     if "MODAL" in clause_tags or "CONDITIONAL" in clause_tags or "OBSERVATION" in clause_tags:
         return True
 
-    # Layer 2: anchor-scope ±K PAST_REF
-    # Past-tense talk ('昨天是106吸的') is chatter when close to the verb, but a
-    # distant PAST_REF can still drive a legitimate lot reference (R3); keep
-    # this narrow.
+    # Layer 2: anchor-scope ±K PAST_REF, but only BEFORE the verb.
+    # PAST_REF before the verb signals past-tense talk ('昨天是106吸的' = chatter).
+    # PAST_REF after the verb is a lot-ref form ('200出昨天192的' = R3 lot-ref),
+    # not chatter; let slot phase extract referenced_lot_price.
     i = anchor.verb_index
     lo = max(0, i - ANCHOR_SCOPE_K)
-    hi = min(len(tokens), i + ANCHOR_SCOPE_K + 1)
-    scope = tokens[lo:hi]
-    for t in scope:
-        if t is anchor.verb_token:
-            continue
+    for t in tokens[lo:i]:
         if t.tag == "PAST_REF":
             return True
 
