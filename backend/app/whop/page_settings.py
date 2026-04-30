@@ -9,6 +9,8 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
+from app.parser.vocab_shared import _FRACTION_MAP, _SELL_FRACTION_MAP
+
 logger = logging.getLogger(__name__)
 
 
@@ -137,31 +139,8 @@ def page_settings_from_dict(
 
 # --------------------------------------------------------------------------- #
 # Position size string → fraction multiplier                                    #
+# (_FRACTION_MAP imported from app.parser.vocab_shared above)                   #
 # --------------------------------------------------------------------------- #
-
-_FRACTION_MAP: dict[str, float] = {
-    "常规仓": 1.0,
-    "中仓位": 1.0,
-    "常规仓的一半": 0.5,
-    "常规一半": 0.5,
-    "常规的一半": 0.5,
-    "半仓": 0.5,
-    "一半": 0.5,
-    "小仓位": 0.5,
-    "轻仓": 0.5,
-    "大仓位": 1.5,
-    "重仓": 1.5,
-    "满仓": 2.0,
-    "1/2": 0.5,
-    "1/3": 1 / 3,
-    "2/3": 2 / 3,
-    "1/4": 0.25,
-    "1/5": 0.2,
-    "三分之一": 1 / 3,
-    "三分之二": 2 / 3,
-    "四分之一": 0.25,
-    "五分之一": 0.2,
-}
 
 
 def position_size_to_fraction(s: str | None) -> float:
@@ -181,23 +160,8 @@ def position_size_to_fraction(s: str | None) -> float:
 
 # --------------------------------------------------------------------------- #
 # Sell quantity string → fraction multiplier                                    #
+# (_SELL_FRACTION_MAP imported from app.parser.vocab_shared above)              #
 # --------------------------------------------------------------------------- #
-
-_SELL_FRACTION_MAP: dict[str, float] = {
-    "1/2": 0.5,
-    "1/3": 1 / 3,
-    "1/4": 0.25,
-    "2/3": 2 / 3,
-    "3/4": 0.75,
-    "全部": 1.0,
-    "剩下": 1.0,
-    "剩下一半": 0.5,
-    # "部分" / "那部分" reference the entire prior lot (e.g., "12.32 部分 12.4出"
-    # = "sell at 12.4 the full prior 12.32 lot"). Maps to 1.0 of the
-    # referenced_lot_price's qty.
-    "部分": 1.0,
-    "那部分": 1.0,
-}
 
 
 def sell_quantity_to_fraction(s: str | None) -> float:
