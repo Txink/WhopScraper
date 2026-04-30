@@ -11,15 +11,39 @@ from .message import Message
 from .push_event import PushEvent, PushState
 from .status import Status, next_status
 
-# PushState → Status 映射
+# PushState → Status 映射. Broker-faithful PushState members each fall into
+# one of four task-status buckets:
+#   - Pre-exchange / live / pending-modify  → PENDING
+#   - Partial fills                         → PARTIAL
+#   - Terminal fills                        → FILLED
+#   - Terminal cancels / expires            → CANCELLED
+#   - Rejected / unknown / unmapped         → REJECTED
 _PUSH_TO_STATUS: dict[PushState, Status] = {
+    # Pre-exchange (broker received, awaiting routing/exchange acceptance)
+    PushState.WAIT_TO_NEW: Status.PENDING,
+    PushState.NOT_REPORTED: Status.PENDING,
+    PushState.WAIT_TO_REPLACE: Status.PENDING,
+    PushState.PENDING_REPLACE: Status.PENDING,
+    PushState.REPLACED_NOT_REPORTED: Status.PENDING,
+    PushState.PROTECTED_NOT_REPORTED: Status.PENDING,
+    PushState.VARIETIES_NOT_REPORTED: Status.PENDING,
+    # Live on exchange / accepted (and limit modifications)
     PushState.NEW: Status.PENDING,
-    PushState.SUBMITTED: Status.PENDING,
-    PushState.MODIFIED: Status.PENDING,
-    PushState.PARTIAL: Status.PARTIAL,
+    PushState.REPLACED: Status.PENDING,
+    PushState.PENDING_CANCEL: Status.PENDING,
+    PushState.WAIT_TO_CANCEL: Status.PENDING,
+    # Partial fills.  ``PartialWithdrawal`` = partially filled then the
+    # unfilled remainder was cancelled, which is terminal — map to CANCELLED
+    # so the task moves out of the active bucket; the partial-fill quantity
+    # remains visible via the push-event history.
+    PushState.PARTIAL_FILLED: Status.PARTIAL,
+    PushState.PARTIAL_WITHDRAWAL: Status.CANCELLED,
+    # Terminal
     PushState.FILLED: Status.FILLED,
-    PushState.CANCELLED: Status.CANCELLED,
+    PushState.CANCELED: Status.CANCELLED,
+    PushState.EXPIRED: Status.CANCELLED,
     PushState.REJECTED: Status.REJECTED,
+    PushState.UNKNOWN: Status.REJECTED,
     PushState.FAILED: Status.REJECTED,
 }
 

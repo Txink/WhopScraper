@@ -206,7 +206,7 @@ async def test_push_filled_emits_with_cumulative_deltas(
 
     # PARTIAL event — first fill batch
     partial_evt = captured[1].push_event
-    assert partial_evt.state == PushState.PARTIAL
+    assert partial_evt.state == PushState.PARTIAL_FILLED
     assert partial_evt.cumulative_qty == 100
     assert partial_evt.delta_qty == 100  # 100 - 0 prior
 
@@ -551,7 +551,7 @@ async def test_handle_raw_push_publishes_when_raw_is_c_extension_shaped(
 
     assert len(captured) == 1
     payload: TaskPushPayload = captured[0].payload  # type: ignore[assignment]
-    assert payload.push_event.state == PushState.PARTIAL
+    assert payload.push_event.state == PushState.PARTIAL_FILLED
     assert payload.push_event.order_id == "1232925773216645120"
     # The serialised payload reached storage shape via the dir() fallback.
     assert payload.push_event.payload["symbol"] == "AAPL.US"
@@ -651,6 +651,110 @@ def test_build_push_event_falls_back_to_unknown_status_note_when_msg_empty() -> 
     assert evt.note is not None
     assert "unknown status" in evt.note
     assert "MadeUp" in evt.note
+
+
+# ---------------------------------------------------------------------------
+# Modify-relabel: New → Replaced when submitted_price OR submitted_quantity
+# differs from the prior live event. Recorded scenario "modify_price"
+# (data/pushes.jsonl) showed the broker emits ``New`` for both the initial
+# live event AND for any modify, so we MUST relabel client-side or the
+# chain shows N consecutive ``New`` nodes that hide what actually changed.
+# ---------------------------------------------------------------------------
+
+
+def _push_evt(state: PushState, *, sub_px: float | None, sub_qty: int | None, evt_id: str) -> "PushEvent":
+    """Build a minimal PushEvent for prior-history fixtures (relabel input)."""
+    from app.domain.push_event import PushEvent
+    return PushEvent(
+        id=evt_id,
+        task_id="task-modify",
+        order_id="ord-modify",
+        state=state,
+        received_at=datetime(2026, 4, 30, 11, 0, 0, tzinfo=UTC),
+        payload={},
+        submitted_price=sub_px,
+        submitted_quantity=sub_qty,
+    )
+
+
+def test_modify_relabels_new_to_replaced_when_only_price_changes() -> None:
+    """User changed limit from $7.31 → $7.32, qty unchanged. Broker resends
+    ``New`` — without the relabel we'd lose the modify in the chain."""
+    task = _make_pending_task("task-modify", "ord-modify")
+    task.push_events = [
+        _push_evt(PushState.WAIT_TO_NEW, sub_px=7.31, sub_qty=1, evt_id="prev-1"),
+        _push_evt(PushState.NEW, sub_px=7.31, sub_qty=1, evt_id="prev-2"),
+    ]
+    raw = _CExtensionPushOrderChanged(
+        order_id="ord-modify",
+        status=_SDKEnumLike("OrderStatus", "New"),
+        side=_SDKEnumLike("OrderSide", "Buy"),
+        symbol="CONL.US",
+        executed_quantity=Decimal("0"),
+        executed_price=None,
+        submitted_price=Decimal("7.32"),
+        submitted_quantity=Decimal("1"),
+        msg="",
+    )
+
+    evt = _build_push_event(raw, task)
+
+    assert evt.state == PushState.REPLACED
+    assert evt.submitted_price == 7.32
+    assert evt.submitted_quantity == 1
+
+
+def test_modify_relabels_new_to_replaced_when_only_quantity_changes() -> None:
+    """User changed qty 1 → 2, price unchanged. Without checking
+    ``submitted_quantity`` the relabel misses this and the chain stays
+    flat (the bug surfaced by the recorded ``modify_price`` scenario)."""
+    task = _make_pending_task("task-modify", "ord-modify")
+    task.push_events = [
+        _push_evt(PushState.WAIT_TO_NEW, sub_px=7.30, sub_qty=1, evt_id="prev-1"),
+        _push_evt(PushState.NEW, sub_px=7.30, sub_qty=1, evt_id="prev-2"),
+    ]
+    raw = _CExtensionPushOrderChanged(
+        order_id="ord-modify",
+        status=_SDKEnumLike("OrderStatus", "New"),
+        side=_SDKEnumLike("OrderSide", "Buy"),
+        symbol="CONL.US",
+        executed_quantity=Decimal("0"),
+        executed_price=None,
+        submitted_price=Decimal("7.30"),
+        submitted_quantity=Decimal("2"),
+        msg="",
+    )
+
+    evt = _build_push_event(raw, task)
+
+    assert evt.state == PushState.REPLACED
+    assert evt.submitted_price == 7.30
+    assert evt.submitted_quantity == 2
+
+
+def test_modify_keeps_new_when_price_and_qty_both_unchanged() -> None:
+    """Pure broker keep-alive — same status, same price, same qty.
+    Must NOT spurious-relabel as Replaced."""
+    task = _make_pending_task("task-modify", "ord-modify")
+    task.push_events = [
+        _push_evt(PushState.WAIT_TO_NEW, sub_px=7.30, sub_qty=1, evt_id="prev-1"),
+        _push_evt(PushState.NEW, sub_px=7.30, sub_qty=1, evt_id="prev-2"),
+    ]
+    raw = _CExtensionPushOrderChanged(
+        order_id="ord-modify",
+        status=_SDKEnumLike("OrderStatus", "New"),
+        side=_SDKEnumLike("OrderSide", "Buy"),
+        symbol="CONL.US",
+        executed_quantity=Decimal("0"),
+        executed_price=None,
+        submitted_price=Decimal("7.30"),
+        submitted_quantity=Decimal("1"),
+        msg="",
+    )
+
+    evt = _build_push_event(raw, task)
+
+    assert evt.state == PushState.NEW
 
 
 async def test_filled_push_with_msg_does_not_set_reject_reason(
@@ -770,7 +874,7 @@ async def test_replay_for_order_drains_buffer_in_arrival_order(
     assert listener.buffered_count("ord-replay") == 0
     assert [p.push_event.state for p in captured] == [
         PushState.NEW,
-        PushState.PARTIAL,
+        PushState.PARTIAL_FILLED,
         PushState.FILLED,
     ]
     # Cumulative deltas are computed against persisted prior events

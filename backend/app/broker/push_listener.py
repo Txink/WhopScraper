@@ -37,6 +37,7 @@ import time
 import uuid
 from collections.abc import Callable
 from datetime import UTC, datetime
+from decimal import Decimal
 from enum import Enum
 from typing import Any
 
@@ -55,41 +56,48 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # SDK status → PushState mapping
 # ---------------------------------------------------------------------------
-# LongPort ``OrderStatus`` label → our PushState
+# Identity mapping: every LongPort ``OrderStatus`` label round-trips to the
+# matching ``PushState`` member (StrEnum value == broker label).  Defining
+# the dict explicitly (rather than ``{s.value: s for s in PushState}``)
+# makes the broker contract grep-able and keeps unmapped labels obvious.
 _SDK_STATUS_MAP: dict[str, PushState] = {
-    # Active / in-flight
+    # Pre-exchange
+    "WaitToNew": PushState.WAIT_TO_NEW,
+    "NotReported": PushState.NOT_REPORTED,
+    "WaitToReplace": PushState.WAIT_TO_REPLACE,
+    "PendingReplace": PushState.PENDING_REPLACE,
+    "ReplacedNotReported": PushState.REPLACED_NOT_REPORTED,
+    "ProtectedNotReported": PushState.PROTECTED_NOT_REPORTED,
+    "VarietiesNotReported": PushState.VARIETIES_NOT_REPORTED,
+    # Live on exchange
     "New": PushState.NEW,
-    "WaitToNew": PushState.NEW,
-    "NotReported": PushState.SUBMITTED,
-    "WaitToReplace": PushState.SUBMITTED,
-    "PendingReplace": PushState.SUBMITTED,
-    "ReplacedNotReported": PushState.SUBMITTED,
-    "ProtectedNotReported": PushState.SUBMITTED,
-    "VarietiesNotReported": PushState.SUBMITTED,
-    "Replaced": PushState.MODIFIED,
-    "PendingCancel": PushState.MODIFIED,
-    "WaitToCancel": PushState.MODIFIED,
-    "PartialFilled": PushState.PARTIAL,
-    "PartialWithdrawal": PushState.PARTIAL,
+    "Replaced": PushState.REPLACED,
+    "PendingCancel": PushState.PENDING_CANCEL,
+    "WaitToCancel": PushState.WAIT_TO_CANCEL,
+    # Partial
+    "PartialFilled": PushState.PARTIAL_FILLED,
+    "PartialWithdrawal": PushState.PARTIAL_WITHDRAWAL,
+    # Terminal
     "Filled": PushState.FILLED,
-    "Canceled": PushState.CANCELLED,
-    "Expired": PushState.CANCELLED,
+    "Canceled": PushState.CANCELED,
+    "Expired": PushState.EXPIRED,
     "Rejected": PushState.REJECTED,
-    "Unknown": PushState.FAILED,
+    "Unknown": PushState.UNKNOWN,
 }
 
-# Also support upper-case string variants from test doubles
+# Case-insensitive lookup for SDK labels arriving in unexpected case (e.g.
+# from test doubles that hand-craft strings). Matches ``_SDK_STATUS_MAP``
+# but keyed on upper-case.
 _SDK_STATUS_MAP_UPPER: dict[str, PushState] = {k.upper(): v for k, v in _SDK_STATUS_MAP.items()}
 
-# Extra plain-string aliases that test doubles may use
-_PLAIN_STRING_MAP: dict[str, PushState] = {
-    "NEW": PushState.NEW,
-    "SUBMITTED": PushState.SUBMITTED,
-    "MODIFIED": PushState.MODIFIED,
-    "PARTIAL": PushState.PARTIAL,
-    "FILLED": PushState.FILLED,
-    "CANCELLED": PushState.CANCELLED,
-    "REJECTED": PushState.REJECTED,
+# Backward-compat for tests / external callers that still pass legacy
+# coarse-grained labels (the pre-broker-faithful enum members). Each old
+# bucket maps to the canonical broker label that best represents it.
+_LEGACY_LABEL_MAP: dict[str, PushState] = {
+    "SUBMITTED": PushState.NOT_REPORTED,
+    "MODIFIED": PushState.REPLACED,
+    "PARTIAL": PushState.PARTIAL_FILLED,
+    "CANCELLED": PushState.CANCELED,
     "FAILED": PushState.FAILED,
 }
 
@@ -120,17 +128,17 @@ def _map_sdk_status(status: Any) -> tuple[PushState, str | None]:
     """
     label = _extract_status_label(status)
 
-    # 1. Try original-case SDK labels
+    # 1. Exact-case SDK label (the common path on production)
     if label in _SDK_STATUS_MAP:
         return _SDK_STATUS_MAP[label], None
 
-    # 2. Try upper-case SDK labels
+    # 2. Case-insensitive SDK label (defensive against future SDK changes)
     if label.upper() in _SDK_STATUS_MAP_UPPER:
         return _SDK_STATUS_MAP_UPPER[label.upper()], None
 
-    # 3. Try plain-string PushState names (test doubles)
-    if label.upper() in _PLAIN_STRING_MAP:
-        return _PLAIN_STRING_MAP[label.upper()], None
+    # 3. Legacy coarse-grained labels (test doubles, old callers)
+    if label.upper() in _LEGACY_LABEL_MAP:
+        return _LEGACY_LABEL_MAP[label.upper()], None
 
     # Unknown
     note = f"unknown status: {label}"
@@ -164,17 +172,29 @@ def _to_float(value: Any) -> float | None:
 
 
 def _serialise_value(v: Any) -> Any:
-    """Convert a single value to a JSON-safe primitive."""
+    """Convert a single value to a JSON-safe primitive.
+
+    LongPort SDK exposes prices/quantities as ``Decimal`` and statuses as
+    Rust-backed enum-likes whose ``repr`` is ``"OrderStatus.Filled"``.
+    Decimals must be converted to ``str`` faithfully (``Decimal('7.29')`` →
+    ``"7.29"``); enum-likes are unwrapped via the dotted-repr trick.
+    Naively splitting *every* dotted repr corrupts numerics
+    (``Decimal('7.29')`` → ``"29')"``), so we type-check first.
+    """
     if v is None or isinstance(v, (bool, int, float, str)):
         return v
     if isinstance(v, Enum):
         return v.value
     if isinstance(v, datetime):
         return v.isoformat()
-    # LongPort uses custom types (Decimal-like, enums without .value via repr)
+    if isinstance(v, Decimal):
+        return str(v)
     raw = repr(v)
-    if "." in raw:
-        # e.g. "OrderStatus.Filled" → "Filled"
+    # SDK enum-likes look like "ClassName.Member" — but Decimals also contain
+    # a dot inside their quoted literal (`Decimal('7.29')`), and so do paths,
+    # tuples, etc. The enum-like shape is specifically `Word.Word` with no
+    # parens/quotes; reject anything containing `'`, `(`, or whitespace.
+    if "." in raw and not any(c in raw for c in "'(\" "):
         return raw.split(".")[-1]
     return str(v)
 
@@ -244,6 +264,12 @@ def _extract_broker_msg(raw: Any) -> str | None:
     return msg or None
 
 
+#: PushState members that represent the order being live on exchange (not
+#: pre-routing, not partial-fill, not terminal).  Used for the "is this the
+#: same live state as before, just with a modified limit?" check.
+_LIVE_STATES: frozenset[PushState] = frozenset({PushState.NEW, PushState.REPLACED})
+
+
 def _build_push_event(raw: Any, task: Task) -> PushEvent:
     """Build a ``PushEvent`` from a raw SDK event and the associated ``Task``.
 
@@ -253,6 +279,15 @@ def _build_push_event(raw: Any, task: Task) -> PushEvent:
     - ``delta_price``: None — SDK's ``executed_price`` is a weighted average,
       not the fill price of this specific batch.
 
+    Modify relabel:
+    LongPort emits ``New`` for both the initial live event AND for any
+    post-submit modification (limit price OR ordered quantity — the broker
+    treats each modify as the order entering "live" again).  When the
+    previous live event for this task carried a different ``submitted_price``
+    OR a different ``submitted_quantity`` we relabel the state to ``Replaced``
+    so the chain surfaces the modify as a distinct event instead of yet
+    another ``New`` lookalike.
+
     ``note`` priority:
     1. Broker-supplied ``raw.msg`` if non-empty (rejection reason etc).
     2. Otherwise the unknown-status warning emitted by ``_map_sdk_status``.
@@ -261,6 +296,8 @@ def _build_push_event(raw: Any, task: Task) -> PushEvent:
 
     cum_qty = _to_int(getattr(raw, "executed_quantity", None))
     cum_avg = _to_float(getattr(raw, "executed_price", None))
+    submitted_price = _to_float(getattr(raw, "submitted_price", None))
+    submitted_quantity = _to_int(getattr(raw, "submitted_quantity", None))
 
     # Highest prior cumulative from earlier push events on this task
     prior_cum = 0
@@ -271,6 +308,30 @@ def _build_push_event(raw: Any, task: Task) -> PushEvent:
     delta_qty: int | None = None
     if cum_qty is not None and cum_qty > prior_cum:
         delta_qty = cum_qty - prior_cum
+
+    # Detect post-submit modifications. SDK reports them as another ``New``,
+    # but if the most recent live event has a different ``submitted_price``
+    # OR ``submitted_quantity`` this is really a Replace. Either dimension
+    # triggers the relabel; the chain inline content surfaces which one
+    # changed (price → ``$7.30``, qty → ``×2``, or both).
+    if state is PushState.NEW:
+        prior_live = next(
+            (e for e in reversed(task.push_events) if e.state in _LIVE_STATES),
+            None,
+        )
+        if prior_live is not None:
+            price_changed = (
+                submitted_price is not None
+                and prior_live.submitted_price is not None
+                and prior_live.submitted_price != submitted_price
+            )
+            qty_changed = (
+                submitted_quantity is not None
+                and prior_live.submitted_quantity is not None
+                and prior_live.submitted_quantity != submitted_quantity
+            )
+            if price_changed or qty_changed:
+                state = PushState.REPLACED
 
     # Prefer broker-supplied message — that's where the rejection reason lives.
     note = _extract_broker_msg(raw) or status_note
@@ -287,6 +348,8 @@ def _build_push_event(raw: Any, task: Task) -> PushEvent:
         cumulative_qty=cum_qty,
         cumulative_avg_price=cum_avg,
         note=note,
+        submitted_price=submitted_price,
+        submitted_quantity=submitted_quantity,
     )
 
 

@@ -226,7 +226,7 @@ def test_push_event_to_out_fields() -> None:
     evt = _make_push_event()
     out = push_event_to_out(evt)
     assert out.id == "evt-1"
-    assert out.state == "FILLED"
+    assert out.state == "Filled"
     assert out.delta_qty == 100
     assert out.cumulative_avg_price == 195.5
     assert out.note == "filled"

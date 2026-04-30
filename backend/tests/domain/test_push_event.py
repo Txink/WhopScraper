@@ -37,14 +37,18 @@ def test_push_event_equal_by_id():
 
 
 def test_push_state_values():
-    assert PushState.NEW.value == "NEW"
-    assert PushState.PARTIAL.value == "PARTIAL"
-    assert PushState.FILLED.value == "FILLED"
+    # Broker-faithful labels (LongPort SDK ``OrderStatus`` names).
+    assert PushState.NEW.value == "New"
+    assert PushState.WAIT_TO_NEW.value == "WaitToNew"
+    assert PushState.PARTIAL_FILLED.value == "PartialFilled"
+    assert PushState.FILLED.value == "Filled"
+    assert PushState.REPLACED.value == "Replaced"
+    assert PushState.CANCELED.value == "Canceled"
 
 
 def test_partial_fill_carries_deltas():
     e = _make(
-        state=PushState.PARTIAL,
+        state=PushState.PARTIAL_FILLED,
         delta_qty=100,
         delta_price=26.47,
         cumulative_qty=100,

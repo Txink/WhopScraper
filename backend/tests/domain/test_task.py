@@ -78,7 +78,7 @@ def test_task_append_push_event_sorted():
     t.mark_submitting()
     t.mark_submitted(order_id="ord-1", timing_ms=412)
     t.append_push_event(_pe(state=PushState.NEW, order_id="ord-1"))
-    t.append_push_event(_pe(state=PushState.PARTIAL, order_id="ord-1", delta_qty=100))
+    t.append_push_event(_pe(state=PushState.PARTIAL_FILLED, order_id="ord-1", delta_qty=100))
     assert len(t.push_events) == 2
     assert t.status == Status.PARTIAL
 

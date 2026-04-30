@@ -147,6 +147,15 @@ class PushEventRow(Base):
     cumulative_qty: Mapped[int | None] = mapped_column(Integer, nullable=True)
     cumulative_avg_price: Mapped[float | None] = mapped_column(nullable=True)
     note: Mapped[str | None] = mapped_column(String, nullable=True)
+    # Current limit price the order is sitting at on the broker side
+    # (LongPort ``submitted_price``). Captured on every push so post-submit
+    # limit modifications can be recovered from history without parsing
+    # ``payload_json``.
+    submitted_price: Mapped[float | None] = mapped_column(nullable=True)
+    # Current ordered quantity (LongPort ``submitted_quantity``). Captured
+    # so qty-only modifications can be detected against prior live events
+    # without re-parsing payload_json.
+    submitted_quantity: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # Full push payload as JSON.
     payload_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
 
