@@ -63,38 +63,72 @@ def tokenize(content: str) -> list[Token]:
             i += 1
             continue
 
-        # 2. RANGE (must come before PRICE because PRICE is a prefix)
+        # 2. RANGE (must come before PRICE because PRICE is a prefix).
+        # Reject when followed by '点' (time-of-day '4-4点半' / '3-4点钟') or
+        # when start == end (degenerate '4-4').
         m = _RANGE_RE.match(content, i)
         if m:
-            tokens.append(Token(tag="RANGE", value=m.group(0).replace("。", "."), start=i, end=m.end()))
-            i = m.end()
-            continue
+            try:
+                start_v = float(m.group(1).replace("。", "."))
+                end_v = float(m.group(2).replace("。", "."))
+                # Look-ahead for '点' which indicates time, not price
+                end_pos = m.end()
+                followed_by_dian = end_pos < len(content) and content[end_pos] == "点"
+                if start_v != end_v and not followed_by_dian:
+                    tokens.append(Token(tag="RANGE", value=m.group(0).replace("。", "."), start=i, end=m.end()))
+                    i = m.end()
+                    continue
+                if followed_by_dian:
+                    # Skip the entire range as time chars
+                    for ch in m.group(0):
+                        tokens.append(Token(tag="OTHER", value=ch, start=i, end=i + 1))
+                        i += 1
+                    continue
+            except ValueError:
+                pass
 
-        # 3. PRICE (with sanity bound)
+        # 3. PRICE (with sanity bound + time-of-day filter)
         if c.isdigit():
             m = _PRICE_RE.match(content, i)
             if m:
                 val = m.group(0).replace("。", ".")
                 try:
                     if 0 < float(val) < 10000:
-                        tokens.append(Token(tag="PRICE", value=val, start=i, end=m.end()))
-                        i = m.end()
-                        continue
+                        # Time-of-day filter: '4点半' / '3点38分' → not a price.
+                        # Percentage filter: '4成' / '7成左右' → not a price.
+                        # Month/date filter: '9月' / '11月28日' → not a price.
+                        end_pos = m.end()
+                        rest = content[end_pos:end_pos + 3]
+                        next_ch = content[end_pos] if end_pos < len(content) else ""
+                        is_time = (
+                            rest.startswith("点半")
+                            or rest.startswith("点钟")
+                            or (rest.startswith("点") and len(content) > end_pos + 1 and content[end_pos + 1].isdigit())
+                        )
+                        is_pct = next_ch == "成"
+                        is_month = next_ch == "月"
+                        if not (is_time or is_pct or is_month):
+                            tokens.append(Token(tag="PRICE", value=val, start=i, end=m.end()))
+                            i = m.end()
+                            continue
                 except ValueError:
                     pass
 
-        # 4. TICKER (ASCII letters; common-English-word blocklist)
+        # 4. TICKER (ASCII letters; common-English-word blocklist;
+        # context-suppress when preceded by '指数'/'港股'/'A股' — those mark
+        # market-index references, not the stock ticker itself).
         if c.isascii() and c.isalpha():
             m = _TICKER_RE.match(content, i)
             if m:
                 ticker = m.group(0).upper()
-                if ticker not in _COMMON_WORD_BLOCKLIST:
+                preceded_by_index = (
+                    i >= 2 and content[i - 2:i] in {"指数", "港股", "美股", "A股"}
+                )
+                if ticker not in _COMMON_WORD_BLOCKLIST and not preceded_by_index:
                     tokens.append(Token(tag="TICKER", value=ticker, start=i, end=m.end()))
                     i = m.end()
                     continue
                 else:
-                    # Blocked — emit as OTHER chars so vocab/regex below can
-                    # still reach following content; advance just past the run.
                     for ch in m.group(0):
                         tokens.append(Token(tag="OTHER", value=ch, start=i, end=i + 1))
                         i += 1

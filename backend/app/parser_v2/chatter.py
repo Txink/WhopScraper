@@ -59,6 +59,39 @@ def is_chatter(anchor: Anchor) -> bool:
         if any(t.tag == "PAST_REF" for t in tokens):
             return True
 
+    # Layer 2d: '可以X了' speculation pattern (e.g., '78-80附近可以买了长拿').
+    # '可以' is benign in directives ('可以19.6出一半'), but '可以X了' with the
+    # past/completion '了' particle right after the verb is conditional
+    # speculation, not a directive.
+    if (
+        i + 1 < len(tokens)
+        and tokens[i + 1].tag == "OTHER"
+        and tokens[i + 1].value == "了"
+    ):
+        # Check clause for '可以' substring (two consecutive OTHERs '可' '以')
+        for j in range(i):
+            if (
+                tokens[j].tag == "OTHER"
+                and tokens[j].value == "可"
+                and j + 1 < len(tokens)
+                and tokens[j + 1].tag == "OTHER"
+                and tokens[j + 1].value == "以"
+            ):
+                return True
+
+    # Layer 2e: '回调到了' / '震荡到了' / '突破到了' — descriptive past
+    # observation about reaching a price level, not a directive. Pattern is
+    # ACTION_DESC token immediately followed by OTHER('到') + OTHER('了').
+    for j in range(len(tokens) - 2):
+        if (
+            tokens[j].tag == "ACTION_DESC"
+            and tokens[j + 1].tag == "OTHER"
+            and tokens[j + 1].value == "到"
+            and tokens[j + 2].tag == "OTHER"
+            and tokens[j + 2].value == "了"
+        ):
+            return True
+
     # Right-neighbor PAST particle
     if i + 1 < len(tokens):
         right = tokens[i + 1]
