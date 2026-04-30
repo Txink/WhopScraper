@@ -529,3 +529,64 @@ async def test_errored_callback_fires_once_on_first_failure(patch_scripted_brows
 
     assert actions == ["errored"], f"expected ['errored'], got {actions}"
     assert listener.last_error == "net down"
+
+
+@pytest.mark.asyncio
+async def test_errored_then_recovered_callback_sequence(patch_scripted_browser) -> None:
+    """One failure followed by a success fires ['errored', 'recovered'] in order.
+
+    The recovery scan happens after the 1.0s backoff that follows the first failure,
+    so we sleep 1.5s to give it time to land. Subsequent successful scans inside the
+    same healthy streak must NOT fire 'recovered' again — only the transition counts.
+    """
+    patch_scripted_browser([
+        ("raise", RuntimeError("blip")),
+        ("html", "<html></html>"),
+    ])
+
+    actions: list[str] = []
+
+    async def record(action: str) -> None:
+        actions.append(action)
+
+    listener = WhopListener(
+        bus=EventBus(),
+        url="http://test",
+        source="stock",
+        poll_interval=0.05,
+        skip_initial=False,
+        dedupe_processed_messages=False,
+        on_status_change=record,
+    )
+    await listener.start()
+    await asyncio.sleep(1.5)
+    await listener.stop()
+
+    assert actions == ["errored", "recovered"], f"expected ['errored','recovered'], got {actions}"
+    assert listener.last_error is None
+
+
+@pytest.mark.asyncio
+async def test_no_recovered_callback_on_fresh_healthy_start(patch_scripted_browser) -> None:
+    """A listener that never errored must NOT fire 'recovered' on its first success."""
+    patch_scripted_browser([("html", "<html></html>")])
+
+    actions: list[str] = []
+
+    async def record(action: str) -> None:
+        actions.append(action)
+
+    listener = WhopListener(
+        bus=EventBus(),
+        url="http://test",
+        source="stock",
+        poll_interval=0.05,
+        skip_initial=False,
+        dedupe_processed_messages=False,
+        on_status_change=record,
+    )
+    await listener.start()
+    await asyncio.sleep(0.2)
+    await listener.stop()
+
+    assert actions == [], f"expected no callbacks on healthy startup, got {actions}"

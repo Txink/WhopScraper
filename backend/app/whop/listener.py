@@ -282,7 +282,11 @@ class WhopListener:
             new_count += 1
 
         self._last_poll_at = datetime.now(UTC)
+        prev_error = self._last_error
         self._last_error = None
+        if prev_error is not None:
+            # Fire AFTER clearing _last_error so subscribers see the post-recovery snapshot.
+            await self._safe_status_callback("recovered")
 
         if new_count > 0:
             self._messages_published += new_count
