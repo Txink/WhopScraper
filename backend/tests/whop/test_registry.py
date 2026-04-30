@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 
 from app.core.config import Settings
-from app.core.event_bus import EventBus
+from app.core.event_bus import Event, EventBus
 from app.whop.page_settings import PageSettings, TickerConfig  # noqa: F401  (used in new tests)
 from app.whop.registry import WhopRegistry
 
@@ -680,3 +680,68 @@ async def test_page_change_event_published_on_start_and_stop(
     await reg.stop_page(entry.id)
     await bus.wait_idle()
     assert any(p.action == "stopped" for p in received)
+
+
+@pytest.mark.asyncio
+async def test_status_callback_publishes_page_changed_event(
+    patch_browser: None, settings_test: Settings, tmp_path: Path
+) -> None:
+    """Invoking the registry's status callback publishes a WHOP_PAGE_CHANGED event.
+
+    No live listener required — the callback resolves the entry from the registry
+    dict and uses _build_page_dict, which works off the entry alone.
+    """
+    from app.core.events import Topics, WhopPagePayload
+
+    bus = EventBus()
+    received: list[Event] = []
+
+    async def capture(evt: Event) -> None:
+        received.append(evt)
+
+    bus.subscribe(Topics.WHOP_PAGE_CHANGED, capture)
+
+    pages_file = tmp_path / "pages.json"
+    registry = WhopRegistry(
+        bus=bus, settings=settings_test, pages_file=pages_file
+    )
+    entry = await registry.add_page(url="https://whop.com/statuscb/app/", source="stock", name="X")
+    await bus.wait_idle(timeout=1)
+    received.clear()  # discard the "added" event
+
+    cb = registry._make_status_callback(entry.id)
+    await cb("errored")
+    await bus.wait_idle(timeout=1)
+
+    assert len(received) == 1
+    payload = received[0].payload
+    assert isinstance(payload, WhopPagePayload)
+    assert payload.action == "errored"
+    assert payload.page_dict["id"] == entry.id
+
+
+@pytest.mark.asyncio
+async def test_status_callback_silent_when_entry_missing(
+    patch_browser: None, settings_test: Settings, tmp_path: Path
+) -> None:
+    """If the entry was removed before the callback fires, no event is published and no exception bubbles up."""
+    from app.core.events import Topics
+
+    bus = EventBus()
+    received: list[Event] = []
+
+    async def capture(evt: Event) -> None:
+        received.append(evt)
+
+    bus.subscribe(Topics.WHOP_PAGE_CHANGED, capture)
+
+    pages_file = tmp_path / "pages.json"
+    registry = WhopRegistry(
+        bus=bus, settings=settings_test, pages_file=pages_file
+    )
+
+    cb = registry._make_status_callback("nonexistent-id")
+    await cb("errored")  # must not raise
+    await bus.wait_idle(timeout=1)
+
+    assert received == []

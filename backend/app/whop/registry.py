@@ -11,6 +11,7 @@ import asyncio
 import json
 import logging
 import uuid
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -430,6 +431,27 @@ class WhopRegistry:
             )
         )
 
+    def _make_status_callback(self, page_id: str) -> Callable[[str], Awaitable[None]]:
+        """Build the on_status_change callback that a listener invokes when its
+        scan loop transitions between healthy and errored.
+
+        The closure looks up the entry under the registry lock, snapshots its
+        current page dict, then publishes a whop.page_changed event with the
+        given action ("errored" or "recovered"). If the entry has already been
+        removed by the time the callback fires, it returns silently — the
+        listener is in the process of being torn down, so there's nothing to
+        report.
+        """
+        async def _on_status(action: str) -> None:
+            async with self._lock:
+                entry = self._entries.get(page_id)
+                if entry is None:
+                    return
+                page_dict = self._build_page_dict(entry)
+            await self._publish_page_event(action, page_dict)
+
+        return _on_status
+
     async def _start_listener(self, entry: WhopPageEntry, *, skip_initial: bool = True) -> None:
         """Build + start a listener for an entry. Lock must be held by caller.
 
@@ -452,6 +474,7 @@ class WhopRegistry:
             skip_initial=skip_initial,
             dedupe_processed_messages=entry.settings.dedupe_processed_messages,
             session_factory=self._session_factory,
+            on_status_change=self._make_status_callback(entry.id),
         )
         await listener.start()
         self._listeners[entry.id] = listener
