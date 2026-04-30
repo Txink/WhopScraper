@@ -699,15 +699,14 @@ async def test_status_callback_publishes_page_changed_event(
     async def capture(evt: Event) -> None:
         received.append(evt)
 
-    bus.subscribe(Topics.WHOP_PAGE_CHANGED, capture)
-
     pages_file = tmp_path / "pages.json"
     registry = WhopRegistry(
         bus=bus, settings=settings_test, pages_file=pages_file
     )
     entry = await registry.add_page(url="https://whop.com/statuscb/app/", source="stock", name="X")
-    await bus.wait_idle(timeout=1)
-    received.clear()  # discard the "added" event
+
+    # Subscribe AFTER add_page so we don't catch the "added" event.
+    bus.subscribe(Topics.WHOP_PAGE_CHANGED, capture)
 
     cb = registry._make_status_callback(entry.id)
     await cb("errored")
@@ -733,12 +732,12 @@ async def test_status_callback_silent_when_entry_missing(
     async def capture(evt: Event) -> None:
         received.append(evt)
 
-    bus.subscribe(Topics.WHOP_PAGE_CHANGED, capture)
-
     pages_file = tmp_path / "pages.json"
     registry = WhopRegistry(
         bus=bus, settings=settings_test, pages_file=pages_file
     )
+
+    bus.subscribe(Topics.WHOP_PAGE_CHANGED, capture)
 
     cb = registry._make_status_callback("nonexistent-id")
     await cb("errored")  # must not raise
