@@ -76,8 +76,10 @@ def register_parser_service(
         # Publish TASK_CREATED (status=PARSING) so storage has a record
         await bus.publish(Event(Topics.TASK_CREATED, TaskPayload(task)))
 
-        # Per-page tickers for the stock fallback. orphan / option / no-registry
-        # all collapse to an empty set, which the resolver treats as "no help".
+        # Per-page settings. Looked up here once (not inside the try block) so
+        # both the watched-ticker fallback and the parser-version dispatch can
+        # use it. orphan / option / no-registry → page_settings is None.
+        page_settings: PageSettings | None = None
         watched: set[str] = set()
         if msg.source == "stock" and registry is not None:
             page_settings = registry.get_settings_for_url(msg.url)
@@ -85,12 +87,19 @@ def register_parser_service(
                 watched = set(page_settings.tickers.keys())
 
         started = time.perf_counter()
+        parser_version_used: str | None = None
 
         try:
             # --- Single-message parse ---
             parsed: Instruction | None
             if msg.source == "stock":
-                parsed = stock_parser.parse(msg.content, message_id=msg.id)
+                if page_settings is not None and page_settings.parser_version == "v2":
+                    import app.parser_v2 as parser_v2  # local import: avoid cycle
+                    parsed = parser_v2.parse(msg.content, message_id=msg.id)
+                    parser_version_used = "v2"
+                else:
+                    parsed = stock_parser.parse(msg.content, message_id=msg.id)
+                    parser_version_used = "v1"
             else:
                 parsed = option_parser.parse(
                     msg.content,
@@ -110,7 +119,11 @@ def register_parser_service(
                 resolved = parsed
 
         except Exception as exc:  # noqa: BLE001
-            logger.exception("parser.service: exception while parsing message %s", msg.id)
+            logger.exception(
+                "parser.service: exception while parsing message %s",
+                msg.id,
+                extra={"parser_version": parser_version_used},
+            )
             elapsed_ms = (time.perf_counter() - started) * 1000
             task.record_parse_timing(elapsed_ms)
             task.mark_parse_failed(f"parser error: {exc}")
