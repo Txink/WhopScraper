@@ -1,12 +1,9 @@
-"""parser_v2 — placeholder during B1.
+"""parser_v2 — independent token-based stock parser.
 
-Re-exports stock_parser.parse so harness code can import from a stable name.
-B2 will replace this module's content with a token-based slot-filling parser.
-The validate_parser harness uses `parser_v2.parse is stock_parser.parse` as
-an identity check to detect the placeholder state and skip the recovery_rate
-constraint until a real v2 lands.
+See docs/superpowers/specs/2026-04-27-parser-v2-token-based-design.md.
+Entry point: parse(content, *, message_id) -> StockInstruction | None.
 """
 
-from app.parser.stock_parser import parse  # noqa: F401  — re-export
+from app.parser_v2.parse import parse  # noqa: F401
 
 __all__ = ["parse"]
