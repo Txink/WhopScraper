@@ -71,12 +71,18 @@ def create_app(
     if settings is None:
         settings = get_settings()
 
-    # Apply Settings.log_level to the root logger so that ``logger.info`` calls
-    # in app.* modules (e.g. PushListener) actually surface. Without this the
-    # only push-related logs you'd see are warnings (buffer GC, unknown SDK
-    # status); INFO-level "handling push / publishing TASK_PUSH_EVENT" entries
-    # would be silently dropped by Python's default WARNING root level.
-    logging.getLogger().setLevel(settings.log_level.upper())
+    # Configure the root logger so ``logger.info`` calls in app.* modules
+    # (e.g. PushListener) actually surface. ``setLevel`` alone is NOT enough:
+    # uvicorn installs handlers for ``uvicorn``/``uvicorn.access`` but never
+    # touches the root logger, so app records propagate up to a handler-less
+    # root and fall back to Python's WARNING-only ``lastResort`` handler.
+    # ``basicConfig(force=True)`` installs a StreamHandler on root and sets
+    # its level — required for INFO-level push listener logs to print.
+    logging.basicConfig(
+        level=settings.log_level.upper(),
+        format="%(levelname)s:    %(name)s: %(message)s",
+        force=True,
+    )
 
     state = AppState()
     state.settings = settings
@@ -306,6 +312,12 @@ def create_app(
             except Exception as exc:  # noqa: BLE001
                 logger.warning("whop registry load failed: %s", exc)
 
+            # Register the simulator's virtual page so trader gates (whitelist,
+            # qty resolution) work end-to-end for sim:// tasks. Ephemeral —
+            # never persisted; re-registered on every restart.
+            from app.sim.virtual_page import register_sim_page
+            register_sim_page(state.whop_registry)
+
             # Seed default monitoring pages on first run (when pages file empty).
             # User can later remove or modify them via the Whop management UI.
             # Note: WHOP_STOCK_URL / WHOP_OPTION_URL env vars are no longer
@@ -348,6 +360,18 @@ def create_app(
             )
         )
         app.include_router(build_ws_router(state.hub, state.settings))
+
+        # Simulator router — exercises the real bus → parser → DB → WS pipeline
+        # with prebuilt scenarios so the operator can preview UI behaviour
+        # without making real broker calls.
+        from app.api.sim import build_sim_router
+        app.include_router(
+            build_sim_router(
+                bus=state.bus,
+                session_factory=state.session_factory,
+                push_listener_getter=lambda: state.push_listener,
+            )
+        )
 
         # ── Static frontend mount (after API/WS routers) ──────────────────
         _DIST_DIR = Path(__file__).resolve().parents[2] / "frontend" / "dist"

@@ -219,4 +219,37 @@ export const api = {
       { method: "POST", body: JSON.stringify({ url, force: true }) },
     );
   },
+
+  // -------------------------------------------------------------------------
+  // Simulator — exercises real bus → parser → DB → WS pipeline with
+  // prebuilt scenarios so the operator can preview UI behaviour without
+  // making real broker calls.
+  // -------------------------------------------------------------------------
+
+  async listSimScenarios(): Promise<{ scenarios: SimScenarioOverview[] }> {
+    return request<{ scenarios: SimScenarioOverview[] }>("/api/sim/scenarios");
+  },
+
+  async runSimScenario(name: string): Promise<SimRunResult> {
+    return request<SimRunResult>(
+      `/api/sim/run/${encodeURIComponent(name)}`,
+      { method: "POST" },
+    );
+  },
 };
+
+export interface SimScenarioOverview {
+  name: string;
+  label: string;
+  description: string;
+  source: string;
+  message_text: string;
+  push_step_count: number;
+}
+
+export interface SimRunResult {
+  scenario_name: string;
+  message_id: string;
+  order_id: string | null;
+  started: boolean;
+}

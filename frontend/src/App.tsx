@@ -23,6 +23,7 @@ import { OrphanCleanupBar } from "./components/Dashboard/OrphanCleanupBar";
 import { DatabaseRecordsPanel } from "./components/Dashboard/DatabaseRecordsPanel";
 import { EmptyState } from "./components/Dashboard/EmptyState";
 import { LongportSettingsModal } from "./components/Dashboard/LongportSettingsModal";
+import { SimPanel } from "./components/Sim/SimPanel";
 import { useStickyTop } from "./hooks/useStickyTop";
 import "./App.css";
 import "./components/Dashboard/Dashboard.css";
@@ -333,6 +334,7 @@ function ContentRouter({ token }: { token: string }) {
 
 export default function App() {
   const [longportSettingsOpen, setLongportSettingsOpen] = useState(false);
+  const [simPanelOpen, setSimPanelOpen] = useState(false);
   const [authState, setAuthState] = useState<"checking" | "valid" | "missing" | "invalid">(
     "checking",
   );
@@ -389,6 +391,7 @@ export default function App() {
         dryRun={conn.dryRun}
         autoTrade={conn.autoTrade}
         onOpenLongportSettings={() => setLongportSettingsOpen(true)}
+        onOpenSimulator={() => setSimPanelOpen(true)}
         onReloadBroker={async () => {
           try {
             const status = await api.reloadBroker();
@@ -415,6 +418,7 @@ export default function App() {
           }}
         />
       )}
+      <SimPanel open={simPanelOpen} onClose={() => setSimPanelOpen(false)} />
     </div>
   );
 }

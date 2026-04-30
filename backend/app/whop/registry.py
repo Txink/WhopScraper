@@ -156,6 +156,35 @@ class WhopRegistry:
 
     # ---- mutating ops ----
 
+    def register_virtual_page(
+        self,
+        *,
+        url: str,
+        source: str,
+        name: str,
+        settings: "PageSettings",
+    ) -> WhopPageEntry:
+        """Inject a non-Whop page entry without URL validation or disk persist.
+
+        Used by ``app.sim`` to register the ``sim://scenarios`` virtual page
+        on startup so the trader's whitelist + qty resolution gates work for
+        simulated tasks. The entry is NOT written to ``pages.json`` (sim is
+        ephemeral; restart re-registers) and no listener is started.
+        """
+        entry = WhopPageEntry(
+            id=f"virtual-{uuid.uuid4().hex[:8]}",
+            url=url,
+            source=source,  # type: ignore[arg-type]
+            name=name,
+            added_at=datetime.now(UTC),
+            settings=settings,
+        )
+        # Take the lock synchronously via the same internal dict mutation
+        # path; this runs at startup before any concurrent callers exist.
+        self._entries[entry.id] = entry
+        self._rebuild_url_index()
+        return entry
+
     async def add_page(self, *, url: str, source: str, name: str | None = None) -> WhopPageEntry:
         """Add a new page entry + persist (does NOT start listener).
 
@@ -446,7 +475,13 @@ class WhopRegistry:
 
     def _save_entries(self) -> None:
         self._pages_file.parent.mkdir(parents=True, exist_ok=True)
-        data = [e.to_dict() for e in self._entries.values()]
+        # Skip ``sim://`` virtual entries — the simulator re-registers them
+        # from code on every startup; persisting them risks stale config
+        # silently overriding the canonical in-code definition.
+        data = [
+            e.to_dict() for e in self._entries.values()
+            if not e.url.startswith("sim://")
+        ]
         self._pages_file.write_text(
             json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8"
         )

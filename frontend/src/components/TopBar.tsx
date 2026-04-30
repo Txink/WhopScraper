@@ -12,6 +12,10 @@ export interface TopBarProps {
   dryRun: boolean;
   autoTrade?: boolean;
   onOpenLongportSettings?: () => void;
+  /** Open the simulator modal — exercises the real pipeline with prebuilt
+   *  scenarios so the operator can preview UI behaviour without making
+   *  real broker calls. */
+  onOpenSimulator?: () => void;
   /** Trigger a backend broker rebuild (POST /api/longport/broker/reload).
    *  When provided, the longport pill becomes clickable: hovering swaps
    *  the status content for a "⟳ 刷新" affordance, clicking runs the
@@ -29,6 +33,7 @@ export function TopBar({
   dryRun,
   autoTrade = false,
   onOpenLongportSettings,
+  onOpenSimulator,
   onReloadBroker,
   onLogout,
 }: TopBarProps) {
@@ -121,6 +126,17 @@ export function TopBar({
             </span>
           </button>
         </div>
+        {onOpenSimulator && (
+          <button
+            type="button"
+            className="sim-btn"
+            onClick={onOpenSimulator}
+            title="模拟器 — 触发场景预览 UI"
+            aria-label="打开模拟器"
+          >
+            模拟器
+          </button>
+        )}
         <button
           type="button"
           className={`acct-pill ${mode}`}

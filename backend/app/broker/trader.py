@@ -298,6 +298,7 @@ def register_trader(
         if inst is None:
             return
 
+
         page_settings = _resolve_settings(task)
 
         # ============== 完整信息校验节点 (gate ①) ==============
@@ -340,6 +341,11 @@ def register_trader(
         auto_trade_enabled = (
             auto_trade_getter() if auto_trade_getter is not None else config.auto_trade
         )
+        # Sim scenarios always auto-trade so the demo flow doesn't stall
+        # waiting for manual confirmation when the operator has auto_trade
+        # off in their LongPort settings.
+        if task.message.url == "sim://scenarios":
+            auto_trade_enabled = True
         if not auto_trade_enabled:
             task.reject_reason = "auto_trade disabled in config; awaiting manual confirmation"
             await bus.publish(Event(Topics.TASK_STATUS_CHANGED, TaskPayload(task)))
@@ -467,26 +473,53 @@ def register_trader(
         task.mark_submitting()
         await bus.publish(Event(Topics.TASK_STATUS_CHANGED, TaskPayload(task)))
         started = time.perf_counter()
-        try:
-            order_id = _submit(
-                client,
-                inst,
-                quantity=computed_qty,
-                price=submit_price,
-                order_type=order_type,
-            )
-        except Exception as exc:
-            elapsed = (time.perf_counter() - started) * 1000
-            task.stage_timings["submit"] = elapsed
-            task.mark_submit_failed(_format_broker_error(exc))
-            logger.error(
-                "Trader: order submission failed for task %s: %s",
-                task.id,
-                exc,
-                exc_info=True,
-            )
-            await bus.publish(Event(Topics.TASK_SUBMIT_FAILED, TaskPayload(task)))
-            return
+        # Simulator branch: the sim runner injects messages with this fixed
+        # URL (``sim://scenarios`` — see app.sim.virtual_page.SIM_PAGE_URL).
+        # Skip ONLY the broker.submit_order call; everything before
+        # (gates ①+②+③, qty resolution, order-type/quote decision) and
+        # everything after (mark_submitted, save, replay, TASK_ORDER_SUBMITTED)
+        # runs identically to a real order.
+        if task.message.url == "sim://scenarios":
+            # Sim scenarios may opt into a synthetic broker error by stashing
+            # a reason in PENDING_SIM_FAILURES (keyed on message_id) before
+            # publishing MESSAGE_RECEIVED. Pop-and-raise here so the existing
+            # ``except Exception`` below routes us to mark_submit_failed,
+            # exercising the same SUBMIT_FAILED path real broker errors take.
+            from app.sim.runner import PENDING_SIM_FAILURES as _sim_failures
+            sim_failure = _sim_failures.pop(task.message.id, None)
+            if sim_failure is not None:
+                try:
+                    raise RuntimeError(sim_failure)
+                except Exception as exc:  # mirror the real broker-error block below
+                    elapsed = (time.perf_counter() - started) * 1000
+                    task.stage_timings["submit"] = elapsed
+                    task.mark_submit_failed(_format_broker_error(exc))
+                    logger.info("Trader[sim]: synthetic broker error: %s", exc)
+                    await bus.publish(Event(Topics.TASK_SUBMIT_FAILED, TaskPayload(task)))
+                    return
+            import uuid as _sim_uuid
+            order_id: str | None = f"sim_ord_{_sim_uuid.uuid4().hex[:12]}"
+        else:
+            try:
+                order_id = _submit(
+                    client,
+                    inst,
+                    quantity=computed_qty,
+                    price=submit_price,
+                    order_type=order_type,
+                )
+            except Exception as exc:
+                elapsed = (time.perf_counter() - started) * 1000
+                task.stage_timings["submit"] = elapsed
+                task.mark_submit_failed(_format_broker_error(exc))
+                logger.error(
+                    "Trader: order submission failed for task %s: %s",
+                    task.id,
+                    exc,
+                    exc_info=True,
+                )
+                await bus.publish(Event(Topics.TASK_SUBMIT_FAILED, TaskPayload(task)))
+                return
 
         elapsed_ms = (time.perf_counter() - started) * 1000
         order_id_str = normalize_broker_order_id(order_id)

@@ -256,6 +256,24 @@
   background: transparent;
 }
 
+/* Simulator trigger — sits between conn group and account pill. */
+.sim-btn {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  padding: 3px 8px;
+  border-radius: var(--radius-chip);
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--fg-2);
+  cursor: pointer;
+  transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+.sim-btn:hover {
+  color: var(--info);
+  border-color: rgba(90, 160, 255, 0.5);
+}
+
 .acct-pill:hover {
   filter: brightness(1.05);
 }
