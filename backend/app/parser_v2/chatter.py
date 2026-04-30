@@ -26,24 +26,32 @@ ANCHOR_SCOPE_K = 3
 
 def is_chatter(anchor: Anchor) -> bool:
     tokens = anchor.clause.tokens
+    i = anchor.verb_index
 
-    # Layer 1: clause-level MODAL/CONDITIONAL/OBSERVATION
-    # OBSERVATION ('看', '看下', '比如', '盘前看' …) is a clause-wide indicator that
-    # the speaker is examining/forecasting rather than directing. Treating it
-    # clause-wide handles long Chinese sentences where '看' is far from the verb.
+    # Layer 1: clause-level MODAL / CONDITIONAL / OBSERVATION.
+    # If any of these markers appears anywhere in the clause, the clause is
+    # forecast/example/observation, not directive. Long paragraphs that mix
+    # a directive with afterword commentary should be split into separate
+    # clauses (clause-split rules handle this; see clauses.py).
     clause_tags = {t.tag for t in tokens}
     if "MODAL" in clause_tags or "CONDITIONAL" in clause_tags or "OBSERVATION" in clause_tags:
         return True
 
-    # Layer 2: anchor-scope ±K PAST_REF, but only BEFORE the verb.
-    # PAST_REF before the verb signals past-tense talk ('昨天是106吸的' = chatter).
-    # PAST_REF after the verb is a lot-ref form ('200出昨天192的' = R3 lot-ref),
-    # not chatter; let slot phase extract referenced_lot_price.
-    i = anchor.verb_index
-    lo = max(0, i - ANCHOR_SCOPE_K)
-    for t in tokens[lo:i]:
-        if t.tag == "PAST_REF":
-            return True
+    # Layer 2: BEFORE-verb PAST_REF (clause-scoped) with R3 exemption.
+    # PAST_REF before the verb = past-tense talk ('昨天是106吸的',
+    # '上次也是15.8附近买入') = chatter.
+    # EXEMPTION: when the clause has a QUANTIFIER or POSITION_SIZE token, the
+    # PAST_REF most likely qualifies a referenced lot ('之前78的部分在78.4出'
+    # = R3 lot-ref form), not the action itself — keep the anchor alive so
+    # slot phase can extract referenced_lot_price.
+    has_quant_or_size = any(
+        t.tag in {"QUANTIFIER", "POSITION_SIZE"} and not t.weak
+        for t in tokens
+    )
+    if not has_quant_or_size:
+        for t in tokens[:i]:
+            if t.tag == "PAST_REF":
+                return True
 
     # Right-neighbor PAST particle
     if i + 1 < len(tokens):

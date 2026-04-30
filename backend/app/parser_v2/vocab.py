@@ -44,6 +44,12 @@ IMPERATIVE_VERBS_SELL: frozenset[str] = frozenset({
 DESCRIPTIVE_VERBS: frozenset[str] = frozenset({
     "回踩", "转弯", "震荡", "突破", "测试", "反弹", "回调",
     "跌破", "站稳", "撑住", "持有",
+    # Compound forms whose first char is also an imperative verb. Greedy
+    # longest-match wins, so '吸筹' beats '吸', '出现' beats '出', '补涨'
+    # beats '补'. These are descriptive in this corpus and appear in long
+    # commentary paragraphs.
+    "吸筹", "出现", "出货", "补涨", "补缺口",
+    "买入价", "卖出价", "买点", "卖点", "建仓点",
 })
 
 # ----------------------------------------------------------------------------
@@ -126,6 +132,16 @@ POSITION_SIZE_PHRASES: frozenset[str] = frozenset({
 # ----------------------------------------------------------------------------
 
 CONJUNCTIONS: frozenset[str] = frozenset({"和", "与", "或者", "或", "再"})
+
+# Soft clause-start phrases: when preceded by whitespace, force a clause split.
+# Used by clauses.py — these are typical topic-shift / temporal-shift starts
+# that introduce afterword commentary in long Chinese messages.
+# Not tokenized as a separate tag (most are not in PHRASE_TO_TAG); this is a
+# content-substring check.
+SOFT_CLAUSE_STARTS: tuple[str, ...] = tuple(sorted([
+    "今天", "明天", "后天", "后面", "后续", "后市", "盘后", "盘前",
+    "盘中", "早上", "晚上", "上午", "下午", "之后", "主要", "剩下",
+], key=len, reverse=True))
 
 # ----------------------------------------------------------------------------
 # Past particles (used by chatter.py right-neighbor check; not vocab tokens)

@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from app.parser_v2 import vocab
 from app.parser_v2.tokenize import Token
 
 
@@ -28,6 +29,7 @@ class Clause:
 
 
 _HARD_SPLIT_CHARS = set("。！？；.!?;\n")
+_WS_CHARS = {" ", "\t", "　"}
 
 
 def split_clauses(tokens: list[Token], content: str | None = None) -> list[Clause]:
@@ -70,6 +72,18 @@ def split_clauses(tokens: list[Token], content: str | None = None) -> list[Claus
             gap = content[prev.end:curr.start]
             if "，" in gap and curr.tag in {"TICKER", "PRICE", "RANGE"}:
                 boundaries.add(i)
+
+        # Rule 5: ≥1 whitespace gap + curr begins with a soft clause-start
+        # marker (temporal/topic-shift like '今天', '盘后', '剩下', '主要' …).
+        # Long Chinese messages glue afterword commentary to a directive with
+        # a single space; without this, OBSERVATION/MODAL in the commentary
+        # disqualifies the directive at chatter Layer 1.
+        if content is not None:
+            gap = content[prev.end:curr.start]
+            if any(c in _WS_CHARS for c in gap):
+                rest = content[curr.start:curr.start + 6]
+                if any(rest.startswith(marker) for marker in vocab.SOFT_CLAUSE_STARTS):
+                    boundaries.add(i)
 
     sorted_b = sorted(boundaries) + [n]
     clauses: list[Clause] = []
