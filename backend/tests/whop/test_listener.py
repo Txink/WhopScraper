@@ -407,3 +407,40 @@ def test_historical_marker_does_not_misclassify_across_utc_beijing_date_boundary
         f"Today's message (posted_at={posted_at}) wrongly marked historical "
         f"vs started_at={started_at}"
     )
+
+
+# ---------------------------------------------------------------------------
+# on_status_change callback + _safe_status_callback helper
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_safe_status_callback_noop_when_none() -> None:
+    """_safe_status_callback returns silently when no callback is wired."""
+    listener = WhopListener(
+        bus=EventBus(),
+        url="http://test",
+        source="stock",
+        poll_interval=0.05,
+        on_status_change=None,
+    )
+    # Should not raise.
+    await listener._safe_status_callback("errored")
+
+
+@pytest.mark.asyncio
+async def test_safe_status_callback_swallows_exceptions(caplog) -> None:
+    """A raising callback must not propagate — it's logged and absorbed."""
+    async def boom(_action: str) -> None:
+        raise RuntimeError("intentional")
+
+    listener = WhopListener(
+        bus=EventBus(),
+        url="http://test",
+        source="stock",
+        poll_interval=0.05,
+        on_status_change=boom,
+    )
+    with caplog.at_level("WARNING"):
+        await listener._safe_status_callback("errored")
+    assert any("status callback failed" in r.message for r in caplog.records)

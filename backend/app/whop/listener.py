@@ -12,6 +12,7 @@ import asyncio
 import contextlib
 import dataclasses
 import logging
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -51,6 +52,7 @@ class WhopListener:
         skip_initial: bool = True,
         dedupe_processed_messages: bool = True,
         session_factory: async_sessionmaker[AsyncSession] | None = None,
+        on_status_change: Callable[[str], Awaitable[None]] | None = None,
     ) -> None:
         self._bus = bus
         self._url = url
@@ -61,6 +63,7 @@ class WhopListener:
         self._skip_initial = skip_initial
         self._dedupe = dedupe_processed_messages
         self._session_factory = session_factory
+        self._on_status_change = on_status_change
 
         self._browser: WhopBrowser | None = None
         self._task: asyncio.Task[None] | None = None
@@ -108,6 +111,22 @@ class WhopListener:
     def reset_seen_cache(self) -> None:
         """Clear in-memory dedupe ids (used after cleanup)."""
         self._seen.clear()
+
+    async def _safe_status_callback(self, action: str) -> None:
+        """Invoke on_status_change(action) without ever propagating an exception.
+
+        Swallowing failures keeps the polling loop alive even if the registry
+        callback (or its downstream EventBus subscribers) misbehaves.
+        """
+        cb = self._on_status_change
+        if cb is None:
+            return
+        try:
+            await cb(action)
+        except Exception as e:  # noqa: BLE001
+            logger.warning(
+                "WhopListener[%s] status callback failed: %s", self._source, e
+            )
 
     async def _prime_dedupe(self) -> None:
         """Seed _seen from DB so restart-time message replays are filtered.
