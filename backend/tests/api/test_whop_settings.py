@@ -417,11 +417,14 @@ def test_patch_parser_version_v1_reverts(
 ) -> None:
     """PATCH v2 then v1 reverts cleanly."""
     _, client, stock, _ = registry_and_client
-    client.patch(
+    first = client.patch(
         f"/api/whop/pages/{stock.id}/settings",
         params={"token": _TOKEN},
         json={"parser_version": "v2"},
     )
+    assert first.status_code == 200
+    assert first.json()["settings"]["parser_version"] == "v2"
+
     resp = client.patch(
         f"/api/whop/pages/{stock.id}/settings",
         params={"token": _TOKEN},
