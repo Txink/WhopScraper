@@ -42,8 +42,7 @@ def is_chatter(anchor: Anchor) -> bool:
     # '上次也是15.8附近买入') = chatter.
     # EXEMPTION: when the clause has a QUANTIFIER or POSITION_SIZE token, the
     # PAST_REF most likely qualifies a referenced lot ('之前78的部分在78.4出'
-    # = R3 lot-ref form), not the action itself — keep the anchor alive so
-    # slot phase can extract referenced_lot_price.
+    # = R3 lot-ref form), not the action itself.
     has_quant_or_size = any(
         t.tag in {"QUANTIFIER", "POSITION_SIZE"} and not t.weak
         for t in tokens

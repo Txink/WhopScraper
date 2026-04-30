@@ -90,6 +90,25 @@ def split_clauses(tokens: list[Token], content: str | None = None) -> list[Claus
                     window_tags = {t.tag for t in tokens[last_b:i]}
                     if "TICKER" in window_tags and "ACTION_IMP" in window_tags:
                         boundaries.add(i)
+                        continue
+
+        # Rule 6: split BEFORE a CONDITIONAL chatter marker when the
+        # accumulated clause already contains a complete directive (TICKER +
+        # PRICE/RANGE + ACTION_IMP). Lets afterword commentary like
+        # '...mara 留资金出来等低吸做T' break off after the directive.
+        # Restricted to CONDITIONAL only; MODAL/OBSERVATION mid-directive
+        # ('16.45买入可能几秒') is genuinely speculative and must trip
+        # Layer 1 chatter — those rely on whitespace-gap rule 5 instead.
+        if curr.tag == "CONDITIONAL":
+            last_b = max(b for b in boundaries if b <= i)
+            window = tokens[last_b:i]
+            tag_set = {t.tag for t in window}
+            if (
+                "TICKER" in tag_set
+                and "ACTION_IMP" in tag_set
+                and ("PRICE" in tag_set or "RANGE" in tag_set)
+            ):
+                boundaries.add(i)
 
     sorted_b = sorted(boundaries) + [n]
     clauses: list[Clause] = []

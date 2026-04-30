@@ -21,8 +21,8 @@ IMPERATIVE_VERBS_BUY: frozenset[str] = frozenset({
     "买", "买入",
     "吸", "回吸", "低吸",
     "加", "加仓", "加了", "再加",
-    "开", "开仓", "建", "建仓", "建了",
-    "接", "接回", "补", "补仓", "补了",
+    "开仓", "开了", "新开", "建", "建仓", "建了",
+    "接", "补", "补仓", "补了",
     "进了", "入了", "入仓", "挂",
 })
 
@@ -50,8 +50,11 @@ DESCRIPTIVE_VERBS: frozenset[str] = frozenset({
     # commentary paragraphs.
     "吸筹", "出现", "出货", "出售", "补涨", "补缺口", "加息",
     "减持", "买入价", "卖出价", "买点", "卖点",
-    "接近", "接到", "接着", "开始", "开盘", "开票",
-    "加上", "加大", "进入", "进行",
+    "接近", "接到", "接着", "直接", "开始", "开盘", "开票",
+    "加上", "加大", "加密", "加征", "加工", "加自选",
+    "进入", "进行",
+    "购买", "买过", "买到", "出逃",
+    "减少", "削减", "建好", "被动减",
 })
 
 # ----------------------------------------------------------------------------
@@ -104,13 +107,17 @@ PAST_REF_MARKERS: frozenset[str] = frozenset({
 # ----------------------------------------------------------------------------
 
 SELL_QUANTIFIERS: frozenset[str] = frozenset({
-    "一半", "全部", "全出", "都出",
+    "一半", "全部",
     "剩下", "剩下一半",
     "部分", "那部分",
     "1/2", "1/3", "1/4", "2/3", "3/4",
     "三分之一", "三分之二", "四分之一",
     "点",
 })
+
+# NOTE: '都出' / '全出' were intentionally dropped — they shadowed '出'
+# (ACTION_IMP). Slot phase (slots.py) covers the qty by inspecting verb's
+# OTHER left-neighbor for '都' / '全' / '全部' instead.
 
 # Weak quantifiers — present as tokens (so they don't fall to OTHER) but
 # slot phase ignores them when filling sell_quantity.

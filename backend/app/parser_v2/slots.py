@@ -60,7 +60,13 @@ def fill_slots(anchor: Anchor) -> dict[str, Any]:
             verb_idx,
             lambda t: t.tag == "QUANTIFIER" and not t.weak,
         )
-        out["sell_quantity"] = quant.value if quant is not None else None
+        if quant is not None:
+            out["sell_quantity"] = quant.value
+        elif verb_idx > 0 and tokens[verb_idx - 1].tag == "OTHER" and tokens[verb_idx - 1].value in {"都", "全"}:
+            # '都出' / '全出': verb's immediate left is '都' or '全'; treat as
+            # sell-all marker. Canonical form '全部' so canonicalize maps to
+            # the same string the golden curator wrote.
+            out["sell_quantity"] = "全部"
     else:  # BUY
         ps = _nearest(tokens, verb_idx, lambda t: t.tag == "POSITION_SIZE")
         if ps is None:
