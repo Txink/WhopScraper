@@ -65,9 +65,13 @@ def test_known_anchor_examples() -> None:
 
 
 def test_chatter_markers_present() -> None:
-    """The 27 chatter FP root causes must have their markers in vocab."""
-    assert "可以" in vocab.MODAL_MARKERS
+    """Core chatter markers per category present.
+
+    '可以' intentionally excluded from MODAL — it functions as a benign
+    softener in directives ('可以19.6出一半') in this corpus.
+    """
     assert "可能" in vocab.MODAL_MARKERS
+    assert "估计" in vocab.MODAL_MARKERS
     assert "等" in vocab.CONDITIONAL_MARKERS
     assert "看" in vocab.OBSERVATION_MARKERS
     assert "昨天" in vocab.PAST_REF_MARKERS

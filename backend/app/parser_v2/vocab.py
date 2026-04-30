@@ -51,9 +51,14 @@ DESCRIPTIVE_VERBS: frozenset[str] = frozenset({
 # ----------------------------------------------------------------------------
 
 MODAL_MARKERS: frozenset[str] = frozenset({
-    "可能", "可以", "估计", "应该", "大概", "也许", "或许",
+    "可能", "估计", "应该", "大概", "也许", "或许",
     "打算", "计划", "准备", "会",
 })
+
+# NOTE: '可以' is intentionally NOT in MODAL — corpus analysis (golden 778
+# trade_signals) shows it appears as a benign softener in directives like
+# '可以19.6出一半' (= "you can sell half at 19.6"). Treating it as MODAL
+# silently rejected ~65 real signals.
 
 # ----------------------------------------------------------------------------
 # Conditional markers (CONDITIONAL)

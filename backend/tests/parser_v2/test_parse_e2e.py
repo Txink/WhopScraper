@@ -35,8 +35,8 @@ def test_lot_ref_e2e() -> None:
 
 
 def test_chatter_modal_returns_none() -> None:
-    """'78-80附近可以买了长拿' — MODAL '可以' rejects."""
-    inst = parse("nvdl 78-80附近可以买了长拿", message_id="t4")
+    """MODAL '可能' / '估计' rejects forecast-style messages."""
+    inst = parse("nvdl 估计80附近会反弹再买", message_id="t4")
     assert inst is None
 
 
