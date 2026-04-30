@@ -346,7 +346,6 @@ async def test_stock_parser_v1_called_when_parser_version_v1(
     """parser_version='v1' (or no registry) → app.parser.stock_parser.parse is called,
     parser_v2.parse is NOT called."""
     from app.parser import service as service_mod
-    from app.parser_v2 import parse as v2_parse_real  # noqa: F401
 
     v1_calls: list[str] = []
     v2_calls: list[str] = []
@@ -386,8 +385,8 @@ async def test_parser_v2_called_when_parser_version_v2(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """parser_version='v2' → parser_v2.parse is called, stock_parser.parse is NOT."""
-    from app.parser import service as service_mod
     import app.parser_v2 as v2_mod
+    from app.parser import service as service_mod
 
     v1_calls: list[str] = []
     v2_calls: list[str] = []
@@ -426,7 +425,6 @@ async def test_option_message_ignores_parser_version(
 ) -> None:
     """Option messages take the option branch regardless of parser_version,
     and parser_v2.parse is never called for them."""
-    from app.parser import service as service_mod
     import app.parser_v2 as v2_mod
 
     v2_calls: list[str] = []
@@ -456,8 +454,8 @@ async def test_stock_parser_v1_called_when_no_registry(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """No registry → page_settings is None → falls back to v1 (safe default)."""
-    from app.parser import service as service_mod
     import app.parser_v2 as v2_mod
+    from app.parser import service as service_mod
 
     v1_calls: list[str] = []
     v2_calls: list[str] = []

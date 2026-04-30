@@ -28,6 +28,7 @@ from typing import TYPE_CHECKING, Protocol
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+import app.parser_v2 as parser_v2
 from app.core.event_bus import Event, EventBus
 from app.core.events import MessagePayload, TaskPayload, Topics
 from app.domain.instruction import Instruction
@@ -94,12 +95,11 @@ def register_parser_service(
             parsed: Instruction | None
             if msg.source == "stock":
                 if page_settings is not None and page_settings.parser_version == "v2":
-                    import app.parser_v2 as parser_v2  # local import: avoid cycle
-                    parsed = parser_v2.parse(msg.content, message_id=msg.id)
                     parser_version_used = "v2"
+                    parsed = parser_v2.parse(msg.content, message_id=msg.id)
                 else:
-                    parsed = stock_parser.parse(msg.content, message_id=msg.id)
                     parser_version_used = "v1"
+                    parsed = stock_parser.parse(msg.content, message_id=msg.id)
             else:
                 parsed = option_parser.parse(
                     msg.content,
