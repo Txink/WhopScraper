@@ -525,6 +525,7 @@ def build_http_router(
                 price_deviation_tolerance=s.price_deviation_tolerance,
                 block_historical_messages=s.block_historical_messages,
                 launch_headless=s.launch_headless,
+                parser_version=s.parser_version,
                 option_buy_quantity_enabled=s.option_buy_quantity_enabled,
                 option_buy_quantity=s.option_buy_quantity,
                 option_total_price_limit_enabled=s.option_total_price_limit_enabled,
@@ -552,6 +553,8 @@ def build_http_router(
                 patch_dict["block_historical_messages"] = body.block_historical_messages
             if body.launch_headless is not None:
                 patch_dict["launch_headless"] = body.launch_headless
+            if body.parser_version is not None:
+                patch_dict["parser_version"] = body.parser_version
             if body.tickers is not None:
                 patch_dict["tickers"] = {
                     k: {"trade_quantity": v.trade_quantity} for k, v in body.tickers.items()

@@ -263,6 +263,7 @@ class WhopPageSettingsOut(BaseModel):
     price_deviation_tolerance: float
     block_historical_messages: bool
     launch_headless: bool
+    parser_version: Literal["v1", "v2"] = "v1"
     tickers: dict[str, TickerConfigOut] | None = None  # None = option page
     option_buy_quantity_enabled: bool | None = None
     option_buy_quantity: int | None = None
@@ -277,6 +278,7 @@ class WhopPageSettingsPatch(BaseModel):
     price_deviation_tolerance: float | None = Field(default=None, ge=0)
     block_historical_messages: bool | None = None
     launch_headless: bool | None = None
+    parser_version: Literal["v1", "v2"] | None = None
     tickers: dict[str, TickerConfigOut] | None = None
     option_buy_quantity_enabled: bool | None = None
     option_buy_quantity: int | None = Field(default=None, ge=1)
@@ -517,6 +519,7 @@ def whop_page_to_out(
         price_deviation_tolerance=entry.settings.price_deviation_tolerance,
         block_historical_messages=entry.settings.block_historical_messages,
         launch_headless=entry.settings.launch_headless,
+        parser_version=entry.settings.parser_version,
         option_buy_quantity_enabled=entry.settings.option_buy_quantity_enabled,
         option_buy_quantity=entry.settings.option_buy_quantity,
         option_total_price_limit_enabled=entry.settings.option_total_price_limit_enabled,

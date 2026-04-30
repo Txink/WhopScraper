@@ -361,3 +361,84 @@ def test_patch_then_get_block_historical_messages(
     pages = g.json()["pages"]
     s = next(p["settings"] for p in pages if p["id"] == stock.id)
     assert s["block_historical_messages"] is True
+
+
+# ---------------------------------------------------------------------------
+# Tests — parser_version per-page toggle
+# ---------------------------------------------------------------------------
+
+
+def test_get_pages_includes_parser_version_default_v1(
+    registry_and_client: tuple[WhopRegistry, TestClient, WhopPageEntry, WhopPageEntry],
+) -> None:
+    """A freshly-added stock page reports parser_version='v1'."""
+    _, client, stock, _ = registry_and_client
+    resp = client.get("/api/whop/pages", params={"token": _TOKEN})
+    assert resp.status_code == 200
+    pages = resp.json()["pages"]
+    s = next(p["settings"] for p in pages if p["id"] == stock.id)
+    assert s["parser_version"] == "v1"
+
+
+def test_defaults_endpoint_includes_parser_version_v1(
+    registry_and_client: tuple[WhopRegistry, TestClient, WhopPageEntry, WhopPageEntry],
+) -> None:
+    """GET /api/whop/pages/defaults?source=stock includes parser_version='v1'."""
+    _, client, _, _ = registry_and_client
+    resp = client.get(
+        "/api/whop/pages/defaults",
+        params={"token": _TOKEN, "source": "stock"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["parser_version"] == "v1"
+
+
+def test_patch_parser_version_v2_persists(
+    registry_and_client: tuple[WhopRegistry, TestClient, WhopPageEntry, WhopPageEntry],
+) -> None:
+    """PATCH parser_version='v2' is reflected in the response and on the next GET."""
+    _, client, stock, _ = registry_and_client
+    resp = client.patch(
+        f"/api/whop/pages/{stock.id}/settings",
+        params={"token": _TOKEN},
+        json={"parser_version": "v2"},
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["settings"]["parser_version"] == "v2"
+
+    # Re-read via list endpoint to confirm registry was updated
+    resp2 = client.get("/api/whop/pages", params={"token": _TOKEN})
+    s = next(p["settings"] for p in resp2.json()["pages"] if p["id"] == stock.id)
+    assert s["parser_version"] == "v2"
+
+
+def test_patch_parser_version_v1_reverts(
+    registry_and_client: tuple[WhopRegistry, TestClient, WhopPageEntry, WhopPageEntry],
+) -> None:
+    """PATCH v2 then v1 reverts cleanly."""
+    _, client, stock, _ = registry_and_client
+    client.patch(
+        f"/api/whop/pages/{stock.id}/settings",
+        params={"token": _TOKEN},
+        json={"parser_version": "v2"},
+    )
+    resp = client.patch(
+        f"/api/whop/pages/{stock.id}/settings",
+        params={"token": _TOKEN},
+        json={"parser_version": "v1"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["settings"]["parser_version"] == "v1"
+
+
+def test_patch_parser_version_invalid_value_rejected(
+    registry_and_client: tuple[WhopRegistry, TestClient, WhopPageEntry, WhopPageEntry],
+) -> None:
+    """Pydantic Literal validation rejects non-{v1,v2} values at the boundary."""
+    _, client, stock, _ = registry_and_client
+    resp = client.patch(
+        f"/api/whop/pages/{stock.id}/settings",
+        params={"token": _TOKEN},
+        json={"parser_version": "v3"},
+    )
+    assert resp.status_code == 422
