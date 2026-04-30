@@ -23,7 +23,7 @@ IMPERATIVE_VERBS_BUY: frozenset[str] = frozenset({
     "加", "加仓", "加了", "再加",
     "开", "开仓", "建", "建仓", "建了",
     "接", "接回", "补", "补仓", "补了",
-    "进了",
+    "进了", "入了", "入仓", "挂",
 })
 
 IMPERATIVE_VERBS_SELL: frozenset[str] = frozenset({
@@ -48,8 +48,10 @@ DESCRIPTIVE_VERBS: frozenset[str] = frozenset({
     # longest-match wins, so '吸筹' beats '吸', '出现' beats '出', '补涨'
     # beats '补'. These are descriptive in this corpus and appear in long
     # commentary paragraphs.
-    "吸筹", "出现", "出货", "补涨", "补缺口",
-    "买入价", "卖出价", "买点", "卖点", "建仓点",
+    "吸筹", "出现", "出货", "出售", "补涨", "补缺口", "加息",
+    "减持", "买入价", "卖出价", "买点", "卖点",
+    "接近", "接到", "接着", "开始", "开盘", "开票",
+    "加上", "加大", "进入", "进行",
 })
 
 # ----------------------------------------------------------------------------
@@ -121,11 +123,14 @@ QUANTIFIER_WEAK: frozenset[str] = frozenset({"点"})
 POSITION_SIZE_PHRASES: frozenset[str] = frozenset({
     "常规仓", "中仓位",
     "常规仓的一半", "常规一半", "常规的一半",
-    "半仓", "一半仓",
+    "半仓",
     "小仓位", "轻仓",
     "大仓位", "重仓",
     "满仓", "底仓",
 })
+
+# NOTE: '一半仓' was intentionally dropped — greedy matching let it shadow
+# '一半' (QUANTIFIER) in '减一半仓位' contexts where '一半' is the qty.
 
 # ----------------------------------------------------------------------------
 # Conjunctions (CONJ — drive soft clause splits)
@@ -139,9 +144,17 @@ CONJUNCTIONS: frozenset[str] = frozenset({"和", "与", "或者", "或", "再"})
 # Not tokenized as a separate tag (most are not in PHRASE_TO_TAG); this is a
 # content-substring check.
 SOFT_CLAUSE_STARTS: tuple[str, ...] = tuple(sorted([
-    "今天", "明天", "后天", "后面", "后续", "后市", "盘后", "盘前",
-    "盘中", "早上", "晚上", "上午", "下午", "之后", "主要", "剩下",
+    "今天", "明天", "后天", "后面", "后续", "后市",
+    "早上", "晚上", "上午", "下午", "之后", "主要",
+    "盘前", "盘后", "盘中", "剩下",
+    "等", "下周", "上周", "本周", "下个", "下一",
 ], key=len, reverse=True))
+
+# NOTE: clauses.py applies a "directive-already-present" guard before honoring
+# these markers — so 'onds 盘前冲高也在9.23附近出一半' (clause 1 has only
+# TICKER, no ACTION_IMP) does NOT split, while 'tsll 27.2出 盘后看' (clause 1
+# has TICKER+PRICE+ACTION_IMP) does. This keeps mid-directive time markers
+# from disqualifying real signals.
 
 # ----------------------------------------------------------------------------
 # Past particles (used by chatter.py right-neighbor check; not vocab tokens)

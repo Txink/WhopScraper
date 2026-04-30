@@ -78,12 +78,18 @@ def split_clauses(tokens: list[Token], content: str | None = None) -> list[Claus
         # Long Chinese messages glue afterword commentary to a directive with
         # a single space; without this, OBSERVATION/MODAL in the commentary
         # disqualifies the directive at chatter Layer 1.
+        # Guard: only split if clause 1 (since the previous boundary) already
+        # contains TICKER + ACTION_IMP — otherwise '盘前' or '剩下' might appear
+        # mid-directive ('onds 盘前冲高...出一半') and shouldn't split.
         if content is not None:
             gap = content[prev.end:curr.start]
             if any(c in _WS_CHARS for c in gap):
                 rest = content[curr.start:curr.start + 6]
                 if any(rest.startswith(marker) for marker in vocab.SOFT_CLAUSE_STARTS):
-                    boundaries.add(i)
+                    last_b = max(b for b in boundaries if b <= i)
+                    window_tags = {t.tag for t in tokens[last_b:i]}
+                    if "TICKER" in window_tags and "ACTION_IMP" in window_tags:
+                        boundaries.add(i)
 
     sorted_b = sorted(boundaries) + [n]
     clauses: list[Clause] = []

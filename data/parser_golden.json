@@ -87,7 +87,7 @@
         56.5
       ],
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "剩下一半",
       "position_size": null
     },
     "requires_context": false,
@@ -272,7 +272,7 @@
       "price": 32.7,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -288,7 +288,7 @@
       "price": 215.7,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -481,7 +481,7 @@
       "price": 19.6,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -516,7 +516,7 @@
         209.0
       ],
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -543,7 +543,7 @@
         19.9
       ],
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "剩下一半",
       "position_size": null
     },
     "requires_context": false,
@@ -567,7 +567,7 @@
       "price": 208.0,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "剩下一半",
       "position_size": null
     },
     "requires_context": false,
@@ -623,7 +623,7 @@
       "price": 19.6,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -655,7 +655,7 @@
       "price": 19.6,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -722,7 +722,7 @@
       "price": 59.0,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -739,7 +739,7 @@
       "price_range": null,
       "referenced_lot_price": null,
       "sell_quantity": "1/2",
-      "position_size": null
+      "position_size": "一半"
     },
     "requires_context": false,
     "notes": ""
@@ -1164,7 +1164,7 @@
       "price": 55.2,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -1311,7 +1311,7 @@
         19.1
       ],
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -1335,7 +1335,7 @@
       "price": 56.0,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "全部",
+      "sell_quantity": "都出",
       "position_size": null
     },
     "requires_context": false,
@@ -1367,7 +1367,7 @@
       "price": 41.5,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -1383,7 +1383,7 @@
       "price": 35.0,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -1402,7 +1402,7 @@
         205.0
       ],
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -1450,7 +1450,7 @@
       "price": 16.15,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -1661,7 +1661,7 @@
       "price": 18.95,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -2258,7 +2258,7 @@
         68.0
       ],
       "referenced_lot_price": null,
-      "sell_quantity": "全部",
+      "sell_quantity": "部分",
       "position_size": null
     },
     "requires_context": false,
@@ -2579,7 +2579,7 @@
       "price": 90.0,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -2627,7 +2627,7 @@
       "price": 71.5,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "剩下一半",
       "position_size": null
     },
     "requires_context": false,
@@ -2643,7 +2643,7 @@
       "price": 21.2,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -2678,7 +2678,7 @@
         21.9
       ],
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "剩下一半",
       "position_size": null
     },
     "requires_context": false,
@@ -2697,7 +2697,7 @@
         50.5
       ],
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -3360,7 +3360,7 @@
       "price": 33.6,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -3489,7 +3489,7 @@
         88.0
       ],
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -3553,7 +3553,7 @@
       "price": 19.6,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -3596,7 +3596,7 @@
       "price": 133.5,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -3660,7 +3660,7 @@
       "price": 34.3,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "剩下一半",
       "position_size": null
     },
     "requires_context": false,
@@ -3692,7 +3692,7 @@
       "price": 19.85,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "剩下一半",
       "position_size": null
     },
     "requires_context": false,
@@ -3708,7 +3708,7 @@
       "price": 135.2,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "剩下一半",
       "position_size": null
     },
     "requires_context": false,
@@ -3764,7 +3764,7 @@
       "price": 8.1,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "全部",
+      "sell_quantity": "剩下",
       "position_size": null
     },
     "requires_context": false,
@@ -3855,7 +3855,7 @@
       "price": 91.5,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -4022,7 +4022,7 @@
         20.6
       ],
       "referenced_lot_price": null,
-      "sell_quantity": "全部",
+      "sell_quantity": "剩下",
       "position_size": null
     },
     "requires_context": false,
@@ -4057,7 +4057,7 @@
         21.45
       ],
       "referenced_lot_price": null,
-      "sell_quantity": "全部",
+      "sell_quantity": "剩下",
       "position_size": null
     },
     "requires_context": false,
@@ -4180,7 +4180,7 @@
       "price": 107.5,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -4247,7 +4247,7 @@
       "price": 16.1,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -4263,7 +4263,7 @@
       "price": 16.2,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -4413,7 +4413,7 @@
       "price": 15.45,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -4663,7 +4663,7 @@
         14.75
       ],
       "referenced_lot_price": null,
-      "sell_quantity": "全部",
+      "sell_quantity": "剩下",
       "position_size": null
     },
     "requires_context": false,
@@ -4835,7 +4835,7 @@
         62.7
       ],
       "referenced_lot_price": null,
-      "sell_quantity": "剩下一半",
+      "sell_quantity": "剩下",
       "position_size": null
     },
     "requires_context": false,
@@ -5915,7 +5915,7 @@
       "price": 42.0,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -5931,7 +5931,7 @@
       "price": 31.5,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -6900,7 +6900,7 @@
       "price": 2.73,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/3",
+      "sell_quantity": "三分之一",
       "position_size": null
     },
     "requires_context": false,
@@ -6916,7 +6916,7 @@
       "price": 2.73,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -7000,7 +7000,7 @@
       ],
       "referenced_lot_price": null,
       "sell_quantity": "部分",
-      "position_size": null
+      "position_size": "一半"
     },
     "requires_context": false,
     "notes": ""
@@ -7023,7 +7023,7 @@
       "price": 20.32,
       "price_range": null,
       "referenced_lot_price": 19.8,
-      "sell_quantity": "部分",
+      "sell_quantity": "那部分",
       "position_size": null
     },
     "requires_context": false,
@@ -7079,7 +7079,7 @@
       "price": 56.0,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "部分",
+      "sell_quantity": "剩下",
       "position_size": null
     },
     "requires_context": false,
@@ -7214,7 +7214,7 @@
       ],
       "referenced_lot_price": null,
       "sell_quantity": "1/2",
-      "position_size": null
+      "position_size": "一半"
     },
     "requires_context": false,
     "notes": ""
@@ -7233,7 +7233,7 @@
       ],
       "referenced_lot_price": null,
       "sell_quantity": "1/2",
-      "position_size": null
+      "position_size": "一半"
     },
     "requires_context": false,
     "notes": ""
@@ -7248,7 +7248,7 @@
       "price": 48.5,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "剩下一半",
       "position_size": null
     },
     "requires_context": false,
@@ -7283,7 +7283,7 @@
         8.3
       ],
       "referenced_lot_price": null,
-      "sell_quantity": "部分",
+      "sell_quantity": "剩下",
       "position_size": null
     },
     "requires_context": false,
@@ -8242,7 +8242,7 @@
       "price": 4.35,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -8857,7 +8857,7 @@
       "price_range": null,
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "常规仓的一半"
+      "position_size": "一半"
     },
     "requires_context": false,
     "notes": "17.07附近回吸一半仓，tsll明确"
@@ -8955,7 +8955,7 @@
       "price": 17.0,
       "price_range": null,
       "referenced_lot_price": 16.64,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -9027,7 +9027,7 @@
       "price": 18.0,
       "price_range": null,
       "referenced_lot_price": 17.35,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -9059,7 +9059,7 @@
       "price": 18.3,
       "price_range": null,
       "referenced_lot_price": 17.35,
-      "sell_quantity": "1/2",
+      "sell_quantity": "剩下一半",
       "position_size": null
     },
     "requires_context": false,
@@ -9439,7 +9439,7 @@
       "price": 80.4,
       "price_range": null,
       "referenced_lot_price": 80.4,
-      "sell_quantity": null,
+      "sell_quantity": "部分",
       "position_size": null
     },
     "requires_context": false,
@@ -10026,7 +10026,7 @@
       "price": 86.0,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -10042,7 +10042,7 @@
       "price": 12.0,
       "price_range": null,
       "referenced_lot_price": 11.4,
-      "sell_quantity": null,
+      "sell_quantity": "那部分",
       "position_size": null
     },
     "requires_context": false,
@@ -10067,7 +10067,7 @@
       "price_range": null,
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": null
+      "position_size": "一半"
     },
     "requires_context": false,
     "notes": "nvdl 83附近回吸"
@@ -10162,7 +10162,7 @@
       "price": 109.5,
       "price_range": null,
       "referenced_lot_price": 86.0,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -10306,7 +10306,7 @@
       "price": 40.6,
       "price_range": null,
       "referenced_lot_price": 38.8,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -10402,7 +10402,7 @@
       "price": 51.0,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "部分",
       "position_size": null
     },
     "requires_context": false,
@@ -10614,7 +10614,7 @@
       "price_range": null,
       "referenced_lot_price": null,
       "sell_quantity": "1/2",
-      "position_size": null
+      "position_size": "一半"
     },
     "requires_context": false,
     "notes": "apld 34.8出剩下一半"
@@ -10629,7 +10629,7 @@
       "price": 39.15,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -11036,7 +11036,7 @@
       "price": 43.1,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": null,
+      "sell_quantity": "那部分",
       "position_size": null
     },
     "requires_context": false,
@@ -11052,7 +11052,7 @@
       "price": 19.4,
       "price_range": null,
       "referenced_lot_price": 18.8,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -11487,7 +11487,7 @@
       "price": 43.8,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": null,
+      "sell_quantity": "部分",
       "position_size": null
     },
     "requires_context": false,
@@ -11587,7 +11587,7 @@
       "price_range": null,
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": null
+      "position_size": "底仓"
     },
     "requires_context": false,
     "notes": ""
@@ -12058,7 +12058,7 @@
       "price_range": null,
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": null
+      "position_size": "底仓"
     },
     "requires_context": false,
     "notes": ""
@@ -12185,7 +12185,7 @@
       "price": 119.0,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "一半",
+      "sell_quantity": "剩下一半",
       "position_size": null
     },
     "requires_context": false,
@@ -12281,7 +12281,7 @@
       "price": 77.4,
       "price_range": null,
       "referenced_lot_price": 77.0,
-      "sell_quantity": null,
+      "sell_quantity": "部分",
       "position_size": null
     },
     "requires_context": false,
@@ -12346,7 +12346,7 @@
         34.1
       ],
       "referenced_lot_price": 34.0,
-      "sell_quantity": null,
+      "sell_quantity": "部分",
       "position_size": null
     },
     "requires_context": false,
@@ -12651,7 +12651,7 @@
       "price": 26.4,
       "price_range": null,
       "referenced_lot_price": 27.0,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -12865,7 +12865,7 @@
       "price": 18.2,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/3",
+      "sell_quantity": "三分之一",
       "position_size": null
     },
     "requires_context": false,
@@ -12913,7 +12913,7 @@
       "price": 14.95,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -12959,7 +12959,7 @@
         43.5
       ],
       "referenced_lot_price": null,
-      "sell_quantity": null,
+      "sell_quantity": "剩下",
       "position_size": null
     },
     "requires_context": false,
@@ -13015,7 +13015,7 @@
       "price": 17.0,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/3",
+      "sell_quantity": "三分之一",
       "position_size": null
     },
     "requires_context": false,
@@ -13079,7 +13079,7 @@
       "price": 86.5,
       "price_range": null,
       "referenced_lot_price": 80.0,
-      "sell_quantity": null,
+      "sell_quantity": "剩下",
       "position_size": null
     },
     "requires_context": false,
@@ -13274,7 +13274,7 @@
       "price": 350.0,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "做T仓位剩下的",
+      "sell_quantity": "剩下",
       "position_size": null
     },
     "requires_context": false,
@@ -13619,7 +13619,7 @@
       "price": 4.29,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -13858,7 +13858,7 @@
       "price": 29.0,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -13909,7 +13909,7 @@
       "price": 38.0,
       "price_range": null,
       "referenced_lot_price": 36.0,
-      "sell_quantity": "1/3",
+      "sell_quantity": "三分之一",
       "position_size": null
     },
     "requires_context": false,
@@ -14131,7 +14131,7 @@
       "price": 39.0,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/3",
+      "sell_quantity": "三分之一",
       "position_size": null
     },
     "requires_context": false,
@@ -14147,7 +14147,7 @@
       "price": 74.3,
       "price_range": null,
       "referenced_lot_price": 74.0,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -14164,7 +14164,7 @@
       "price_range": null,
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "卖出的一半"
+      "position_size": "一半"
     },
     "requires_context": false,
     "notes": "19.1回吸卖出的一半"
@@ -14206,7 +14206,7 @@
         29.0
       ],
       "referenced_lot_price": 27.6,
-      "sell_quantity": null,
+      "sell_quantity": "那部分",
       "position_size": null
     },
     "requires_context": false,
@@ -14270,7 +14270,7 @@
       "price": 4.22,
       "price_range": null,
       "referenced_lot_price": 4.11,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -14308,7 +14308,7 @@
         360.0
       ],
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "部分",
       "position_size": "死拿的部分"
     },
     "requires_context": false,
@@ -14399,7 +14399,7 @@
       "price": 115.2,
       "price_range": null,
       "referenced_lot_price": 113.0,
-      "sell_quantity": null,
+      "sell_quantity": "部分",
       "position_size": null
     },
     "requires_context": false,
@@ -14483,7 +14483,7 @@
       "price_range": null,
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "正常仓位的一半"
+      "position_size": "一半"
     },
     "requires_context": false,
     "notes": "89.8少量吸nvdl"
@@ -14608,7 +14608,7 @@
       "price": 94.3,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -14659,7 +14659,7 @@
         18.5
       ],
       "referenced_lot_price": 16.8,
-      "sell_quantity": null,
+      "sell_quantity": "部分",
       "position_size": null
     },
     "requires_context": false,
@@ -14675,7 +14675,7 @@
       "price": 19.45,
       "price_range": null,
       "referenced_lot_price": 19.1,
-      "sell_quantity": null,
+      "sell_quantity": "那部分",
       "position_size": null
     },
     "requires_context": false,
@@ -14694,7 +14694,7 @@
         35.2
       ],
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -14718,7 +14718,7 @@
       "price": 28.2,
       "price_range": null,
       "referenced_lot_price": 27.5,
-      "sell_quantity": null,
+      "sell_quantity": "那部分",
       "position_size": null
     },
     "requires_context": false,
@@ -14742,7 +14742,7 @@
       "price": 45.6,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "部分",
       "position_size": "死拿的部分"
     },
     "requires_context": false,
@@ -14790,7 +14790,7 @@
       "price": 15.55,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -14865,7 +14865,7 @@
       "price": 89.0,
       "price_range": null,
       "referenced_lot_price": 88.5,
-      "sell_quantity": null,
+      "sell_quantity": "部分",
       "position_size": null
     },
     "requires_context": false,
@@ -14905,7 +14905,7 @@
       "price": 95.0,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": "死拿"
     },
     "requires_context": false,
@@ -14925,7 +14925,7 @@
       ],
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "卖出的一半"
+      "position_size": "一半"
     },
     "requires_context": false,
     "notes": "18.4-18.45回吸卖出一半"
@@ -14940,7 +14940,7 @@
       "price": 4.5,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -14956,7 +14956,7 @@
       "price": 69.0,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/3",
+      "sell_quantity": "三分之一",
       "position_size": null
     },
     "requires_context": false,
@@ -14983,7 +14983,7 @@
         100.0
       ],
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -15078,7 +15078,7 @@
       "price_range": null,
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "卖出数量的一半"
+      "position_size": "小仓位"
     },
     "requires_context": false,
     "notes": "43.5吸卖出数量的一半"
@@ -15094,7 +15094,7 @@
       "price_range": null,
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "常规仓位的一半"
+      "position_size": "常规仓"
     },
     "requires_context": false,
     "notes": "89吸常规仓位一半"
@@ -15117,7 +15117,7 @@
       "price": 17.88,
       "price_range": null,
       "referenced_lot_price": 17.4,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -15192,7 +15192,7 @@
       "price": 27.2,
       "price_range": null,
       "referenced_lot_price": 25.5,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -15212,7 +15212,7 @@
       ],
       "referenced_lot_price": 89.0,
       "sell_quantity": null,
-      "position_size": null
+      "position_size": "底仓"
     },
     "requires_context": false,
     "notes": "90.5-91减点"
@@ -15333,7 +15333,7 @@
       "price_range": null,
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": null
+      "position_size": "底仓"
     },
     "requires_context": false,
     "notes": "16.33减点（重仓的）"
@@ -15375,7 +15375,7 @@
         31.3
       ],
       "referenced_lot_price": 31.0,
-      "sell_quantity": null,
+      "sell_quantity": "部分",
       "position_size": null
     },
     "requires_context": false,
@@ -15458,7 +15458,7 @@
       "price": 11.5,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -15478,7 +15478,7 @@
       ],
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "常规仓少一半的小仓位"
+      "position_size": "常规仓"
     },
     "requires_context": false,
     "notes": "29.6-29.7开小仓"
@@ -15505,7 +15505,7 @@
       ],
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "常规仓位一半的小仓位"
+      "position_size": "常规仓"
     },
     "requires_context": false,
     "notes": "15.9-16开小仓"
@@ -15524,7 +15524,7 @@
       ],
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "常规仓一半的小仓位"
+      "position_size": "常规仓"
     },
     "requires_context": false,
     "notes": "85.2-85.3开小仓"
@@ -15558,7 +15558,7 @@
       "price": 18.48,
       "price_range": null,
       "referenced_lot_price": 18.4,
-      "sell_quantity": null,
+      "sell_quantity": "那部分",
       "position_size": null
     },
     "requires_context": false,
@@ -15612,7 +15612,7 @@
       "price": 104.3,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "剩下的一半",
+      "sell_quantity": "剩下",
       "position_size": "死拿"
     },
     "requires_context": false,
@@ -15644,7 +15644,7 @@
       "price": 347.0,
       "price_range": null,
       "referenced_lot_price": 347.0,
-      "sell_quantity": null,
+      "sell_quantity": "部分",
       "position_size": null
     },
     "requires_context": false,
@@ -15679,7 +15679,7 @@
       "price": 31.05,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -15746,7 +15746,7 @@
       "price": 88.2,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": null,
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -15762,7 +15762,7 @@
       "price": 31.1,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "剩下一半",
       "position_size": null
     },
     "requires_context": false,
@@ -15778,7 +15778,7 @@
       "price": 50.0,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "剩下一半",
       "position_size": null
     },
     "requires_context": false,
@@ -15854,7 +15854,7 @@
       "price_range": null,
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "常规仓一半"
+      "position_size": "常规仓"
     },
     "requires_context": false,
     "notes": ""
@@ -15869,7 +15869,7 @@
       "price": 18.75,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -15974,7 +15974,7 @@
       "price_range": null,
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "常规仓一半"
+      "position_size": "常规仓"
     },
     "requires_context": false,
     "notes": ""
@@ -16084,7 +16084,7 @@
       "price_range": null,
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "常规仓一半"
+      "position_size": "常规仓"
     },
     "requires_context": false,
     "notes": ""
@@ -16100,7 +16100,7 @@
       "price_range": null,
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "常规仓一半"
+      "position_size": "常规仓"
     },
     "requires_context": false,
     "notes": "博通 = AVGO"
@@ -16260,7 +16260,7 @@
       "price_range": null,
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "常规仓一半"
+      "position_size": "常规仓"
     },
     "requires_context": false,
     "notes": ""
@@ -16275,7 +16275,7 @@
       "price": 84.03,
       "price_range": null,
       "referenced_lot_price": 83.7,
-      "sell_quantity": null,
+      "sell_quantity": "那部分",
       "position_size": null
     },
     "requires_context": false,
@@ -16348,7 +16348,7 @@
       "price": 33.3,
       "price_range": null,
       "referenced_lot_price": 32.2,
-      "sell_quantity": null,
+      "sell_quantity": "部分",
       "position_size": null
     },
     "requires_context": false,
@@ -16372,7 +16372,7 @@
       "price": 98.0,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -16413,7 +16413,7 @@
       "price_range": null,
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "常规仓一半"
+      "position_size": "常规仓"
     },
     "requires_context": false,
     "notes": ""
@@ -16429,7 +16429,7 @@
       "price_range": null,
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "常规仓一半"
+      "position_size": "常规仓"
     },
     "requires_context": false,
     "notes": ""
@@ -16445,7 +16445,7 @@
       "price_range": null,
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "常规仓一半"
+      "position_size": "常规仓"
     },
     "requires_context": false,
     "notes": ""
@@ -16461,7 +16461,7 @@
       "price_range": null,
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "常规仓一半"
+      "position_size": "常规仓"
     },
     "requires_context": false,
     "notes": ""
@@ -16597,7 +16597,7 @@
         16.5
       ],
       "referenced_lot_price": 16.0,
-      "sell_quantity": "1/2",
+      "sell_quantity": "剩下一半",
       "position_size": null
     },
     "requires_context": false,
@@ -16622,7 +16622,7 @@
       "price_range": null,
       "referenced_lot_price": null,
       "sell_quantity": "1/2",
-      "position_size": null
+      "position_size": "一半"
     },
     "requires_context": false,
     "notes": "回吸卖出数量的一半"
@@ -16646,7 +16646,7 @@
       "price_range": null,
       "referenced_lot_price": null,
       "sell_quantity": "1/2",
-      "position_size": null
+      "position_size": "一半"
     },
     "requires_context": false,
     "notes": "回吸卖出数量的一半"
@@ -16686,7 +16686,7 @@
       "price_range": null,
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "常规仓一半"
+      "position_size": "常规仓"
     },
     "requires_context": false,
     "notes": ""
@@ -16705,7 +16705,7 @@
       ],
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "常规仓一半"
+      "position_size": "常规仓"
     },
     "requires_context": false,
     "notes": ""
@@ -16724,7 +16724,7 @@
       ],
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "常规仓一半"
+      "position_size": "常规仓"
     },
     "requires_context": false,
     "notes": ""
@@ -16834,7 +16834,7 @@
       "price_range": null,
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "常规仓一半"
+      "position_size": "常规仓"
     },
     "requires_context": false,
     "notes": ""
@@ -16866,7 +16866,7 @@
       "price_range": null,
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "常规仓一半"
+      "position_size": "常规仓"
     },
     "requires_context": false,
     "notes": ""
@@ -16882,7 +16882,7 @@
       "price_range": null,
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "常规仓一半"
+      "position_size": "常规仓"
     },
     "requires_context": false,
     "notes": "博通=AVGO"
@@ -16897,7 +16897,7 @@
       "price": 16.75,
       "price_range": null,
       "referenced_lot_price": 16.54,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -16956,7 +16956,7 @@
         339.0
       ],
       "referenced_lot_price": 333.0,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -16996,7 +16996,7 @@
       "price": 82.0,
       "price_range": null,
       "referenced_lot_price": 79.5,
-      "sell_quantity": "1/2",
+      "sell_quantity": "剩下一半",
       "position_size": null
     },
     "requires_context": false,
@@ -17028,7 +17028,7 @@
       "price": 16.94,
       "price_range": null,
       "referenced_lot_price": 16.54,
-      "sell_quantity": "1/2",
+      "sell_quantity": "剩下一半",
       "position_size": null
     },
     "requires_context": false,
@@ -17044,7 +17044,7 @@
       "price": 83.6,
       "price_range": null,
       "referenced_lot_price": 83.0,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -17076,7 +17076,7 @@
       "price": 84.5,
       "price_range": null,
       "referenced_lot_price": 83.0,
-      "sell_quantity": "1/2",
+      "sell_quantity": "剩下一半",
       "position_size": null
     },
     "requires_context": false,
@@ -17491,7 +17491,7 @@
       ],
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "常规仓一半"
+      "position_size": "常规仓"
     },
     "requires_context": false,
     "notes": ""
@@ -17538,7 +17538,7 @@
       "price": 92.3,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -17554,7 +17554,7 @@
       "price": 24.6,
       "price_range": null,
       "referenced_lot_price": 24.4,
-      "sell_quantity": null,
+      "sell_quantity": "部分",
       "position_size": null
     },
     "requires_context": false,
@@ -17586,7 +17586,7 @@
       "price": 17.35,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -17626,7 +17626,7 @@
       "price": 17.75,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "剩下一半",
       "position_size": null
     },
     "requires_context": false,
@@ -17642,7 +17642,7 @@
       "price": 29.1,
       "price_range": null,
       "referenced_lot_price": 28.25,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -17658,7 +17658,7 @@
       "price": 95.45,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "剩下一半",
       "position_size": null
     },
     "requires_context": false,
@@ -17682,7 +17682,7 @@
       "price": 29.75,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "剩下一半",
       "position_size": null
     },
     "requires_context": false,
@@ -17715,7 +17715,7 @@
       "price_range": null,
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "常规仓一半"
+      "position_size": "常规仓"
     },
     "requires_context": false,
     "notes": ""
@@ -17738,7 +17738,7 @@
       "price": 28.65,
       "price_range": null,
       "referenced_lot_price": 27.7,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -17770,7 +17770,7 @@
       "price": 25.45,
       "price_range": null,
       "referenced_lot_price": 26.2,
-      "sell_quantity": "1/3",
+      "sell_quantity": "三分之一",
       "position_size": null
     },
     "requires_context": false,
@@ -17787,7 +17787,7 @@
       "price_range": null,
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "常规仓一半"
+      "position_size": "常规仓"
     },
     "requires_context": false,
     "notes": ""
@@ -17802,7 +17802,7 @@
       "price": 17.2,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -17834,7 +17834,7 @@
       "price": 16.85,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -17853,7 +17853,7 @@
         26.3
       ],
       "referenced_lot_price": 26.1,
-      "sell_quantity": "1/3",
+      "sell_quantity": "三分之一",
       "position_size": null
     },
     "requires_context": false,
@@ -17877,7 +17877,7 @@
       "price": 17.48,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "剩下一半",
       "position_size": null
     },
     "requires_context": false,
@@ -17917,7 +17917,7 @@
       "price": 28.7,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "剩下一半",
       "position_size": null
     },
     "requires_context": false,
@@ -18069,7 +18069,7 @@
       "price": 24.5,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -18085,7 +18085,7 @@
       "price": 18.5,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -18125,7 +18125,7 @@
       "price": 18.16,
       "price_range": null,
       "referenced_lot_price": 17.5,
-      "sell_quantity": null,
+      "sell_quantity": "部分",
       "position_size": null
     },
     "requires_context": false,
@@ -18288,7 +18288,7 @@
       "price": 17.8,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -18425,7 +18425,7 @@
       "price_range": null,
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "常规仓的一半"
+      "position_size": "常规一半"
     },
     "requires_context": false,
     "notes": "首句即时买入；后半为条件计划"
@@ -18464,7 +18464,7 @@
       "price": 17.12,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -18561,7 +18561,7 @@
       "price_range": null,
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "常规仓的一半"
+      "position_size": "常规仓"
     },
     "requires_context": false,
     "notes": ""
@@ -18648,7 +18648,7 @@
       "price": 15.75,
       "price_range": null,
       "referenced_lot_price": 15.7,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -18680,7 +18680,7 @@
       "price": 53.65,
       "price_range": null,
       "referenced_lot_price": 53.0,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -18696,7 +18696,7 @@
       "price": 16.58,
       "price_range": null,
       "referenced_lot_price": 16.55,
-      "sell_quantity": null,
+      "sell_quantity": "那部分",
       "position_size": null
     },
     "requires_context": false,
@@ -18808,7 +18808,7 @@
       "price": 78.2,
       "price_range": null,
       "referenced_lot_price": 79.0,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -18857,7 +18857,7 @@
       "price_range": null,
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "常规仓的一半"
+      "position_size": "常规一半"
     },
     "requires_context": false,
     "notes": "开仓建议"
@@ -18880,7 +18880,7 @@
       "price": 16.45,
       "price_range": null,
       "referenced_lot_price": 16.1,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -18977,7 +18977,7 @@
       "price_range": null,
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "常规仓的一半"
+      "position_size": "常规一半"
     },
     "requires_context": false,
     "notes": "首句即时买入"
@@ -19057,7 +19057,7 @@
       "price_range": null,
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "常规仓的一半"
+      "position_size": "常规的一半"
     },
     "requires_context": false,
     "notes": ""
@@ -19193,7 +19193,7 @@
       "price_range": null,
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "常规仓的一半"
+      "position_size": "常规一半"
     },
     "requires_context": false,
     "notes": ""
@@ -19249,7 +19249,7 @@
       "price_range": null,
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "常规仓的一半"
+      "position_size": "常规一半"
     },
     "requires_context": false,
     "notes": "首句即时买入；后半为条件计划"
@@ -19368,7 +19368,7 @@
       "price": 14.34,
       "price_range": null,
       "referenced_lot_price": 14.0,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -19392,7 +19392,7 @@
       "price": 75.4,
       "price_range": null,
       "referenced_lot_price": 74.0,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -19553,7 +19553,7 @@
       "price_range": null,
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "常规仓的一半"
+      "position_size": "常规一半"
     },
     "requires_context": false,
     "notes": ""
@@ -19576,7 +19576,7 @@
       "price": 14.31,
       "price_range": null,
       "referenced_lot_price": 14.0,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -19632,7 +19632,7 @@
       "price": 77.8,
       "price_range": null,
       "referenced_lot_price": 73.7,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -19721,7 +19721,7 @@
       "price_range": null,
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "常规仓的一半"
+      "position_size": "常规的一半"
     },
     "requires_context": false,
     "notes": ""
@@ -19736,7 +19736,7 @@
       "price": 15.05,
       "price_range": null,
       "referenced_lot_price": 14.6,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -20167,7 +20167,7 @@
       ],
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "常规仓的一半"
+      "position_size": "常规一半"
     },
     "requires_context": false,
     "notes": ""
@@ -20239,7 +20239,7 @@
       "price_range": null,
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "很小仓位"
+      "position_size": "小仓位"
     },
     "requires_context": false,
     "notes": ""
@@ -20286,7 +20286,7 @@
       "price": 69.65,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -20327,7 +20327,7 @@
       "price_range": null,
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "常规仓的一半"
+      "position_size": "常规仓"
     },
     "requires_context": false,
     "notes": "首句即时买入；后半为后续计划"
@@ -20410,7 +20410,7 @@
       "price_range": null,
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "常规仓的一半"
+      "position_size": "常规仓"
     },
     "requires_context": false,
     "notes": ""
@@ -20450,7 +20450,7 @@
       "price_range": null,
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "常规仓的一半"
+      "position_size": "底仓"
     },
     "requires_context": false,
     "notes": "首句即时开仓"
@@ -20521,7 +20521,7 @@
       "price": 9.23,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -20546,7 +20546,7 @@
       "price_range": null,
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "常规仓的一半"
+      "position_size": "常规一半"
     },
     "requires_context": false,
     "notes": ""
@@ -20562,7 +20562,7 @@
       "price_range": null,
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "常规仓的一半"
+      "position_size": "常规一半"
     },
     "requires_context": false,
     "notes": ""
@@ -20668,7 +20668,7 @@
       "price": 16.04,
       "price_range": null,
       "referenced_lot_price": 16.02,
-      "sell_quantity": null,
+      "sell_quantity": "那部分",
       "position_size": null
     },
     "requires_context": false,
@@ -20684,7 +20684,7 @@
       "price": 16.4,
       "price_range": null,
       "referenced_lot_price": 15.43,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -20860,7 +20860,7 @@
       "price": 15.75,
       "price_range": null,
       "referenced_lot_price": 15.45,
-      "sell_quantity": "1/2",
+      "sell_quantity": "剩下一半",
       "position_size": null
     },
     "requires_context": false,
@@ -21015,7 +21015,7 @@
       "price": 132.5,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -21079,7 +21079,7 @@
       "price": 15.39,
       "price_range": null,
       "referenced_lot_price": 15.05,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -21099,7 +21099,7 @@
       ],
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "常规仓一半"
+      "position_size": "常规仓"
     },
     "requires_context": false,
     "notes": "回买 crwv 89-89.5"
@@ -21117,7 +21117,7 @@
         15.65
       ],
       "referenced_lot_price": 15.05,
-      "sell_quantity": "1/2",
+      "sell_quantity": "剩下一半",
       "position_size": null
     },
     "requires_context": false,
@@ -21163,7 +21163,7 @@
         15.6
       ],
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "剩下一半",
       "position_size": null
     },
     "requires_context": false,
@@ -21198,7 +21198,7 @@
         15.4
       ],
       "referenced_lot_price": 15.03,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -21217,7 +21217,7 @@
         15.4
       ],
       "referenced_lot_price": 15.03,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -21282,7 +21282,7 @@
       "price_range": null,
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "常规仓一半"
+      "position_size": "常规仓"
     },
     "requires_context": false,
     "notes": ""
@@ -21329,7 +21329,7 @@
       "price": 14.58,
       "price_range": null,
       "referenced_lot_price": 14.2,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -21353,7 +21353,7 @@
       "price": 14.8,
       "price_range": null,
       "referenced_lot_price": 14.8,
-      "sell_quantity": null,
+      "sell_quantity": "那部分",
       "position_size": null
     },
     "requires_context": false,
@@ -21380,7 +21380,7 @@
         15.0
       ],
       "referenced_lot_price": 14.95,
-      "sell_quantity": null,
+      "sell_quantity": "部分",
       "position_size": null
     },
     "requires_context": false,
@@ -21396,7 +21396,7 @@
       "price": 11.01,
       "price_range": null,
       "referenced_lot_price": 11.16,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -21428,7 +21428,7 @@
       "price": 77.1,
       "price_range": null,
       "referenced_lot_price": 71.7,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -21455,7 +21455,7 @@
         11.7
       ],
       "referenced_lot_price": 11.16,
-      "sell_quantity": "1/2",
+      "sell_quantity": "剩下一半",
       "position_size": null
     },
     "requires_context": false,
@@ -21506,7 +21506,7 @@
       "price": 135.0,
       "price_range": null,
       "referenced_lot_price": 132.0,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -21574,7 +21574,7 @@
       "price_range": null,
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "常规仓的一半"
+      "position_size": "底仓"
     },
     "requires_context": false,
     "notes": ""
@@ -21670,7 +21670,7 @@
       "price_range": null,
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "做T仓位的另外一半"
+      "position_size": "一半"
     },
     "requires_context": false,
     "notes": ""
@@ -21733,7 +21733,7 @@
       "price": 82.4,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "一半",
       "position_size": null
     },
     "requires_context": false,
@@ -21757,7 +21757,7 @@
       "price": 137.0,
       "price_range": null,
       "referenced_lot_price": null,
-      "sell_quantity": "1/2",
+      "sell_quantity": "剩下一半",
       "position_size": null
     },
     "requires_context": false,
@@ -22031,7 +22031,7 @@
       "price_range": null,
       "referenced_lot_price": null,
       "sell_quantity": null,
-      "position_size": "常规仓一半"
+      "position_size": "常规仓"
     },
     "requires_context": false,
     "notes": ""

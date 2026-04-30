@@ -22,9 +22,20 @@ from app.parser_v2 import vocab
 _WHITESPACE = set(" \t\n　")
 _PUNCT = set("，。；：、！？,.;:!?、")
 
-_RANGE_RE = re.compile(r"(\d{1,4}(?:\.\d{1,3})?)\s*(?:-|到|至)\s*(\d{1,4}(?:\.\d{1,3})?)")
-_PRICE_RE = re.compile(r"\d{1,4}(?:\.\d{1,3})?")
+# PRICE accepts ASCII '.' as well as Chinese fullwidth '。' as decimal point —
+# corpus has '203。3' / '15。03' input from sloppy mobile typing.
+_RANGE_RE = re.compile(r"(\d{1,4}(?:[.。]\d{1,3})?)\s*(?:-|到|至)\s*(\d{1,4}(?:[.。]\d{1,3})?)")
+_PRICE_RE = re.compile(r"\d{1,4}(?:[.。]\d{1,3})?")
 _TICKER_RE = re.compile(r"[A-Za-z]{2,5}")
+
+# Common English words frequently embedded in Chinese signal text but not
+# meant as stock tickers. Excluding these as TICKER prevents '杀call' /
+# 'put结算' / 'AI股' / 'TRUMP THREATENS' from anchoring directives.
+_COMMON_WORD_BLOCKLIST: frozenset[str] = frozenset({
+    "CALL", "PUT", "AI", "BULL", "BEAR", "ETF",
+    "AS", "IS", "IT", "OF", "ON", "AT", "TO", "OR", "BY",
+    "AND", "THE", "FOR", "BUT", "NOT", "NTS",
+})
 
 
 @dataclass
@@ -55,7 +66,7 @@ def tokenize(content: str) -> list[Token]:
         # 2. RANGE (must come before PRICE because PRICE is a prefix)
         m = _RANGE_RE.match(content, i)
         if m:
-            tokens.append(Token(tag="RANGE", value=m.group(0), start=i, end=m.end()))
+            tokens.append(Token(tag="RANGE", value=m.group(0).replace("。", "."), start=i, end=m.end()))
             i = m.end()
             continue
 
@@ -63,7 +74,7 @@ def tokenize(content: str) -> list[Token]:
         if c.isdigit():
             m = _PRICE_RE.match(content, i)
             if m:
-                val = m.group(0)
+                val = m.group(0).replace("。", ".")
                 try:
                     if 0 < float(val) < 10000:
                         tokens.append(Token(tag="PRICE", value=val, start=i, end=m.end()))
@@ -72,14 +83,22 @@ def tokenize(content: str) -> list[Token]:
                 except ValueError:
                     pass
 
-        # 4. TICKER (ASCII letters)
+        # 4. TICKER (ASCII letters; common-English-word blocklist)
         if c.isascii() and c.isalpha():
             m = _TICKER_RE.match(content, i)
             if m:
                 ticker = m.group(0).upper()
-                tokens.append(Token(tag="TICKER", value=ticker, start=i, end=m.end()))
-                i = m.end()
-                continue
+                if ticker not in _COMMON_WORD_BLOCKLIST:
+                    tokens.append(Token(tag="TICKER", value=ticker, start=i, end=m.end()))
+                    i = m.end()
+                    continue
+                else:
+                    # Blocked — emit as OTHER chars so vocab/regex below can
+                    # still reach following content; advance just past the run.
+                    for ch in m.group(0):
+                        tokens.append(Token(tag="OTHER", value=ch, start=i, end=i + 1))
+                        i += 1
+                    continue
 
         # 5. Chinese alias longest-match
         matched_alias = False
