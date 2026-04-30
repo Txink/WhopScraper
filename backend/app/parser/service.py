@@ -135,9 +135,25 @@ def register_parser_service(
 
         if resolved is not None:
             task.attach_instruction(resolved)
+            logger.info(
+                "parser.service: parsed message %s",
+                msg.id,
+                extra={
+                    "parser_version": parser_version_used,
+                    "elapsed_ms": elapsed_ms,
+                },
+            )
             await bus.publish(Event(Topics.TASK_INSTRUCTION_READY, TaskPayload(task)))
         else:
             task.mark_parse_failed("无法解析为交易指令")
+            logger.info(
+                "parser.service: parse failed for message %s",
+                msg.id,
+                extra={
+                    "parser_version": parser_version_used,
+                    "elapsed_ms": elapsed_ms,
+                },
+            )
             await bus.publish(Event(Topics.TASK_PARSE_FAILED, TaskPayload(task)))
 
     return bus.subscribe(Topics.MESSAGE_RECEIVED, _handle_message_received)
