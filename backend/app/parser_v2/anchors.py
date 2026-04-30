@@ -17,9 +17,6 @@ from dataclasses import dataclass
 from app.parser_v2.clauses import Clause
 from app.parser_v2.tokenize import Token
 
-PROXIMITY_N = 8
-
-
 @dataclass
 class Anchor:
     clause: Clause
@@ -29,14 +26,15 @@ class Anchor:
 
 
 def proximity_ok(anchor: Anchor) -> bool:
-    """True if anchor's clause contains TICKER and PRICE/RANGE within ±N tokens
-    of verb_token."""
-    n = len(anchor.clause.tokens)
-    lo = max(0, anchor.verb_index - PROXIMITY_N)
-    hi = min(n, anchor.verb_index + PROXIMITY_N + 1)
-    window = anchor.clause.tokens[lo:hi]
-    has_ticker = any(t.tag == "TICKER" for t in window)
-    has_price = any(t.tag in {"PRICE", "RANGE"} for t in window)
+    """True if anchor's clause contains TICKER and PRICE/RANGE.
+
+    Proximity is clause-scoped (not a tight ±N window). The clause split
+    already enforces sentence-level locality; long Chinese sentences with
+    intervening descriptive material still produce one clause and one anchor.
+    Tighter chatter scope (±K=3) is enforced in chatter.py.
+    """
+    has_ticker = any(t.tag == "TICKER" for t in anchor.clause.tokens)
+    has_price = any(t.tag in {"PRICE", "RANGE"} for t in anchor.clause.tokens)
     return has_ticker and has_price
 
 

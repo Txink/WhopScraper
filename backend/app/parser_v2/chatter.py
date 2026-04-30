@@ -27,12 +27,18 @@ ANCHOR_SCOPE_K = 3
 def is_chatter(anchor: Anchor) -> bool:
     tokens = anchor.clause.tokens
 
-    # Layer 1: clause-level MODAL/CONDITIONAL
+    # Layer 1: clause-level MODAL/CONDITIONAL/OBSERVATION
+    # OBSERVATION ('看', '看下', '比如', '盘前看' …) is a clause-wide indicator that
+    # the speaker is examining/forecasting rather than directing. Treating it
+    # clause-wide handles long Chinese sentences where '看' is far from the verb.
     clause_tags = {t.tag for t in tokens}
-    if "MODAL" in clause_tags or "CONDITIONAL" in clause_tags:
+    if "MODAL" in clause_tags or "CONDITIONAL" in clause_tags or "OBSERVATION" in clause_tags:
         return True
 
-    # Layer 2: anchor-scope ±K OBSERVATION/PAST_REF
+    # Layer 2: anchor-scope ±K PAST_REF
+    # Past-tense talk ('昨天是106吸的') is chatter when close to the verb, but a
+    # distant PAST_REF can still drive a legitimate lot reference (R3); keep
+    # this narrow.
     i = anchor.verb_index
     lo = max(0, i - ANCHOR_SCOPE_K)
     hi = min(len(tokens), i + ANCHOR_SCOPE_K + 1)
@@ -40,7 +46,7 @@ def is_chatter(anchor: Anchor) -> bool:
     for t in scope:
         if t is anchor.verb_token:
             continue
-        if t.tag in {"OBSERVATION", "PAST_REF"}:
+        if t.tag == "PAST_REF":
             return True
 
     # Right-neighbor PAST particle
