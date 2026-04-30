@@ -245,9 +245,7 @@ class WhopListener:
             except asyncio.CancelledError:
                 raise
             except Exception as e:
-                # Fire the "errored" event ONLY on the healthy → errored transition,
-                # i.e. when last_error was previously None. Subsequent failures inside
-                # the same error streak just refresh the message — no event.
+                # Fire once on healthy→errored; subsequent failures in the same streak stay silent.
                 if self._last_error is None:
                     await self._safe_status_callback("errored")
                 self._last_error = str(e)

@@ -522,9 +522,9 @@ async def test_errored_callback_fires_once_on_first_failure(patch_scripted_brows
         on_status_change=record,
     )
     await listener.start()
-    # 0.3s lets the first scan run + sets last_error; backoff is 1.0s so the
-    # second attempt has not started yet.
-    await asyncio.sleep(0.3)
+    # 0.5s gives plenty of margin for the first scan to fail + set last_error
+    # while staying well under the 1.0s backoff that gates the second attempt.
+    await asyncio.sleep(0.5)
     await listener.stop()
 
     assert actions == ["errored"], f"expected ['errored'], got {actions}"
