@@ -1,19 +1,31 @@
 import type { PushEvent } from "../../api/domain-types";
 import { fmtBeijingHmsMs } from "./cardHelpers";
 
+// PushState (broker-faithful labels) → row color class.
 function nodeClass(state: string): string {
   switch (state) {
-    case "NEW":
-    case "FILLED":
+    case "New":
+    case "Filled":
+    case "PartialFilled":
       return "ok";
-    case "PARTIAL":
-      return "ok";
-    case "SUBMITTED":
-    case "MODIFIED":
+    case "WaitToNew":
+    case "NotReported":
+    case "WaitToReplace":
+    case "PendingReplace":
+    case "ReplacedNotReported":
+    case "ProtectedNotReported":
+    case "VarietiesNotReported":
+    case "Replaced":
+    case "PendingCancel":
+    case "WaitToCancel":
       return "info";
-    case "CANCELLED":
+    case "Canceled":
+    case "Expired":
+    case "PartialWithdrawal":
       return "cancel";
-    case "REJECTED":
+    case "Rejected":
+    case "Unknown":
+    case "FAILED":
       return "err";
     default:
       return "info";
@@ -22,6 +34,16 @@ function nodeClass(state: string): string {
 
 function msDiff(a: string, b: string): number {
   return new Date(b).getTime() - new Date(a).getTime();
+}
+
+// For a Replaced event at ``idx``, find the prior live event (New/Replaced)
+// so we can highlight which dimension(s) changed. Mirrors PushChain.
+function priorLiveBefore(events: PushEvent[], idx: number): PushEvent | null {
+  for (let i = idx - 1; i >= 0; i--) {
+    const s = events[i].state;
+    if (s === "New" || s === "Replaced") return events[i];
+  }
+  return null;
 }
 
 function formatDelta(ms: number): string {
@@ -72,7 +94,11 @@ export function PushDetail({ events, taskStatus, totalQty, submitOrderId, submit
         const deltaMs = prevTs != null ? msDiff(prevTs, evt.received_at) : null;
 
         let detail: React.ReactNode = null;
-        if (evt.state === "PARTIAL" && evt.delta_qty != null) {
+        if (evt.state === "PartialFilled" && evt.delta_qty != null) {
+          // Denominator: prefer the push event's own submitted_quantity (the
+          // order quantity at the moment of this fill — survives mid-order
+          // qty modifications); fall back to instruction's totalQty.
+          const denom = evt.submitted_quantity ?? totalQty ?? "?";
           detail = (
             <span className="row-detail">
               <span className="diff-pos">+{evt.delta_qty}</span>
@@ -81,7 +107,57 @@ export function PushDetail({ events, taskStatus, totalQty, submitOrderId, submit
               )}
               {evt.cumulative_qty != null && (
                 <> · <span className="k">cum</span>{" "}
-                <span className="v">{evt.cumulative_qty}/{totalQty ?? "?"}</span></>
+                <span className="v">{evt.cumulative_qty}/{denom}</span></>
+              )}
+            </span>
+          );
+        } else if (evt.state === "Filled") {
+          // Final fill: show actual cumulative price/qty so the row reflects
+          // what really executed (not the original limit).
+          detail = (
+            <span className="row-detail">
+              {evt.cumulative_qty != null && (
+                <>
+                  <span className="k">qty</span>{" "}
+                  <span className="v">{evt.cumulative_qty}/{totalQty ?? "?"}</span>
+                </>
+              )}
+              {evt.cumulative_avg_price != null && (
+                <> · <span className="k">avg</span>{" "}
+                <span className="v">${evt.cumulative_avg_price.toFixed(3)}</span></>
+              )}
+            </span>
+          );
+        } else if (evt.state === "Replaced") {
+          // Modification: show whichever dimension changed against the
+          // prior live event — price, qty, or both.
+          const prior = priorLiveBefore(events, idx);
+          const priceChanged =
+            evt.submitted_price != null
+            && prior?.submitted_price != null
+            && prior.submitted_price !== evt.submitted_price;
+          const qtyChanged =
+            evt.submitted_quantity != null
+            && prior?.submitted_quantity != null
+            && prior.submitted_quantity !== evt.submitted_quantity;
+          detail = (
+            <span className="row-detail">
+              {priceChanged && (
+                <>
+                  <span className="k">price</span>{" "}
+                  <span className="v">
+                    ${prior!.submitted_price!.toFixed(3)} → ${evt.submitted_price!.toFixed(3)}
+                  </span>
+                </>
+              )}
+              {priceChanged && qtyChanged && " · "}
+              {qtyChanged && (
+                <>
+                  <span className="k">qty</span>{" "}
+                  <span className="v">
+                    {prior!.submitted_quantity} → {evt.submitted_quantity}
+                  </span>
+                </>
               )}
             </span>
           );

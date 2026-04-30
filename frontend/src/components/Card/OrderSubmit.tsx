@@ -23,6 +23,14 @@ export interface OrderSubmitProps {
   submitPrice?: number | null;
   /** Precomputed UTC clock string for right column (HH:MM:SS.mmm). */
   wallClockAtSubmitEnd?: string;
+  /** Cumulative filled quantity from the latest fill push. */
+  filledQty?: number | null;
+  /** Volume-weighted average fill price from the latest fill push. */
+  filledAvgPrice?: number | null;
+  /** True when task.status === "FILLED" (terminal). When set, PRICE/QTY/TOTAL
+   *  switch from the submit-time values to the actual fill values so the card
+   *  reflects what really executed. */
+  isFilled?: boolean;
 }
 
 export function OrderSubmit({
@@ -35,6 +43,9 @@ export function OrderSubmit({
   submitQuoteLastDone,
   submitPrice,
   wallClockAtSubmitEnd,
+  filledQty,
+  filledAvgPrice,
+  isFilled,
 }: OrderSubmitProps) {
   const side = instruction.instruction_type?.toUpperCase() ?? "—";
   const isMarket = submitOrderType === "MARKET";
@@ -43,18 +54,38 @@ export function OrderSubmit({
   // the parsed signal price for tasks that pre-date the submit_price field.
   const limitPrice =
     submitPrice != null && Number.isFinite(submitPrice) ? submitPrice : instruction.price;
-  const price =
-    isMarket && ref != null && Number.isFinite(ref)
+
+  // Once the order is fully filled, PRICE/QTY/TOTAL switch from the
+  // submit-time values to the actual broker-reported fills so the card
+  // reflects what really executed (cumulative_avg_price × cumulative_qty).
+  const showFill =
+    !!isFilled &&
+    filledAvgPrice != null && Number.isFinite(filledAvgPrice) &&
+    filledQty != null && filledQty > 0;
+
+  const price = showFill
+    ? `$${filledAvgPrice!.toFixed(3)}`
+    : isMarket && ref != null && Number.isFinite(ref)
       ? `市价 @$${ref.toFixed(3)}`
       : limitPrice != null
         ? `$${limitPrice.toFixed(3)}`
         : "—";
-  const qty = instruction.quantity ?? "—";
-  const priceForTotal =
-    isMarket && ref != null && Number.isFinite(ref) ? ref : (limitPrice ?? null);
+
+  const qty = showFill
+    ? String(filledQty)
+    : instruction.quantity != null
+      ? String(instruction.quantity)
+      : "—";
+
+  const priceForTotal = showFill
+    ? filledAvgPrice
+    : isMarket && ref != null && Number.isFinite(ref)
+      ? ref
+      : (limitPrice ?? null);
+  const qtyForTotal = showFill ? filledQty : instruction.quantity;
   const total =
-    priceForTotal != null && instruction.quantity != null
-      ? `$${(priceForTotal * instruction.quantity).toLocaleString("en-US", {
+    priceForTotal != null && qtyForTotal != null
+      ? `$${(priceForTotal * qtyForTotal).toLocaleString("en-US", {
           minimumFractionDigits: 2,
           maximumFractionDigits: 2,
         })}`
