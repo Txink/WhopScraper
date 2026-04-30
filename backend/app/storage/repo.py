@@ -196,6 +196,8 @@ def _push_event_to_row(evt: PushEvent) -> PushEventRow:
         cumulative_qty=evt.cumulative_qty,
         cumulative_avg_price=evt.cumulative_avg_price,
         note=evt.note,
+        submitted_price=evt.submitted_price,
+        submitted_quantity=evt.submitted_quantity,
         payload_json=dict(evt.payload),
     )
 
@@ -234,6 +236,8 @@ def _row_to_push_event(row: PushEventRow) -> PushEvent:
         cumulative_qty=row.cumulative_qty,
         cumulative_avg_price=row.cumulative_avg_price,
         note=row.note,
+        submitted_price=row.submitted_price,
+        submitted_quantity=row.submitted_quantity,
     )
 
 
@@ -559,7 +563,41 @@ async def list_tasks(
         inst_row = await session.get(InstructionRow, task_row.id)
         tasks.append(_rows_to_task(task_row, msg_row, inst_row, []))
 
+    # Hydrate the latest push event per task so task_to_summary can populate
+    # the collapsed-card display fields (last_cum_qty / last_cum_avg_price /
+    # last_submitted_*). Single batched query, indexed on (task_id, received_at).
+    if tasks:
+        latest = await latest_push_per_task(session, [t.id for t in tasks])
+        for t in tasks:
+            evt = latest.get(t.id)
+            if evt is not None:
+                t.push_events = [evt]
+
     return tasks
+
+
+async def latest_push_per_task(
+    session: AsyncSession, task_ids: list[str]
+) -> dict[str, PushEvent]:
+    """Return ``{task_id: latest_push_event}`` for the given task ids.
+
+    Used by the /api/tasks list endpoint so the collapsed card can show
+    real fill / post-modify state without fetching full per-task detail.
+    Single query over the (task_id, received_at) index — no N+1.
+    """
+    if not task_ids:
+        return {}
+    stmt = (
+        select(PushEventRow)
+        .where(PushEventRow.task_id.in_(task_ids))
+        .order_by(PushEventRow.task_id, PushEventRow.received_at.asc())
+    )
+    result = await session.execute(stmt)
+    latest: dict[str, PushEvent] = {}
+    for row in result.scalars().all():
+        # ASC order means the last seen for each task_id is its latest push.
+        latest[row.task_id] = _row_to_push_event(row)
+    return latest
 
 
 async def count_tasks(

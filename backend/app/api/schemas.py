@@ -7,7 +7,7 @@ Converter functions translate app.domain.* dataclasses → Pydantic models.
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -82,6 +82,8 @@ class PushEventOut(BaseModel):
     cumulative_qty: int | None
     cumulative_avg_price: float | None
     note: str | None
+    submitted_price: float | None = None
+    submitted_quantity: int | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -105,6 +107,14 @@ class TaskOut(BaseModel):
     message: MessageOut
     instruction: InstructionOut | None
     push_events: list[PushEventOut]
+    # Snapshot of the latest push event's broker-side state. Lets the
+    # collapsed card render the actually-executed (or post-modify) values
+    # instead of the original signal. All four are None when no pushes
+    # have arrived yet (parse-only or sync-failed tasks).
+    last_cum_qty: int | None = None
+    last_cum_avg_price: float | None = None
+    last_submitted_price: float | None = None
+    last_submitted_qty: int | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -127,6 +137,13 @@ class TaskSummaryOut(BaseModel):
     reject_reason: str | None
     message: MessageOut
     instruction: InstructionOut | None
+    # See TaskOut for semantics. Same shape so the WS bridge (which sends
+    # task_to_out) and the HTTP list (which sends task_to_summary) populate
+    # the same display fields the frontend reads.
+    last_cum_qty: int | None = None
+    last_cum_avg_price: float | None = None
+    last_submitted_price: float | None = None
+    last_submitted_qty: int | None = None
     # push_events intentionally NOT included — call /api/tasks/{id} for full detail
 
 
@@ -346,6 +363,8 @@ def push_event_to_out(evt: PushEvent) -> PushEventOut:
         cumulative_qty=evt.cumulative_qty,
         cumulative_avg_price=evt.cumulative_avg_price,
         note=evt.note,
+        submitted_price=evt.submitted_price,
+        submitted_quantity=evt.submitted_quantity,
     )
 
 
@@ -413,6 +432,31 @@ def instruction_to_out(inst: Instruction) -> InstructionOut:
         )
 
 
+def _last_push_summary(events: list[PushEvent]) -> dict[str, Any]:
+    """Snapshot the latest push event for the collapsed-card display.
+
+    Caller must pass events ordered ASC by received_at (load_task and
+    list_tasks both guarantee this). The latest cumulative/submitted
+    values are what the broker last reported, so the card can show
+    "really filled X@avg" or "post-modify Y×Z" instead of the original
+    signal price/qty.
+    """
+    if not events:
+        return {
+            "last_cum_qty": None,
+            "last_cum_avg_price": None,
+            "last_submitted_price": None,
+            "last_submitted_qty": None,
+        }
+    latest = events[-1]
+    return {
+        "last_cum_qty": latest.cumulative_qty,
+        "last_cum_avg_price": latest.cumulative_avg_price,
+        "last_submitted_price": latest.submitted_price,
+        "last_submitted_qty": latest.submitted_quantity,
+    }
+
+
 def task_to_out(task: Task) -> TaskOut:
     """Convert a domain Task (with push events) to TaskOut."""
     return TaskOut(
@@ -431,11 +475,19 @@ def task_to_out(task: Task) -> TaskOut:
         message=message_to_out(task.message),
         instruction=instruction_to_out(task.instruction) if task.instruction is not None else None,
         push_events=[push_event_to_out(e) for e in task.push_events],
+        **_last_push_summary(task.push_events),
     )
 
 
 def task_to_summary(task: Task) -> TaskSummaryOut:
-    """Convert a domain Task to TaskSummaryOut (push_events excluded)."""
+    """Convert a domain Task to TaskSummaryOut (push_events excluded).
+
+    The four ``last_*`` summary fields ARE included — they're tiny scalars
+    derived from the most recent push event, and the collapsed card needs
+    them to show real fill/modify state without a per-card detail fetch.
+    Callers from /api/tasks (list endpoint) populate ``task.push_events``
+    with just the latest event so this serializer can read it.
+    """
     return TaskSummaryOut(
         id=task.id,
         type=task.type,
@@ -451,6 +503,7 @@ def task_to_summary(task: Task) -> TaskSummaryOut:
         reject_reason=task.reject_reason,
         message=message_to_out(task.message),
         instruction=instruction_to_out(task.instruction) if task.instruction is not None else None,
+        **_last_push_summary(task.push_events),
     )
 
 

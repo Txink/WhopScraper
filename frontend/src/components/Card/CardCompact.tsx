@@ -37,18 +37,44 @@ export function CardCompact({ task, autoTrade, onExpand }: CardCompactProps) {
 
   // Build details line — only used when we have a parsed instruction.
   // Show price-only / qty-only / both, whichever the parser produced.
+  //
+  // Price/qty source priority (so the collapsed card matches what really
+  // happened, not just the original signal):
+  //   1. Cumulative fill (last_cum_qty > 0) → real fill avg × cum qty.
+  //      Covers FILLED and PartialWithdrawal-style cancels with fills.
+  //   2. Latest broker-side state (last_submitted_*) → catches post-modify
+  //      values for CANCELLED/REJECTED orders that were edited before exit.
+  //   3. Trader-submitted price + parsed qty → existing pre-push display.
   let detailContent: React.ReactNode = null;
   if (isSkipped && task.reject_reason) {
     detailContent = task.reject_reason;
   } else if (parsedSymbol && instruction) {
-    const px = displaySubmitPriceDollars(
-      instruction,
-      task.submit_order_type,
-      task.submit_price,
-      task.submit_quote_last_done,
-    );
-    const price = px != null ? `$${px.toFixed(3)}` : null;
-    const qty = instruction.quantity != null ? String(instruction.quantity) : null;
+    const hasFills =
+      task.last_cum_qty != null && task.last_cum_qty > 0
+      && task.last_cum_avg_price != null && Number.isFinite(task.last_cum_avg_price);
+    const hasLastSubmit =
+      task.last_submitted_price != null && Number.isFinite(task.last_submitted_price);
+
+    let priceVal: number | null;
+    let qtyVal: number | null;
+    if (hasFills) {
+      priceVal = task.last_cum_avg_price!;
+      qtyVal = task.last_cum_qty!;
+    } else if (hasLastSubmit) {
+      priceVal = task.last_submitted_price!;
+      qtyVal = task.last_submitted_qty ?? instruction.quantity ?? null;
+    } else {
+      priceVal = displaySubmitPriceDollars(
+        instruction,
+        task.submit_order_type,
+        task.submit_price,
+        task.submit_quote_last_done,
+      );
+      qtyVal = instruction.quantity ?? null;
+    }
+
+    const price = priceVal != null ? `$${priceVal.toFixed(3)}` : null;
+    const qty = qtyVal != null ? String(qtyVal) : null;
     if (price || qty) {
       detailContent = (
         <>
