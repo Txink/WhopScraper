@@ -131,6 +131,8 @@ def page_settings_from_dict(
             for k, v in raw_tickers.items()
         }
     pv_raw = d.get("parser_version", base.parser_version)
+    # Whitelist: any saved value that is not exactly "v2" degrades to "v1"
+    # (handles missing key, legacy data, and future-unknown values uniformly).
     parser_version: Literal["v1", "v2"] = "v2" if pv_raw == "v2" else "v1"
     return PageSettings(
         dedupe_processed_messages=dedupe,
