@@ -170,11 +170,18 @@ def _gold_signal(domid: str, content: str, expected: dict, *, requires_context: 
             "requires_context": requires_context, "notes": ""}
 
 
-def test_run_validation_alias_exemption_skips_recovery_check(tmp_path: Path) -> None:
-    """When parser_v2.parse is stock_parser.parse (the B1 alias), recovery
-    constraint must be skipped — even if v1 fails on real signals."""
-    corpus = [_msg("m1", "TSLL 27.2出一半"),  # v1 parses, expected matches
-              _msg("m2", "未知形状的信号 28.4 出 hood")]  # v1 may fail
+def test_run_validation_alias_exemption_skips_recovery_check(tmp_path: Path, monkeypatch) -> None:
+    """When parser_v2.parse is stock_parser.parse (B1 alias mode), recovery
+    constraint must be skipped — even if v1 fails on real signals.
+
+    parser_v2 is no longer aliased after B2 (Task 9 flip), so this test now
+    monkeypatches `_v2_is_alias_of_v1` to True to keep coverage of the
+    harness's alias branch.
+    """
+    from scripts import validate_parser as vp
+    monkeypatch.setattr(vp, "_v2_is_alias_of_v1", lambda: True)
+    corpus = [_msg("m1", "TSLL 27.2出一半"),
+              _msg("m2", "未知形状的信号 28.4 出 hood")]
     golden = [_gold_signal("m1", "TSLL 27.2出一半", _expected()),
               _gold_signal("m2", "未知形状的信号 28.4 出 hood",
                            _expected(ticker="HOOD", price=28.4))]
@@ -182,8 +189,6 @@ def test_run_validation_alias_exemption_skips_recovery_check(tmp_path: Path) -> 
         corpus_path=_write_corpus(tmp_path, corpus),
         golden_path=_write_golden(tmp_path, golden),
     )
-    # Under alias mode: regressions=0 and chatter_fp=0 enough for PASS,
-    # regardless of how many trade_signals v2 still misses.
     assert result.summary.passed is True
     assert result.summary.recovery_rate is None  # exempt → undefined
 
@@ -276,7 +281,11 @@ from scripts.validate_parser import (
 )
 
 
-def test_format_console_summary_pass(tmp_path: Path) -> None:
+def test_format_console_summary_pass(tmp_path: Path, monkeypatch) -> None:
+    """Force alias mode so the 1-message synthetic corpus reaches PASS via
+    recovery exemption (post-B2 flip, real harness needs ≥20% recovery)."""
+    from scripts import validate_parser as vp
+    monkeypatch.setattr(vp, "_v2_is_alias_of_v1", lambda: True)
     corpus = [_msg("c", "TSLL 27.2出一半")]
     golden = [_gold_signal("c", "TSLL 27.2出一半", _expected())]
     result = run_validation(
@@ -288,7 +297,9 @@ def test_format_console_summary_pass(tmp_path: Path) -> None:
     assert "regressions:" in output
 
 
-def test_format_console_summary_alias_marks_recovery_exempt(tmp_path: Path) -> None:
+def test_format_console_summary_alias_marks_recovery_exempt(tmp_path: Path, monkeypatch) -> None:
+    from scripts import validate_parser as vp
+    monkeypatch.setattr(vp, "_v2_is_alias_of_v1", lambda: True)
     corpus = [_msg("c", "TSLL 27.2出一半")]
     golden = [_gold_signal("c", "TSLL 27.2出一半", _expected())]
     result = run_validation(
@@ -299,7 +310,9 @@ def test_format_console_summary_alias_marks_recovery_exempt(tmp_path: Path) -> N
     assert "exempt" in output.lower() or "alias" in output.lower()
 
 
-def test_write_report_json_round_trip(tmp_path: Path) -> None:
+def test_write_report_json_round_trip(tmp_path: Path, monkeypatch) -> None:
+    from scripts import validate_parser as vp
+    monkeypatch.setattr(vp, "_v2_is_alias_of_v1", lambda: True)
     corpus = [_msg("c", "TSLL 27.2出一半")]
     golden = [_gold_signal("c", "TSLL 27.2出一半", _expected())]
     result = run_validation(
