@@ -71,6 +71,13 @@ def create_app(
     if settings is None:
         settings = get_settings()
 
+    # Apply Settings.log_level to the root logger so that ``logger.info`` calls
+    # in app.* modules (e.g. PushListener) actually surface. Without this the
+    # only push-related logs you'd see are warnings (buffer GC, unknown SDK
+    # status); INFO-level "handling push / publishing TASK_PUSH_EVENT" entries
+    # would be silently dropped by Python's default WARNING root level.
+    logging.getLogger().setLevel(settings.log_level.upper())
+
     state = AppState()
     state.settings = settings
     state.unsubs = []
