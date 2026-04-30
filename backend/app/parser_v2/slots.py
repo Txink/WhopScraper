@@ -111,8 +111,23 @@ def _find_lot_ref(
     """Apply R1-R5 to find a lot-ref PRICE distinct from main_pr."""
     main_id = id(main_pr) if main_pr is not None else None
 
+    # R1/R2/R4 exemption: if clause mentions '撤' (撤单 = cancel order) the
+    # PRICE+的 pattern refers to a cancelled price, not a lot ref.
+    has_cancel = any(t.tag == "OTHER" and t.value == "撤" for t in tokens)
+
     for i, t in enumerate(tokens):
         if t.tag != "PRICE" or id(t) == main_id:
+            continue
+        if has_cancel:
+            # Skip 的-based rules; only R3 (PAST_REF before PRICE) and R5 still
+            # apply because they reference a different syntactic pattern.
+            for j in range(max(0, i - 3), i):
+                if tokens[j].tag == "PAST_REF":
+                    return float(t.value)
+            if i > verb_idx and main_pr is not None and main_pr.tag == "PRICE":
+                for j in range(i + 1, min(len(tokens), i + 3)):
+                    if tokens[j].tag == "QUANTIFIER" and not tokens[j].weak:
+                        return float(t.value)
             continue
 
         # R1: PRICE + OTHER:'的'

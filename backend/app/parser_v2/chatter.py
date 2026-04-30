@@ -52,6 +52,13 @@ def is_chatter(anchor: Anchor) -> bool:
             if t.tag == "PAST_REF":
                 return True
 
+    # Layer 2c: verb is a 了-ending compound ('入了', '加了', '开了', '补了',
+    # '出了') AND clause has PAST_REF anywhere — past-completion status update,
+    # not directive ('今天就44入了 上周四').
+    if anchor.verb_token.value.endswith("了") and not has_quant_or_size:
+        if any(t.tag == "PAST_REF" for t in tokens):
+            return True
+
     # Right-neighbor PAST particle
     if i + 1 < len(tokens):
         right = tokens[i + 1]

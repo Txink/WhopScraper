@@ -55,6 +55,8 @@ DESCRIPTIVE_VERBS: frozenset[str] = frozenset({
     "进入", "进行",
     "购买", "买过", "买到", "出逃",
     "减少", "削减", "建好", "被动减",
+    # Proper nouns / loanwords containing imperative chars
+    "维加斯", "加州", "加拿大", "新加坡",
 })
 
 # ----------------------------------------------------------------------------
@@ -154,8 +156,10 @@ SOFT_CLAUSE_STARTS: tuple[str, ...] = tuple(sorted([
     "今天", "明天", "后天", "后面", "后续", "后市",
     "早上", "晚上", "上午", "下午", "之后", "主要",
     "盘前", "盘后", "盘中", "剩下",
-    "等", "下周", "上周", "本周", "下个", "下一",
+    "等", "下周", "本周", "下个", "下一",
 ], key=len, reverse=True))
+# NOTE: '上周' kept OUT — it's a PAST_REF that should reach chatter Layer 2,
+# not a topic-shift that splits the directive into a clean clause.
 
 # NOTE: clauses.py applies a "directive-already-present" guard before honoring
 # these markers — so 'onds 盘前冲高也在9.23附近出一半' (clause 1 has only

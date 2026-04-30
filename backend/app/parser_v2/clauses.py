@@ -62,10 +62,18 @@ def split_clauses(tokens: list[Token], content: str | None = None) -> list[Claus
                 else:
                     ws_run = 0
 
-        # Rule 3: CONJ token followed by new TICKER/PRICE/RANGE
+        # Rule 3: CONJ token followed by new TICKER/PRICE/RANGE — require
+        # whitespace gap so 'btc和博通' (no spaces) doesn't split off, while
+        # 'tsll 14 加 和 nvdl 80 加' (spaces around 和) still does.
         if prev.tag == "CONJ" and curr.tag in {"TICKER", "PRICE", "RANGE"}:
-            boundaries.add(i)
-            continue
+            if content is not None:
+                gap = content[prev.end:curr.start]
+                if any(c in _WS_CHARS for c in gap):
+                    boundaries.add(i)
+                    continue
+            else:
+                boundaries.add(i)
+                continue
 
         # Rule 4: Chinese comma in gap followed by TICKER/PRICE
         if content is not None:
