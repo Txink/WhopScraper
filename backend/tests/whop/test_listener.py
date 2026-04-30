@@ -429,7 +429,7 @@ async def test_safe_status_callback_noop_when_none() -> None:
 
 
 @pytest.mark.asyncio
-async def test_safe_status_callback_swallows_exceptions(caplog) -> None:
+async def test_safe_status_callback_swallows_exceptions(caplog: pytest.LogCaptureFixture) -> None:
     """A raising callback must not propagate — it's logged and absorbed."""
     async def boom(_action: str) -> None:
         raise RuntimeError("intentional")
@@ -443,4 +443,4 @@ async def test_safe_status_callback_swallows_exceptions(caplog) -> None:
     )
     with caplog.at_level("WARNING"):
         await listener._safe_status_callback("errored")
-    assert any("status callback failed" in r.message for r in caplog.records)
+    assert any("status callback failed" in r.getMessage() for r in caplog.records)
