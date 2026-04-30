@@ -31,6 +31,7 @@ class PageSettings:
     option_buy_quantity: int | None = None
     option_total_price_limit_enabled: bool = False
     option_total_price_limit: float | None = None
+    parser_version: Literal["v1", "v2"] = "v1"
 
 
 DEFAULT_STOCK_SETTINGS = PageSettings(
@@ -39,6 +40,7 @@ DEFAULT_STOCK_SETTINGS = PageSettings(
     block_historical_messages=False,
     launch_headless=False,
     tickers={},
+    parser_version="v1",
 )
 
 DEFAULT_OPTION_SETTINGS = PageSettings(
@@ -51,6 +53,7 @@ DEFAULT_OPTION_SETTINGS = PageSettings(
     option_buy_quantity=None,
     option_total_price_limit_enabled=False,
     option_total_price_limit=None,
+    parser_version="v1",
 )
 
 
@@ -62,6 +65,7 @@ def default_settings_for(source: Literal["stock", "option"]) -> PageSettings:
             block_historical_messages=DEFAULT_STOCK_SETTINGS.block_historical_messages,
             launch_headless=DEFAULT_STOCK_SETTINGS.launch_headless,
             tickers={},
+            parser_version=DEFAULT_STOCK_SETTINGS.parser_version,
         )
     if source == "option":
         return PageSettings(
@@ -74,6 +78,7 @@ def default_settings_for(source: Literal["stock", "option"]) -> PageSettings:
             option_buy_quantity=DEFAULT_OPTION_SETTINGS.option_buy_quantity,
             option_total_price_limit_enabled=DEFAULT_OPTION_SETTINGS.option_total_price_limit_enabled,
             option_total_price_limit=DEFAULT_OPTION_SETTINGS.option_total_price_limit,
+            parser_version=DEFAULT_OPTION_SETTINGS.parser_version,
         )
     raise ValueError(f"unknown source: {source!r}")
 
@@ -88,6 +93,7 @@ def page_settings_to_dict(s: PageSettings) -> dict[str, Any]:
         "option_buy_quantity": s.option_buy_quantity,
         "option_total_price_limit_enabled": s.option_total_price_limit_enabled,
         "option_total_price_limit": s.option_total_price_limit,
+        "parser_version": s.parser_version,
     }
     if s.tickers is not None:
         out["tickers"] = {k: {"trade_quantity": v.trade_quantity} for k, v in s.tickers.items()}
@@ -124,6 +130,8 @@ def page_settings_from_dict(
             str(k).upper(): TickerConfig(trade_quantity=int(v["trade_quantity"]))
             for k, v in raw_tickers.items()
         }
+    pv_raw = d.get("parser_version", base.parser_version)
+    parser_version: Literal["v1", "v2"] = "v2" if pv_raw == "v2" else "v1"
     return PageSettings(
         dedupe_processed_messages=dedupe,
         price_deviation_tolerance=tol,
@@ -134,6 +142,7 @@ def page_settings_from_dict(
         option_buy_quantity=option_qty,
         option_total_price_limit_enabled=option_total_enabled,
         option_total_price_limit=option_total,
+        parser_version=parser_version,
     )
 
 

@@ -193,3 +193,77 @@ def test_sell_quantity_to_fraction_unknown_returns_one(caplog):
     with caplog.at_level(logging.WARNING, logger="app.whop.page_settings"):
         assert sell_quantity_to_fraction("一点点") == 1.0
     assert any("unrecognized sell_quantity" in r.getMessage() for r in caplog.records)
+
+
+def test_default_stock_settings_parser_version_v1():
+    assert DEFAULT_STOCK_SETTINGS.parser_version == "v1"
+
+
+def test_default_option_settings_parser_version_v1():
+    assert DEFAULT_OPTION_SETTINGS.parser_version == "v1"
+
+
+def test_to_dict_writes_parser_version():
+    s = PageSettings(
+        dedupe_processed_messages=True,
+        price_deviation_tolerance=1.0,
+        block_historical_messages=False,
+        launch_headless=False,
+        tickers={},
+        parser_version="v2",
+    )
+    d = page_settings_to_dict(s)
+    assert d["parser_version"] == "v2"
+
+
+def test_from_dict_reads_parser_version_v2():
+    d = {
+        "dedupe_processed_messages": True,
+        "price_deviation_tolerance": 1.0,
+        "block_historical_messages": False,
+        "launch_headless": False,
+        "parser_version": "v2",
+    }
+    s = page_settings_from_dict(d, source="stock")
+    assert s.parser_version == "v2"
+
+
+def test_from_dict_missing_parser_version_defaults_to_v1():
+    """Backward compat: settings JSON written before this field existed must
+    deserialize cleanly with parser_version='v1'."""
+    d = {
+        "dedupe_processed_messages": True,
+        "price_deviation_tolerance": 1.0,
+        "block_historical_messages": False,
+        "launch_headless": False,
+    }
+    s = page_settings_from_dict(d, source="stock")
+    assert s.parser_version == "v1"
+
+
+def test_from_dict_unknown_parser_version_falls_back_to_v1():
+    """Sanitization: any value other than 'v2' degrades to 'v1' so a corrupted
+    or future-unknown saved value cannot crash the parser dispatcher."""
+    d = {
+        "dedupe_processed_messages": True,
+        "price_deviation_tolerance": 1.0,
+        "block_historical_messages": False,
+        "launch_headless": False,
+        "parser_version": "v3",
+    }
+    s = page_settings_from_dict(d, source="stock")
+    assert s.parser_version == "v1"
+
+
+def test_round_trip_preserves_parser_version():
+    src = PageSettings(
+        dedupe_processed_messages=False,
+        price_deviation_tolerance=0.7,
+        block_historical_messages=True,
+        launch_headless=True,
+        tickers={"TSLL": TickerConfig(trade_quantity=2000)},
+        parser_version="v2",
+    )
+    out = page_settings_from_dict(page_settings_to_dict(src), source="stock")
+    assert out == src
+    assert out.parser_version == "v2"
