@@ -14,6 +14,7 @@ export function PageSettingsModal({ page, onClose }: Props) {
   const [tolerance, setTolerance] = useState(String(page.settings.price_deviation_tolerance));
   const [blockHistorical, setBlockHistorical] = useState(page.settings.block_historical_messages);
   const [launchHeadless, setLaunchHeadless] = useState(Boolean(page.settings.launch_headless));
+  const [parserV2, setParserV2] = useState(page.settings.parser_version === "v2");
   const [optionBuyQtyEnabled, setOptionBuyQtyEnabled] = useState(
     Boolean(page.settings.option_buy_quantity_enabled)
   );
@@ -86,6 +87,7 @@ export function PageSettingsModal({ page, onClose }: Props) {
         price_deviation_tolerance: tolNum,
         block_historical_messages: blockHistorical,
         launch_headless: launchHeadless,
+        parser_version: parserV2 ? "v2" : "v1",
       };
       // Stock whitelist (tickers) is now edited inline below the page header
       // via PageWhitelistBar — not in this modal — so we never include it
@@ -169,6 +171,20 @@ export function PageSettingsModal({ page, onClose }: Props) {
             </label>
             <p className="hint small">
               重启监听后生效；关闭后会以可见浏览器窗口启动该页面监听。
+            </p>
+          </section>
+
+          <section>
+            <label>
+              <input
+                type="checkbox"
+                checked={parserV2}
+                onChange={e => setParserV2(e.target.checked)}
+              />
+              <span>使用 parser v2（实验）</span>
+            </label>
+            <p className="hint small">
+              切换后下一条消息即用新 parser 解析，无需重启监听。默认关闭。
             </p>
           </section>
 

@@ -120,4 +120,31 @@ describe("<PageSettingsModal>", () => {
     expect(arg.option_total_price_limit).toBe(1200);
   });
 
+  it("toggling parser_version checkbox saves it as v2", async () => {
+    const spy = vi.spyOn(httpModule.api, "updateWhopPageSettings").mockResolvedValue(stockPage);
+    render(<PageSettingsModal page={stockPage} onClose={vi.fn()} />);
+    const checkbox = screen.getByLabelText(/parser v2/i);
+    fireEvent.click(checkbox);
+    fireEvent.click(screen.getByText(/^保存/));
+    await waitFor(() => expect(spy).toHaveBeenCalled());
+    const arg = spy.mock.calls[0][1];
+    expect(arg.parser_version).toBe("v2");
+  });
+
+  it("checkbox initial state reflects existing parser_version=v2", async () => {
+    const v2Page: WhopPage = {
+      ...stockPage,
+      settings: { ...stockPage.settings, parser_version: "v2" },
+    };
+    const spy = vi.spyOn(httpModule.api, "updateWhopPageSettings").mockResolvedValue(v2Page);
+    render(<PageSettingsModal page={v2Page} onClose={vi.fn()} />);
+    const checkbox = screen.getByLabelText(/parser v2/i) as HTMLInputElement;
+    expect(checkbox.checked).toBe(true);
+    fireEvent.click(checkbox); // unchecks
+    fireEvent.click(screen.getByText(/^保存/));
+    await waitFor(() => expect(spy).toHaveBeenCalled());
+    const arg = spy.mock.calls[0][1];
+    expect(arg.parser_version).toBe("v1");
+  });
+
 });

@@ -16,12 +16,21 @@ export type Health = components["schemas"]["HealthOut"];
 
 export type BrokerStatus = components["schemas"]["BrokerStatusOut"];
 
-export type WhopPage = components["schemas"]["WhopPageOut"];
+// Extend the OpenAPI-generated types with parser_version until the next
+// `npm run gen:types` regeneration. The `?` keeps existing fixtures (which
+// omit the field) valid; the backend defaults to "v1".
+export type WhopPageSettings = components["schemas"]["WhopPageSettingsOut"] & {
+  parser_version?: "v1" | "v2";
+};
+export type WhopPageSettingsPatch = components["schemas"]["WhopPageSettingsPatch"] & {
+  parser_version?: "v1" | "v2";
+};
+export type WhopPage = Omit<components["schemas"]["WhopPageOut"], "settings"> & {
+  settings: WhopPageSettings;
+};
 export type WhopPages = components["schemas"]["WhopPagesOut"];
 export type WhopPageCreate = components["schemas"]["WhopPageCreate"];
 export type WhopCookieStatus = components["schemas"]["WhopCookieStatusOut"];
-export type WhopPageSettings = components["schemas"]["WhopPageSettingsOut"];
-export type WhopPageSettingsPatch = components["schemas"]["WhopPageSettingsPatch"];
 export type TickerConfig = components["schemas"]["TickerConfigOut"];
 
 export interface LongportCredentialSet {
