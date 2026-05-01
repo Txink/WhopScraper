@@ -48,6 +48,23 @@ describe("<PageActionBar>", () => {
     expect(btn).toHaveAttribute("title", "错误：navigate failed");
   });
 
+  it("running listener with last_error shows red (last_error wins over running)", () => {
+    const errPage = { ...stockPage, running: true, last_error: "scrape timeout" };
+    render(<PageActionBar page={errPage} mode="page" onOpenSettings={vi.fn()} />);
+    const btn = screen.getByLabelText("错误，点击关机");
+    expect(btn).toHaveAttribute("title", "错误：scrape timeout");
+    expect(btn.className).toContain("err");
+    expect(btn.className).not.toContain(" on ");
+  });
+
+  it("clicks stop when red button is clicked while running with error", async () => {
+    const errPage = { ...stockPage, running: true, last_error: "scrape timeout" };
+    const stopSpy = vi.spyOn(httpModule.api, "stopWhopPage").mockResolvedValue(errPage);
+    render(<PageActionBar page={errPage} mode="page" onOpenSettings={vi.fn()} />);
+    fireEvent.click(screen.getByLabelText("错误，点击关机"));
+    await waitFor(() => expect(stopSpy).toHaveBeenCalledWith("a"));
+  });
+
   it("expand mode button cycles smart → all-open → all-closed → smart", () => {
     render(<PageActionBar page={stockPage} mode="page" onOpenSettings={vi.fn()} />);
     // Icon-only — locate by aria-label which mirrors current state.
