@@ -54,7 +54,7 @@ describe("<PageActionBar>", () => {
     const btn = screen.getByLabelText("错误，点击关机");
     expect(btn).toHaveAttribute("title", "错误：scrape timeout");
     expect(btn.className).toContain("err");
-    expect(btn.className).not.toContain(" on ");
+    expect(btn.className).not.toMatch(/\bon\b/);
   });
 
   it("clicks stop when red button is clicked while running with error", async () => {
