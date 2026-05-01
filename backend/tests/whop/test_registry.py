@@ -718,6 +718,13 @@ async def test_status_callback_publishes_page_changed_event(
     assert payload.action == "errored"
     assert payload.page_dict["id"] == entry.id
 
+    # The status callback must snapshot the entry's CURRENT state — not a stale
+    # one. last_error and running are the fields the dashboard tri-state reads;
+    # asserting they're present (even when null in this synthetic test where no
+    # listener actually errored) confirms the snapshot path is intact.
+    assert "last_error" in payload.page_dict
+    assert "running" in payload.page_dict
+
 
 @pytest.mark.asyncio
 async def test_status_callback_silent_when_entry_missing(

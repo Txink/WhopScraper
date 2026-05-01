@@ -246,9 +246,12 @@ class WhopListener:
                 raise
             except Exception as e:
                 # Fire once on healthy→errored; subsequent failures in the same streak stay silent.
-                if self._last_error is None:
-                    await self._safe_status_callback("errored")
+                # Set _last_error BEFORE the callback so the snapshot _build_page_dict captures
+                # carries the error message — otherwise frontend sees last_error=null on the first event.
+                was_healthy = self._last_error is None
                 self._last_error = str(e)
+                if was_healthy:
+                    await self._safe_status_callback("errored")
                 logger.exception("WhopListener[%s] scan error: %s", self._source, e)
                 # Exponential backoff
                 await asyncio.sleep(backoff)

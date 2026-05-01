@@ -508,9 +508,11 @@ async def test_errored_callback_fires_once_on_first_failure(patch_scripted_brows
     patch_scripted_browser([("raise", RuntimeError("net down"))])
 
     actions: list[str] = []
+    error_at_callback: list[str | None] = []
 
     async def record(action: str) -> None:
         actions.append(action)
+        error_at_callback.append(listener.last_error)
 
     listener = WhopListener(
         bus=EventBus(),
@@ -529,6 +531,13 @@ async def test_errored_callback_fires_once_on_first_failure(patch_scripted_brows
 
     assert actions == ["errored"], f"expected ['errored'], got {actions}"
     assert listener.last_error == "net down"
+
+    # Snapshot ordering: by the time the callback fires, listener.last_error is
+    # already the new error string — anything calling _build_page_dict from inside
+    # the callback (e.g., the registry closure) captures the populated error,
+    # not the pre-mutation null. This is critical: without this ordering, the
+    # frontend's tri-state stays green on the first errored event.
+    assert error_at_callback == ["net down"], f"expected ['net down'], got {error_at_callback}"
 
 
 @pytest.mark.asyncio
