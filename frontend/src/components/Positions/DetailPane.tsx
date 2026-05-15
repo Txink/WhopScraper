@@ -8,6 +8,7 @@ import { usePairsStore } from "../../stores/pairs";
 import { useDetailViewStore } from "../../stores/detailView";
 import { DetailSummary } from "./DetailSummary";
 import { DetailChart } from "./DetailChart";
+import { PairDetailModal } from "./PairDetailModal";
 import { PairKPIs } from "./PairKPIs";
 import { PendingTrades } from "./PendingTrades";
 import { TradeList } from "./TradeList";
@@ -51,6 +52,7 @@ export function DetailPane({ position, onBack }: Props) {
   const setTodaySessions = useDetailViewStore((s) => s.setTodaySessions);
   const selectedBuys = useDetailViewStore((s) => s.selectedBuys);
   const selectedSells = useDetailViewStore((s) => s.selectedSells);
+  const activePairId = useDetailViewStore((s) => s.activePairId);
   const setActivePair = useDetailViewStore((s) => s.setActivePair);
   const clearSelection = useDetailViewStore((s) => s.clearSelection);
 
@@ -412,6 +414,23 @@ export function DetailPane({ position, onBack }: Props) {
         onExtendPair={onExtendPair}
       />
 
+      {/* Clicking a T-N chip on a trade row sets activePairId in the
+         store; we render the modal whenever a known pair is selected.
+         For options we never set activePairId, so the modal stays hidden.
+         Closing the modal clears activePairId. */}
+      {(() => {
+        if (activePairId == null || isOption) return null;
+        const pair = pairs.find((p) => p.id === activePairId);
+        if (!pair) return null;
+        return (
+          <PairDetailModal
+            pair={pair}
+            trades={trades}
+            allPairs={pairs}
+            onClose={() => setActivePair(null)}
+          />
+        );
+      })()}
     </div>
   );
 }
