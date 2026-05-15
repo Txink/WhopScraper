@@ -67,11 +67,7 @@ class FakePushEvt:
 
 
 def _make_config() -> LongPortConfig:
-    return LongPortConfig(
-        mode="paper",
-        app_key="test",
-        app_secret="test",
-        access_token="test",
+    return LongPortConfig(        account_id="test-cid",
         region="cn",
         auto_trade=True,
         dry_run=False,

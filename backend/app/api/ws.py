@@ -31,7 +31,14 @@ from app.api.auth import ws_token_valid
 from app.api.schemas import push_event_to_out, task_to_out
 from app.core.config import Settings
 from app.core.event_bus import Event, EventBus
-from app.core.events import TaskPayload, TaskPushPayload, Topics, WhopPagePayload
+from app.core.events import (
+    ExecutionPayload,
+    QuoteSnapshotPayload,
+    TaskPayload,
+    TaskPushPayload,
+    Topics,
+    WhopPagePayload,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +81,8 @@ class WebSocketHub:
             Topics.TASK_STATUS_CHANGED,
             Topics.SYSTEM_CONNECTION_CHANGED,
             Topics.WHOP_PAGE_CHANGED,
+            Topics.QUOTE_SNAPSHOT,
+            Topics.EXECUTION_UPDATE,
         ]
         for t in topics_to_bridge:
             unsub = self._bus.subscribe(t, self._on_bus_event)
@@ -108,6 +117,25 @@ class WebSocketHub:
             }
         if isinstance(p, TaskPayload):
             return {"task": task_to_out(p.task).model_dump(mode="json")}
+        if isinstance(p, QuoteSnapshotPayload):
+            # ``quote`` already carries the QuoteOut shape from the broker
+            # adapter (last_done, open, high, low, volume, turnover,
+            # trade_session). Frontend writes it straight into quotesStore
+            # under ``symbol`` — no client-side conversion needed.
+            return {"symbol": p.symbol, "quote": p.quote}
+        if isinstance(p, ExecutionPayload):
+            # Shape mirrors ExecutionOut so the frontend's executions store
+            # can ingest push-driven rows without a converter. Drives the
+            # per-card Day P/L update.
+            return {
+                "order_id": p.order_id,
+                "symbol": p.symbol,
+                "ticker": p.ticker,
+                "side": p.side,
+                "qty": p.qty,
+                "price": p.price,
+                "ts": p.ts,
+            }
         if isinstance(p, WhopPagePayload):
             return {"action": p.action, "page": p.page_dict}
         # Pass-through for dict payloads (e.g. system.connection_changed)

@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from app.domain.message import Message
     from app.domain.push_event import PushEvent
     from app.domain.task import Task
+    from app.storage.schema import TPairRow
     from app.whop.listener import WhopListener
     from app.whop.registry import WhopPageEntry
 
@@ -181,6 +182,11 @@ class PositionOut(BaseModel):
     ticker: str
     quantity: int
     avg_cost: float | None
+    # Symbol display name from the broker. Critical for HK / A-share
+    # positions whose ticker is numeric ("2228" → "罗欣药业") and useless
+    # without the company name. Optional because legacy / sim brokers may
+    # not surface it.
+    name: str | None = None
     option_strike: float | None = None
     option_expiry: date | None = None
     option_type: str | None = None
@@ -192,6 +198,228 @@ class PositionsOut(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# T-pair (做T 配对)
+# ---------------------------------------------------------------------------
+
+
+class TPairAllocation(BaseModel):
+    """One trade's allocation into a做T pair. ``qty`` may be less than the
+    trade's filled quantity — a trade can be split across multiple pairs."""
+
+    trade_id: str
+    qty: int
+
+
+class TPairOut(BaseModel):
+    # Pair id is a SQLite autoincrement integer (table-wide unique, never
+    # reused). UI labels it as "T-{id}".
+    id: int
+    ticker: str
+    symbol: str | None = None
+    buys: list[TPairAllocation]
+    sells: list[TPairAllocation]
+    # Realized做T profit on the matched portion; persisted on the pair row.
+    profit: float = 0.0
+    created_at: datetime
+    updated_at: datetime
+
+
+class PairAggregateOut(BaseModel):
+    """Account+ticker scoped做T aggregates — driven by SQL SUM/COUNT
+    over t_pairs so PairKPIs can render without pulling every pair into
+    memory."""
+
+    profit_total: float
+    count: int
+    win_count: int
+
+
+class PendingTradeOut(BaseModel):
+    """One row of "pending做T" trade — broker fill with remaining qty
+    not yet allocated to any pair."""
+
+    order_id: str
+    ticker: str
+    symbol: str
+    side: str
+    qty: int
+    allocated_qty: int
+    pending_qty: int
+    price: float
+    ts: datetime
+
+
+class PendingExecutionsOut(BaseModel):
+    """Aggregate + per-trade breakdown of unallocated qty."""
+
+    pending_buy_qty: int
+    pending_sell_qty: int
+    trades: list[PendingTradeOut]
+
+
+class TPairsOut(BaseModel):
+    pairs: list[TPairOut]
+    # Total做T pair count matching the request's filters (account/ticker),
+    # ignoring pagination. Defaults to ``len(pairs)`` so legacy
+    # non-paginated callers see a sensible value.
+    total_count: int = 0
+    has_more: bool = False
+
+
+class TPairCreate(BaseModel):
+    """Client selection for a new做T pair. The server computes per-trade
+    qty allocations using FIFO + min(BUY_avail, SELL_avail) and persists
+    the result; partial / one-sided selections are accepted."""
+
+    ticker: str
+    symbol: str | None = None
+    buy_trade_ids: list[str] = []
+    sell_trade_ids: list[str] = []
+
+
+class TPairExtendIn(BaseModel):
+    """Add more trades to an existing pair. Same allocation rules apply,
+    with the existing pair contents counted against trade availability."""
+
+    buy_trade_ids: list[str] = []
+    sell_trade_ids: list[str] = []
+
+
+# ---------------------------------------------------------------------------
+# Quote / candlestick
+# ---------------------------------------------------------------------------
+
+
+class QuoteOut(BaseModel):
+    symbol: str
+    last_done: float
+    # Yesterday's RTH close. Used as the change% reference during
+    # 盘前 / 盘中 sessions.
+    prev_close: float
+    # TODAY's RTH close — only populated during 盘后 / 夜盘 (when the
+    # SDK has frozen ``SecurityQuote.last_done`` at the close). Acts as
+    # the change% reference during those sessions. ``None`` otherwise.
+    today_close: float | None = None
+    open: float
+    high: float
+    low: float
+    volume: int
+    turnover: float
+    change: float
+    change_pct: float
+    # Current market state for the symbol (determined from the wall clock
+    # in the market's local timezone, not from which quote tier has the
+    # freshest tick). Stock cards render this as a 盘中 / 盘前 / 盘后 /
+    # 夜盘 / 休市 chip. "closed" means the market is outside any session
+    # window (weekend, lunch break, post-close) and the surfaced
+    # ``last_done`` is yesterday's close.
+    trade_session: Literal["regular", "pre", "post", "overnight", "closed"] = "regular"
+
+
+class QuotesOut(BaseModel):
+    quotes: list[QuoteOut]
+
+
+class QuoteWatchIn(BaseModel):
+    """Request body for ``POST /api/quotes/watch``.
+
+    Replaces the active quote-push watch set with ``symbols``. Backend
+    diffs vs. the prior set and issues subscribe/unsubscribe calls to the
+    broker. Empty list clears all subscriptions (e.g. on dashboard close).
+    """
+
+    symbols: list[str]
+
+
+class QuoteWatchOut(BaseModel):
+    """Response body for ``POST /api/quotes/watch`` — observability fields
+    so the UI / log can confirm the diff actually took effect."""
+
+    added: int
+    removed: int
+    total: int
+
+
+class CandlestickOut(BaseModel):
+    timestamp: str | None
+    open: float
+    high: float
+    low: float
+    close: float
+    volume: int
+    turnover: float
+
+
+class CandlesticksOut(BaseModel):
+    symbol: str
+    period: str  # "today" or "5"|"7"|"15"|"30"|"60"|"90"
+    bars: list[CandlestickOut]
+
+
+# ---------------------------------------------------------------------------
+# Trade aggregation (flat fill list per ticker for做T binding)
+# ---------------------------------------------------------------------------
+
+
+class TradeOut(BaseModel):
+    """A single fully-executed (or partial) trade, suitable as a做T
+    pair member. ``id`` matches the originating task id."""
+
+    id: str
+    ticker: str
+    # Full symbol from the originating instruction (e.g. "TSLA.US" for a
+    # stock fill, "RXRX260618C7000" for an option contract fill). Needed
+    # to distinguish trades on the same ticker but different option
+    # contracts when computing per-contract day P/L on the option card.
+    symbol: str | None = None
+    side: str  # BUY | SELL
+    qty: int
+    price: float
+    ts: datetime
+    source: str | None = None  # signal channel / author
+    tag: str | None = None     # parser-extracted note ("做T 加仓" etc.)
+
+
+class TradesOut(BaseModel):
+    ticker: str
+    trades: list[TradeOut]
+
+
+class ExecutionOut(BaseModel):
+    """One broker-side ORDER (with partial fills aggregated). The unit
+    of做T binding + day-PL accounting.
+
+    ``order_id`` is the unique key. ``task_id`` (nullable) links back to
+    the signal-station ``tasks`` row that submitted this order — present
+    only for orders that went through the trader pipeline; manual fills
+    placed via the LongBridge app / web have ``task_id = null``.
+    """
+
+    order_id: str
+    task_id: str | None = None
+    symbol: str
+    ticker: str
+    side: Literal["BUY", "SELL"]
+    qty: int
+    price: float
+    ts: datetime
+
+
+class ExecutionsOut(BaseModel):
+    executions: list[ExecutionOut]
+    # Wall-clock moment of the most recent broker→DB sync write for this
+    # slice. Detail pane renders it as "上次更新：xxx". Null when no
+    # row has been synced yet (first-ever open).
+    last_synced_at: datetime | None = None
+    # Total rows matching the request's filters (account/ticker/window),
+    # ignoring pagination. Lets the UI render "N 笔 (已加载 M)" and decide
+    # whether to show 加载更多. Defaults to ``len(executions)`` for callers
+    # that don't paginate.
+    total_count: int = 0
+    has_more: bool = False
+
+
+# ---------------------------------------------------------------------------
 # Health
 # ---------------------------------------------------------------------------
 
@@ -199,43 +427,83 @@ class PositionsOut(BaseModel):
 class HealthOut(BaseModel):
     whop: str  # up | down
     longport: str  # up | down
-    mode: str  # paper | real
+    # OAuth account label that the broker is currently bound to. Empty
+    # string when no account is active yet. Replaces the prior paper/real
+    # ``mode`` field, which has no meaning in the multi-account era.
+    account_label: str = ""
     dry_run: bool
 
 
-class LongPortCredentialSet(BaseModel):
-    app_key: str
-    app_secret: str
-    access_token: str
+class LongPortAccountOut(BaseModel):
+    """One OAuth-authorized LongBridge account slot in the settings list.
+
+    ``account_id`` is the registered Longbridge OAuth client_id (stable
+    per Longbridge account). ``label`` is a user-chosen display name.
+    ``authorized`` reflects whether the SDK token cache holds a valid
+    token for that account.
+    """
+
+    account_id: str
+    label: str
+    authorized: bool
 
 
 class LongPortSettingsOut(BaseModel):
-    mode: Literal["paper", "real"]
-    paper: LongPortCredentialSet
-    real: LongPortCredentialSet
+    active_account_id: str | None
+    accounts: list[LongPortAccountOut]
     auto_trade: bool
     region: str
     dry_run: bool
 
 
 class LongPortSettingsPatch(BaseModel):
-    mode: Literal["paper", "real"] | None = None
-    paper: LongPortCredentialSet | None = None
-    real: LongPortCredentialSet | None = None
+    """Mutable subset of LongPort settings. Account list is managed via the
+    OAuth + account endpoints and cannot be patched here.
+    """
+
     auto_trade: bool | None = None
     region: str | None = None
     dry_run: bool | None = None
 
 
+class LongPortOAuthStartOut(BaseModel):
+    """Returned by POST /oauth/start — the URL is opened in a new tab and
+    the session_id is polled by /oauth/status until completion. The new
+    account_id is added to the settings list only after success."""
+
+    session_id: str
+    auth_url: str
+    account_id: str
+
+
+class LongPortOAuthStatusOut(BaseModel):
+    state: Literal["awaiting_url", "ready", "success", "error", "cancelled"]
+    error: str | None = None
+    account_id: str | None = None
+
+
+class LongPortAccountActivateIn(BaseModel):
+    account_id: str
+
+
+class LongPortAccountLogoutIn(BaseModel):
+    account_id: str
+
+
+class LongPortAccountRenameIn(BaseModel):
+    account_id: str
+    label: str
+
+
 class BrokerStatusOut(BaseModel):
     """Snapshot of the running broker — whether it's a live LongPortClient
     or fell back to NoopBrokerClient, plus the last init error if any.
-    Used by the settings dialog to surface init state and let the user
-    trigger a rebuild after correcting credentials.
     """
 
     is_real: bool
-    mode: Literal["paper", "real"]
+    # User-chosen label of the currently active account (empty when noop
+    # or no account configured). Replaces the prior paper/real mode field.
+    account_label: str = ""
     dry_run: bool
     last_init_error: str | None = None
 
@@ -559,4 +827,18 @@ def whop_page_to_out(
         last_poll_at=None,
         messages_published=0,
         last_error=None,
+    )
+
+
+def tpair_row_to_out(row: TPairRow) -> TPairOut:
+    """Convert a TPairRow into the API response model."""
+    return TPairOut(
+        id=row.id,
+        ticker=row.ticker,
+        symbol=row.symbol,
+        buys=[TPairAllocation(**a) for a in (row.buys_json or [])],
+        sells=[TPairAllocation(**a) for a in (row.sells_json or [])],
+        profit=row.profit,
+        created_at=row.created_at,
+        updated_at=row.updated_at,
     )

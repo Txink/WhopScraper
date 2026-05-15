@@ -48,19 +48,41 @@ from app.api.auth import require_app_token
 from app.api.schemas import (
     BrokerStatusOut,
     CancelOk,
+    CandlestickOut,
+    CandlesticksOut,
+    ExecutionOut,
+    ExecutionsOut,
+    QuoteWatchIn,
+    QuoteWatchOut,
+    TradeOut,
+    TradesOut,
     HealthOut,
-    LongPortCredentialSet,
+    LongPortAccountActivateIn,
+    LongPortAccountLogoutIn,
+    LongPortAccountOut,
+    LongPortAccountRenameIn,
+    LongPortOAuthStartOut,
+    LongPortOAuthStatusOut,
     LongPortSettingsOut,
     LongPortSettingsPatch,
     OrphanCleanupRequest,
     OrphanCleanupResponse,
+    PairAggregateOut,
+    PendingExecutionsOut,
+    PendingTradeOut,
     PositionOut,
     PositionsOut,
+    QuoteOut,
+    QuotesOut,
     StatsTodayOut,
     TaskCountOut,
     TaskListOut,
     TaskOut,
     TickerConfigOut,
+    TPairCreate,
+    TPairExtendIn,
+    TPairOut,
+    TPairsOut,
     WhopCookieStatusOut,
     WhopPageCreate,
     WhopPageOut,
@@ -69,6 +91,7 @@ from app.api.schemas import (
     WhopPagesOut,
     task_to_out,
     task_to_summary,
+    tpair_row_to_out,
     whop_page_to_out,
 )
 from app.broker.broker_client import BrokerClient
@@ -79,6 +102,7 @@ from app.core.event_bus import Event
 from app.core.events import TaskPayload, Topics
 from app.storage import repo
 from app.storage.db import session_scope
+from app.storage.schema import TPairRow
 
 if TYPE_CHECKING:
     from app.core.event_bus import EventBus
@@ -96,6 +120,7 @@ def build_http_router(
     broker_getter: Callable[[], BrokerClient] | None = None,
     broker_status_fn: Callable[[], dict[str, Any]] | None = None,
     broker_reload_fn: Callable[[], Awaitable[dict[str, Any]]] | None = None,
+    subscription_manager_getter: Callable[[], Any] | None = None,
 ) -> APIRouter:
     """Factory — injects session_factory, broker, and settings at app assembly.
 
@@ -123,17 +148,15 @@ def build_http_router(
     def _longport_settings_out() -> LongPortSettingsOut:
         runtime = runtime_store.get()
         return LongPortSettingsOut(
-            mode=runtime.mode,
-            paper=LongPortCredentialSet(
-                app_key=runtime.paper.app_key,
-                app_secret=runtime.paper.app_secret,
-                access_token=runtime.paper.access_token,
-            ),
-            real=LongPortCredentialSet(
-                app_key=runtime.real.app_key,
-                app_secret=runtime.real.app_secret,
-                access_token=runtime.real.access_token,
-            ),
+            active_account_id=runtime.active_account_id,
+            accounts=[
+                LongPortAccountOut(
+                    account_id=a.account_id,
+                    label=a.label,
+                    authorized=a.authorized,
+                )
+                for a in runtime.accounts
+            ],
             auto_trade=runtime.auto_trade,
             region=runtime.region,
             dry_run=runtime.dry_run,
@@ -263,31 +286,678 @@ def build_http_router(
     async def list_positions_endpoint() -> PositionsOut:
         """Return current positions split into stocks and options.
 
-        Sourced from the ``positions`` table (populated by a future broker-sync
-        job — returns empty lists until that sync runs).
+        Pulls live from the broker on every call (no DB cache yet) so the
+        dashboard cards reflect the latest holdings without a periodic sync
+        job. If the broker is down we fall back to ``[]`` rather than 502 —
+        the dashboard treats absence as "no positions" and skips quote/
+        candlestick fetches.
+
+        Longbridge's ``stock_positions`` endpoint actually returns BOTH
+        stocks and option contracts the user holds (the option contracts
+        carry an OCC-format symbol). We classify each row via
+        ``parse_option_symbol`` and route to the appropriate bucket.
         """
-        async with session_scope(session_factory) as session:
-            rows = await repo.list_positions(session)
+        from app.broker.symbol_classify import parse_option_symbol
 
         stocks: list[PositionOut] = []
         options: list[PositionOut] = []
-        for row in rows:
-            pos = PositionOut(
-                symbol=row.symbol,
-                type=row.type,
-                ticker=row.ticker,
-                quantity=row.quantity,
-                avg_cost=row.avg_cost,
-                option_strike=row.option_strike,
-                option_expiry=row.option_expiry,
-                option_type=row.option_type,
-            )
-            if row.type == "option":
-                options.append(pos)
+        try:
+            raw = _get_broker().stock_positions()
+        except Exception as exc:  # pragma: no cover — broker SDK errors
+            logger.warning("stock_positions fetch failed: %s", exc)
+            raw = []
+        for p in raw:
+            symbol = str(p.get("symbol", ""))
+            option_leg = parse_option_symbol(symbol)
+            qty = int(p.get("quantity", 0) or 0)
+            avg = p.get("avg_cost")
+            name = p.get("name")
+            if option_leg is not None:
+                options.append(
+                    PositionOut(
+                        symbol=symbol,
+                        type="option",
+                        ticker=option_leg.ticker,
+                        quantity=qty,
+                        avg_cost=avg,
+                        name=name,
+                        option_strike=option_leg.strike,
+                        option_expiry=option_leg.expiry,
+                        option_type=option_leg.cp,
+                    )
+                )
             else:
-                stocks.append(pos)
-
+                stocks.append(
+                    PositionOut(
+                        symbol=symbol,
+                        type="stock",
+                        ticker=str(p.get("ticker", "")),
+                        quantity=qty,
+                        avg_cost=avg,
+                        name=name,
+                        option_strike=None,
+                        option_expiry=None,
+                        option_type=None,
+                    )
+                )
         return PositionsOut(stocks=stocks, options=options)
+
+    # ------------------------------------------------------------------ #
+    # /api/pairs — 做T 配对 CRUD                                           #
+    # ------------------------------------------------------------------ #
+
+    @router.get("/api/pairs", response_model=TPairsOut)
+    async def list_pairs_endpoint(
+        ticker: str | None = None,
+        offset: int = Query(0, ge=0),
+        limit: int = Query(50, ge=1, le=500),
+    ) -> TPairsOut:
+        """List做T pairs for the active account, optionally filtered by
+        ticker. Cross-account isolation is enforced via the broker's
+        ``account_id``; pairs created under a different account stay
+        hidden after switching.
+
+        Paginated: ``offset`` / ``limit`` slice the result. The response
+        carries ``total_count`` and ``has_more`` so the UI can render a
+        "已加载 M / N · 加载更多" affordance without a separate count call.
+        """
+        account_id = getattr(_get_broker(), "account_id", "") or None
+        async with session_scope(session_factory) as session:
+            rows = await repo.list_pairs(
+                session,
+                ticker=ticker,
+                account_id=account_id,
+                offset=offset,
+                limit=limit,
+            )
+            total = await repo.count_pairs(
+                session, ticker=ticker, account_id=account_id
+            )
+        return TPairsOut(
+            pairs=[tpair_row_to_out(r) for r in rows],
+            total_count=total,
+            has_more=(offset + len(rows)) < total,
+        )
+
+    @router.post("/api/pairs", response_model=TPairOut, status_code=201)
+    async def create_pair_endpoint(body: TPairCreate) -> TPairOut:
+        """Create a做T pair binding broker fills (one row per order_id).
+        Server auto-balances qty using FIFO; leftover qty stays on the
+        originating fills for future bindings. The pair id is assigned by
+        SQLite (autoincrement integer)."""
+        if not body.buy_trade_ids and not body.sell_trade_ids:
+            raise HTTPException(400, detail="must select at least one trade")
+
+        all_ids = list({*body.buy_trade_ids, *body.sell_trade_ids})
+
+        account_id = getattr(_get_broker(), "account_id", "") or None
+        if account_id is None:
+            raise HTTPException(503, detail="broker account not initialised")
+        async with session_scope(session_factory) as session:
+            # Qty lookup reads broker_executions (one row per order_id,
+            # partial fills aggregated).
+            trade_qty = await repo.get_broker_executions_qty_map(session, all_ids)
+            row = await repo.create_pair(
+                session,
+                ticker=body.ticker,
+                symbol=body.symbol,
+                buy_trade_ids=body.buy_trade_ids,
+                sell_trade_ids=body.sell_trade_ids,
+                trade_qty=trade_qty,
+                account_id=account_id,
+            )
+        if row is None:
+            raise HTTPException(
+                400,
+                detail="no available qty to allocate — selected trades may be "
+                       "unfilled or already fully bound to other pairs",
+            )
+        return tpair_row_to_out(row)
+
+    @router.post("/api/pairs/{pair_id}/extend", response_model=TPairOut)
+    async def extend_pair_endpoint(
+        pair_id: int,
+        body: TPairExtendIn,
+    ) -> TPairOut:
+        """Add trades to an existing做T pair."""
+        if not body.buy_trade_ids and not body.sell_trade_ids:
+            raise HTTPException(400, detail="must select at least one trade")
+        all_ids = list({*body.buy_trade_ids, *body.sell_trade_ids})
+
+        account_id = getattr(_get_broker(), "account_id", "") or None
+        async with session_scope(session_factory) as session:
+            trade_qty = await repo.get_broker_executions_qty_map(session, all_ids)
+            row = await repo.extend_pair(
+                session,
+                pair_id=pair_id,
+                buy_trade_ids=body.buy_trade_ids,
+                sell_trade_ids=body.sell_trade_ids,
+                trade_qty=trade_qty,
+                account_id=account_id,
+            )
+        if row is None:
+            raise HTTPException(404, detail=f"pair {pair_id} not found")
+        return tpair_row_to_out(row)
+
+    @router.delete("/api/pairs/{pair_id}", status_code=204)
+    async def delete_pair_endpoint(pair_id: int) -> None:
+        """Unbind a做T pair. The underlying trades become available again."""
+        async with session_scope(session_factory) as session:
+            ok = await repo.delete_pair(session, pair_id)
+        if not ok:
+            raise HTTPException(404, detail=f"pair {pair_id} not found")
+
+    @router.get("/api/pairs/aggregate", response_model=PairAggregateOut)
+    async def pair_aggregate_endpoint(
+        ticker: Annotated[str | None, Query()] = None,
+    ) -> PairAggregateOut:
+        """Account+ticker scoped做T aggregates via SQL SUM/COUNT.
+
+        Used by PairKPIs so the frontend never has to fetch every pair
+        just to display totals. ``ticker`` is optional; omit for an
+        account-wide aggregate.
+        """
+        account_id = getattr(_get_broker(), "account_id", "") or None
+        async with session_scope(session_factory) as session:
+            if account_id is None:
+                return PairAggregateOut(profit_total=0.0, count=0, win_count=0)
+            from sqlalchemy import case, func, select as _select
+
+            stmt = _select(
+                func.coalesce(func.sum(TPairRow.profit), 0.0),
+                func.count(),
+                func.coalesce(
+                    func.sum(case((TPairRow.profit > 0, 1), else_=0)), 0
+                ),
+            ).where(TPairRow.account_id == account_id)
+            if ticker is not None:
+                stmt = stmt.where(TPairRow.ticker == ticker)
+            row = (await session.execute(stmt)).one()
+        return PairAggregateOut(
+            profit_total=float(row[0]),
+            count=int(row[1]),
+            win_count=int(row[2]),
+        )
+
+    @router.get(
+        "/api/broker/executions/pending", response_model=PendingExecutionsOut
+    )
+    async def pending_executions_endpoint(
+        ticker: Annotated[str | None, Query()] = None,
+        limit: Annotated[int, Query(ge=1, le=500)] = 100,
+    ) -> PendingExecutionsOut:
+        """List broker fills whose qty exceeds the qty already allocated
+        to any做T pair, plus aggregate pending qty by side.
+
+        ``allocated_qty`` is derived from ``t_pair_tags`` via
+        ``json_each``; the WHERE filter drops fully-allocated fills so the
+        UI can scan the result for what's still open. ``limit`` caps the
+        listing but the aggregate row totals everything regardless.
+        """
+        account_id = getattr(_get_broker(), "account_id", "") or None
+        if account_id is None:
+            return PendingExecutionsOut(
+                pending_buy_qty=0, pending_sell_qty=0, trades=[]
+            )
+        from sqlalchemy import text as _text
+
+        async with session_scope(session_factory) as session:
+            # SQLite JSON inline:
+            # allocated_qty = SUM(json_extract(t.value, '$[1]')) over
+            # json_each(broker_executions.t_pair_tags).
+            allocated_sql = (
+                "COALESCE(("
+                " SELECT SUM(CAST(json_extract(t.value, '$[1]') AS INTEGER))"
+                " FROM json_each(broker_executions.t_pair_tags) AS t"
+                "), 0)"
+            )
+            params: dict[str, Any] = {"account_id": account_id, "limit": limit}
+            where = ["account_id = :account_id", f"qty > {allocated_sql}"]
+            if ticker is not None:
+                where.append("ticker = :ticker")
+                params["ticker"] = ticker
+
+            agg_sql = (
+                f"SELECT side, SUM(qty - {allocated_sql}) "
+                f"FROM broker_executions WHERE {' AND '.join(where)} "
+                f"GROUP BY side"
+            )
+            buy_qty = sell_qty = 0
+            for side, pending in (await session.execute(_text(agg_sql), params)).all():
+                if side == "BUY":
+                    buy_qty = int(pending or 0)
+                elif side == "SELL":
+                    sell_qty = int(pending or 0)
+
+            list_sql = (
+                f"SELECT order_id, ticker, symbol, side, qty, "
+                f"{allocated_sql} AS allocated_qty, "
+                f"(qty - {allocated_sql}) AS pending_qty, "
+                f"price, ts "
+                f"FROM broker_executions "
+                f"WHERE {' AND '.join(where)} "
+                f"ORDER BY ts DESC LIMIT :limit"
+            )
+            from datetime import timezone as _tz
+
+            trades: list[PendingTradeOut] = []
+            for row in (await session.execute(_text(list_sql), params)).all():
+                ts = row.ts
+                if isinstance(ts, datetime) and ts.tzinfo is None:
+                    ts = ts.replace(tzinfo=_tz.utc)
+                trades.append(
+                    PendingTradeOut(
+                        order_id=row.order_id,
+                        ticker=row.ticker,
+                        symbol=row.symbol,
+                        side=row.side,
+                        qty=int(row.qty),
+                        allocated_qty=int(row.allocated_qty),
+                        pending_qty=int(row.pending_qty),
+                        price=float(row.price),
+                        ts=ts,
+                    )
+                )
+        return PendingExecutionsOut(
+            pending_buy_qty=buy_qty, pending_sell_qty=sell_qty, trades=trades,
+        )
+
+    # ------------------------------------------------------------------ #
+    # GET /api/quote — snapshot quotes for one or more symbols              #
+    # ------------------------------------------------------------------ #
+
+    @router.get("/api/quote", response_model=QuotesOut)
+    async def quote_endpoint(
+        symbols: Annotated[str, Query(description="comma-separated symbols")],
+    ) -> QuotesOut:
+        """Fetch snapshot quotes for the comma-separated symbol list.
+
+        Symbols missing from the broker's response are silently dropped from
+        the result — callers should expect a possibly-smaller result set.
+        """
+        symbol_list = [s.strip() for s in symbols.split(",") if s.strip()]
+        if not symbol_list:
+            raise HTTPException(400, detail="symbols query param is empty")
+
+        try:
+            raw = _get_broker().get_quote(symbol_list)
+        except Exception as exc:  # pragma: no cover — broker SDK errors
+            raise HTTPException(502, detail=f"broker quote failed: {exc}") from exc
+
+        quotes: list[QuoteOut] = []
+        for sym in symbol_list:
+            q = raw.get(sym)
+            if q is None:
+                continue
+            # ``broker.get_quote`` returns dicts pre-shaped by
+            # ``_quote_to_dict`` — session-aware change% + today_close
+            # already computed. Fallback (last - prev_close) kept for
+            # alternate broker implementations that don't pre-compute.
+            last = float(q.get("last_done", 0.0))
+            prev = float(q.get("prev_close", 0.0))
+            today_close_val = q.get("today_close")
+            today_close = float(today_close_val) if today_close_val is not None else None
+            if "change" in q and "change_pct" in q:
+                change = float(q.get("change", 0.0))
+                change_pct = float(q.get("change_pct", 0.0))
+            else:
+                change = last - prev
+                change_pct = (change / prev * 100.0) if prev > 0 else 0.0
+            session = str(q.get("trade_session") or "regular")
+            if session not in ("regular", "pre", "post", "overnight", "closed"):
+                session = "regular"
+            quotes.append(
+                QuoteOut(
+                    symbol=sym,
+                    last_done=last,
+                    prev_close=prev,
+                    today_close=today_close,
+                    open=float(q.get("open", 0.0)),
+                    high=float(q.get("high", 0.0)),
+                    low=float(q.get("low", 0.0)),
+                    volume=int(q.get("volume", 0)),
+                    turnover=float(q.get("turnover", 0.0)),
+                    change=change,
+                    change_pct=change_pct,
+                    trade_session=session,  # type: ignore[arg-type]
+                )
+            )
+        return QuotesOut(quotes=quotes)
+
+    # ------------------------------------------------------------------ #
+    # POST /api/quotes/watch — replace the streaming quote watch set     #
+    # ------------------------------------------------------------------ #
+
+    @router.post("/api/quotes/watch", response_model=QuoteWatchOut)
+    async def watch_quotes_endpoint(body: QuoteWatchIn) -> QuoteWatchOut:
+        """Set the symbols whose quote push-stream the backend forwards
+        to WS clients. Replaces the previous set — backend diffs and
+        issues subscribe/unsubscribe to the broker.
+
+        Frontend calls this once after positions resolve, and again on
+        every account switch (after /broker/reload). Empty list clears
+        all subscriptions (used on dashboard unmount / logout).
+
+        Returns 503 when no SubscriptionManager is bound yet (early
+        startup window before broker init completes, or right after an
+        account-switch reload tore the old manager down) — frontend
+        retries on the next positions tick.
+        """
+        if subscription_manager_getter is None:
+            raise HTTPException(503, detail="subscription manager not available")
+        mgr = subscription_manager_getter()
+        if mgr is None:
+            raise HTTPException(503, detail="subscription manager not available")
+        result = await mgr.watch_quotes(body.symbols)
+        return QuoteWatchOut(**result)
+
+    # ------------------------------------------------------------------ #
+    # GET /api/candlesticks — intraday or daily K bars for one symbol      #
+    # ------------------------------------------------------------------ #
+
+    # Regular US session ~6.5h. Extended (pre+regular+post) ~16h.
+    # Both 分时 and 1min map to SDK Min_1; 分时 differs only in front-end
+    # rendering (pads to fill the session window).
+    _BARS_PER_DAY_REGULAR = {
+        "min_1": 390, "min_2": 195, "min_3": 130, "min_5": 78,
+    }
+    _BARS_PER_DAY_ALL = {
+        "min_1": 960, "min_2": 480, "min_3": 320, "min_5": 192,
+    }
+
+    # Longer-horizon (non-today) periods use a fixed granularity; granularity/
+    # sessions query params are ignored for these.
+    _PERIOD_GRANULARITY_NON_TODAY: dict[str, tuple[str, int]] = {
+        "5":  ("min_5", 5 * 78),
+        "7":  ("min_5", 7 * 78),
+        "15": ("min_15", 15 * 26),
+        "30": ("day", 30),
+        "60": ("day", 60),
+        "90": ("day", 90),
+    }
+
+    # User-facing granularity name → SDK period.
+    # ``分时`` is a 1-min line chart with session-padded x-axis;
+    # ``1min`` is the same SDK data but rendered as a regular K-line view
+    # (no slot padding, identical to 2/3/5min behavior).
+    _GRANULARITY_FOR_TODAY = {
+        "分时": "min_1",
+        "1min": "min_1",
+        "2min": "min_2",
+        "3min": "min_3",
+        "5min": "min_5",
+    }
+    _SESSION_NAMES = {"regular", "pre", "post", "overnight", "all"}
+
+    @router.get("/api/candlesticks", response_model=CandlesticksOut)
+    async def candlesticks_endpoint(
+        symbol: str,
+        period: Annotated[
+            str,
+            Query(description="today | 5 | 7 | 15 | 30 | 60 | 90"),
+        ] = "today",
+        granularity: Annotated[
+            str,
+            Query(description="(today only) 2min | 3min | 5min"),
+        ] = "5min",
+        sessions: Annotated[
+            str,
+            Query(description="(today only) regular | all (include pre/post-market)"),
+        ] = "regular",
+    ) -> CandlesticksOut:
+        """Return candlestick bars for a single symbol.
+
+        For `today`, granularity (2/3/5 min) and sessions (regular vs
+        pre+post) are user-selectable so the user can choose between a
+        clean regular-hours curve and a wider view that includes pre-market
+        and after-hours. For other periods these query params are ignored
+        (fixed mapping):
+          5/7 → 5-min, 15 → 15-min, 30/60/90 → daily.
+        """
+        if period == "today":
+            sdk_period = _GRANULARITY_FOR_TODAY.get(granularity)
+            if sdk_period is None:
+                raise HTTPException(
+                    400,
+                    detail=f"unknown granularity {granularity!r}; "
+                           f"expected {list(_GRANULARITY_FOR_TODAY)}",
+                )
+            if sessions not in _SESSION_NAMES:
+                raise HTTPException(
+                    400,
+                    detail=f"unknown sessions {sessions!r}; "
+                           f"expected {sorted(_SESSION_NAMES)}",
+                )
+            # The SDK only exposes two modes: Intraday (regular) or All.
+            # For 盘前/盘后/夜盘 specifically, fetch All and let the client
+            # filter by ET time-of-day. We send sdk_sessions accordingly.
+            sdk_sessions_for_query = "regular" if sessions == "regular" else "all"
+            bars_per_day = (
+                _BARS_PER_DAY_ALL if sdk_sessions_for_query == "all"
+                else _BARS_PER_DAY_REGULAR
+            )
+            count = bars_per_day[sdk_period]
+            sessions = sdk_sessions_for_query  # what we actually pass to broker
+        else:
+            cfg = _PERIOD_GRANULARITY_NON_TODAY.get(period)
+            if cfg is None:
+                raise HTTPException(
+                    400,
+                    detail=f"unknown period {period!r}; expected one of "
+                           f"today, {sorted(_PERIOD_GRANULARITY_NON_TODAY)}",
+                )
+            sdk_period, count = cfg
+            # Non-today periods always use regular session.
+            sessions = "regular"
+
+        try:
+            bars = _get_broker().get_candlesticks(
+                symbol, period=sdk_period, count=count, sessions=sessions,
+            )
+        except Exception as exc:  # pragma: no cover — broker SDK errors
+            raise HTTPException(502, detail=f"broker candlesticks failed: {exc}") from exc
+
+        return CandlesticksOut(
+            symbol=symbol,
+            period=period,
+            bars=[CandlestickOut(**b) for b in bars],
+        )
+
+    # ------------------------------------------------------------------ #
+    # GET /api/trades — per-ticker flat fill history for做T binding        #
+    # ------------------------------------------------------------------ #
+
+    @router.get("/api/broker/executions", response_model=ExecutionsOut)
+    async def history_executions_endpoint(
+        ticker: Annotated[str | None, Query()] = None,
+        days: Annotated[int, Query(ge=1, le=3650)] = 730,
+        offset: Annotated[int, Query(ge=0)] = 0,
+        limit: Annotated[int, Query(ge=1, le=500)] = 50,
+    ) -> ExecutionsOut:
+        """Broker-side fill history for the detail pane's trade list.
+
+        Sync semantics:
+          - Incremental: starts from ``MAX(ts)`` already in DB for this
+            account (+ optional ticker), pulls only the gap. Single
+            broker call.
+          - First-ever sync: iterates 90-day chunks backwards up to
+            ``days`` total (default 730 = 2 years) so the user's complete
+            history materializes on initial detail-pane open. Stops
+            early on any empty window — saves wasted calls when the
+            account opened mid-horizon.
+
+        Read comes from DB filtered by account_id (cross-account bleed
+        is impossible) and is NOT truncated by ``days``: once history is
+        synced, every page returns it. ``days`` only governs the
+        first-time backfill horizon.
+
+        Paginated: ``offset`` / ``limit`` slice the result newest-first.
+        Sync runs on every call (idempotent upsert) so a page-flip also
+        picks up new fills that arrived since the previous open.
+        """
+        from app.broker.executions_sync import (
+            sync_broker_executions_incremental,
+            latest_synced_at,
+        )
+
+        broker = _get_broker()
+        account_id = getattr(broker, "account_id", "")
+        async with session_scope(session_factory) as session:
+            last_synced: datetime | None = None
+            total = 0
+            if account_id:
+                await sync_broker_executions_incremental(
+                    session, broker, ticker=ticker, fallback_days=days
+                )
+                rows = await repo.list_broker_executions(
+                    session,
+                    account_id=account_id,
+                    ticker=ticker,
+                    offset=offset,
+                    limit=limit,
+                )
+                total = await repo.count_broker_executions(
+                    session,
+                    account_id=account_id,
+                    ticker=ticker,
+                )
+                last_synced = await latest_synced_at(
+                    session, account_id=account_id, ticker=ticker
+                )
+            else:
+                rows = []
+        from datetime import timezone as _tz
+        executions: list[ExecutionOut] = []
+        for r in rows:
+            if r.side not in ("BUY", "SELL"):
+                continue
+            ts = r.ts
+            if ts is not None and ts.tzinfo is None:
+                ts = ts.replace(tzinfo=_tz.utc)
+            executions.append(
+                ExecutionOut(
+                    order_id=r.order_id,
+                    task_id=r.task_id,
+                    symbol=r.symbol,
+                    ticker=r.ticker,
+                    side=r.side,  # type: ignore[arg-type]
+                    qty=r.qty,
+                    price=r.price,
+                    ts=ts,
+                )
+            )
+        if last_synced is not None and last_synced.tzinfo is None:
+            last_synced = last_synced.replace(tzinfo=_tz.utc)
+        return ExecutionsOut(
+            executions=executions,
+            last_synced_at=last_synced,
+            total_count=total,
+            has_more=(offset + len(executions)) < total,
+        )
+
+    @router.get("/api/broker/today_executions", response_model=ExecutionsOut)
+    async def today_executions_endpoint() -> ExecutionsOut:
+        """Today's (ET trading day) order-level executions for the active
+        account. Same DB-backed path as /api/broker/executions but with a
+        narrow window — used by Day P/L on position cards.
+
+        Sync pulls today_executions from the broker (which already covers
+        ~30h via history_executions internally) and upserts as one row
+        per order. Frontend re-filters by ET trading day client-side.
+        """
+        from datetime import datetime, timedelta, timezone as _tz
+        from app.broker.executions_sync import sync_broker_executions
+
+        broker = _get_broker()
+        account_id = getattr(broker, "account_id", "")
+        async with session_scope(session_factory) as session:
+            if account_id:
+                # 2-day window comfortably spans an ET trading session
+                # (BJ 16:00 → BJ 08:00 next day = ~16h). DB upsert
+                # dedupes by order_id so it's idempotent.
+                await sync_broker_executions(session, broker, days=2)
+                since = datetime.now(_tz.utc) - timedelta(days=2)
+                rows = await repo.list_broker_executions(
+                    session,
+                    account_id=account_id,
+                    since=since,
+                )
+            else:
+                rows = []
+        executions: list[ExecutionOut] = []
+        for r in rows:
+            if r.side not in ("BUY", "SELL"):
+                continue
+            ts = r.ts
+            if ts is not None and ts.tzinfo is None:
+                ts = ts.replace(tzinfo=_tz.utc)
+            executions.append(
+                ExecutionOut(
+                    order_id=r.order_id,
+                    task_id=r.task_id,
+                    symbol=r.symbol,
+                    ticker=r.ticker,
+                    side=r.side,  # type: ignore[arg-type]
+                    qty=r.qty,
+                    price=r.price,
+                    ts=ts,
+                )
+            )
+        return ExecutionsOut(executions=executions)
+
+    @router.get("/api/trades", response_model=TradesOut)
+    async def trades_endpoint(
+        ticker: Annotated[str, Query(description="user-facing ticker, e.g. TSLA")],
+        limit: int = Query(200, ge=1, le=500),
+    ) -> TradesOut:
+        """Return chronologically-ordered FILLED / PARTIAL trades for a ticker.
+
+        Each entry corresponds to one task (its id is the trade_id used in
+        做T pair allocations). Unfilled tasks (no cumulative_qty) are
+        filtered out — they have no position to bind.
+        """
+        async with session_scope(session_factory) as session:
+            tasks = await repo.list_tasks(
+                session,
+                ticker=ticker,
+                statuses=[Status.FILLED, Status.PARTIAL],
+                limit=limit,
+            )
+
+        trades: list[TradeOut] = []
+        for t in tasks:
+            evt = t.push_events[0] if t.push_events else None
+            qty = evt.cumulative_qty if evt and evt.cumulative_qty else None
+            price = (
+                evt.cumulative_avg_price
+                if evt and evt.cumulative_avg_price is not None
+                else None
+            )
+            if qty is None or qty <= 0 or price is None:
+                continue  # no position to do T on
+
+            inst = t.instruction
+            if inst is None:
+                continue
+            side = "BUY" if "BUY" in inst.instruction_type.value.upper() else "SELL"
+
+            trades.append(
+                TradeOut(
+                    id=t.id,
+                    ticker=t.instruction.ticker if hasattr(t.instruction, "ticker") else ticker,
+                    symbol=getattr(t.instruction, "symbol", None) or None,
+                    side=side,
+                    qty=int(qty),
+                    price=float(price),
+                    ts=evt.received_at if evt else t.updated_at,
+                    source=t.message.author or t.message.source,
+                    tag=None,
+                )
+            )
+
+        # Chronological ascending so做T builder can FIFO-allocate by order.
+        trades.sort(key=lambda x: x.ts)
+        return TradesOut(ticker=ticker, trades=trades)
 
     # ------------------------------------------------------------------ #
     # GET /api/health                                                      #
@@ -301,11 +971,18 @@ def build_http_router(
         into the health probe.  ``longport`` is assumed ``"up"`` because the
         broker is injected at startup (real health-check is future work).
         """
+        settings_out = _longport_settings_out()
+        # Look up the active account's label so /health can surface a
+        # user-friendly hint of which account is in use right now.
+        active = next(
+            (a for a in settings_out.accounts if a.account_id == settings_out.active_account_id),
+            None,
+        )
         return HealthOut(
             whop="down",
             longport="up",
-            mode=_longport_settings_out().mode,
-            dry_run=_longport_settings_out().dry_run,
+            account_label=active.label if active else "",
+            dry_run=settings_out.dry_run,
         )
 
     @router.get("/api/longport/settings", response_model=LongPortSettingsOut)
@@ -314,28 +991,10 @@ def build_http_router(
 
     @router.patch("/api/longport/settings", response_model=LongPortSettingsOut)
     async def patch_longport_settings(body: LongPortSettingsPatch) -> LongPortSettingsOut:
+        # Only flags / region are patchable here. The account list and
+        # active account mutate exclusively through the OAuth / account
+        # endpoints below.
         patch: dict[str, object] = {}
-        if body.mode is not None:
-            patch["mode"] = body.mode
-        # Credentials: per-field merge. An empty string means "keep existing"
-        # — this prevents a UI form glitch (e.g. one of the long-string fields
-        # accidentally cleared during paste / selection) from wiping real
-        # credentials. To explicitly clear a credential the user can edit the
-        # runtime JSON file directly; the UI never has a legitimate reason to
-        # set a field to "".
-        current = runtime_store.get()
-        if body.paper is not None:
-            patch["paper"] = {
-                "app_key": body.paper.app_key or current.paper.app_key,
-                "app_secret": body.paper.app_secret or current.paper.app_secret,
-                "access_token": body.paper.access_token or current.paper.access_token,
-            }
-        if body.real is not None:
-            patch["real"] = {
-                "app_key": body.real.app_key or current.real.app_key,
-                "app_secret": body.real.app_secret or current.real.app_secret,
-                "access_token": body.real.access_token or current.real.access_token,
-            }
         if body.auto_trade is not None:
             patch["auto_trade"] = body.auto_trade
         if body.region is not None:
@@ -343,6 +1002,123 @@ def build_http_router(
         if body.dry_run is not None:
             patch["dry_run"] = body.dry_run
         runtime_store.update(patch)
+        return _longport_settings_out()
+
+    # ------------------------------------------------------------------ #
+    # OAuth login flow                                                    #
+    #                                                                     #
+    # /start: register a client_id if missing, then kick off the SDK's    #
+    #         local-callback OAuth dance and return the auth URL for the  #
+    #         UI to window.open().                                        #
+    # /status: poll for completion (the SDK's callback server fires when  #
+    #         the user finishes authorizing in their browser).            #
+    # /logout: delete the SDK's local token cache for the chosen mode so  #
+    #         the next login flow starts from scratch.                    #
+    # ------------------------------------------------------------------ #
+    # Reference the module (not its members) so tests can monkeypatch
+    # ``register_client`` / ``revoke_local_token`` on the module and the
+    # routes pick up the patched version on next call.
+    from app.broker import oauth as oauth_mod
+
+    # One coordinator instance per router build — its sessions are in-memory
+    # and tied to this app process. Hoisting it outside the router would
+    # leak state across test fixtures.
+    oauth_coordinator = oauth_mod.OAuthCoordinator()
+
+    @router.post(
+        "/api/longport/oauth/start",
+        response_model=LongPortOAuthStartOut,
+    )
+    async def post_longport_oauth_start() -> LongPortOAuthStartOut:
+        """Start a fresh OAuth flow to add a new LongBridge account slot.
+
+        Always registers a brand-new OAuth client_id — there is no concept
+        of "re-using" a previously-authorized account here, because each
+        invocation expresses the user's intent to add an account.
+        """
+        try:
+            account_id = await oauth_mod.register_client(
+                client_name="Signal Station",
+            )
+        except Exception as e:
+            raise HTTPException(
+                status_code=502,
+                detail=f"OAuth client registration failed: {e}",
+            ) from e
+
+        session = await oauth_coordinator.start(account_id)
+        # Port-bind recovery is now handled inside the coordinator (it
+        # cancels the prior task + waits for the OS to release the socket
+        # before rebinding the same port). If it still fails here, the
+        # port is held by an outside process and re-registration won't
+        # help — surface the error.
+        if session.state == "error" or session.auth_url is None:
+            raise HTTPException(
+                status_code=502,
+                detail=session.error or "OAuth flow failed to start",
+            )
+        return LongPortOAuthStartOut(
+            session_id=session.session_id,
+            auth_url=session.auth_url,
+            account_id=account_id,
+        )
+
+    @router.get(
+        "/api/longport/oauth/status",
+        response_model=LongPortOAuthStatusOut,
+    )
+    async def get_longport_oauth_status(session_id: str) -> LongPortOAuthStatusOut:
+        session = oauth_coordinator.get(session_id)
+        if session is None:
+            raise HTTPException(status_code=404, detail="OAuth session not found")
+        # On success, materialize the account into the settings list. We
+        # only do this once — add_account is idempotent on account_id.
+        if session.state == "success":
+            runtime_store.add_account(session.client_id)
+        return LongPortOAuthStatusOut(
+            state=session.state,
+            error=session.error,
+            account_id=session.client_id if session.state == "success" else None,
+        )
+
+    @router.post(
+        "/api/longport/oauth/activate",
+        response_model=LongPortSettingsOut,
+    )
+    async def post_longport_oauth_activate(
+        body: LongPortAccountActivateIn,
+    ) -> LongPortSettingsOut:
+        """Set ``account_id`` as the active account. Caller is expected to
+        invoke /broker/reload separately to actually swap the broker."""
+        try:
+            runtime_store.set_active(body.account_id)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e)) from e
+        return _longport_settings_out()
+
+    @router.post(
+        "/api/longport/oauth/logout",
+        response_model=LongPortSettingsOut,
+    )
+    async def post_longport_oauth_logout(
+        body: LongPortAccountLogoutIn,
+    ) -> LongPortSettingsOut:
+        """Remove an account: scrub the SDK token cache, drop from the
+        settings list. If it was the active account, fall back to whatever
+        account remains."""
+        oauth_mod.revoke_local_token(body.account_id)
+        runtime_store.remove_account(body.account_id)
+        return _longport_settings_out()
+
+    @router.patch(
+        "/api/longport/oauth/account",
+        response_model=LongPortSettingsOut,
+    )
+    async def patch_longport_oauth_account(
+        body: LongPortAccountRenameIn,
+    ) -> LongPortSettingsOut:
+        """Rename an account's display label."""
+        runtime_store.rename_account(body.account_id, body.label)
         return _longport_settings_out()
 
     # ------------------------------------------------------------------ #
@@ -357,7 +1133,7 @@ def build_http_router(
             snap = broker_status_fn()
             return BrokerStatusOut(
                 is_real=bool(snap.get("is_real")),
-                mode=str(snap.get("mode", "paper")),
+                account_label=str(snap.get("account_label", "")),
                 dry_run=bool(snap.get("dry_run")),
                 last_init_error=snap.get("last_init_error"),
             )
@@ -373,7 +1149,7 @@ def build_http_router(
             snap = await broker_reload_fn()
             return BrokerStatusOut(
                 is_real=bool(snap.get("is_real")),
-                mode=str(snap.get("mode", "paper")),
+                account_label=str(snap.get("account_label", "")),
                 dry_run=bool(snap.get("dry_run")),
                 last_init_error=snap.get("last_init_error"),
             )

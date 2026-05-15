@@ -368,6 +368,88 @@ def test_ws_hub_close_removes_all_connections(
 # ---------------------------------------------------------------------------
 
 
+def test_quote_snapshot_broadcast(
+    ws_app: tuple[FastAPI, EventBus, WebSocketHub, Settings],
+) -> None:
+    """Bus publish QUOTE_SNAPSHOT → WS clients receive event with
+    symbol + quote dict. Frontend writes payload.quote into quotesStore
+    keyed by payload.symbol."""
+    from app.core.events import QuoteSnapshotPayload
+
+    app, bus, _hub, _settings = ws_app
+    client = TestClient(app)
+
+    with client, client.websocket_connect(f"/ws?token={_TOKEN}") as ws:
+        quote = {
+            "last_done": 250.5,
+            "open": 248.0,
+            "high": 251.0,
+            "low": 247.5,
+            "volume": 100_000,
+            "turnover": 25_000_000.0,
+            "trade_session": "regular",
+        }
+
+        async def _pub() -> None:
+            await bus.publish(
+                Event(
+                    topic=Topics.QUOTE_SNAPSHOT,
+                    payload=QuoteSnapshotPayload(symbol="TSLA.US", quote=quote),
+                )
+            )
+            await bus.wait_idle(timeout=2.0)
+
+        assert client.portal is not None
+        client.portal.call(_pub)
+
+        msg = json.loads(ws.receive_text())
+        assert msg["type"] == "quote.snapshot"
+        assert msg["payload"]["symbol"] == "TSLA.US"
+        assert msg["payload"]["quote"]["last_done"] == 250.5
+        assert msg["payload"]["quote"]["trade_session"] == "regular"
+
+
+def test_execution_update_broadcast(
+    ws_app: tuple[FastAPI, EventBus, WebSocketHub, Settings],
+) -> None:
+    """Bus publish EXECUTION_UPDATE → WS clients receive event with the
+    full ExecutionOut-shaped payload (order_id, symbol, ticker, side,
+    qty, price, ts). Frontend upserts into executions store."""
+    from app.core.events import ExecutionPayload
+
+    app, bus, _hub, _settings = ws_app
+    client = TestClient(app)
+
+    with client, client.websocket_connect(f"/ws?token={_TOKEN}") as ws:
+        payload = ExecutionPayload(
+            order_id="ord-9001",
+            symbol="TSLA.US",
+            ticker="TSLA",
+            side="BUY",
+            qty=10,
+            price=245.5,
+            ts="2026-05-15T12:00:00+00:00",
+        )
+
+        async def _pub() -> None:
+            await bus.publish(Event(topic=Topics.EXECUTION_UPDATE, payload=payload))
+            await bus.wait_idle(timeout=2.0)
+
+        assert client.portal is not None
+        client.portal.call(_pub)
+
+        msg = json.loads(ws.receive_text())
+        assert msg["type"] == "execution.update"
+        p = msg["payload"]
+        assert p["order_id"] == "ord-9001"
+        assert p["symbol"] == "TSLA.US"
+        assert p["ticker"] == "TSLA"
+        assert p["side"] == "BUY"
+        assert p["qty"] == 10
+        assert p["price"] == 245.5
+        assert p["ts"] == "2026-05-15T12:00:00+00:00"
+
+
 def test_whop_page_changed_broadcast(
     ws_app: tuple[FastAPI, EventBus, WebSocketHub, Settings],
 ) -> None:

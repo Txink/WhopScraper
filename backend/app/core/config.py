@@ -38,13 +38,10 @@ class Settings(BaseSettings):
     # ------------------------------------------------------------------ #
     # LongPort broker                                                      #
     # ------------------------------------------------------------------ #
+    # OAuth-era: credentials are no longer surfaced as env vars — the SDK
+    # persists OAuth tokens at ~/.longbridge/openapi/tokens/<client_id> and
+    # the registered client_id is stored in data/longport_settings.json.
     longport_mode: str = "paper"
-    longport_paper_app_key: str = ""
-    longport_paper_app_secret: str = ""
-    longport_paper_access_token: str = ""
-    longport_real_app_key: str = ""
-    longport_real_app_secret: str = ""
-    longport_real_access_token: str = ""
     longport_region: str = "cn"
     longport_auto_trade: bool = True
     longport_dry_run: bool = True

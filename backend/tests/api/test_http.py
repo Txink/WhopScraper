@@ -165,7 +165,9 @@ def test_health(client_and_broker: tuple[TestClient, FakeBrokerClient]) -> None:
     data = resp.json()
     assert data["whop"] == "down"
     assert data["longport"] == "up"
-    assert data["mode"] in ("paper", "real")
+    # account_label is empty when no account is active yet (test fixture
+    # has no accounts registered) — present as a string field regardless.
+    assert isinstance(data["account_label"], str)
     assert isinstance(data["dry_run"], bool)
 
 
@@ -457,6 +459,41 @@ def test_positions_empty_returns_empty_lists(
     assert data["options"] == []
 
 
+def test_positions_returns_broker_holdings(
+    client_and_broker: tuple[TestClient, FakeBrokerClient],
+) -> None:
+    """Live broker.stock_positions() drives the response — no DB cache."""
+    client, broker = client_and_broker
+    broker.stock_positions_list = [  # type: ignore[attr-defined]
+        {"symbol": "TSLL.US", "ticker": "TSLL", "name": "Direxion TSLA Bull 2X",
+         "quantity": 800, "avg_cost": 11.889, "currency": "USD"},
+        {"symbol": "IREN.US", "ticker": "IREN", "name": "IREN",
+         "quantity": 55, "avg_cost": 44.935, "currency": "USD"},
+    ]
+    resp = client.get("/api/positions", params={"token": _TOKEN})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert [p["ticker"] for p in data["stocks"]] == ["TSLL", "IREN"]
+    assert data["stocks"][0]["quantity"] == 800
+    assert data["stocks"][0]["avg_cost"] == pytest.approx(11.889)
+
+
+def test_positions_broker_error_falls_back_to_empty(
+    client_and_broker: tuple[TestClient, FakeBrokerClient],
+) -> None:
+    """If the broker raises (e.g. SDK transient failure), we return [] rather
+    than 502 — the dashboard treats absence as 'no positions'."""
+    client, broker = client_and_broker
+
+    def boom() -> list:
+        raise RuntimeError("simulated broker outage")
+    broker.stock_positions = boom  # type: ignore[assignment]
+
+    resp = client.get("/api/positions", params={"token": _TOKEN})
+    assert resp.status_code == 200
+    assert resp.json()["stocks"] == []
+
+
 # ---------------------------------------------------------------------------
 # 14. No token → 403
 # ---------------------------------------------------------------------------
@@ -473,97 +510,61 @@ def test_get_longport_settings(client_and_broker: tuple[TestClient, FakeBrokerCl
     resp = client.get("/api/longport/settings", params={"token": _TOKEN})
     assert resp.status_code == 200
     body = resp.json()
-    assert body["mode"] in ("paper", "real")
-    assert "paper" in body and "real" in body
+    # Multi-account shape: list of accounts + active pointer + flags.
+    assert "active_account_id" in body
+    assert isinstance(body["accounts"], list)
     assert "auto_trade" in body and "dry_run" in body and "region" in body
 
 
 def test_patch_longport_settings(client_and_broker: tuple[TestClient, FakeBrokerClient]) -> None:
+    """PATCH only accepts auto_trade / region / dry_run.
+
+    Account list + active selection mutate exclusively through
+    /api/longport/oauth/* endpoints. Anything else in the body is
+    silently dropped (Pydantic ignores unknown fields).
+    """
+    client, _ = client_and_broker
+    resp = client.patch(
+        "/api/longport/settings",
+        params={"token": _TOKEN},
+        json={
+            "auto_trade": False,
+            "dry_run": False,
+            "region": "hk",
+        },
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["auto_trade"] is False
+    assert body["dry_run"] is False
+    assert body["region"] == "hk"
+    # Account list shape unchanged by a flag-only PATCH.
+    assert isinstance(body["accounts"], list)
+    assert "active_account_id" in body
+
+
+def test_patch_longport_settings_rejects_legacy_credential_fields(
+    client_and_broker: tuple[TestClient, FakeBrokerClient],
+) -> None:
+    """Legacy `mode` / `paper` / `real` payloads must be ignored by the
+    multi-account schema. Pydantic drops unknown fields; the persisted
+    shape stays clean.
+    """
     client, _ = client_and_broker
     resp = client.patch(
         "/api/longport/settings",
         params={"token": _TOKEN},
         json={
             "mode": "real",
-            "auto_trade": False,
-            "dry_run": False,
-            "region": "hk",
-            "paper": {"app_key": "pk", "app_secret": "ps", "access_token": "pt"},
-            "real": {"app_key": "rk", "app_secret": "rs", "access_token": "rt"},
+            "paper": {"app_key": "x", "app_secret": "y", "access_token": "z"},
         },
     )
     assert resp.status_code == 200
     body = resp.json()
-    assert body["mode"] == "real"
-    assert body["auto_trade"] is False
-    assert body["dry_run"] is False
-    assert body["region"] == "hk"
-    assert body["real"]["app_key"] == "rk"
-
-
-def test_patch_longport_settings_empty_credential_fields_preserve_existing(
-    client_and_broker: tuple[TestClient, FakeBrokerClient],
-) -> None:
-    """Empty credential strings in PATCH must NOT wipe existing values.
-
-    Regression: a UI form glitch (e.g. paste mishap clearing a field) was
-    sending paper.app_secret="" with otherwise-correct creds. Wholesale
-    overwrite stored "" → restart loaded empty creds → LongPort init failed
-    → broker fell back to NoopClient. Per-field merge preserves the prior
-    value when the incoming string is empty.
-    """
-    client, _ = client_and_broker
-    # 1. Seed with full creds
-    resp = client.patch(
-        "/api/longport/settings",
-        params={"token": _TOKEN},
-        json={
-            "paper": {"app_key": "pk-good", "app_secret": "ps-good", "access_token": "pt-good"},
-        },
-    )
-    assert resp.status_code == 200
-    assert resp.json()["paper"]["app_key"] == "pk-good"
-
-    # 2. PATCH with one field empty (simulating UI glitch). The other two
-    #    arrive correctly; access_token is empty.
-    resp = client.patch(
-        "/api/longport/settings",
-        params={"token": _TOKEN},
-        json={
-            "paper": {"app_key": "pk-good", "app_secret": "ps-good", "access_token": ""},
-        },
-    )
-    assert resp.status_code == 200
-    body = resp.json()
-    # Empty access_token preserved the previously-stored value.
-    assert body["paper"]["access_token"] == "pt-good"
-    # Non-empty fields stay as sent.
-    assert body["paper"]["app_key"] == "pk-good"
-    assert body["paper"]["app_secret"] == "ps-good"
-
-
-def test_patch_longport_settings_all_empty_credentials_preserve_existing(
-    client_and_broker: tuple[TestClient, FakeBrokerClient],
-) -> None:
-    """A PATCH where ALL three credential fields are empty (e.g. modal sent
-    a stale form before user re-entered anything) must leave existing creds
-    untouched."""
-    client, _ = client_and_broker
-    client.patch(
-        "/api/longport/settings",
-        params={"token": _TOKEN},
-        json={"paper": {"app_key": "k1", "app_secret": "s1", "access_token": "t1"}},
-    )
-    resp = client.patch(
-        "/api/longport/settings",
-        params={"token": _TOKEN},
-        json={"paper": {"app_key": "", "app_secret": "", "access_token": ""}},
-    )
-    assert resp.status_code == 200
-    body = resp.json()
-    assert body["paper"]["app_key"] == "k1"
-    assert body["paper"]["app_secret"] == "s1"
-    assert body["paper"]["access_token"] == "t1"
+    # No mode or per-mode slot keys leak into the response.
+    assert "mode" not in body
+    assert "paper" not in body
+    assert "real" not in body
 
 
 @pytest_asyncio.fixture
@@ -713,7 +714,8 @@ def test_broker_status_returns_current_state(
     assert resp.status_code == 200
     body = resp.json()
     assert body["is_real"] is True
-    assert body["mode"] == "paper"
+    # account_label replaces the prior paper/real mode field.
+    assert isinstance(body["account_label"], str)
     assert body["dry_run"] is False
     assert body["last_init_error"] is None
 
@@ -771,3 +773,486 @@ def test_broker_status_endpoint_omitted_when_status_fn_not_provided(
     assert resp.status_code == 404
     resp = client.post("/api/longport/broker/reload", params={"token": _TOKEN})
     assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# OAuth endpoints — register / start / status / logout
+# ---------------------------------------------------------------------------
+
+
+def test_oauth_start_registers_fresh_account(
+    client_and_broker: tuple[TestClient, FakeBrokerClient],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Each /oauth/start registers a NEW OAuth client; the resulting
+    account_id is returned to the caller for polling."""
+    from app.broker import oauth as oauth_mod
+
+    client, _ = client_and_broker
+    registered: list[str] = []
+
+    async def fake_register(client_name: str = "Signal Station", **_: object) -> str:
+        registered.append(client_name)
+        return "fresh-acct-1"
+
+    monkeypatch.setattr(oauth_mod, "register_client", fake_register)
+
+    async def fake_start(self, client_id: str, **_: object):
+        from app.broker.oauth import OAuthSession
+
+        sess = OAuthSession(session_id="sid-1", client_id=client_id)
+        sess.auth_url = f"https://example.test/auth?cid={client_id}"
+        sess.state = "ready"
+        self._sessions[sess.session_id] = sess
+        return sess
+
+    monkeypatch.setattr(oauth_mod.OAuthCoordinator, "start", fake_start)
+
+    resp = client.post(
+        "/api/longport/oauth/start",
+        params={"token": _TOKEN},
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["account_id"] == "fresh-acct-1"
+    assert body["session_id"] == "sid-1"
+    assert "fresh-acct-1" in body["auth_url"]
+    assert registered == ["Signal Station"]
+
+
+def test_oauth_status_adds_account_on_success(
+    client_and_broker: tuple[TestClient, FakeBrokerClient],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """When /oauth/status flips to success, the new account_id is appended
+    to the accounts list and becomes active (it's the first one)."""
+    from app.broker import oauth as oauth_mod
+    from app.broker.oauth import OAuthSession
+
+    client, _ = client_and_broker
+
+    async def fake_register(**_: object) -> str:
+        return "acct-success"
+
+    monkeypatch.setattr(oauth_mod, "register_client", fake_register)
+
+    captured: dict[str, OAuthSession] = {}
+
+    async def fake_start(self, client_id: str, **_: object):
+        sess = OAuthSession(session_id="sid-success", client_id=client_id)
+        sess.auth_url = "https://example.test/auth"
+        sess.state = "ready"
+        self._sessions[sess.session_id] = sess
+        captured["session"] = sess
+        return sess
+
+    monkeypatch.setattr(oauth_mod.OAuthCoordinator, "start", fake_start)
+
+    client.post(
+        "/api/longport/oauth/start",
+        params={"token": _TOKEN},
+    )
+    captured["session"].state = "success"
+
+    resp = client.get(
+        "/api/longport/oauth/status",
+        params={"token": _TOKEN, "session_id": "sid-success"},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["state"] == "success"
+    assert body["account_id"] == "acct-success"
+
+    settings = client.get("/api/longport/settings", params={"token": _TOKEN}).json()
+    # The first account added is auto-promoted to active.
+    assert settings["active_account_id"] == "acct-success"
+    account_ids = [a["account_id"] for a in settings["accounts"]]
+    assert "acct-success" in account_ids
+
+
+def test_oauth_status_unknown_session_returns_404(
+    client_and_broker: tuple[TestClient, FakeBrokerClient],
+) -> None:
+    client, _ = client_and_broker
+    resp = client.get(
+        "/api/longport/oauth/status",
+        params={"token": _TOKEN, "session_id": "no-such-session"},
+    )
+    assert resp.status_code == 404
+
+
+def test_oauth_logout_removes_account(
+    client_and_broker: tuple[TestClient, FakeBrokerClient],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """POST /oauth/logout scrubs the token cache and drops the slot."""
+    from app.broker import oauth as oauth_mod
+    from app.broker.oauth import OAuthSession
+
+    client, _ = client_and_broker
+
+    async def fake_register(**_: object) -> str:
+        return "acct-to-logout"
+
+    monkeypatch.setattr(oauth_mod, "register_client", fake_register)
+
+    captured: dict[str, OAuthSession] = {}
+
+    async def fake_start(self, client_id: str, **_: object):
+        sess = OAuthSession(session_id="sid-x", client_id=client_id)
+        sess.auth_url = "https://example.test/auth"
+        sess.state = "ready"
+        self._sessions[sess.session_id] = sess
+        captured["session"] = sess
+        return sess
+
+    monkeypatch.setattr(oauth_mod.OAuthCoordinator, "start", fake_start)
+
+    revoked: list[str] = []
+
+    def fake_revoke(cid: str | None) -> bool:
+        if cid:
+            revoked.append(cid)
+        return True
+
+    monkeypatch.setattr(oauth_mod, "revoke_local_token", fake_revoke)
+
+    # First add the account (start + flip to success + poll status).
+    client.post("/api/longport/oauth/start", params={"token": _TOKEN})
+    captured["session"].state = "success"
+    client.get(
+        "/api/longport/oauth/status",
+        params={"token": _TOKEN, "session_id": "sid-x"},
+    )
+
+    resp = client.post(
+        "/api/longport/oauth/logout",
+        params={"token": _TOKEN},
+        json={"account_id": "acct-to-logout"},
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    # Account removed from list; active pointer reset to None (no fallback).
+    assert all(a["account_id"] != "acct-to-logout" for a in body["accounts"])
+    assert body["active_account_id"] is None
+    assert revoked == ["acct-to-logout"]
+
+
+def test_oauth_activate_and_rename(
+    client_and_broker: tuple[TestClient, FakeBrokerClient],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Activate + rename endpoints mutate the runtime store correctly."""
+    from app.broker import oauth as oauth_mod
+    from app.broker.oauth import OAuthSession
+
+    client, _ = client_and_broker
+
+    counter = {"n": 0}
+
+    async def fake_register(**_: object) -> str:
+        counter["n"] += 1
+        return f"acct-{counter['n']}"
+
+    monkeypatch.setattr(oauth_mod, "register_client", fake_register)
+
+    sessions: dict[str, OAuthSession] = {}
+
+    async def fake_start(self, client_id: str, **_: object):
+        sid = f"sid-{client_id}"
+        sess = OAuthSession(session_id=sid, client_id=client_id)
+        sess.auth_url = "https://example.test/auth"
+        sess.state = "ready"
+        self._sessions[sid] = sess
+        sessions[client_id] = sess
+        return sess
+
+    monkeypatch.setattr(oauth_mod.OAuthCoordinator, "start", fake_start)
+
+    # Add two accounts.
+    for _ in range(2):
+        r = client.post("/api/longport/oauth/start", params={"token": _TOKEN}).json()
+        sessions[r["account_id"]].state = "success"
+        client.get(
+            "/api/longport/oauth/status",
+            params={"token": _TOKEN, "session_id": r["session_id"]},
+        )
+
+    # First account is active by default.
+    settings = client.get("/api/longport/settings", params={"token": _TOKEN}).json()
+    assert settings["active_account_id"] == "acct-1"
+
+    # Activate the second account.
+    resp = client.post(
+        "/api/longport/oauth/activate",
+        params={"token": _TOKEN},
+        json={"account_id": "acct-2"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["active_account_id"] == "acct-2"
+
+    # Rename the second account.
+    resp = client.patch(
+        "/api/longport/oauth/account",
+        params={"token": _TOKEN},
+        json={"account_id": "acct-2", "label": "副账户"},
+    )
+    assert resp.status_code == 200
+    labels = {a["account_id"]: a["label"] for a in resp.json()["accounts"]}
+    assert labels["acct-2"] == "副账户"
+
+
+def test_today_executions_endpoint_aggregates_partial_fills(
+    client_and_broker: tuple[TestClient, FakeBrokerClient],
+) -> None:
+    """today_executions now aggregates per-fill rows by order_id (qty sum,
+    weighted-avg price, latest ts). Endpoint syncs to DB then reads back
+    one row per order. Side-less rows get filtered at response time."""
+    from datetime import datetime, timezone
+
+    client, broker = client_and_broker
+    broker.history_executions_list = [  # type: ignore[attr-defined]
+        # Two partial fills on the same order — should aggregate.
+        {
+            "order_id": "o-1",
+            "trade_id": "t-1a",
+            "symbol": "HOOD260618P100000.US",
+            "ticker": "HOOD",
+            "side": "SELL",
+            "qty": 30,
+            "price": 1.7,
+            "ts": datetime(2026, 5, 15, 16, 0, 0, tzinfo=timezone.utc),
+        },
+        {
+            "order_id": "o-1",
+            "trade_id": "t-1b",
+            "symbol": "HOOD260618P100000.US",
+            "ticker": "HOOD",
+            "side": "SELL",
+            "qty": 10,
+            "price": 1.7,
+            "ts": datetime(2026, 5, 15, 16, 1, 0, tzinfo=timezone.utc),
+        },
+        # Separate order with empty side — kept in DB but filtered at
+        # response (side not BUY/SELL).
+        {
+            "order_id": "o-2",
+            "symbol": "HOOD260618P100000.US",
+            "ticker": "HOOD",
+            "side": "",
+            "qty": 20,
+            "price": 1.5,
+            "ts": datetime(2026, 5, 15, 16, 30, 0, tzinfo=timezone.utc),
+        },
+    ]
+    resp = client.get("/api/broker/today_executions", params={"token": _TOKEN})
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    # o-1 aggregates to qty=40, o-2 drops due to empty side.
+    assert len(body["executions"]) == 1
+    exec0 = body["executions"][0]
+    assert exec0["order_id"] == "o-1"
+    assert exec0["side"] == "SELL"
+    assert exec0["qty"] == 40
+    assert exec0["price"] == 1.7  # weighted avg of identical prices
+    # task_id is null because no signal-station task points at this order_id.
+    assert exec0["task_id"] is None
+
+
+def test_history_executions_endpoint_paginates(
+    client_and_broker: tuple[TestClient, FakeBrokerClient],
+) -> None:
+    """``/api/broker/executions?offset=&limit=`` slices the result newest-first
+    and reports total_count + has_more so the UI can drive "加载更多" without
+    losing cross-page做T binding state."""
+    from datetime import datetime, timedelta, timezone
+
+    client, broker = client_and_broker
+    base = datetime(2026, 5, 14, 16, 0, 0, tzinfo=timezone.utc)
+    # 5 distinct fills, monotonically-increasing ts so order is unambiguous.
+    broker.history_executions_list = [  # type: ignore[attr-defined]
+        {
+            "order_id": f"o-{i}",
+            "symbol": "TSLA.US",
+            "ticker": "TSLA",
+            "side": "BUY" if i % 2 == 0 else "SELL",
+            "qty": 10 + i,
+            "price": 200.0 + i,
+            "ts": base + timedelta(minutes=i),
+        }
+        for i in range(5)
+    ]
+
+    # Page 1: newest 2.
+    r1 = client.get(
+        "/api/broker/executions",
+        params={"token": _TOKEN, "ticker": "TSLA", "offset": 0, "limit": 2},
+    )
+    assert r1.status_code == 200, r1.text
+    b1 = r1.json()
+    assert b1["total_count"] == 5
+    assert b1["has_more"] is True
+    assert [e["order_id"] for e in b1["executions"]] == ["o-4", "o-3"]
+
+    # Page 2: next 2.
+    r2 = client.get(
+        "/api/broker/executions",
+        params={"token": _TOKEN, "ticker": "TSLA", "offset": 2, "limit": 2},
+    )
+    b2 = r2.json()
+    assert b2["total_count"] == 5
+    assert b2["has_more"] is True
+    assert [e["order_id"] for e in b2["executions"]] == ["o-2", "o-1"]
+
+    # Page 3: tail row, has_more flips off.
+    r3 = client.get(
+        "/api/broker/executions",
+        params={"token": _TOKEN, "ticker": "TSLA", "offset": 4, "limit": 2},
+    )
+    b3 = r3.json()
+    assert b3["total_count"] == 5
+    assert b3["has_more"] is False
+    assert [e["order_id"] for e in b3["executions"]] == ["o-0"]
+
+
+def test_history_executions_endpoint_backfills_across_windows(
+    client_and_broker: tuple[TestClient, FakeBrokerClient],
+) -> None:
+    """First-time sync iterates 90-day chunks backwards up to ``days`` total
+    so rows older than 90d still land in the DB. Asserts that a row at
+    ``now-150d`` is persisted alongside one at ``now-15d`` (i.e. multiple
+    windows were issued)."""
+    from datetime import datetime, timedelta, timezone
+
+    client, broker = client_and_broker
+    now = datetime.now(timezone.utc)
+    broker.history_executions_list = [  # type: ignore[attr-defined]
+        # Window 1 (now-90d → now): recent fill
+        {
+            "order_id": "recent",
+            "symbol": "TSLA.US",
+            "ticker": "TSLA",
+            "side": "BUY",
+            "qty": 10,
+            "price": 200.0,
+            "ts": now - timedelta(days=15),
+        },
+        # Window 2 (now-180d → now-90d): old fill, only reachable if
+        # the sync issued a second backfill chunk.
+        {
+            "order_id": "old",
+            "symbol": "TSLA.US",
+            "ticker": "TSLA",
+            "side": "SELL",
+            "qty": 5,
+            "price": 220.0,
+            "ts": now - timedelta(days=150),
+        },
+    ]
+
+    r = client.get(
+        "/api/broker/executions",
+        params={"token": _TOKEN, "ticker": "TSLA", "days": 365, "limit": 50},
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["total_count"] == 2
+    ids = sorted(e["order_id"] for e in body["executions"])
+    assert ids == ["old", "recent"]
+
+
+def test_quotes_watch_endpoint_diffs_subscriptions(
+    tmp_path,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """POST /api/quotes/watch replaces the symbol watch list — backend
+    diffs the new set against the prior one and subscribes/unsubscribes
+    on the broker accordingly. Empty list clears everything."""
+    from app.api.http import build_http_router
+    from app.broker.subscription_manager import SubscriptionManager
+    from app.core.config import Settings
+    from app.core.event_bus import EventBus
+    import asyncio
+
+    broker = FakeBrokerClient()
+    settings = Settings(app_token=_TOKEN)
+    bus = EventBus()
+
+    # Lazily-bound manager — created on first endpoint hit so the router
+    # can be built before there's an event loop.
+    mgr_ref: dict[str, SubscriptionManager | None] = {"mgr": None}
+
+    def _get_mgr() -> SubscriptionManager:
+        if mgr_ref["mgr"] is None:
+            mgr_ref["mgr"] = SubscriptionManager(broker, asyncio.get_event_loop())
+            mgr_ref["mgr"].attach()
+        return mgr_ref["mgr"]
+
+    app = FastAPI()
+    app.include_router(
+        build_http_router(
+            session_factory=session_factory,
+            broker=broker,
+            settings=settings,
+            bus=bus,
+            subscription_manager_getter=_get_mgr,
+        )
+    )
+    app.dependency_overrides[get_settings] = lambda: settings
+    client = TestClient(app)
+
+    # First watch — pure additions.
+    r1 = client.post(
+        "/api/quotes/watch",
+        params={"token": _TOKEN},
+        json={"symbols": ["TSLA.US", "AAPL.US"]},
+    )
+    assert r1.status_code == 200, r1.text
+    assert r1.json() == {"added": 2, "removed": 0, "total": 2}
+
+    # Swap one, keep one.
+    r2 = client.post(
+        "/api/quotes/watch",
+        params={"token": _TOKEN},
+        json={"symbols": ["TSLA.US", "NVDA.US"]},
+    )
+    assert r2.json() == {"added": 1, "removed": 1, "total": 2}
+
+    # Empty list clears.
+    r3 = client.post(
+        "/api/quotes/watch",
+        params={"token": _TOKEN},
+        json={"symbols": []},
+    )
+    assert r3.json() == {"added": 0, "removed": 2, "total": 0}
+
+
+def test_quotes_watch_endpoint_503_when_hub_unavailable(
+    tmp_path,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """No subscription_manager_getter passed → endpoint returns 503 so
+    the frontend can retry after broker init / auth completes."""
+    from app.api.http import build_http_router
+    from app.core.config import Settings
+    from app.core.event_bus import EventBus
+
+    settings = Settings(app_token=_TOKEN)
+    app = FastAPI()
+    app.include_router(
+        build_http_router(
+            session_factory=session_factory,
+            broker=FakeBrokerClient(),
+            settings=settings,
+            bus=EventBus(),
+        )
+    )
+    app.dependency_overrides[get_settings] = lambda: settings
+    client = TestClient(app)
+
+    r = client.post(
+        "/api/quotes/watch",
+        params={"token": _TOKEN},
+        json={"symbols": ["TSLA.US"]},
+    )
+    assert r.status_code == 503

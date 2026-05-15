@@ -144,8 +144,9 @@ def test_acceptance_websocket_broadcast_and_replay() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_acceptance_health_endpoint_exposes_mode() -> None:
-    """Spec §11.6: app starts and /api/health reports broker mode and dry_run."""
+def test_acceptance_health_endpoint_exposes_account_label() -> None:
+    """Spec §11.6 (updated): app starts and /api/health reports account_label
+    + dry_run. Multi-account era — no paper/real mode field."""
     settings = _settings_for_test()
     broker = FakeBrokerClient(is_paper=True, dry_run=True)
     app = create_app(settings=settings, broker_override=broker, skip_whop=True)
@@ -155,7 +156,7 @@ def test_acceptance_health_endpoint_exposes_mode() -> None:
         r = client.get("/api/health", params={"token": "acceptance-token"})
         assert r.status_code == 200
         h = r.json()
-        assert h["mode"] == "paper"
+        assert isinstance(h["account_label"], str)
         assert h["dry_run"] is True
 
 

@@ -90,6 +90,8 @@ def create_app(
     state.trader_unsub = None
     state.push_listener = None
     state.last_init_error = None
+    state.subscription_manager = None
+    state.market_schedule = None
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -193,12 +195,12 @@ def create_app(
             try:
                 return load_longport_config_from_runtime(runtime, settings=settings)
             except ValueError:
-                # No creds yet; trader still uses runtime auto_trade gate.
+                # No active account / not yet authorized; trader still
+                # uses runtime auto_trade + dry_run gates so confirmations
+                # and risk math keep working even before the user logs in.
                 return LongPortConfig(
-                    mode=runtime.mode,
-                    app_key="",
-                    app_secret="",
-                    access_token="",
+                    account_id="",
+                    label="",
                     region=runtime.region,
                     auto_trade=runtime.auto_trade,
                     dry_run=runtime.dry_run,
@@ -229,7 +231,82 @@ def create_app(
                 push_listener=state.push_listener,
             )
 
+        def _build_subscription_manager() -> None:
+            """Wire SubscriptionManager + MarketSchedule to the current
+            broker and bind bus-publishing listeners. Called once at
+            startup and again after each ``_broker_reload``.
+
+            Two bus listeners are registered:
+              - Quote push → ``Topics.QUOTE_SNAPSHOT`` (per-symbol live price)
+              - Execution push → ``Topics.EXECUTION_UPDATE`` (per-fill row)
+
+            The MarketSchedule cache is also bound here — its initial
+            refresh runs as a "default task" alongside the subscription
+            attach. Subsequent calls reuse the cache (6h fatigue) so
+            the SDK isn't hit on every quote.
+            """
+            from app.broker.market_schedule import MarketSchedule
+            from app.broker.subscription_manager import SubscriptionManager
+            from app.core.event_bus import Event
+            from app.core.events import (
+                ExecutionPayload,
+                QuoteSnapshotPayload,
+                Topics,
+            )
+
+            loop = asyncio.get_running_loop()
+            mgr = SubscriptionManager(state.broker, loop)
+
+            schedule = MarketSchedule(state.broker)
+            state.market_schedule = schedule
+            # Inject the schedule into the broker so internal state
+            # lookups (``_market_state_for``) hit the cached service
+            # instead of issuing per-quote SDK calls.
+            if hasattr(state.broker, "bind_market_schedule"):
+                state.broker.bind_market_schedule(schedule)
+            # Default task: kick off the initial refresh in the
+            # background so the cache is warm by the time the first
+            # push arrives. Failure is logged but not fatal — the
+            # state_for fallback uses the static clock heuristic.
+            asyncio.ensure_future(schedule.maybe_refresh())
+
+            def _publish_quote(symbol: str, quote: dict[str, Any]) -> None:
+                # SDK thread → marshal onto loop. Closure captures ``bus``
+                # via the outer scope, so the lambda body stays small.
+                payload = QuoteSnapshotPayload(symbol=symbol, quote=quote)
+                event = Event(Topics.QUOTE_SNAPSHOT, payload)
+                try:
+                    loop.call_soon_threadsafe(
+                        lambda: asyncio.ensure_future(bus.publish(event))
+                    )
+                except RuntimeError:
+                    logger.debug("quote dispatch: loop closed")
+
+            def _publish_execution(exec_dict: dict[str, Any]) -> None:
+                payload = ExecutionPayload(
+                    order_id=exec_dict["order_id"],
+                    symbol=exec_dict["symbol"],
+                    ticker=exec_dict["ticker"],
+                    side=exec_dict["side"],
+                    qty=exec_dict["qty"],
+                    price=exec_dict["price"],
+                    ts=exec_dict.get("ts"),
+                )
+                event = Event(Topics.EXECUTION_UPDATE, payload)
+                try:
+                    loop.call_soon_threadsafe(
+                        lambda: asyncio.ensure_future(bus.publish(event))
+                    )
+                except RuntimeError:
+                    logger.debug("execution dispatch: loop closed")
+
+            mgr.add_quote_listener(_publish_quote)
+            mgr.add_execution_listener(_publish_execution)
+            mgr.attach()
+            state.subscription_manager = mgr
+
         _register_trader_and_push()
+        _build_subscription_manager()
 
         # Broker status / reload — surfaced via /api/longport/broker/* so the
         # UI can show "real / noop / error" and let the user retry init after
@@ -239,9 +316,13 @@ def create_app(
         def _broker_status() -> dict[str, Any]:
             from app.broker.longport_client import LongPortClient
 
+            # ``account_label`` replaces the prior paper/real ``mode``
+            # field in the BrokerStatusOut payload. Real SDK broker has
+            # ``account_label`` from its current LongPortConfig; Noop has
+            # an empty string.
             return {
                 "is_real": isinstance(state.broker, LongPortClient),
-                "mode": "paper" if state.broker.is_paper else "real",
+                "account_label": getattr(state.broker, "account_label", ""),
                 "dry_run": state.broker.dry_run,
                 "last_init_error": state.last_init_error,
             }
@@ -279,6 +360,28 @@ def create_app(
                 #    which makes the old _sync_callback unreachable.
                 state.push_listener = None
 
+                # 2a. Detach SubscriptionManager from the OLD broker —
+                #     unsubscribes all watched symbols at the SDK level so
+                #     the next broker doesn't inherit stale subs. Listener
+                #     callbacks (bus publishers) are tied to the manager
+                #     instance; rebuilding the manager on the new broker
+                #     wires fresh callbacks. Front-end re-issues
+                #     /api/quotes/watch with the new account's positions.
+                if state.subscription_manager is not None:
+                    try:
+                        state.subscription_manager.detach()
+                    except Exception as exc:  # noqa: BLE001
+                        logger.warning(
+                            "subscription_manager detach during reload failed: %s", exc,
+                        )
+                    state.subscription_manager = None
+
+                # 2b. Drop MarketSchedule — it'll be rebuilt against
+                # the new broker by ``_build_subscription_manager``.
+                # Account-switch typically also changes which markets
+                # the user has access to; starting cold is safe.
+                state.market_schedule = None
+
                 # 3. Close the old broker (releases SDK resources / WebSocket).
                 try:
                     state.broker.close()
@@ -288,8 +391,10 @@ def create_app(
                 # 4. Build fresh broker from current runtime settings.
                 state.broker, state.last_init_error = _build_broker()
 
-                # 5. Re-register trader + push_listener against the new broker.
+                # 5. Re-register trader + push_listener + QuoteHub against
+                #    the new broker.
                 _register_trader_and_push()
+                _build_subscription_manager()
 
                 from app.broker.longport_client import LongPortClient
                 is_real = isinstance(state.broker, LongPortClient)
@@ -357,6 +462,7 @@ def create_app(
                 broker_getter=lambda: state.broker,
                 broker_status_fn=_broker_status,
                 broker_reload_fn=_broker_reload,
+                subscription_manager_getter=lambda: state.subscription_manager,
             )
         )
         app.include_router(build_ws_router(state.hub, state.settings))

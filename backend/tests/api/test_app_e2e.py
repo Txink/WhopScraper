@@ -103,7 +103,8 @@ def test_e2e_rest_tasks_empty_then_populated() -> None:
         assert r.status_code == 200
         data = r.json()
         assert data["longport"] == "up"
-        assert data["mode"] == "paper"  # FakeBrokerClient.is_paper = True
+        # FakeBrokerClient lacks ``account_label`` attribute → empty string.
+        assert data["account_label"] == ""
 
         # Empty task list at startup
         r = client.get("/api/tasks", params={"token": "e2e-token"})
