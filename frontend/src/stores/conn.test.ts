@@ -5,7 +5,7 @@ describe("conn store", () => {
   beforeEach(() => {
     useConnStore.setState({
       ws: "closed", whop: "unknown", longport: "unknown",
-      mode: "paper", dryRun: true, autoTrade: true, lastEventId: null,
+      mode: "", dryRun: true, autoTrade: true, lastEventId: null,
     });
   });
 
@@ -14,9 +14,12 @@ describe("conn store", () => {
     expect(useConnStore.getState().ws).toBe("open");
   });
 
-  it("setHealth normalizes mode + dry_run", () => {
+  it("setHealth normalizes account_label + dry_run", () => {
     useConnStore.getState().setHealth({
-      whop: "up", longport: "up", mode: "real", dry_run: false,
+      whop: "up",
+      longport: "up",
+      account_label: "real",
+      dry_run: false,
     });
     const s = useConnStore.getState();
     expect(s.mode).toBe("real");
@@ -29,11 +32,16 @@ describe("conn store", () => {
     expect(useConnStore.getState().lastEventId).toBe(42);
   });
 
-  it("setRuntimeSettings updates mode/dry/autoTrade", () => {
+  it("setRuntimeSettings reflects active account's label", () => {
     useConnStore.getState().setRuntimeSettings({
-      mode: "real",
-      dry_run: false,
+      active_account_id: "acct-2",
+      accounts: [
+        { account_id: "acct-1", label: "paper", authorized: true },
+        { account_id: "acct-2", label: "real", authorized: true },
+      ],
       auto_trade: false,
+      region: "cn",
+      dry_run: false,
     });
     const s = useConnStore.getState();
     expect(s.mode).toBe("real");

@@ -59,12 +59,24 @@ describe("pageTabs store", () => {
     expect(localStorage.getItem("DASHBOARD_LAST_TAB")).toBeNull();
   });
 
-  it("setExpandMode is per-tab, ephemeral (no localStorage)", () => {
-    usePageTabsStore.getState().setExpandMode("a", "all-open");
-    usePageTabsStore.getState().setExpandMode("b", "all-closed");
-    expect(usePageTabsStore.getState().expandModeByTab["a"]).toBe("all-open");
-    expect(usePageTabsStore.getState().expandModeByTab["b"]).toBe("all-closed");
-    expect(localStorage.getItem("DASHBOARD_EXPAND")).toBeNull();
+  it("toggleExpandedTask: same id twice collapses; different id switches the open slot", () => {
+    // Expand t1.
+    usePageTabsStore.getState().toggleExpandedTask("a", "t1");
+    expect(usePageTabsStore.getState().expandedTaskIdByTab["a"]).toBe("t1");
+    // Click t1 again → collapse.
+    usePageTabsStore.getState().toggleExpandedTask("a", "t1");
+    expect(usePageTabsStore.getState().expandedTaskIdByTab["a"]).toBeNull();
+    // Expand t1 then click t2 → t2 takes the slot.
+    usePageTabsStore.getState().toggleExpandedTask("a", "t1");
+    usePageTabsStore.getState().toggleExpandedTask("a", "t2");
+    expect(usePageTabsStore.getState().expandedTaskIdByTab["a"]).toBe("t2");
+  });
+
+  it("toggleExpandedTask is per-tab — different tabs have independent slots", () => {
+    usePageTabsStore.getState().toggleExpandedTask("a", "t1");
+    usePageTabsStore.getState().toggleExpandedTask("b", "t9");
+    expect(usePageTabsStore.getState().expandedTaskIdByTab["a"]).toBe("t1");
+    expect(usePageTabsStore.getState().expandedTaskIdByTab["b"]).toBe("t9");
   });
 
   it("applyPageChanged action=added appends to pages", () => {

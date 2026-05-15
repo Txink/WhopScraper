@@ -2,7 +2,6 @@ import { create } from "zustand";
 import type { WhopPage } from "../api/domain-types";
 import type { WsEvent } from "../api/ws";
 
-export type ExpandMode = "smart" | "all-open" | "all-closed";
 export type ActiveTabId = string | "orphan" | null;
 
 const LS_KEY = "DASHBOARD_LAST_TAB";
@@ -10,13 +9,19 @@ const LS_KEY = "DASHBOARD_LAST_TAB";
 interface PageTabsState {
   pages: WhopPage[];
   activeTabId: ActiveTabId;
-  expandModeByTab: Record<string, ExpandMode>;
+  /** Single-accordion expand state per tab. At most one card is expanded
+   *  per tab; ``null`` (or absent key) = nothing expanded. Click an
+   *  unexpanded card → it becomes expanded and the prior one collapses;
+   *  click the expanded card → it collapses (key set to null). */
+  expandedTaskIdByTab: Record<string, string | null>;
   orphanCount: number;
   pagesLoaded: boolean;
 
   setPages(pages: WhopPage[]): void;
   setActiveTab(id: ActiveTabId): void;
-  setExpandMode(tabId: string, mode: ExpandMode): void;
+  /** Toggle the card's expanded state. Pass the same id twice to collapse;
+   *  pass a different id to switch the accordion's open slot. */
+  toggleExpandedTask(tabId: string, taskId: string): void;
   setOrphanCount(n: number): void;
   markPagesLoaded(): void;
   applyPageChanged(evt: WsEvent): void;
@@ -26,7 +31,7 @@ interface PageTabsState {
 export const usePageTabsStore = create<PageTabsState>((set, get) => ({
   pages: [],
   activeTabId: null,
-  expandModeByTab: {},
+  expandedTaskIdByTab: {},
   orphanCount: 0,
   pagesLoaded: false,
 
@@ -51,10 +56,14 @@ export const usePageTabsStore = create<PageTabsState>((set, get) => ({
     set({ activeTabId: id });
   },
 
-  setExpandMode(tabId, mode) {
-    set(state => ({
-      expandModeByTab: { ...state.expandModeByTab, [tabId]: mode },
-    }));
+  toggleExpandedTask(tabId, taskId) {
+    set(state => {
+      const current = state.expandedTaskIdByTab[tabId] ?? null;
+      const next = current === taskId ? null : taskId;
+      return {
+        expandedTaskIdByTab: { ...state.expandedTaskIdByTab, [tabId]: next },
+      };
+    });
   },
 
   setOrphanCount(n) {
@@ -88,6 +97,6 @@ export const usePageTabsStore = create<PageTabsState>((set, get) => ({
   },
 
   reset() {
-    set({ pages: [], activeTabId: null, expandModeByTab: {}, orphanCount: 0, pagesLoaded: false });
+    set({ pages: [], activeTabId: null, expandedTaskIdByTab: {}, orphanCount: 0, pagesLoaded: false });
   },
 }));
