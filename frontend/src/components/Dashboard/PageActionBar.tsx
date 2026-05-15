@@ -1,14 +1,9 @@
 import { useState } from "react";
 import { api } from "../../api/http";
-import { usePageTabsStore } from "../../stores/pageTabs";
-import type { ExpandMode } from "../../stores/pageTabs";
 import type { WhopPage } from "../../api/domain-types";
 import {
-  CollapseAllIcon,
-  ExpandAllIcon,
   PowerIcon,
   SettingsIcon,
-  SmartIcon,
 } from "./icons";
 
 interface Props {
@@ -20,9 +15,6 @@ interface Props {
 export function PageActionBar({ page, mode, onOpenSettings }: Props) {
   const [busy, setBusy] = useState(false);
   const isReadonlyTab = mode !== "page" || page === null;
-  const tabId = mode === "orphan" ? "orphan" : (page?.id ?? "orphan");
-  const expandMode = usePageTabsStore(s => s.expandModeByTab[tabId] ?? "smart");
-  const setExpand = usePageTabsStore(s => s.setExpandMode);
 
   // Power toggle: stop if running, start otherwise. The backend start endpoint
   // is restart-style (stop existing + fresh start with skip_initial=False), so
@@ -63,31 +55,10 @@ export function PageActionBar({ page, mode, onOpenSettings }: Props) {
     }
   }
 
-  const cycleExpandMode = () => {
-    const next: ExpandMode =
-      expandMode === "smart" ? "all-open"
-      : expandMode === "all-open" ? "all-closed"
-      : "smart";
-    setExpand(tabId, next);
-  };
-
-  // Tri-state expand toggle — icon-only. Each state shows a different
-  // glyph + tooltip + aria-label so the meaning is clear without a text
-  // label, and tests can locate the button by its current aria-label.
-  const expandTitle =
-    expandMode === "smart" ? "智能展开 — 点击切换为全部展开"
-    : expandMode === "all-open" ? "全部展开 — 点击切换为全部收起"
-    : "全部收起 — 点击回到智能模式";
-
-  const expandAria =
-    expandMode === "smart" ? "智能展开"
-    : expandMode === "all-open" ? "全部展开"
-    : "全部收起";
-
-  const expandIcon =
-    expandMode === "smart" ? <SmartIcon size={18} />
-    : expandMode === "all-open" ? <ExpandAllIcon size={16} />
-    : <CollapseAllIcon size={16} />;
+  // Expand mode is no longer user-toggleable — the card list is a fixed
+  // single-card accordion (default everything collapsed; click expands;
+  // clicking another collapses the prior). The mode-cycle button used to
+  // sit alongside power/settings; removing it shortens the action bar.
 
   return (
     <div className="page-action-bar">
@@ -108,18 +79,6 @@ export function PageActionBar({ page, mode, onOpenSettings }: Props) {
         aria-label="设置"
       >
         <SettingsIcon size={22} />
-      </button>
-      <button
-        onClick={cycleExpandMode}
-        className={
-          "action-btn icon-only "
-          + (expandMode === "smart" ? "" : "engaged ")
-          + `expand-mode-${expandMode}`
-        }
-        title={expandTitle}
-        aria-label={expandAria}
-      >
-        {expandIcon}
       </button>
     </div>
   );

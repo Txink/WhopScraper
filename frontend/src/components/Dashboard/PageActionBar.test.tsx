@@ -65,43 +65,16 @@ describe("<PageActionBar>", () => {
     await waitFor(() => expect(stopSpy).toHaveBeenCalledWith("a"));
   });
 
-  it("expand mode button cycles smart → all-open → all-closed → smart", () => {
-    render(<PageActionBar page={stockPage} mode="page" onOpenSettings={vi.fn()} />);
-    // Icon-only — locate by aria-label which mirrors current state.
-    // Initial: smart
-    expect(screen.getByLabelText("智能展开")).toBeInTheDocument();
-
-    // Click 1: smart → all-open
-    fireEvent.click(screen.getByLabelText("智能展开"));
-    expect(usePageTabsStore.getState().expandModeByTab["a"]).toBe("all-open");
-    expect(screen.getByLabelText("全部展开")).toBeInTheDocument();
-
-    // Click 2: all-open → all-closed
-    fireEvent.click(screen.getByLabelText("全部展开"));
-    expect(usePageTabsStore.getState().expandModeByTab["a"]).toBe("all-closed");
-    expect(screen.getByLabelText("全部收起")).toBeInTheDocument();
-
-    // Click 3: all-closed → smart
-    fireEvent.click(screen.getByLabelText("全部收起"));
-    expect(usePageTabsStore.getState().expandModeByTab["a"]).toBe("smart");
-    expect(screen.getByLabelText("智能展开")).toBeInTheDocument();
-  });
-
-  it("expand button gets engaged class when not in smart mode", () => {
-    const { container } = render(<PageActionBar page={stockPage} mode="page" onOpenSettings={vi.fn()} />);
-    // Initial state: smart, no engaged class
-    expect(container.querySelector(".action-btn.engaged")).not.toBeInTheDocument();
-    // Cycle once → all-open → engaged
-    fireEvent.click(screen.getByLabelText("智能展开"));
-    expect(container.querySelector(".action-btn.engaged")).toBeInTheDocument();
-  });
-
-  it("expand button carries an expand-mode-* class identifying current state", () => {
-    const { container } = render(<PageActionBar page={stockPage} mode="page" onOpenSettings={vi.fn()} />);
-    expect(container.querySelector(".expand-mode-smart")).toBeInTheDocument();
-    fireEvent.click(screen.getByLabelText("智能展开"));
-    expect(container.querySelector(".expand-mode-all-open")).toBeInTheDocument();
-    fireEvent.click(screen.getByLabelText("全部展开"));
-    expect(container.querySelector(".expand-mode-all-closed")).toBeInTheDocument();
+  it("does not render the expand-mode toggle button (single-accordion is fixed)", () => {
+    // Regression: the tri-state expand toggle was removed in favor of a
+    // single-accordion behavior driven by TaskStream + pageTabsStore.
+    // Action bar should only show 2 buttons now (power + settings).
+    const { container } = render(
+      <PageActionBar page={stockPage} mode="page" onOpenSettings={vi.fn()} />,
+    );
+    expect(container.querySelectorAll(".page-action-bar button")).toHaveLength(2);
+    expect(screen.queryByLabelText("智能展开")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("全部展开")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("全部收起")).not.toBeInTheDocument();
   });
 });

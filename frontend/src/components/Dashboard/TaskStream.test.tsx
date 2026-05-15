@@ -35,10 +35,10 @@ function renderControlled(tasks: TaskSummary[], currentKey?: string) {
   return render(
     <TaskStream
       pushEventsByTask={{}}
-      expandMode="smart"
       autoTrade={false}
       groups={groups}
       currentWeekKey={currentKey ?? weeks[0]?.key ?? null}
+      tabKey="test-tab"
     />,
   );
 }
@@ -78,10 +78,10 @@ describe("<TaskStream> weekly pagination (controlled)", () => {
     const { container } = render(
       <TaskStream
         pushEventsByTask={{}}
-        expandMode="smart"
         autoTrade={false}
         groups={new Map()}
         currentWeekKey={null}
+        tabKey="test-tab"
       />,
     );
     expect(container.firstChild).toBeNull();

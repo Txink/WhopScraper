@@ -14,7 +14,9 @@
   border: 1px solid var(--line);
   border-radius: var(--radius-card);
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  /* Instant-apply settings: no footer with 保存/取消 buttons, just
+   * header + scrollable body. Changes write through on every edit. */
+  grid-template-rows: auto 1fr;
 }
 
 .lp-modal header {
@@ -110,11 +112,259 @@
   background: rgba(63, 181, 197, 0.1);
 }
 
+/* ─── Color preference segmented control (涨跌色彩) ───
+ * Same .mode-switch chassis as the paper/real / save-mode pickers. Each
+ * button shows a tiny ▲▼ arrow pair colored in the actual preset hexes
+ * (so the visual carries the meaning) plus a short locale label. */
+.mode-switch.color-pref button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 120px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.mode-switch.color-pref .cp-arr {
+  font-size: 11px;
+  line-height: 1;
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+.mode-switch.color-pref .cp-arr.up-us   { color: #3dd68c; }
+.mode-switch.color-pref .cp-arr.down-us { color: #ef5b5b; }
+.mode-switch.color-pref .cp-arr.up-cn   { color: #ef5b5b; }
+.mode-switch.color-pref .cp-arr.down-cn { color: #3dd68c; }
+.mode-switch.color-pref .cp-name {
+  margin-left: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .cred-grid {
   display: grid;
   grid-template-columns: 110px 1fr;
   gap: var(--space-2);
   align-items: center;
+}
+
+/* ─── Multi-account list ───
+ *
+ * Each account is a card with:
+ *  - status dot (green=authed/active, grey=unauthed, yellow=pending)
+ *  - label (clickable text; double-click → inline rename input)
+ *  - small state suffix ("已激活" / "已授权" / "切换中…" / "未授权")
+ *  - tiny "重命名" / "退出" actions on the right
+ * Clicking the main row activates that account (triggers broker reload +
+ * positions refresh).
+ */
+.acct-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.acct-card {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  background: var(--bg-1);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+.acct-card.active {
+  border-color: var(--brand);
+  background: rgba(63, 181, 197, 0.08);
+}
+.acct-card:hover:not(.active) {
+  border-color: var(--brand);
+}
+.acct-main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  color: var(--fg-1);
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+}
+.acct-main:disabled { cursor: not-allowed; opacity: 0.6; }
+.acct-card .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: 0 0 8px;
+}
+.acct-label {
+  font-size: 13px;
+  font-weight: 600;
+}
+.acct-label-input {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  background: transparent;
+  border: none;
+  border-bottom: 1px dashed var(--brand);
+  color: var(--fg-1);
+  outline: none;
+  padding: 0;
+  width: 100%;
+}
+.acct-state {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+.acct-card.authed .acct-state { color: var(--ok); }
+.acct-card.unauthed .acct-state { color: var(--fg-3); }
+.acct-card.pending .acct-state { color: var(--warn); }
+.acct-card.active .acct-state { color: var(--brand); }
+
+/* Dot color by tier — uses semantic --ok / --warn tokens so the auth
+ * indicator stays green regardless of the user's up/down direction
+ * preference. */
+.acct-card.authed .dot {
+  background: var(--ok);
+  box-shadow: 0 0 0 3px rgba(61, 214, 140, 0.18);
+}
+.acct-card.unauthed .dot {
+  background: #6e757d;
+  box-shadow: 0 0 0 3px rgba(110, 117, 125, 0.18);
+}
+.acct-card.pending .dot {
+  background: var(--warn);
+  box-shadow: 0 0 0 3px rgba(231, 167, 61, 0.22);
+  animation: lp-pulse 1.2s ease-in-out infinite;
+}
+
+.acct-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+  border-left: 1px solid var(--line);
+}
+.acct-action {
+  background: transparent;
+  border: none;
+  color: var(--fg-3);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  padding: 4px 6px;
+  font-family: var(--font-mono);
+  border-radius: 4px;
+}
+.acct-action:hover:not(:disabled) {
+  color: var(--fg-1);
+  background: rgba(255, 255, 255, 0.04);
+}
+.acct-action.danger:hover:not(:disabled) {
+  color: var(--err);
+}
+.acct-action.ghost {
+  margin-left: 6px;
+  text-decoration: underline;
+}
+.acct-action:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.add-acct-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+.add-acct-btn {
+  background: transparent;
+  border: 1px dashed var(--line-strong);
+  color: var(--fg-2);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 6px 14px;
+  border-radius: var(--radius-chip);
+  cursor: pointer;
+  transition: border-color var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+.add-acct-btn:hover:not(:disabled) {
+  border-color: var(--brand);
+  color: var(--fg-1);
+}
+.add-acct-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+/* Auth status uses the semantic --ok / --warn tokens (fixed green / amber)
+ * — independent of the directional --up-color which flips with the user's
+ * 涨跌色彩 preference. 已授权 should always read as green regardless of
+ * whether the user has chosen 红涨绿跌. */
+.mode-btn.authed .dot {
+  background: var(--ok);
+  box-shadow: 0 0 0 3px rgba(61, 214, 140, 0.18);
+}
+.mode-btn.authed .mode-state {
+  color: var(--ok);
+}
+.mode-btn.unauthed .dot {
+  background: #6e757d;
+  box-shadow: 0 0 0 3px rgba(110, 117, 125, 0.18);
+}
+.mode-btn.pending .dot {
+  background: var(--warn);
+  box-shadow: 0 0 0 3px rgba(231, 167, 61, 0.22);
+  animation: lp-pulse 1.2s ease-in-out infinite;
+}
+.mode-btn.pending .mode-state {
+  color: var(--warn);
+}
+@keyframes lp-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(231, 167, 61, 0.22); }
+  50%      { box-shadow: 0 0 0 6px rgba(231, 167, 61, 0.10); }
+}
+
+/* Logout row — compact ghost buttons, only visible when something is
+ * actually authorized. Pushed to the bottom of the auth panel. */
+.auth-revoke-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+.auth-revoke {
+  background: transparent;
+  border: none;
+  color: var(--fg-3);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  padding: 2px 4px;
+  text-decoration: underline;
+  text-decoration-color: rgba(255, 255, 255, 0.08);
+}
+.auth-revoke:hover:not(:disabled) {
+  color: var(--fg-1);
+  text-decoration-color: currentColor;
+}
+.auth-revoke:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.hint.mono {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  word-break: break-all;
+  color: var(--fg-3);
+}
+.hint.mono a {
+  color: var(--brand);
 }
 
 .lp-modal input[type="text"],

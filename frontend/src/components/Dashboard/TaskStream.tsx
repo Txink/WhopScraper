@@ -1,21 +1,7 @@
 import { Card } from "../Card/Card";
 import { fmtBeijingDate } from "../Card/cardHelpers";
 import type { TaskSummary, PushEvent } from "../../api/domain-types";
-import type { ExpandMode } from "../../stores/pageTabs";
-
-const ACTIVE_STATUSES = new Set([
-  "RECEIVED", "PARSING", "INSTRUCTION_READY",
-  "SUBMITTING", "PENDING", "PARTIAL",
-]);
-
-function isActiveExpanded(task: TaskSummary): boolean {
-  if (ACTIVE_STATUSES.has(task.status)) return true;
-  if (task.status === "FILLED") {
-    const updatedAt = new Date(task.updated_at).getTime();
-    return Date.now() - updatedAt < 30_000;
-  }
-  return false;
-}
+import { usePageTabsStore } from "../../stores/pageTabs";
 
 function formatDateLabel(dateKey: string): string {
   const nowIso = new Date().toISOString();
@@ -28,19 +14,30 @@ function formatDateLabel(dateKey: string): string {
 
 interface Props {
   pushEventsByTask: Record<string, PushEvent[]>;
-  expandMode: ExpandMode;
   autoTrade: boolean;
   groups: Map<string, TaskSummary[]>;
   currentWeekKey: string | null;
+  /** Identifies the tab we're rendering for — drives the single-accordion
+   *  expand state lookup. Page tabs use the page id; the orphan view uses
+   *  ``"orphan"``. */
+  tabKey: string;
 }
 
+/** Stream of task cards for one week + day grouping. All cards render
+ *  collapsed by default; clicking a card expands it and collapses any
+ *  previously-expanded card on the same tab. */
 export function TaskStream({
   pushEventsByTask,
-  expandMode,
   autoTrade,
   groups,
   currentWeekKey,
+  tabKey,
 }: Props) {
+  const expandedTaskId = usePageTabsStore(
+    (s) => s.expandedTaskIdByTab[tabKey] ?? null,
+  );
+  const toggleExpandedTask = usePageTabsStore((s) => s.toggleExpandedTask);
+
   if (currentWeekKey == null) return null;
 
   const weekTasks = groups.get(currentWeekKey) ?? [];
@@ -61,21 +58,16 @@ export function TaskStream({
         return (
           <div key={dateKey}>
             <div className="stream-divider">{formatDateLabel(dateKey)} · {dayTasks.length}</div>
-            {dayTasks.map((t) => {
-              const defaultExpanded =
-                expandMode === "all-open" ? true :
-                expandMode === "all-closed" ? false :
-                isActiveExpanded(t);
-              return (
-                <Card
-                  key={`${t.id}-${expandMode}`}
-                  task={t}
-                  pushEvents={pushEventsByTask[t.id] ?? []}
-                  defaultExpanded={defaultExpanded}
-                  autoTrade={autoTrade}
-                />
-              );
-            })}
+            {dayTasks.map((t) => (
+              <Card
+                key={t.id}
+                task={t}
+                pushEvents={pushEventsByTask[t.id] ?? []}
+                expanded={expandedTaskId === t.id}
+                onToggle={() => toggleExpandedTask(tabKey, t.id)}
+                autoTrade={autoTrade}
+              />
+            ))}
           </div>
         );
       })}
