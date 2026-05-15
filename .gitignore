@@ -33,6 +33,12 @@ data/longport_settings.json
 logs/
 *.log
 
+# Runtime SQLite (backend module local DB)
+backend/app.db
+
+# Prototype / design scratch
+prototypes/
+
 # Playwright
 playwright-report/
 test-results/
