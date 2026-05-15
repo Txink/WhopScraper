@@ -1,0 +1,620 @@
+/* Positions panel — right side of the dashboard. Hosts a 2-col card grid
+ * by default; switches to a detail pane when a ticker is selected. */
+
+.positions-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  position: sticky;
+  top: var(--rail-top, 64px);
+  align-self: start;
+  max-height: calc(100vh - var(--rail-top, 64px) - 32px);
+  overflow-y: auto;
+}
+
+/* Tabs + portfolio summary stay pinned to the top of the scroll
+ * container so they don't get covered when the user scrolls the card
+ * grid. Z-index above the cards; opaque bg covers any overlap. */
+.positions-panel-top {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--bg-1);
+}
+
+.positions-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 4px 8px;
+}
+
+/* ─── Portfolio aggregate summary (top of panel) ───
+ * Shows total market value, floating P/L, realized做T profit, and the
+ * count of BUYs still waiting to be bound. Persistent header strip
+ * matching the prototype's "顶部汇总" pattern. */
+.portfolio-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  margin-bottom: var(--space-3);
+}
+.portfolio-summary.two-col {
+  /* Options-tab variant: only 总市值 + 浮盈, no做T columns. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.ps-cell {
+  background: var(--bg-2);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.ps-cell .lbl {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+.ps-cell .val {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--fg-1);
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+}
+.ps-cell .val.pos { color: var(--up-color); }
+.ps-cell .val.neg { color: var(--down-color); }
+.ps-cell .val.warn { color: var(--warn); }
+.ps-cell .val.ok { color: var(--ok); }
+.ps-cell .val .sub {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--fg-3);
+  font-weight: 400;
+}
+.positions-title {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+  font-weight: 500;
+}
+.positions-title .count {
+  font-family: var(--font-mono);
+  color: var(--fg-2);
+  margin-left: 4px;
+}
+
+/* ─── Stock / option segmented tabs (panel header) ─── */
+.positions-tabs {
+  display: inline-flex;
+  gap: 2px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-chip);
+  padding: 2px;
+}
+.positions-tabs button {
+  background: transparent;
+  border: none;
+  color: var(--fg-3);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 500;
+  padding: 4px 12px;
+  border-radius: calc(var(--radius-chip) - 2px);
+  cursor: pointer;
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+.positions-tabs button:hover { color: var(--fg-2); }
+.positions-tabs button.active {
+  background: var(--bg-hover, rgba(255, 255, 255, 0.06));
+  color: var(--fg-1);
+}
+.positions-tabs .count {
+  font-family: var(--font-mono);
+  color: var(--fg-3);
+  margin-left: 4px;
+  font-size: 10px;
+}
+.positions-tabs button.active .count { color: var(--fg-2); }
+
+/* Color-convention preference now lives in the LongPort settings modal. */
+
+.positions-empty {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--fg-3);
+  font-size: 12px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-card);
+}
+
+.positions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+/* ─── Position card ─── */
+.pcard {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  padding: 12px 14px 10px;
+  cursor: pointer;
+  position: relative;
+  min-width: 0;
+  transition:
+    transform var(--dur) var(--ease),
+    border-color var(--dur) var(--ease),
+    background var(--dur) var(--ease);
+}
+.pcard:hover {
+  transform: translateY(-1px);
+  border-color: var(--line-strong);
+  background: var(--bg-hover);
+}
+.pcard:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+.pcard:hover .pcard-arrow {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.pcard-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.pcard-ticker {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.pcard-arrow {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--fg-3);
+  opacity: 0;
+  transform: translateX(-4px);
+  margin-left: auto;
+  transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease);
+}
+
+/* Market badge — small pill next to the ticker that surfaces 美股/港股/
+ * 沪 A/深 A. Color-coded by market so the user can scan a mixed account
+ * by region. Subtle borders, no heavy fill — the ticker itself is the
+ * primary visual. */
+.pcard-market {
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  padding: 1px 5px;
+  border-radius: var(--radius-chip);
+  border: 1px solid var(--line-strong);
+  color: var(--fg-3);
+  font-family: var(--font-sans);
+  white-space: nowrap;
+}
+.pcard-market.mkt-us { color: #6aa9ff; border-color: rgba(106, 169, 255, 0.35); }
+.pcard-market.mkt-hk { color: #d28cff; border-color: rgba(210, 140, 255, 0.35); }
+.pcard-market.mkt-sh { color: var(--warn); border-color: rgba(231, 167, 61, 0.35); }
+.pcard-market.mkt-sz { color: var(--warn); border-color: rgba(231, 167, 61, 0.35); }
+
+/* Trade-session pill — same shape as .pcard-market but tinted per session.
+   盘中 stays neutral (it's the default state); 盘前/盘后/夜盘 use warm/cool
+   accents so the user notices they're on an extended-hours quote.  */
+.pcard-session {
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  padding: 1px 5px;
+  border-radius: var(--radius-chip);
+  border: 1px solid var(--line-strong);
+  color: var(--fg-3);
+  font-family: var(--font-sans);
+  white-space: nowrap;
+}
+.pcard-session.sess-regular  { color: var(--up-color); border-color: rgba(61, 214, 140, 0.4); background: rgba(61, 214, 140, 0.08); }
+.pcard-session.sess-pre      { color: #6aa9ff; border-color: rgba(106, 169, 255, 0.4); background: rgba(106, 169, 255, 0.08); }
+.pcard-session.sess-post     { color: #f0a040; border-color: rgba(240, 160, 64, 0.4);  background: rgba(240, 160, 64, 0.08);  }
+.pcard-session.sess-overnight{ color: #b388ff; border-color: rgba(179, 136, 255, 0.4); background: rgba(179, 136, 255, 0.08); }
+.pcard-session.sess-closed   { color: var(--fg-3); border-color: var(--line-strong); }
+
+/* Company/symbol name — single-line subline under the ticker. Especially
+ * helpful for HK numeric tickers like "2228" where the digits alone
+ * communicate nothing. Truncates with ellipsis if longer than the card
+ * width; the full name is exposed via title attribute on hover. */
+.pcard-name {
+  font-size: 11px;
+  color: var(--fg-3);
+  letter-spacing: 0;
+  margin: -2px 0 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pcard-price-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin-top: 2px;
+  flex-wrap: wrap;
+}
+.pcard-price {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.pcard-change {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 1px 6px;
+  border-radius: var(--radius-chip);
+}
+.pcard-change.pos { color: var(--up-color); background: var(--up-soft); }
+.pcard-change.neg { color: var(--down-color); background: var(--down-soft); }
+
+/* Day P/L — sits right of the change% chip on the price row, sized to
+ * match the price itself so dollar impact has equal visual weight to the
+ * current price. Color follows the up/down preset like the price chip. */
+.pcard-day-pl {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin-left: auto;
+}
+.pcard-day-pl.pos { color: var(--up-color); }
+.pcard-day-pl.neg { color: var(--down-color); }
+
+.pcard-chart {
+  height: 60px;
+  margin: 8px -4px 6px;
+  position: relative;
+}
+.minline {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+.minline canvas {
+  display: block;
+}
+/* Pulsing dot anchored to the sparkline's last data point. The dot itself
+   is a solid 6px disc; the ::before pseudo paints an expanding halo so the
+   "live" cue reads at-a-glance without overwhelming the line itself. */
+.minline-pulse {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--pulse-color, var(--up-color));
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.4);
+}
+.minline-pulse::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  background: var(--pulse-color, var(--up-color));
+  opacity: 0.5;
+  animation: minline-pulse 1.8s ease-out infinite;
+}
+@keyframes minline-pulse {
+  0%   { transform: scale(1);   opacity: 0.55; }
+  70%  { transform: scale(3);   opacity: 0;    }
+  100% { transform: scale(3);   opacity: 0;    }
+}
+@media (prefers-reduced-motion: reduce) {
+  .minline-pulse::before { animation: none; }
+}
+.pcard-chart-skeleton {
+  height: 100%;
+  background: linear-gradient(
+    90deg, transparent, rgba(255, 255, 255, 0.03), transparent
+  );
+  border-radius: 3px;
+  animation: pcard-shimmer 1.4s linear infinite;
+}
+@keyframes pcard-shimmer {
+  0% { background-position: -100% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.pcard-meta {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  border-top: 1px dashed var(--line);
+  padding-top: 8px;
+}
+.pcard-meta.four {
+  /* 4-cell variant: 持仓 / 均价 / 总市值 / 浮盈.  Last column gets ~55%
+   * more room so the 浮盈 dollar value + percentage tail can stay on a
+   * single line without truncation. */
+  grid-template-columns: 1fr 1fr 1fr 1.55fr;
+  gap: 4px;
+}
+.pcard-meta .k {
+  font-size: 9.5px;
+  color: var(--fg-3);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 1px;
+}
+.pcard-meta .v {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-1);
+  /* Never wrap onto a second line — 浮盈 carries both a dollar value and
+   * a percentage suffix that need to read as one unit. The cell column is
+   * sized generously to accommodate this. */
+  white-space: nowrap;
+}
+.pcard-meta .v.pos { color: var(--up-color); }
+.pcard-meta .v.neg { color: var(--down-color); }
+/* Secondary number after a dollar value — e.g. percentage tail on 浮盈.
+ * Inherits current color so pos/neg tinting carries through, but at
+ * reduced weight and smaller size so the dollar figure stays primary. */
+.pcard-meta .v small {
+  font-size: 9.5px;
+  font-weight: 400;
+  opacity: 0.75;
+  margin-left: 2px;
+}
+
+.pcard-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 7px;
+  padding-top: 7px;
+  border-top: 1px solid var(--line);
+}
+.pcard-pairs {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  color: var(--fg-2);
+}
+.pcard-pairs .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+.pcard-pairs .dot.warn {
+  background: var(--warn);
+  box-shadow: 0 0 0 2px rgba(231, 167, 61, 0.18);
+}
+.pcard-pairs .dot.ok { background: var(--ok); }
+
+.pcard-pl {
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+.pcard-pl.pos { color: var(--up-color); }
+.pcard-pl.neg { color: var(--down-color); }
+
+/* ─── Option card ─── No sparkline / drill-down — 做T pairing is stock-only.
+ * Layout (per user spec):
+ *   HOOD C   170    26/06/18 34d
+ *   持仓 均价 现价 浮盈
+ * Single-line header with three logical groups (id · strike · expiry) and
+ * a 4-col metric grid below. */
+.ocard {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  padding: 12px 14px 10px;
+  min-width: 0;
+  gap: 10px;
+}
+.ocard.clickable {
+  cursor: pointer;
+  transition:
+    transform var(--dur) var(--ease),
+    border-color var(--dur) var(--ease),
+    background var(--dur) var(--ease);
+}
+.ocard.clickable:hover {
+  transform: translateY(-1px);
+  border-color: var(--line-strong);
+  background: var(--bg-hover);
+}
+.ocard.clickable:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+.ocard-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+.ocard-id {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 auto;
+}
+.ocard-ticker {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.ocard-cp {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: var(--radius-chip);
+  letter-spacing: 0.04em;
+}
+.ocard-cp.call { color: var(--up-color); background: var(--up-soft); }
+.ocard-cp.put  { color: var(--down-color); background: var(--down-soft); }
+
+.ocard-strike {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--fg-1);
+  letter-spacing: 0.02em;
+  flex: 0 0 auto;
+}
+
+.ocard-expiry {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 auto;
+}
+.ocard-expiry-date {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--fg-2);
+  letter-spacing: 0.02em;
+}
+/* DTE pill — six urgency tiers that escalate in volume as expiry nears.
+ * Long-dated (>60d) is purely informational; ≤30d gets amber text; ≤15d
+ * adds a soft amber background; ≤7d switches to red. Expired contracts
+ * get a solid red pill that's impossible to miss. */
+.ocard-dte {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  padding: 1px 0;
+  border-radius: var(--radius-chip);
+}
+.ocard-dte.tier-calm     { color: var(--fg-3); }
+.ocard-dte.tier-watch    { color: var(--fg-2); }
+.ocard-dte.tier-caution {
+  color: var(--warn);
+  font-weight: 600;
+}
+.ocard-dte.tier-urgent {
+  color: var(--warn);
+  background: rgba(231, 167, 61, 0.18);
+  padding: 1px 6px;
+  font-weight: 600;
+}
+.ocard-dte.tier-critical {
+  color: var(--err);
+  background: rgba(239, 91, 91, 0.18);
+  padding: 1px 6px;
+  font-weight: 700;
+}
+.ocard-dte.tier-expired {
+  background: var(--err);
+  color: #0b0f14;
+  padding: 1px 7px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+/* 30-day sparkline — same MiniLine renderer as the stock card, but
+ * sized for the slightly more compact option layout. */
+.ocard-chart {
+  height: 44px;
+  margin: 4px -4px 2px;
+  position: relative;
+}
+.ocard-chart-skeleton {
+  height: 100%;
+  background: linear-gradient(
+    90deg, transparent, rgba(255, 255, 255, 0.03), transparent
+  );
+  border-radius: 3px;
+  animation: pcard-shimmer 1.4s linear infinite;
+}
+
+/* Price row mirrors the stock card: large mono price + small change-pct
+ * chip + large day-P/L pushed to the right. Same scale so the eye reads
+ * 现价 and 当日盈亏 with equal weight. */
+.ocard-price-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.ocard-price {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.ocard-change {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 1px 6px;
+  border-radius: var(--radius-chip);
+}
+.ocard-change.pos { color: var(--up-color); background: var(--up-soft); }
+.ocard-change.neg { color: var(--down-color); background: var(--down-soft); }
+.ocard-day-pl {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin-left: auto;
+}
+.ocard-day-pl.pos { color: var(--up-color); }
+.ocard-day-pl.neg { color: var(--down-color); }
+
+.ocard-meta {
+  /* 3 columns: 持仓 / 均价 / 浮盈. 现价 lives in the emphasized middle row. */
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  border-top: 1px dashed var(--line);
+  padding-top: 8px;
+}
+.ocard-meta .k {
+  font-size: 9.5px;
+  color: var(--fg-3);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 1px;
+}
+.ocard-meta .v {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-1);
+}
+.ocard-meta .v.pos { color: var(--up-color); }
+.ocard-meta .v.neg { color: var(--down-color); }
+
+/* At narrow widths (≤1080px) drop to one column so the cards don't squeeze. */
+@media (max-width: 1080px) {
+  .positions-grid { grid-template-columns: 1fr; }
+}
