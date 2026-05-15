@@ -9,7 +9,20 @@ vi.mock("chartjs-plugin-zoom");
 // prevent the component from crashing while still allowing DOM rendering.
 // In a real test, Chart would be initialized, but here we just verify React wiring.
 vi.mock("chart.js", () => {
-  const ChartConstructor = vi.fn(function() {
+  type ChartStub = {
+    destroy: () => void;
+    update: () => void;
+    data: { labels: unknown[]; datasets: Array<{ label: string; data: unknown[] }> };
+    options: {
+      scales: { x: { max: number; min: number } };
+      plugins: {
+        sessionBg: { barCount: number };
+        zoom: { limits: { x: { max: number } } };
+      };
+    };
+    scales: { x: { max: number; min: number } };
+  };
+  function ChartCtor(this: ChartStub) {
     this.destroy = vi.fn();
     this.update = vi.fn();
     // Pre-populate a minimal dataset structure so Effect B doesn't crash
@@ -18,17 +31,21 @@ vi.mock("chart.js", () => {
       labels: [],
       datasets: [
         { label: "price", data: [] },
-      ]
+      ],
     };
     this.options = {
       scales: { x: { max: 0, min: 0 } },
-      plugins: { sessionBg: { barCount: 0 }, zoom: { limits: { x: { max: 0 } } } }
+      plugins: { sessionBg: { barCount: 0 }, zoom: { limits: { x: { max: 0 } } } },
     };
     this.scales = { x: { max: 0, min: 0 } };
-  });
-  ChartConstructor.register = vi.fn();
+  }
+  const Chart = ChartCtor as unknown as {
+    new (): ChartStub;
+    register: (...args: unknown[]) => void;
+  };
+  Chart.register = vi.fn();
   return {
-    Chart: ChartConstructor,
+    Chart,
     LineController: {},
     ScatterController: {},
     LineElement: {},
@@ -50,8 +67,10 @@ import type { Candlestick } from "../../api/domain-types";
 // so `new Chart(canvas, ...)` swallows the failure quietly (the component
 // wraps the constructor in a try/catch and warns in DEV).
 beforeEach(() => {
-  // @ts-expect-error — jsdom canvas getter is patchable.
-  HTMLCanvasElement.prototype.getContext = () => null;
+  // Stub the canvas getter (jsdom defaults to null; we make it explicit
+  // so Chart.js's internal context check doesn't throw before our mock
+  // takes effect).
+  (HTMLCanvasElement.prototype as unknown as { getContext: () => null }).getContext = () => null;
   useQuotesStore.getState().reset();
 });
 
