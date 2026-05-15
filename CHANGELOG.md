@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### Added (做T 配对 + 持仓详情面板)
+- **做T 配对全栈实现**: 多对多 BUY ↔ SELL 绑定持久化到新的 `t_pairs` 表（buys/sells 用 JSON 数组存 `{trade_id, qty}`），允许同一笔 trade 在多个 pair 之间按可用量分配。新增 4 个 REST 接口：
+  - `GET /api/pairs?ticker=` — 列出做T 配对
+  - `POST /api/pairs` — 新建（服务端按 FIFO 分配 `min(BUY_avail, SELL_avail)`，剩余量留 trade 上备用）
+  - `POST /api/pairs/{id}/extend` — 给已有 pair 追加（先补齐 pair 缺口，余量留 trade）
+  - `DELETE /api/pairs/{id}` — 解绑（trade 可用量自动恢复）
+- **行情 + K 线接口**: `GET /api/quote?symbols=A,B,C`（包装 broker.get_quote，补 change/change_pct）；`GET /api/candlesticks?symbol&period`（`today` → 5 分钟分时 78 根 / `5..90` → 对应天数日 K）。`BrokerClient.get_candlesticks` 协议方法 + LongPort `Period.Min_5 | Day` 实现
+- **成交聚合**: `GET /api/trades?ticker=` 把 FILLED/PARTIAL 任务的最新 push event 拍平成 `{id, side, qty, price, ts, source, tag}` 列表，按时间升序——作为做T pair 的 trade_id 源
+- **前端持仓详情面板**: 右栏从 320px RightRail 改为 720px 持仓卡片网格 + 单标的下钻。详情面板包含 Chart.js 价格图（▲/▼ 买卖点位 + 成本均价虚线 + 自定义 plugin 画 L 形做T 连线：横向虚线 = 时间跨度、纵向粗实线 = 差价方向上色，中点浮气泡显示 `+$ · +%`）、做T KPI 条（次数 + 完整/部分 + 累计已实现 + 平均 + 胜率 + 待做T）、买卖记录表（按可用量勾选 + 绑定 builder + 加入已有配对）、做T 配对列表（pair 色条 + 状态徽章 + 实时收益 + 解绑）
+- Chart.js 4.4 + 5 个新 zustand store: `quotes` / `candlesticks` / `trades` / `pairs` / `detailView`
+- `CardCompact` 行内 STOCK 徽章移除，类型差异由顶部 chip 体现；OPTION 行保留 inline `OPT` 标识；row grid 由 8 列收成 7 列腾给原文
+
 ### Fixed
 - 补全领域模型与 ORM：`Task`、`TaskRow`、`repo.save_task` / `_rows_to_task` 对 `submit_quote_last_done` 的字段与读写（此前仅 trader/API 引用，导致 `GET /api/tasks` 序列化时报 `AttributeError`）
 - **PushListener 改为 buffer + replay 模型**，彻底替换原来的 "DB 多次重试 + 进程内 pending 表 + finally clear" 方案。新流程：(1) 每条推送先按 `order_id` 查库；(2) 命中 → 直接发 `TASK_PUSH_EVENT`；(3) 未命中 → 进 `_buffer[order_id]`（按到达时间排序，附 monotonic 时间戳）。Trader 在 broker submit 成功并 `await save_task` 落库后，调用 `push_listener.replay_for_order(order_id)` 将 buffer 里属于这条 order 的推送一次性按到达顺序排干。外来 order（手机/网页另起的单）的推送在 `BUFFER_TTL_S=60s` 后被 GC 并 WARN，避免 buffer 无限增长。删除 `pending_order_registry.py`、`_LOOKUP_RETRY_ATTEMPTS` 重试循环、trader 中 `register_pending_order/clear_pending_order/finally` 串接
