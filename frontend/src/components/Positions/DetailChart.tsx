@@ -101,6 +101,21 @@ export function DetailChart({
   // colors etc.) when the user toggles US/CN color convention.
   const colorMode = usePrefsStore((s) => s.colorMode);
 
+  // Derived chart data — kept in a ref so Effect A (chart create) reads the
+  // latest closes/labels/markers at mount time without listing them in deps,
+  // while Effect B mutates them on subsequent changes.
+  const dataRef = useRef<{
+    labels: string[];
+    closes: number[];
+    buys: { x: number; y: number; raw: Trade }[];
+    sells: { x: number; y: number; raw: Trade }[];
+  } | null>(null);
+
+  const visibleBarsRef = useRef<Candlestick[]>([]);
+  const markersRef = useRef<{ x: number; y: number; raw: Trade }[]>([]);
+  const avgCostRef = useRef<number | null>(null);
+  const showAvgCostRef = useRef<boolean>(false);
+
   // Snap each trade to the index of its nearest bar in time. Skip trades
   // outside the chart window so they don't anchor to (0, 0) of the axis.
   // Today's intraday flow:
@@ -162,34 +177,7 @@ export function DetailChart({
       .filter((m): m is { x: number; y: number; raw: Trade } => m != null);
   }, [visibleBars, visibleTrades, period]);
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || visibleBars.length === 0) return;
-
-    // Initial visible window per period — sized so the default view shows
-    // ~1 reading-unit of data and the rest is reachable by dragging.
-    // Today (any granularity / session) fits everything in axis; longer
-    // periods narrow so the user can pan to see history.
-    const INITIAL_VISIBLE_COUNT: Record<Period, number> = {
-      today: visibleBars.length,
-      "5": 78,
-      "7": 78,
-      "15": 52,
-      "30": 20,
-      "60": 25,
-      "90": 30,
-    };
-    const initialCount = Math.min(
-      INITIAL_VISIBLE_COUNT[period] ?? visibleBars.length,
-      visibleBars.length,
-    );
-    const xMax = visibleBars.length - 1;
-    const xMin = Math.max(0, xMax - initialCount + 1);
-
-    // Label format depends on bar granularity:
-    //   today: HH:MM (intraday bars within one day)
-    //   5/7/15D: MM/DD HH:MM (intraday bars stitched across days)
-    //   30/60/90D: MM/DD (one bar per trading day)
+  const chartData = useMemo(() => {
     const SHOW_DATE_IN_LABEL = new Set<Period>(["5", "7", "15"]);
     const labels = visibleBars.map((b) => {
       if (!b.timestamp) return "";
@@ -202,15 +190,55 @@ export function DetailChart({
     const closes = visibleBars.map((b) => b.close);
     const buys = markers.filter((m) => m.raw.side === "BUY");
     const sells = markers.filter((m) => m.raw.side === "SELL");
+    return { labels, closes, buys, sells };
+  }, [visibleBars, period, markers]);
+
+  // Mirror into a ref so Effect A (mount-once) can read latest at create-time
+  // without taking a deps subscription.
+  useEffect(() => { dataRef.current = chartData; }, [chartData]);
+
+  // Keep refs in sync each render so chart callbacks read the latest values
+  // without forcing the chart to rebuild.
+  visibleBarsRef.current = visibleBars;
+  markersRef.current = markers;
+  avgCostRef.current = avgCost;
+  showAvgCostRef.current = showAvgCost;
+
+  // Effect A — create the Chart instance once per structural-deps combo
+  // (period/granularity/session/color-mode). visibleBars / markers / avgCost
+  // flow through Effect B as in-place mutations so quote ticks don't tear
+  // the chart down. Symbol switch is structural too (chart cleanly resets).
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const data = dataRef.current;
+    if (!canvas || !data || data.closes.length === 0) return;
+
+    // Initial visible window per period — sized so the default view shows
+    // ~1 reading-unit of data and the rest is reachable by dragging.
+    const INITIAL_VISIBLE_COUNT: Record<Period, number> = {
+      today: data.closes.length,
+      "5": 78, "7": 78, "15": 52, "30": 20, "60": 25, "90": 30,
+    };
+    const initialCount = Math.min(
+      INITIAL_VISIBLE_COUNT[period] ?? data.closes.length,
+      data.closes.length,
+    );
+    const xMax = data.closes.length - 1;
+    const xMin = Math.max(0, xMax - initialCount + 1);
+
+    // Snapshot avgCost / showAvgCost at mount time. Subsequent changes
+    // flow through Effect B (it adds/removes the dataset entry as needed).
+    const initialAvgCost = avgCost;
+    const initialShowAvgCost = showAvgCost;
 
     const cfg: ChartConfiguration = {
       type: "line",
       data: {
-        labels,
+        labels: data.labels,
         datasets: [
           {
             label: "成交价",
-            data: closes,
+            data: data.closes,
             borderColor: C.price,
             backgroundColor: (ctx: ScriptableContext<"line">) => {
               const area = ctx.chart.chartArea;
@@ -224,12 +252,9 @@ export function DetailChart({
             pointRadius: 0, pointHoverRadius: 0,
             order: 4,
           },
-          // Avg-cost reference line is opt-in (legend toggle). Hidden by
-          // default so the price line isn't visually anchored to a dashed
-          // horizontal that often sits well above/below the visible window.
-          ...(avgCost != null && showAvgCost ? [{
+          ...(initialAvgCost != null && initialShowAvgCost ? [{
             label: "成本均价",
-            data: closes.map(() => avgCost),
+            data: data.closes.map(() => initialAvgCost),
             borderColor: C.info,
             borderWidth: 1.2,
             borderDash: [4, 4],
@@ -239,9 +264,7 @@ export function DetailChart({
           {
             label: "买入",
             type: "scatter" as const,
-            data: buys,
-            // Up/down colors come from --up-color / --down-color so the
-            // user's prefs (US vs CN convention) flow into the chart.
+            data: data.buys,
             backgroundColor: cssVar("--up-color", "#3dd68c"),
             borderColor: C.bg0,
             borderWidth: 2.5,
@@ -254,7 +277,7 @@ export function DetailChart({
           {
             label: "卖出",
             type: "scatter" as const,
-            data: sells,
+            data: data.sells,
             backgroundColor: cssVar("--down-color", "#ef5b5b"),
             borderColor: C.bg0,
             borderWidth: 2.5,
@@ -266,11 +289,7 @@ export function DetailChart({
           } as ChartConfiguration["data"]["datasets"][number],
         ],
       },
-      plugins: [
-        sessionBgPlugin,
-        crosshairPlugin,
-        minMaxLabelsPlugin,
-      ],
+      plugins: [sessionBgPlugin, crosshairPlugin, minMaxLabelsPlugin],
       options: {
         responsive: true,
         maintainAspectRatio: false,
@@ -283,15 +302,9 @@ export function DetailChart({
             borderColor: C.line,
             borderWidth: 1,
             padding: 10,
-            // Anchor at the cursor, not at the nearest data point.
-            // Combined with the crosshair plugin, the popup tracks the
-            // mouse so reading "time + price at this x" is one glance.
             position: "cursor" as unknown as undefined,
             caretSize: 0,
             caretPadding: 8,
-            // Single-point tooltip — Chart.js otherwise emits one entry per
-            // dataset (line + avg-cost + scatter), which crowds the popup.
-            // We only need the price reading at the hovered x.
             filter: (item) => {
               const ds = item.dataset as { type?: string; label?: string };
               return ds.label === "成交价" || ds.type === "scatter";
@@ -306,10 +319,9 @@ export function DetailChart({
                   if (!raw) return "";
                   return `${raw.side === "BUY" ? "买入" : "卖出"} · ${fmtBjRel(raw.ts)}`;
                 }
-                // Line tooltip — show full BJ wall-clock for the bar so
-                // intraday vs daily reads identically (the x-axis label
-                // is intentionally short to keep ticks legible).
-                const bar = visibleBars[item.dataIndex];
+                // Read live visibleBars via ref so tooltip stays accurate
+                // after Effect B mutates / live-tick appends bars.
+                const bar = visibleBarsRef.current[item.dataIndex];
                 if (bar?.timestamp) return fmtBjRel(bar.timestamp);
                 return item.label;
               },
@@ -324,99 +336,65 @@ export function DetailChart({
               },
             },
           },
-          // Pre/regular/post session background — only when on today's
-          // intraday view with "含盘前/盘后" selected.
           sessionBg: {
-            // Show the session watermark for every today/分时 selection so
-            // 盘前/盘中/盘后/夜盘/全部 are each clearly labeled (matches
-            // LongBridge App's mobile chart). For K-line granularities
-            // (2/3/5min) we still only label when "all" is selected since
-            // there's just one section otherwise.
             enabled: period === "today"
               && (todayGranularity === "分时" || todaySessions === "all"),
             granularity: todayGranularity,
-            barCount: visibleBars.length,
+            barCount: data.closes.length,
             session: todaySessions,
           },
-          // Drag along the x-axis to scrub through time; shift+wheel or pinch
-          // to zoom in on a slice. The y-axis stays auto-fit so prices keep
-          // their scale as you pan. limits.x.minRange clamps how tight you
-          // can zoom so individual bars stay readable.
           zoom: {
             pan: {
-              enabled: true,
-              mode: "x",
-              threshold: 4,
-              onPanComplete: ({ chart }) => {
-                setIsZoomed(true);
-                // Trigger a non-animated update so `afterDataLimits` on y
-                // recomputes against the new x range.
-                chart.update("none");
-              },
+              enabled: true, mode: "x", threshold: 4,
+              onPanComplete: ({ chart }) => { setIsZoomed(true); chart.update("none"); },
             },
             zoom: {
               wheel: { enabled: true, modifierKey: "shift" },
               pinch: { enabled: true },
               mode: "x",
-              onZoomComplete: ({ chart }) => {
-                setIsZoomed(true);
-                chart.update("none");
-              },
+              onZoomComplete: ({ chart }) => { setIsZoomed(true); chart.update("none"); },
             },
-            limits: {
-              // Clamp pan/zoom to the actual data range so users can't drag
-              // into empty whitespace beyond the first/last bar.
-              x: { min: 0, max: xMax, minRange: 5 },
-            },
+            limits: { x: { min: 0, max: xMax, minRange: 5 } },
           },
         },
         scales: {
           x: {
-            // Category axis indexed by bar position; setting min/max trims
-            // the visible window so pan can scroll horizontally into the
-            // off-screen bars.
-            min: xMin,
-            max: xMax,
+            min: xMin, max: xMax,
             grid: { color: C.line, drawTicks: false },
             ticks: {
               color: C.fg3,
               font: { family: "IBM Plex Mono", size: 10 },
-              maxRotation: 0,
-              autoSkip: true,
-              maxTicksLimit: 8,
+              maxRotation: 0, autoSkip: true, maxTicksLimit: 8,
             },
             border: { color: C.line },
           },
           y: {
             position: "right",
-            // Y range auto-fits the currently-visible x window so prices
-            // stay readable as the user pans/zooms. `afterDataLimits`
-            // fires on every chart update (including pan/zoom) and
-            // overrides Chart.js's full-data-derived bounds.
             afterDataLimits: (scale) => {
               const xScale = scale.chart.scales.x;
               if (!xScale || xScale.min == null || xScale.max == null) return;
+              // Read live closes/markers/avg-cost via refs so the y-fit
+              // reflects whatever Effect B / live-tick most recently wrote.
+              const closes = dataRef.current?.closes ?? [];
               const xLo = Math.max(0, Math.floor(xScale.min as number));
               const xHi = Math.min(closes.length - 1, Math.ceil(xScale.max as number));
-              let vMin = Infinity;
-              let vMax = -Infinity;
+              let vMin = Infinity, vMax = -Infinity;
               for (let i = xLo; i <= xHi; i++) {
                 const v = closes[i];
                 if (v == null) continue;
                 if (v < vMin) vMin = v;
                 if (v > vMax) vMax = v;
               }
-              // Include visible markers and avg-cost so they don't get
-              // clipped on the edge.
-              for (const m of markers) {
+              for (const m of markersRef.current) {
                 if (m.x >= xLo && m.x <= xHi) {
                   if (m.y < vMin) vMin = m.y;
                   if (m.y > vMax) vMax = m.y;
                 }
               }
-              if (showAvgCost && avgCost != null) {
-                if (avgCost < vMin) vMin = avgCost;
-                if (avgCost > vMax) vMax = avgCost;
+              const avgRef = avgCostRef.current;
+              if (showAvgCostRef.current && avgRef != null) {
+                if (avgRef < vMin) vMin = avgRef;
+                if (avgRef > vMax) vMax = avgRef;
               }
               if (vMin === Infinity) return;
               const pad = (vMax - vMin) * 0.06 || Math.abs(vMax) * 0.005 || 0.5;
@@ -444,7 +422,70 @@ export function DetailChart({
       chartRef.current?.destroy();
       chartRef.current = null;
     };
-  }, [visibleBars, period, visibleTrades, markers, avgCost, showAvgCost, todayGranularity, todaySessions, colorMode]);
+    // Structural deps only — non-listed values are read via refs in callbacks.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [symbol, period, todayGranularity, todaySessions, colorMode]);
+
+  // Effect B — mutate chart data in place on data/marker/avg-cost change.
+  // Skips when the chart hasn't been created yet (Effect A will pick up
+  // the latest snapshot via dataRef on mount).
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+    const data = dataRef.current;
+    if (!data) return;
+
+    chart.data.labels = data.labels;
+    // dataset 0 is the price line — replace its data with the latest closes.
+    (chart.data.datasets[0]!.data as unknown as number[]) = data.closes;
+
+    // Find / sync the avg-cost dataset. It's optional — present when
+    // (avgCost != null && showAvgCost). We never reorder the underlying
+    // dataset positions; remove vs insert in-place.
+    const datasets = chart.data.datasets as Array<{ label?: string; data: unknown }>;
+    const avgIdx = datasets.findIndex((d) => d.label === "成本均价");
+    if (avgCost != null && showAvgCost) {
+      const avgData = data.closes.map(() => avgCost);
+      if (avgIdx === -1) {
+        datasets.splice(1, 0, {
+          label: "成本均价",
+          data: avgData,
+          borderColor: C.info,
+          borderWidth: 1.2,
+          borderDash: [4, 4],
+          fill: false, pointRadius: 0, tension: 0,
+          order: 3,
+        } as unknown as typeof datasets[number]);
+      } else {
+        (datasets[avgIdx]!.data as unknown as number[]) = avgData;
+      }
+    } else if (avgIdx !== -1) {
+      datasets.splice(avgIdx, 1);
+    }
+
+    // Scatter datasets — find by label so order-independent.
+    const buyDs = datasets.find((d) => d.label === "买入");
+    const sellDs = datasets.find((d) => d.label === "卖出");
+    if (buyDs) (buyDs.data as unknown) = data.buys;
+    if (sellDs) (sellDs.data as unknown) = data.sells;
+
+    // Keep scales / sessionBg in sync with the new bar count.
+    const xMax = data.closes.length - 1;
+    const opts = chart.options as unknown as {
+      scales: { x: { max: number; min: number } };
+      plugins: { sessionBg: { barCount: number }; zoom: { limits: { x: { max: number } } } };
+    };
+    // Only stretch x-max to the new last bar if the user hasn't panned away
+    // from the tail — keeps manual pan/zoom from being yanked on every update.
+    const prevMax = chart.scales.x.max as number;
+    if (prevMax >= xMax - 1) {
+      opts.scales.x.max = xMax;
+    }
+    opts.plugins.sessionBg.barCount = data.closes.length;
+    opts.plugins.zoom.limits.x.max = xMax;
+
+    chart.update("none");
+  }, [visibleBars, markers, avgCost, showAvgCost]);
 
   // Period switch destroys + recreates the chart, so reset the zoomed
   // indicator independently.
