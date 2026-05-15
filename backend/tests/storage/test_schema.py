@@ -1,4 +1,4 @@
-"""Tests for storage/schema.py — 5 ORM table definitions."""
+"""Tests for storage/schema.py — 6 ORM table definitions."""
 
 from __future__ import annotations
 
@@ -15,6 +15,7 @@ from app.storage.schema import (
     PositionRow,
     PushEventRow,
     TaskRow,
+    TPairRow,
 )
 
 # ---------------------------------------------------------------------------
@@ -73,7 +74,7 @@ async def test_create_all_produces_all_tables(
         )
         table_names = {row[0] for row in result.fetchall()}
 
-    expected = {"tasks", "messages", "instructions", "push_events", "positions"}
+    expected = {"tasks", "messages", "instructions", "push_events", "positions", "t_pairs"}
     assert expected.issubset(table_names), (
         f"Missing tables: {expected - table_names}; found: {table_names}"
     )
@@ -264,3 +265,88 @@ async def test_instruction_row_1to1_with_task(
                 )
             )
             await session.commit()
+
+
+# ---------------------------------------------------------------------------
+# Test 7: TPairRow JSON allocations roundtrip
+# ---------------------------------------------------------------------------
+
+
+async def test_tpair_row_roundtrip(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """TPairRow stores buys/sells as JSON arrays of {trade_id, qty}. The
+    INTEGER autoincrement id and the new ``profit`` column round-trip
+    cleanly through SQLAlchemy."""
+    pair = TPairRow(
+        account_id="acct-1",
+        ticker="TSLA",
+        symbol="TSLA.US",
+        buys_json=[
+            {"trade_id": "T-100", "qty": 100},
+            {"trade_id": "T-101", "qty": 50},
+        ],
+        sells_json=[{"trade_id": "T-200", "qty": 150}],
+        profit=1234.5,
+        created_at=_NOW,
+        updated_at=_NOW,
+    )
+    async with session_factory() as session:
+        session.add(pair)
+        await session.commit()
+        assigned_id = pair.id
+
+    assert isinstance(assigned_id, int) and assigned_id >= 1
+
+    async with session_factory() as session:
+        fetched = await session.get(TPairRow, assigned_id)
+        assert fetched is not None
+        assert fetched.ticker == "TSLA"
+        assert fetched.symbol == "TSLA.US"
+        assert fetched.buys_json == [
+            {"trade_id": "T-100", "qty": 100},
+            {"trade_id": "T-101", "qty": 50},
+        ]
+        assert fetched.sells_json == [{"trade_id": "T-200", "qty": 150}]
+        assert fetched.profit == 1234.5
+
+
+# ---------------------------------------------------------------------------
+# Test 8: multiple pairs per ticker (no uniqueness on ticker), ids
+# monotonically increase
+# ---------------------------------------------------------------------------
+
+
+async def test_tpair_multiple_per_ticker(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """Three pairs inserted on the same (account, ticker) get sequential
+    INTEGER ids in insertion order. SQLite's AUTOINCREMENT semantics
+    guarantee no reuse even after deletes."""
+    async with session_factory() as session:
+        for i in range(3):
+            session.add(
+                TPairRow(
+                    account_id="acct-1",
+                    ticker="NVDA",
+                    symbol="NVDA.US",
+                    buys_json=[{"trade_id": f"B-{i}", "qty": 10}],
+                    sells_json=[{"trade_id": f"S-{i}", "qty": 10}],
+                    created_at=_NOW,
+                    updated_at=_NOW,
+                )
+            )
+        await session.commit()
+
+    async with session_factory() as session:
+        from sqlalchemy import select
+        result = await session.execute(
+            select(TPairRow).where(TPairRow.ticker == "NVDA").order_by(TPairRow.id)
+        )
+        rows = list(result.scalars())
+        assert len(rows) == 3
+        ids = [r.id for r in rows]
+        # Sequential ids — exact values depend on prior tests in the same
+        # SQLite file, but the differences must be 1 across the three.
+        assert ids[1] == ids[0] + 1
+        assert ids[2] == ids[1] + 1

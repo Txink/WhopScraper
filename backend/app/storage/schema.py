@@ -1,11 +1,12 @@
 """SQLAlchemy 2.x ORM table definitions for Signal Station.
 
-Five Row classes (using "Row" suffix to avoid collisions with domain classes):
+Six Row classes (using "Row" suffix to avoid collisions with domain classes):
   - TaskRow         → tasks
   - MessageRow      → messages
   - InstructionRow  → instructions
   - PushEventRow    → push_events
   - PositionRow     → positions
+  - TPairRow        → t_pairs (做T 配对)
 
 All classes inherit from ``Base`` in ``app.storage.db``.
 """
@@ -66,6 +67,9 @@ class TaskRow(Base):
     submit_order_context: Mapped[str | None] = mapped_column(String, nullable=True)
     submit_quote_last_done: Mapped[float | None] = mapped_column(nullable=True)
     submit_price: Mapped[float | None] = mapped_column(nullable=True)
+    # Active OAuth account at submission time. Nullable for backwards
+    # compat — pre-multi-account tasks have NULL.
+    account_id: Mapped[str | None] = mapped_column(String, nullable=True)
 
 
 # ---------------------------------------------------------------------------
@@ -180,3 +184,121 @@ class PositionRow(Base):
     option_expiry: Mapped[date | None] = mapped_column(Date(), nullable=True)
     option_type: Mapped[str | None] = mapped_column(String, nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+# ---------------------------------------------------------------------------
+# t_pairs (做T 配对) — explicit BUY/SELL allocations grouped into one trade
+# round. Each allocation references a task.id and stores the qty consumed
+# from that task. A single task may have allocations across multiple pairs
+# (partial allocation); the sum of allocations across pairs must not exceed
+# the task's filled qty. Enforced at the repo layer, not the DB.
+# ---------------------------------------------------------------------------
+
+
+class TPairRow(Base):
+    """ORM mapping for the ``t_pairs`` table.
+
+    ``buys_json`` / ``sells_json`` are JSON arrays of
+    ``{"trade_id": str, "qty": int}``. We use JSON rather than a child
+    allocations table to keep the schema light — pairs are a UI construct
+    used for做T tracking, not a primary trading data source.
+
+    ``id`` is a SQLite-native autoincrement integer (table-wide unique,
+    never reused after delete). The UI labels each pair as "T-{id}". The
+    pre-v2 schema used a UUID string id; the v2 migration assigns sequential
+    integers in created_at order. See ``migrate_pairs_v2.py``.
+
+    ``profit`` is computed at pair create / extend time from the matched
+    qty × (avg_sell_price − avg_buy_price) and persisted so做T-summary
+    queries can use simple SQL aggregates without joining trades.
+    """
+
+    __tablename__ = "t_pairs"
+    __table_args__ = (
+        # Compound index for the typical detail-pane filter
+        # ``WHERE account_id=? AND ticker=?``.
+        Index("idx_t_pairs_account_ticker", "account_id", "ticker"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    # Account scope for multi-account isolation — required in v2 (pre-v2
+    # legacy rows carrying NULL are dropped by the migration).
+    account_id: Mapped[str] = mapped_column(String, nullable=False)
+    ticker: Mapped[str] = mapped_column(String, nullable=False)
+    # Broker-canonical symbol (e.g. "TSLA.US"). Kept alongside ticker so we
+    # can resolve back to a broker entity even when the ticker→symbol
+    # mapping changes (rare, but happened with rebranded tickers).
+    symbol: Mapped[str | None] = mapped_column(String, nullable=True)
+    buys_json: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSON, nullable=False, default=list
+    )
+    sells_json: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSON, nullable=False, default=list
+    )
+    # Realized做T profit for the matched portion. Snapshot taken at
+    # create/extend; broker fills are immutable in practice so the value
+    # doesn't drift.
+    profit: Mapped[float] = mapped_column(nullable=False, default=0.0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+# ---------------------------------------------------------------------------
+# broker_executions  (canonical fill record, synced from broker.history_executions)
+# ---------------------------------------------------------------------------
+
+
+class BrokerExecutionRow(Base):
+    """ORM mapping for the ``broker_executions`` table.
+
+    One row per ``order_id`` — partial fills under the same order are
+    aggregated at sync time (qty=sum, price=weighted-avg, ts=latest).
+    Includes orders placed via the LongBridge app / web, not just those
+    submitted by signal-station's trader pipeline.
+
+    Cross-references:
+      - ``account_id`` (= active OAuth client_id) scopes multi-account isolation.
+      - ``task_id`` (nullable) links back to ``tasks`` when the order
+        originated in signal-station's pipeline. Manual fills have NULL.
+
+    The reciprocal ``tasks.order_id`` column is also nullable — tasks
+    that never reached the broker (parse error, dry-run skip, etc.)
+    have no order_id. Both references are convenience joins, NOT
+    enforced foreign keys.
+    """
+
+    __tablename__ = "broker_executions"
+    __table_args__ = (
+        Index("idx_broker_exec_account_ts", "account_id", "ts"),
+        Index("idx_broker_exec_account_ticker", "account_id", "ticker"),
+        Index("idx_broker_exec_task_id", "task_id"),
+    )
+
+    order_id: Mapped[str] = mapped_column(String, primary_key=True)
+    account_id: Mapped[str] = mapped_column(String, nullable=False)
+    task_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    symbol: Mapped[str] = mapped_column(String, nullable=False)
+    ticker: Mapped[str] = mapped_column(String, nullable=False)
+    side: Mapped[str] = mapped_column(String, nullable=False)  # BUY | SELL
+    qty: Mapped[int] = mapped_column(Integer, nullable=False)
+    price: Mapped[float] = mapped_column(nullable=False)
+    ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    synced_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
+    # Denormalized做T allocation list maintained by the pair CRUD layer.
+    # Shape: ``[[pair_id, allocated_qty], ...]`` — each entry says how many
+    # shares of this fill were allocated to the given pair. Lets SQL
+    # cheaply identify "pending做T" trades:
+    #   WHERE qty > COALESCE(
+    #     (SELECT SUM(CAST(json_extract(t.value, '$[1]') AS INTEGER))
+    #      FROM json_each(t_pair_tags) AS t),
+    #     0)
+    # The ``[]`` default keeps freshly-synced fills queryable before any
+    # pair touches them.
+    t_pair_tags: Mapped[list[list[Any]]] = mapped_column(
+        JSON,
+        nullable=False,
+        default=list,
+        server_default=text("'[]'"),
+    )

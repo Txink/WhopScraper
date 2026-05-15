@@ -40,7 +40,15 @@ from app.domain.message import Message
 from app.domain.push_event import PushEvent, PushState
 from app.domain.status import TERMINAL, Status
 from app.domain.task import Task
-from app.storage.schema import InstructionRow, MessageRow, PositionRow, PushEventRow, TaskRow
+from app.storage.schema import (
+    BrokerExecutionRow,
+    InstructionRow,
+    MessageRow,
+    PositionRow,
+    PushEventRow,
+    TaskRow,
+    TPairRow,
+)
 
 # ---------------------------------------------------------------------------
 # Instruction serialization helpers
@@ -526,6 +534,8 @@ async def list_tasks(
     status: Status | None = None,
     type_: str | None = None,
     symbol: str | None = None,
+    ticker: str | None = None,
+    statuses: list[Status] | None = None,
 ) -> list[Task]:
     """Return a paginated, filtered list of Tasks.
 
@@ -535,6 +545,12 @@ async def list_tasks(
     Pagination: cursor_created_at is a "less-than" cursor.
     First call: cursor_created_at=None (no filter, returns newest N).
     Next pages: pass the last item's created_at as cursor_created_at.
+
+    ``ticker`` filters TaskRow.ticker (the user-facing equity symbol like
+    "TSLA"), as opposed to ``symbol`` which matches the broker-canonical form
+    (e.g. "TSLA.US"). Pass at most one of these. ``statuses`` accepts a list
+    of allowed statuses (used by the /api/trades endpoint to capture both
+    FILLED and PARTIAL with one query).
     """
     stmt = select(TaskRow).order_by(TaskRow.created_at.desc()).limit(limit)
 
@@ -543,7 +559,9 @@ async def list_tasks(
         cursor_naive = cursor_created_at.replace(tzinfo=None)
         stmt = stmt.where(TaskRow.created_at < cursor_naive)
 
-    if status is not None:
+    if statuses is not None:
+        stmt = stmt.where(TaskRow.status.in_([s.value for s in statuses]))
+    elif status is not None:
         stmt = stmt.where(TaskRow.status == status.value)
 
     if type_ is not None:
@@ -551,6 +569,9 @@ async def list_tasks(
 
     if symbol is not None:
         stmt = stmt.where(TaskRow.symbol == symbol)
+
+    if ticker is not None:
+        stmt = stmt.where(TaskRow.ticker == ticker)
 
     result = await session.execute(stmt)
     task_rows = list(result.scalars().all())
@@ -768,6 +789,645 @@ async def delete_tasks_by_url(session: AsyncSession, url: str | None) -> int:
     await session.execute(sa_delete(MessageRow).where(MessageRow.id.in_(task_ids)))
     await session.commit()
     return len(task_ids)
+
+
+# ---------------------------------------------------------------------------
+# t_pairs (做T 配对) CRUD + FIFO allocation helpers
+# ---------------------------------------------------------------------------
+
+
+def allocate_fifo(
+    trade_ids: list[str],
+    trade_qty: dict[str, int],
+    already_allocated: dict[str, int],
+    target: int,
+) -> list[dict[str, Any]]:
+    """Allocate up to ``target`` qty across trades, FIFO in the given order.
+
+    Each trade contributes at most ``trade_qty[id] - already_allocated[id]``.
+    Returns ``[{"trade_id", "qty"}, ...]`` skipping trades with zero
+    availability and stops once ``target`` is satisfied.
+    """
+    out: list[dict[str, Any]] = []
+    remaining = target
+    for tid in trade_ids:
+        if remaining <= 0:
+            break
+        avail = trade_qty.get(tid, 0) - already_allocated.get(tid, 0)
+        if avail <= 0:
+            continue
+        take = min(avail, remaining)
+        out.append({"trade_id": tid, "qty": int(take)})
+        remaining -= take
+    return out
+
+
+def aggregate_allocated(pairs: list[TPairRow]) -> dict[str, int]:
+    """Sum allocated qty per trade_id across the given pairs (both sides)."""
+    out: dict[str, int] = {}
+    for p in pairs:
+        for a in (p.buys_json or []):
+            tid = a.get("trade_id")
+            if tid is not None:
+                out[tid] = out.get(tid, 0) + int(a.get("qty", 0))
+        for a in (p.sells_json or []):
+            tid = a.get("trade_id")
+            if tid is not None:
+                out[tid] = out.get(tid, 0) + int(a.get("qty", 0))
+    return out
+
+
+def _merge_allocations(
+    existing: list[dict[str, Any]],
+    additions: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Merge additions into existing allocations, summing qty per trade_id.
+    Preserves order: existing first, then any new trade_ids in addition order."""
+    by_tid: dict[str, int] = {}
+    order: list[str] = []
+    for a in existing:
+        tid = a["trade_id"]
+        if tid not in by_tid:
+            order.append(tid)
+        by_tid[tid] = by_tid.get(tid, 0) + int(a["qty"])
+    for a in additions:
+        tid = a["trade_id"]
+        if tid not in by_tid:
+            order.append(tid)
+        by_tid[tid] = by_tid.get(tid, 0) + int(a["qty"])
+    return [{"trade_id": tid, "qty": by_tid[tid]} for tid in order]
+
+
+async def get_task_filled_qty_map(
+    session: AsyncSession,
+    task_ids: list[str],
+) -> dict[str, int]:
+    """For each task_id, return the cumulative_qty of its latest push event.
+
+    Tasks with no push events (e.g. PARSE_ERROR, SUBMIT_FAILED) are
+    omitted from the returned map — callers should treat missing keys
+    as "no filled qty available, ineligible for做T".
+    """
+    if not task_ids:
+        return {}
+    # Latest push per task via correlated subquery on received_at
+    subq = (
+        select(
+            PushEventRow.task_id,
+            func.max(PushEventRow.received_at).label("latest_ts"),
+        )
+        .where(PushEventRow.task_id.in_(task_ids))
+        .group_by(PushEventRow.task_id)
+        .subquery()
+    )
+    stmt = (
+        select(PushEventRow)
+        .join(
+            subq,
+            (PushEventRow.task_id == subq.c.task_id)
+            & (PushEventRow.received_at == subq.c.latest_ts),
+        )
+    )
+    result = await session.execute(stmt)
+    out: dict[str, int] = {}
+    for evt in result.scalars():
+        if evt.cumulative_qty is not None and evt.cumulative_qty > 0:
+            out[evt.task_id] = int(evt.cumulative_qty)
+    return out
+
+
+async def list_pairs(
+    session: AsyncSession,
+    *,
+    ticker: str | None = None,
+    account_id: str | None = None,
+    offset: int = 0,
+    limit: int | None = None,
+) -> list[TPairRow]:
+    """Return做T pairs, optionally filtered by ticker and/or account.
+
+    Ordered by ``created_at ASC`` so the UI's T-1, T-2, ... numbering is
+    stable across reloads. ``account_id=None`` returns all pairs (used by
+    legacy / admin paths). UI callers should always pass the active
+    broker's account_id to keep accounts isolated.
+
+    ``offset`` / ``limit`` provide server-side pagination for the detail
+    pane's pair list. Omit ``limit`` to return all rows (default, matches
+    pre-pagination behavior so internal callers don't break).
+    """
+    stmt = select(TPairRow).order_by(TPairRow.created_at)
+    if ticker is not None:
+        stmt = stmt.where(TPairRow.ticker == ticker)
+    if account_id is not None:
+        stmt = stmt.where(TPairRow.account_id == account_id)
+    if offset:
+        stmt = stmt.offset(offset)
+    if limit is not None:
+        stmt = stmt.limit(limit)
+    result = await session.execute(stmt)
+    return list(result.scalars())
+
+
+async def count_pairs(
+    session: AsyncSession,
+    *,
+    ticker: str | None = None,
+    account_id: str | None = None,
+) -> int:
+    """Total做T pair count matching the same filters as ``list_pairs``.
+    Used by paginated /api/pairs to surface total/has_more to the UI."""
+    stmt = select(func.count()).select_from(TPairRow)
+    if ticker is not None:
+        stmt = stmt.where(TPairRow.ticker == ticker)
+    if account_id is not None:
+        stmt = stmt.where(TPairRow.account_id == account_id)
+    result = await session.execute(stmt)
+    return int(result.scalar_one())
+
+
+async def get_broker_executions_qty_map(
+    session: AsyncSession,
+    order_ids: list[str],
+) -> dict[str, int]:
+    """For each broker order_id, return its aggregated fill quantity from
+    ``broker_executions``. Missing keys mean the order isn't in the synced
+    table — ineligible for做T binding (treat as zero availability).
+
+    This replaces ``get_task_filled_qty_map`` in the做T pair-binding path
+    since pairs now reference broker order_ids instead of task ids.
+    """
+    if not order_ids:
+        return {}
+    stmt = select(BrokerExecutionRow.order_id, BrokerExecutionRow.qty).where(
+        BrokerExecutionRow.order_id.in_(order_ids)
+    )
+    result = await session.execute(stmt)
+    return {row.order_id: int(row.qty) for row in result.all() if row.qty > 0}
+
+
+async def get_pair(session: AsyncSession, pair_id: int) -> TPairRow | None:
+    return await session.get(TPairRow, pair_id)
+
+
+async def delete_pair(session: AsyncSession, pair_id: int) -> bool:
+    """Remove a pair. Also clears the pair's entries from each referenced
+    trade's ``broker_executions.t_pair_tags``. Returns True if existed."""
+    pair = await session.get(TPairRow, pair_id)
+    if pair is None:
+        return False
+    # Strip [pair_id, *] from referenced fills BEFORE deleting the pair
+    # so a follow-up "pending做T" SQL sees the freed qty immediately.
+    await _sync_pair_tags(
+        session,
+        pair_id=pair_id,
+        old_buys=list(pair.buys_json or []),
+        old_sells=list(pair.sells_json or []),
+        new_buys=[],
+        new_sells=[],
+    )
+    await session.delete(pair)
+    await session.commit()
+    return True
+
+
+def _price_map(rows: list[BrokerExecutionRow]) -> dict[str, float]:
+    """``order_id → price`` lookup used by profit computation."""
+    return {r.order_id: float(r.price) for r in rows}
+
+
+def _compute_pair_profit(
+    buys: list[dict[str, Any]],
+    sells: list[dict[str, Any]],
+    price_by_trade_id: dict[str, float],
+) -> float:
+    """Realized profit on the matched portion of a pair.
+
+    matched_qty = min(sum_buy_qty, sum_sell_qty)
+    profit      = matched_qty × (avg_sell_price − avg_buy_price)
+
+    Mirrors ``pairMath.ts::pairProfit`` so the stored value matches the
+    frontend's expectations exactly. Returns 0 for one-sided pairs.
+    """
+    buy_qty_total = sum(int(b.get("qty", 0)) for b in buys)
+    sell_qty_total = sum(int(s.get("qty", 0)) for s in sells)
+    if buy_qty_total <= 0 or sell_qty_total <= 0:
+        return 0.0
+    buy_cost = sum(
+        int(b.get("qty", 0)) * price_by_trade_id.get(str(b.get("trade_id", "")), 0.0)
+        for b in buys
+    )
+    sell_rev = sum(
+        int(s.get("qty", 0)) * price_by_trade_id.get(str(s.get("trade_id", "")), 0.0)
+        for s in sells
+    )
+    avg_buy = buy_cost / buy_qty_total
+    avg_sell = sell_rev / sell_qty_total
+    return float(min(buy_qty_total, sell_qty_total) * (avg_sell - avg_buy))
+
+
+async def _sync_pair_tags(
+    session: AsyncSession,
+    *,
+    pair_id: int,
+    old_buys: list[dict[str, Any]],
+    old_sells: list[dict[str, Any]],
+    new_buys: list[dict[str, Any]],
+    new_sells: list[dict[str, Any]],
+) -> None:
+    """Reconcile ``broker_executions.t_pair_tags`` for the trades
+    referenced by this pair, before/after a CRUD operation.
+
+    Algorithm per affected trade_id:
+      1. Strip any existing ``[pair_id, *]`` entry from the trade's tags.
+      2. If the new allocation under this pair > 0, append ``[pair_id, qty]``.
+
+    Affected set = ids in ``old_*`` ∪ ids in ``new_*`` — covers create
+    (old empty), extend (overlap), and delete (new empty).
+    """
+    new_qty_by_trade: dict[str, int] = {}
+    for entry in (new_buys or []) + (new_sells or []):
+        tid = entry.get("trade_id")
+        if tid is None:
+            continue
+        new_qty_by_trade[str(tid)] = new_qty_by_trade.get(str(tid), 0) + int(
+            entry.get("qty", 0)
+        )
+
+    affected: set[str] = set(new_qty_by_trade.keys())
+    for entry in (old_buys or []) + (old_sells or []):
+        tid = entry.get("trade_id")
+        if tid is not None:
+            affected.add(str(tid))
+    if not affected:
+        return
+
+    for tid in affected:
+        trade_row = await session.get(BrokerExecutionRow, tid)
+        if trade_row is None:
+            # Trade not (yet) in broker_executions table — skip silently.
+            # This shouldn't happen in practice since create_pair derives
+            # buy/sell ids from ``get_broker_executions_qty_map``.
+            continue
+        tags = [
+            list(t) for t in (trade_row.t_pair_tags or [])
+            if not (isinstance(t, (list, tuple)) and len(t) >= 1 and int(t[0]) == pair_id)
+        ]
+        new_qty = new_qty_by_trade.get(tid, 0)
+        if new_qty > 0:
+            tags.append([pair_id, new_qty])
+        trade_row.t_pair_tags = tags
+
+
+async def _fetch_prices(
+    session: AsyncSession, trade_ids: list[str]
+) -> dict[str, float]:
+    """Bulk ``order_id → price`` fetch for profit computation."""
+    if not trade_ids:
+        return {}
+    stmt = select(BrokerExecutionRow.order_id, BrokerExecutionRow.price).where(
+        BrokerExecutionRow.order_id.in_(trade_ids)
+    )
+    return {
+        row.order_id: float(row.price)
+        for row in (await session.execute(stmt)).all()
+    }
+
+
+async def create_pair(
+    session: AsyncSession,
+    *,
+    ticker: str,
+    symbol: str | None,
+    buy_trade_ids: list[str],
+    sell_trade_ids: list[str],
+    trade_qty: dict[str, int],
+    account_id: str,
+) -> TPairRow | None:
+    """Allocate a new pair using FIFO + min(BUY_avail, SELL_avail).
+
+    ``trade_qty`` maps each candidate trade_id (broker order_id) to its
+    aggregated qty. Existing pair allocations are loaded automatically to
+    compute remaining availability. The pair's INTEGER id is assigned by
+    SQLite (autoincrement); the caller doesn't supply it.
+
+    On success:
+      - ``profit`` is computed and stored.
+      - Each referenced broker_executions row has its ``t_pair_tags``
+        updated to include ``[new_pair_id, alloc_qty]``.
+
+    Returns ``None`` if no allocation was possible.
+    """
+    existing_pairs = await list_pairs(session, ticker=ticker, account_id=account_id)
+    allocated = aggregate_allocated(existing_pairs)
+    buy_avail = sum(
+        max(0, trade_qty.get(tid, 0) - allocated.get(tid, 0)) for tid in buy_trade_ids
+    )
+    sell_avail = sum(
+        max(0, trade_qty.get(tid, 0) - allocated.get(tid, 0)) for tid in sell_trade_ids
+    )
+    matched = min(buy_avail, sell_avail)
+
+    if matched > 0:
+        buys = allocate_fifo(buy_trade_ids, trade_qty, allocated, matched)
+        sells = allocate_fifo(sell_trade_ids, trade_qty, allocated, matched)
+    elif buy_avail > 0:
+        buys = allocate_fifo(buy_trade_ids, trade_qty, allocated, buy_avail)
+        sells = []
+    elif sell_avail > 0:
+        buys = []
+        sells = allocate_fifo(sell_trade_ids, trade_qty, allocated, sell_avail)
+    else:
+        return None
+
+    prices = await _fetch_prices(
+        session, [str(a["trade_id"]) for a in buys + sells]
+    )
+    profit = _compute_pair_profit(buys, sells, prices)
+
+    now = datetime.now(UTC)
+    row = TPairRow(
+        account_id=account_id,
+        ticker=ticker,
+        symbol=symbol,
+        buys_json=buys,
+        sells_json=sells,
+        profit=profit,
+        created_at=now,
+        updated_at=now,
+    )
+    session.add(row)
+    # Flush so the autoincrement id is assigned BEFORE we propagate it
+    # into broker_executions.t_pair_tags.
+    await session.flush()
+
+    await _sync_pair_tags(
+        session,
+        pair_id=row.id,
+        old_buys=[],
+        old_sells=[],
+        new_buys=buys,
+        new_sells=sells,
+    )
+    await session.commit()
+    return row
+
+
+async def extend_pair(
+    session: AsyncSession,
+    *,
+    pair_id: int,
+    buy_trade_ids: list[str],
+    sell_trade_ids: list[str],
+    trade_qty: dict[str, int],
+    account_id: str | None = None,
+) -> TPairRow | None:
+    """Add more trades to an existing pair, balancing against current state.
+
+    Allocation algorithm:
+      1. Compute the pair's existing BUY/SELL totals.
+      2. Compute new-side available qty (selection minus other-pair allocations).
+      3. Target balanced total = min(existing_buy + new_buy_avail,
+         existing_sell + new_sell_avail) — fill the smaller gap first.
+      4. If both sides need 0 more (already balanced and selection was
+         one-sided), fall through to a "raw extend" mode that adds the
+         supplied side as available qty — this creates a pair-level
+         mismatch which is intentional (UI labels it "部分做T").
+
+    On success: ``profit`` is recomputed and stored, and
+    ``broker_executions.t_pair_tags`` is resynced for every trade now
+    referenced by this pair (additions append, existing entries' qty
+    grow).
+
+    Returns the updated pair, or ``None`` if the pair does not exist.
+    """
+    pair = await session.get(TPairRow, pair_id)
+    if pair is None:
+        return None
+
+    ticker = pair.ticker
+    # Scope to the pair's own account so cross-account allocations don't
+    # interfere with availability calculations.
+    scope_account = account_id if account_id is not None else pair.account_id
+    all_pairs = await list_pairs(session, ticker=ticker, account_id=scope_account)
+    # The pair we're extending should NOT count its own allocations as
+    # "already used" against the trades being added — they may overlap
+    # with trades already in this pair (the merge step folds them).
+    other_pairs = [p for p in all_pairs if p.id != pair_id]
+    other_alloc = aggregate_allocated(other_pairs)
+
+    existing_buy = sum(int(a["qty"]) for a in (pair.buys_json or []))
+    existing_sell = sum(int(a["qty"]) for a in (pair.sells_json or []))
+
+    new_buy_avail = sum(
+        max(0, trade_qty.get(tid, 0) - other_alloc.get(tid, 0)) for tid in buy_trade_ids
+    )
+    new_sell_avail = sum(
+        max(0, trade_qty.get(tid, 0) - other_alloc.get(tid, 0)) for tid in sell_trade_ids
+    )
+
+    desired = min(existing_buy + new_buy_avail, existing_sell + new_sell_avail)
+    need_buy = max(0, desired - existing_buy)
+    need_sell = max(0, desired - existing_sell)
+
+    new_buys = allocate_fifo(buy_trade_ids, trade_qty, other_alloc, need_buy)
+    new_sells = allocate_fifo(sell_trade_ids, trade_qty, other_alloc, need_sell)
+
+    # Fallback: one-sided extension that doesn't fill any gap → preserve
+    # user intent by adding the supplied side's full availability.
+    if not new_buys and not new_sells:
+        if new_buy_avail > 0:
+            new_buys = allocate_fifo(buy_trade_ids, trade_qty, other_alloc, new_buy_avail)
+        if new_sell_avail > 0:
+            new_sells = allocate_fifo(sell_trade_ids, trade_qty, other_alloc, new_sell_avail)
+
+    if not new_buys and not new_sells:
+        return pair  # nothing to add; leave pair unchanged
+
+    old_buys = list(pair.buys_json or [])
+    old_sells = list(pair.sells_json or [])
+    merged_buys = _merge_allocations(old_buys, new_buys)
+    merged_sells = _merge_allocations(old_sells, new_sells)
+
+    prices = await _fetch_prices(
+        session, [str(a["trade_id"]) for a in merged_buys + merged_sells]
+    )
+    pair.buys_json = merged_buys
+    pair.sells_json = merged_sells
+    pair.profit = _compute_pair_profit(merged_buys, merged_sells, prices)
+    pair.updated_at = datetime.now(UTC)
+
+    await _sync_pair_tags(
+        session,
+        pair_id=pair_id,
+        old_buys=old_buys,
+        old_sells=old_sells,
+        new_buys=merged_buys,
+        new_sells=merged_sells,
+    )
+    await session.commit()
+    return pair
+
+
+# ---------------------------------------------------------------------------
+# broker_executions  — broker-synced fill mirror, account-scoped
+# ---------------------------------------------------------------------------
+
+
+async def upsert_broker_executions(
+    session: AsyncSession,
+    *,
+    account_id: str,
+    rows: list[dict[str, Any]],
+) -> int:
+    """Aggregate broker fills by ``order_id`` and upsert one row per
+    order. Returns the number of orders persisted.
+
+    ``rows`` are per-fill dicts as emitted by
+    ``broker.history_executions`` (qty/price for each partial fill).
+    Aggregation:
+      - qty = sum of fill quantities
+      - price = quantity-weighted average price
+      - ts = latest fill's timestamp
+      - symbol / ticker / side: taken from the first fill (constant
+        within an order)
+
+    Also attempts a best-effort link to ``tasks.task_id`` by matching on
+    ``order_id`` — when a task in this account previously submitted this
+    order, the row records that linkage. Manual fills (no originating
+    task) get ``task_id = NULL``.
+    """
+    if not rows:
+        return 0
+
+    by_order: dict[str, dict[str, Any]] = {}
+    for r in rows:
+        oid = str(r.get("order_id") or "")
+        if not oid:
+            continue
+        raw_ts = r.get("ts")
+        if isinstance(raw_ts, datetime) and raw_ts.tzinfo is not None:
+            raw_ts = raw_ts.astimezone(UTC).replace(tzinfo=None)
+        qty_part = int(r.get("qty", 0) or 0)
+        price_part = float(r.get("price", 0) or 0)
+        agg = by_order.get(oid)
+        if agg is None:
+            by_order[oid] = {
+                "order_id": oid,
+                "account_id": account_id,
+                "task_id": None,
+                "symbol": str(r.get("symbol", "")),
+                "ticker": str(r.get("ticker", "")),
+                "side": str(r.get("side", "")),
+                "qty": qty_part,
+                "_weighted": qty_part * price_part,
+                "ts": raw_ts,
+            }
+        else:
+            agg["qty"] += qty_part
+            agg["_weighted"] += qty_part * price_part
+            # Keep the latest fill ts as the order's ts.
+            if raw_ts is not None and (agg["ts"] is None or raw_ts > agg["ts"]):
+                agg["ts"] = raw_ts
+
+    if not by_order:
+        return 0
+
+    # Link to originating signal-station tasks where order_id matches.
+    order_ids = list(by_order.keys())
+    task_rows = await session.execute(
+        select(TaskRow.id, TaskRow.order_id).where(TaskRow.order_id.in_(order_ids))
+    )
+    task_id_by_order = {r.order_id: r.id for r in task_rows.all()}
+
+    payloads: list[dict[str, Any]] = []
+    for oid, agg in by_order.items():
+        total_qty = agg["qty"]
+        avg_price = (agg["_weighted"] / total_qty) if total_qty > 0 else 0.0
+        payloads.append({
+            "order_id": oid,
+            "account_id": agg["account_id"],
+            "task_id": task_id_by_order.get(oid),
+            "symbol": agg["symbol"],
+            "ticker": agg["ticker"],
+            "side": agg["side"],
+            "qty": total_qty,
+            "price": avg_price,
+            "ts": agg["ts"],
+        })
+
+    stmt = sqlite_insert(BrokerExecutionRow).values(payloads)
+    stmt = stmt.on_conflict_do_update(
+        index_elements=["order_id"],
+        set_={
+            "account_id": stmt.excluded.account_id,
+            "task_id": stmt.excluded.task_id,
+            "symbol": stmt.excluded.symbol,
+            "ticker": stmt.excluded.ticker,
+            "side": stmt.excluded.side,
+            "qty": stmt.excluded.qty,
+            "price": stmt.excluded.price,
+            "ts": stmt.excluded.ts,
+            "synced_at": func.current_timestamp(),
+        },
+    )
+    await session.execute(stmt)
+    await session.commit()
+    return len(payloads)
+
+
+async def list_broker_executions(
+    session: AsyncSession,
+    *,
+    account_id: str,
+    ticker: str | None = None,
+    since: datetime | None = None,
+    offset: int = 0,
+    limit: int = 500,
+) -> list[BrokerExecutionRow]:
+    """List fills for an account, optionally filtered by ticker and a
+    lower-bound timestamp. Returned newest-first.
+
+    ``offset`` enables server-side pagination for the detail pane's trade
+    list. The frontend appends successive pages into a single ticker-scoped
+    store so trades selected on prior pages remain available for cross-page
+    做T binding without re-fetching them.
+    """
+    stmt = (
+        select(BrokerExecutionRow)
+        .where(BrokerExecutionRow.account_id == account_id)
+        .order_by(BrokerExecutionRow.ts.desc())
+        .offset(offset)
+        .limit(limit)
+    )
+    if ticker is not None:
+        stmt = stmt.where(BrokerExecutionRow.ticker == ticker)
+    if since is not None:
+        stmt = stmt.where(BrokerExecutionRow.ts >= since)
+    result = await session.execute(stmt)
+    return list(result.scalars().all())
+
+
+async def count_broker_executions(
+    session: AsyncSession,
+    *,
+    account_id: str,
+    ticker: str | None = None,
+    since: datetime | None = None,
+) -> int:
+    """Total fill count matching the same filters as
+    ``list_broker_executions``. Used by paginated /api/broker/executions
+    to surface total/has_more to the UI without re-fetching."""
+    stmt = (
+        select(func.count())
+        .select_from(BrokerExecutionRow)
+        .where(BrokerExecutionRow.account_id == account_id)
+    )
+    if ticker is not None:
+        stmt = stmt.where(BrokerExecutionRow.ticker == ticker)
+    if since is not None:
+        stmt = stmt.where(BrokerExecutionRow.ts >= since)
+    result = await session.execute(stmt)
+    return int(result.scalar_one())
 
 
 # ---------------------------------------------------------------------------
