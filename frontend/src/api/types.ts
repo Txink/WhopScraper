@@ -122,10 +122,254 @@ export interface paths {
          * List Positions Endpoint
          * @description Return current positions split into stocks and options.
          *
-         *     Sourced from the ``positions`` table (populated by a future broker-sync
-         *     job — returns empty lists until that sync runs).
+         *     Pulls live from the broker on every call (no DB cache yet) so the
+         *     dashboard cards reflect the latest holdings without a periodic sync
+         *     job. If the broker is down we fall back to ``[]`` rather than 502 —
+         *     the dashboard treats absence as "no positions" and skips quote/
+         *     candlestick fetches.
+         *
+         *     Longbridge's ``stock_positions`` endpoint actually returns BOTH
+         *     stocks and option contracts the user holds (the option contracts
+         *     carry an OCC-format symbol). We classify each row via
+         *     ``parse_option_symbol`` and route to the appropriate bucket.
          */
         get: operations["list_positions_endpoint_api_positions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pairs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Pairs Endpoint
+         * @description List做T pairs for the active account, optionally filtered by
+         *     ticker. Cross-account isolation is enforced via the broker's
+         *     ``account_id``; pairs created under a different account stay
+         *     hidden after switching.
+         *
+         *     Paginated: ``offset`` / ``limit`` slice the result. The response
+         *     carries ``total_count`` and ``has_more`` so the UI can render a
+         *     "已加载 M / N · 加载更多" affordance without a separate count call.
+         */
+        get: operations["list_pairs_endpoint_api_pairs_get"];
+        put?: never;
+        /**
+         * Create Pair Endpoint
+         * @description Create a做T pair binding broker fills (one row per order_id).
+         *     Server auto-balances qty using FIFO; leftover qty stays on the
+         *     originating fills for future bindings.
+         */
+        post: operations["create_pair_endpoint_api_pairs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pairs/{pair_id}/extend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Extend Pair Endpoint
+         * @description Add trades to an existing做T pair.
+         */
+        post: operations["extend_pair_endpoint_api_pairs__pair_id__extend_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pairs/{pair_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Pair Endpoint
+         * @description Unbind a做T pair. The underlying trades become available again.
+         */
+        delete: operations["delete_pair_endpoint_api_pairs__pair_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/quote": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Quote Endpoint
+         * @description Fetch snapshot quotes for the comma-separated symbol list.
+         *
+         *     Symbols missing from the broker's response are silently dropped from
+         *     the result — callers should expect a possibly-smaller result set.
+         */
+        get: operations["quote_endpoint_api_quote_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/quotes/watch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Watch Quotes Endpoint
+         * @description Set the symbols whose quote push-stream the backend forwards
+         *     to WS clients. Replaces the previous set — backend diffs and
+         *     issues subscribe/unsubscribe to the broker.
+         *
+         *     Frontend calls this once after positions resolve, and again on
+         *     every account switch (after /broker/reload). Empty list clears
+         *     all subscriptions (used on dashboard unmount / logout).
+         *
+         *     Returns 503 when no SubscriptionManager is bound yet (early
+         *     startup window before broker init completes, or right after an
+         *     account-switch reload tore the old manager down) — frontend
+         *     retries on the next positions tick.
+         */
+        post: operations["watch_quotes_endpoint_api_quotes_watch_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/candlesticks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Candlesticks Endpoint
+         * @description Return candlestick bars for a single symbol.
+         *
+         *     For `today`, granularity (2/3/5 min) and sessions (regular vs
+         *     pre+post) are user-selectable so the user can choose between a
+         *     clean regular-hours curve and a wider view that includes pre-market
+         *     and after-hours. For other periods these query params are ignored
+         *     (fixed mapping):
+         *       5/7 → 5-min, 15 → 15-min, 30/60/90 → daily.
+         */
+        get: operations["candlesticks_endpoint_api_candlesticks_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/broker/executions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * History Executions Endpoint
+         * @description Broker-side fill history for the detail pane's trade list.
+         *
+         *     Incremental sync: starts from MAX(ts) already in DB for this
+         *     account (+ optional ticker), pulls only the gap from the broker,
+         *     upserts. First-ever open falls back to a 90-day window. Read
+         *     comes from DB filtered by account_id so cross-account bleed is
+         *     impossible and broker outages still serve cached data.
+         *
+         *     Paginated: ``offset`` / ``limit`` slice the result newest-first.
+         *     Sync runs on every call (idempotent upsert) so a "加载更多" click
+         *     also picks up new fills that arrived since the previous page.
+         *     Response carries ``total_count`` / ``has_more`` so the UI can
+         *     accumulate pages into a single store for cross-page做T binding.
+         */
+        get: operations["history_executions_endpoint_api_broker_executions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/broker/today_executions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Today Executions Endpoint
+         * @description Today's (ET trading day) order-level executions for the active
+         *     account. Same DB-backed path as /api/broker/executions but with a
+         *     narrow window — used by Day P/L on position cards.
+         *
+         *     Sync pulls today_executions from the broker (which already covers
+         *     ~30h via history_executions internally) and upserts as one row
+         *     per order. Frontend re-filters by ET trading day client-side.
+         */
+        get: operations["today_executions_endpoint_api_broker_today_executions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/trades": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Trades Endpoint
+         * @description Return chronologically-ordered FILLED / PARTIAL trades for a ticker.
+         *
+         *     Each entry corresponds to one task (its id is the trade_id used in
+         *     做T pair allocations). Unfilled tasks (no cumulative_qty) are
+         *     filtered out — they have no position to bind.
+         */
+        get: operations["trades_endpoint_api_trades_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -174,6 +418,110 @@ export interface paths {
         head?: never;
         /** Patch Longport Settings */
         patch: operations["patch_longport_settings_api_longport_settings_patch"];
+        trace?: never;
+    };
+    "/api/longport/oauth/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Longport Oauth Start
+         * @description Start a fresh OAuth flow to add a new LongBridge account slot.
+         *
+         *     Always registers a brand-new OAuth client_id — there is no concept
+         *     of "re-using" a previously-authorized account here, because each
+         *     invocation expresses the user's intent to add an account.
+         */
+        post: operations["post_longport_oauth_start_api_longport_oauth_start_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/longport/oauth/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Longport Oauth Status */
+        get: operations["get_longport_oauth_status_api_longport_oauth_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/longport/oauth/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Longport Oauth Activate
+         * @description Set ``account_id`` as the active account. Caller is expected to
+         *     invoke /broker/reload separately to actually swap the broker.
+         */
+        post: operations["post_longport_oauth_activate_api_longport_oauth_activate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/longport/oauth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Longport Oauth Logout
+         * @description Remove an account: scrub the SDK token cache, drop from the
+         *     settings list. If it was the active account, fall back to whatever
+         *     account remains.
+         */
+        post: operations["post_longport_oauth_logout_api_longport_oauth_logout_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/longport/oauth/account": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Patch Longport Oauth Account
+         * @description Rename an account's display label.
+         */
+        patch: operations["patch_longport_oauth_account_api_longport_oauth_account_patch"];
         trace?: never;
     };
     "/api/longport/broker/status": {
@@ -469,17 +817,15 @@ export interface components {
          * BrokerStatusOut
          * @description Snapshot of the running broker — whether it's a live LongPortClient
          *     or fell back to NoopBrokerClient, plus the last init error if any.
-         *     Used by the settings dialog to surface init state and let the user
-         *     trigger a rebuild after correcting credentials.
          */
         BrokerStatusOut: {
             /** Is Real */
             is_real: boolean;
             /**
-             * Mode
-             * @enum {string}
+             * Account Label
+             * @default
              */
-            mode: "paper" | "real";
+            account_label: string;
             /** Dry Run */
             dry_run: boolean;
             /** Last Init Error */
@@ -493,6 +839,83 @@ export interface components {
              */
             ok: boolean;
         };
+        /** CandlestickOut */
+        CandlestickOut: {
+            /** Timestamp */
+            timestamp: string | null;
+            /** Open */
+            open: number;
+            /** High */
+            high: number;
+            /** Low */
+            low: number;
+            /** Close */
+            close: number;
+            /** Volume */
+            volume: number;
+            /** Turnover */
+            turnover: number;
+        };
+        /** CandlesticksOut */
+        CandlesticksOut: {
+            /** Symbol */
+            symbol: string;
+            /** Period */
+            period: string;
+            /** Bars */
+            bars: components["schemas"]["CandlestickOut"][];
+        };
+        /**
+         * ExecutionOut
+         * @description One broker-side ORDER (with partial fills aggregated). The unit
+         *     of做T binding + day-PL accounting.
+         *
+         *     ``order_id`` is the unique key. ``task_id`` (nullable) links back to
+         *     the signal-station ``tasks`` row that submitted this order — present
+         *     only for orders that went through the trader pipeline; manual fills
+         *     placed via the LongBridge app / web have ``task_id = null``.
+         */
+        ExecutionOut: {
+            /** Order Id */
+            order_id: string;
+            /** Task Id */
+            task_id?: string | null;
+            /** Symbol */
+            symbol: string;
+            /** Ticker */
+            ticker: string;
+            /**
+             * Side
+             * @enum {string}
+             */
+            side: "BUY" | "SELL";
+            /** Qty */
+            qty: number;
+            /** Price */
+            price: number;
+            /**
+             * Ts
+             * Format: date-time
+             */
+            ts: string;
+        };
+        /** ExecutionsOut */
+        ExecutionsOut: {
+            /** Executions */
+            executions: components["schemas"]["ExecutionOut"][];
+            /** Last Synced At */
+            last_synced_at?: string | null;
+            /**
+             * Total Count
+             * @default 0
+             */
+            total_count: number;
+            /**
+             * Has More
+             * @default false
+             */
+            has_more: boolean;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -504,8 +927,11 @@ export interface components {
             whop: string;
             /** Longport */
             longport: string;
-            /** Mode */
-            mode: string;
+            /**
+             * Account Label
+             * @default
+             */
+            account_label: string;
             /** Dry Run */
             dry_run: boolean;
         };
@@ -555,24 +981,72 @@ export interface components {
             /** Expiry */
             expiry?: string | null;
         };
-        /** LongPortCredentialSet */
-        LongPortCredentialSet: {
-            /** App Key */
-            app_key: string;
-            /** App Secret */
-            app_secret: string;
-            /** Access Token */
-            access_token: string;
+        /** LongPortAccountActivateIn */
+        LongPortAccountActivateIn: {
+            /** Account Id */
+            account_id: string;
+        };
+        /** LongPortAccountLogoutIn */
+        LongPortAccountLogoutIn: {
+            /** Account Id */
+            account_id: string;
+        };
+        /**
+         * LongPortAccountOut
+         * @description One OAuth-authorized LongBridge account slot in the settings list.
+         *
+         *     ``account_id`` is the registered Longbridge OAuth client_id (stable
+         *     per Longbridge account). ``label`` is a user-chosen display name.
+         *     ``authorized`` reflects whether the SDK token cache holds a valid
+         *     token for that account.
+         */
+        LongPortAccountOut: {
+            /** Account Id */
+            account_id: string;
+            /** Label */
+            label: string;
+            /** Authorized */
+            authorized: boolean;
+        };
+        /** LongPortAccountRenameIn */
+        LongPortAccountRenameIn: {
+            /** Account Id */
+            account_id: string;
+            /** Label */
+            label: string;
+        };
+        /**
+         * LongPortOAuthStartOut
+         * @description Returned by POST /oauth/start — the URL is opened in a new tab and
+         *     the session_id is polled by /oauth/status until completion. The new
+         *     account_id is added to the settings list only after success.
+         */
+        LongPortOAuthStartOut: {
+            /** Session Id */
+            session_id: string;
+            /** Auth Url */
+            auth_url: string;
+            /** Account Id */
+            account_id: string;
+        };
+        /** LongPortOAuthStatusOut */
+        LongPortOAuthStatusOut: {
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "awaiting_url" | "ready" | "success" | "error" | "cancelled";
+            /** Error */
+            error?: string | null;
+            /** Account Id */
+            account_id?: string | null;
         };
         /** LongPortSettingsOut */
         LongPortSettingsOut: {
-            /**
-             * Mode
-             * @enum {string}
-             */
-            mode: "paper" | "real";
-            paper: components["schemas"]["LongPortCredentialSet"];
-            real: components["schemas"]["LongPortCredentialSet"];
+            /** Active Account Id */
+            active_account_id: string | null;
+            /** Accounts */
+            accounts: components["schemas"]["LongPortAccountOut"][];
             /** Auto Trade */
             auto_trade: boolean;
             /** Region */
@@ -580,12 +1054,12 @@ export interface components {
             /** Dry Run */
             dry_run: boolean;
         };
-        /** LongPortSettingsPatch */
+        /**
+         * LongPortSettingsPatch
+         * @description Mutable subset of LongPort settings. Account list is managed via the
+         *     OAuth + account endpoints and cannot be patched here.
+         */
         LongPortSettingsPatch: {
-            /** Mode */
-            mode?: ("paper" | "real") | null;
-            paper?: components["schemas"]["LongPortCredentialSet"] | null;
-            real?: components["schemas"]["LongPortCredentialSet"] | null;
             /** Auto Trade */
             auto_trade?: boolean | null;
             /** Region */
@@ -647,6 +1121,8 @@ export interface components {
             quantity: number;
             /** Avg Cost */
             avg_cost: number | null;
+            /** Name */
+            name?: string | null;
             /** Option Strike */
             option_strike?: number | null;
             /** Option Expiry */
@@ -690,6 +1166,67 @@ export interface components {
             submitted_price?: number | null;
             /** Submitted Quantity */
             submitted_quantity?: number | null;
+        };
+        /** QuoteOut */
+        QuoteOut: {
+            /** Symbol */
+            symbol: string;
+            /** Last Done */
+            last_done: number;
+            /** Prev Close */
+            prev_close: number;
+            /** Today Close */
+            today_close?: number | null;
+            /** Open */
+            open: number;
+            /** High */
+            high: number;
+            /** Low */
+            low: number;
+            /** Volume */
+            volume: number;
+            /** Turnover */
+            turnover: number;
+            /** Change */
+            change: number;
+            /** Change Pct */
+            change_pct: number;
+            /**
+             * Trade Session
+             * @default regular
+             * @enum {string}
+             */
+            trade_session: "regular" | "pre" | "post" | "overnight" | "closed";
+        };
+        /**
+         * QuoteWatchIn
+         * @description Request body for ``POST /api/quotes/watch``.
+         *
+         *     Replaces the active quote-push watch set with ``symbols``. Backend
+         *     diffs vs. the prior set and issues subscribe/unsubscribe calls to the
+         *     broker. Empty list clears all subscriptions (e.g. on dashboard close).
+         */
+        QuoteWatchIn: {
+            /** Symbols */
+            symbols: string[];
+        };
+        /**
+         * QuoteWatchOut
+         * @description Response body for ``POST /api/quotes/watch`` — observability fields
+         *     so the UI / log can confirm the diff actually took effect.
+         */
+        QuoteWatchOut: {
+            /** Added */
+            added: number;
+            /** Removed */
+            removed: number;
+            /** Total */
+            total: number;
+        };
+        /** QuotesOut */
+        QuotesOut: {
+            /** Quotes */
+            quotes: components["schemas"]["QuoteOut"][];
         };
         /** ScenarioOverviewOut */
         ScenarioOverviewOut: {
@@ -739,6 +1276,94 @@ export interface components {
             filled: number;
             /** Rejected */
             rejected: number;
+        };
+        /**
+         * TPairAllocation
+         * @description One trade's allocation into a做T pair. ``qty`` may be less than the
+         *     trade's filled quantity — a trade can be split across multiple pairs.
+         */
+        TPairAllocation: {
+            /** Trade Id */
+            trade_id: string;
+            /** Qty */
+            qty: number;
+        };
+        /**
+         * TPairCreate
+         * @description Client selection for a new做T pair. The server computes per-trade
+         *     qty allocations using FIFO + min(BUY_avail, SELL_avail) and persists
+         *     the result; partial / one-sided selections are accepted.
+         */
+        TPairCreate: {
+            /** Ticker */
+            ticker: string;
+            /** Symbol */
+            symbol?: string | null;
+            /**
+             * Buy Trade Ids
+             * @default []
+             */
+            buy_trade_ids: string[];
+            /**
+             * Sell Trade Ids
+             * @default []
+             */
+            sell_trade_ids: string[];
+        };
+        /**
+         * TPairExtendIn
+         * @description Add more trades to an existing pair. Same allocation rules apply,
+         *     with the existing pair contents counted against trade availability.
+         */
+        TPairExtendIn: {
+            /**
+             * Buy Trade Ids
+             * @default []
+             */
+            buy_trade_ids: string[];
+            /**
+             * Sell Trade Ids
+             * @default []
+             */
+            sell_trade_ids: string[];
+        };
+        /** TPairOut */
+        TPairOut: {
+            /** Id */
+            id: string;
+            /** Ticker */
+            ticker: string;
+            /** Symbol */
+            symbol?: string | null;
+            /** Buys */
+            buys: components["schemas"]["TPairAllocation"][];
+            /** Sells */
+            sells: components["schemas"]["TPairAllocation"][];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** TPairsOut */
+        TPairsOut: {
+            /** Pairs */
+            pairs: components["schemas"]["TPairOut"][];
+            /**
+             * Total Count
+             * @default 0
+             */
+            total_count: number;
+            /**
+             * Has More
+             * @default false
+             */
+            has_more: boolean;
         };
         /** TaskCountOut */
         TaskCountOut: {
@@ -849,6 +1474,41 @@ export interface components {
             /** Trade Quantity */
             trade_quantity: number;
         };
+        /**
+         * TradeOut
+         * @description A single fully-executed (or partial) trade, suitable as a做T
+         *     pair member. ``id`` matches the originating task id.
+         */
+        TradeOut: {
+            /** Id */
+            id: string;
+            /** Ticker */
+            ticker: string;
+            /** Symbol */
+            symbol?: string | null;
+            /** Side */
+            side: string;
+            /** Qty */
+            qty: number;
+            /** Price */
+            price: number;
+            /**
+             * Ts
+             * Format: date-time
+             */
+            ts: string;
+            /** Source */
+            source?: string | null;
+            /** Tag */
+            tag?: string | null;
+        };
+        /** TradesOut */
+        TradesOut: {
+            /** Ticker */
+            ticker: string;
+            /** Trades */
+            trades: components["schemas"]["TradeOut"][];
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -922,6 +1582,12 @@ export interface components {
             block_historical_messages: boolean;
             /** Launch Headless */
             launch_headless: boolean;
+            /**
+             * Parser Version
+             * @default v1
+             * @enum {string}
+             */
+            parser_version: "v1" | "v2";
             /** Tickers */
             tickers?: {
                 [key: string]: components["schemas"]["TickerConfigOut"];
@@ -948,6 +1614,8 @@ export interface components {
             block_historical_messages?: boolean | null;
             /** Launch Headless */
             launch_headless?: boolean | null;
+            /** Parser Version */
+            parser_version?: ("v1" | "v2") | null;
             /** Tickers */
             tickers?: {
                 [key: string]: components["schemas"]["TickerConfigOut"];
@@ -1173,6 +1841,349 @@ export interface operations {
             };
         };
     };
+    list_pairs_endpoint_api_pairs_get: {
+        parameters: {
+            query?: {
+                ticker?: string | null;
+                offset?: number;
+                limit?: number;
+                token?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TPairsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_pair_endpoint_api_pairs_post: {
+        parameters: {
+            query?: {
+                token?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TPairCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TPairOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    extend_pair_endpoint_api_pairs__pair_id__extend_post: {
+        parameters: {
+            query?: {
+                token?: string | null;
+            };
+            header?: never;
+            path: {
+                pair_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TPairExtendIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TPairOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_pair_endpoint_api_pairs__pair_id__delete: {
+        parameters: {
+            query?: {
+                token?: string | null;
+            };
+            header?: never;
+            path: {
+                pair_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    quote_endpoint_api_quote_get: {
+        parameters: {
+            query: {
+                /** @description comma-separated symbols */
+                symbols: string;
+                token?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuotesOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    watch_quotes_endpoint_api_quotes_watch_post: {
+        parameters: {
+            query?: {
+                token?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuoteWatchIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuoteWatchOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    candlesticks_endpoint_api_candlesticks_get: {
+        parameters: {
+            query: {
+                symbol: string;
+                /** @description today | 5 | 7 | 15 | 30 | 60 | 90 */
+                period?: string;
+                /** @description (today only) 2min | 3min | 5min */
+                granularity?: string;
+                /** @description (today only) regular | all (include pre/post-market) */
+                sessions?: string;
+                token?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CandlesticksOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    history_executions_endpoint_api_broker_executions_get: {
+        parameters: {
+            query?: {
+                ticker?: string | null;
+                days?: number;
+                offset?: number;
+                limit?: number;
+                token?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExecutionsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    today_executions_endpoint_api_broker_today_executions_get: {
+        parameters: {
+            query?: {
+                token?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExecutionsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    trades_endpoint_api_trades_get: {
+        parameters: {
+            query: {
+                /** @description user-facing ticker, e.g. TSLA */
+                ticker: string;
+                limit?: number;
+                token?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TradesOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     health_endpoint_api_health_get: {
         parameters: {
             query?: {
@@ -1247,6 +2258,174 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["LongPortSettingsPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LongPortSettingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_longport_oauth_start_api_longport_oauth_start_post: {
+        parameters: {
+            query?: {
+                token?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LongPortOAuthStartOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_longport_oauth_status_api_longport_oauth_status_get: {
+        parameters: {
+            query: {
+                session_id: string;
+                token?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LongPortOAuthStatusOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_longport_oauth_activate_api_longport_oauth_activate_post: {
+        parameters: {
+            query?: {
+                token?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LongPortAccountActivateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LongPortSettingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_longport_oauth_logout_api_longport_oauth_logout_post: {
+        parameters: {
+            query?: {
+                token?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LongPortAccountLogoutIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LongPortSettingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_longport_oauth_account_api_longport_oauth_account_patch: {
+        parameters: {
+            query?: {
+                token?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LongPortAccountRenameIn"];
             };
         };
         responses: {

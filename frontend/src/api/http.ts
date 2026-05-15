@@ -2,7 +2,11 @@ import type {
   Task, TaskList, Positions, StatsToday, Health,
   WhopPage, WhopPages, WhopPageCreate, WhopCookieStatus,
   WhopPageSettings, WhopPageSettingsPatch, LongportSettings, LongportSettingsPatch,
+  LongportOAuthStartOut, LongportOAuthStatus,
   BrokerStatus,
+  Quotes, Candlesticks, Trades, Executions,
+  TPairs, TPair, TPairCreate, TPairExtendIn,
+  PairAggregate, PendingExecutions,
 } from "./domain-types";
 
 
@@ -145,6 +149,51 @@ export const api = {
     return request<BrokerStatus>("/api/longport/broker/reload", { method: "POST" });
   },
 
+  /** OAuth: start a fresh authorize flow to add a new account slot. The
+   *  SDK opens a local callback server; user authorizes in browser. */
+  async startLongportOauth(): Promise<LongportOAuthStartOut> {
+    return request<LongportOAuthStartOut>("/api/longport/oauth/start", {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+  },
+
+  /** Poll the OAuth session until state flips from ``ready`` to
+   *  ``success`` (user finished) or ``error`` / ``cancelled``. */
+  async longportOauthStatus(sessionId: string): Promise<LongportOAuthStatus> {
+    return request<LongportOAuthStatus>(
+      `/api/longport/oauth/status?session_id=${encodeURIComponent(sessionId)}`,
+    );
+  },
+
+  /** Set the active account. UI is responsible for invoking
+   *  /broker/reload + refreshing positions after this returns. */
+  async activateLongportAccount(accountId: string): Promise<LongportSettings> {
+    return request<LongportSettings>("/api/longport/oauth/activate", {
+      method: "POST",
+      body: JSON.stringify({ account_id: accountId }),
+    });
+  },
+
+  /** Remove an account: scrub local token cache + drop from list. */
+  async logoutLongportAccount(accountId: string): Promise<LongportSettings> {
+    return request<LongportSettings>("/api/longport/oauth/logout", {
+      method: "POST",
+      body: JSON.stringify({ account_id: accountId }),
+    });
+  },
+
+  /** Rename an account label. */
+  async renameLongportAccount(
+    accountId: string,
+    label: string,
+  ): Promise<LongportSettings> {
+    return request<LongportSettings>("/api/longport/oauth/account", {
+      method: "PATCH",
+      body: JSON.stringify({ account_id: accountId, label }),
+    });
+  },
+
   async listWhopPages(): Promise<WhopPages> {
     return request<WhopPages>("/api/whop/pages");
   },
@@ -234,6 +283,153 @@ export const api = {
     return request<SimRunResult>(
       `/api/sim/run/${encodeURIComponent(name)}`,
       { method: "POST" },
+    );
+  },
+
+  // -------------------------------------------------------------------------
+  // Quotes / candlesticks / per-ticker trades — backing data for the
+  // positions card grid + detail pane (chart, trade list, 做T binding).
+  // -------------------------------------------------------------------------
+
+  async quotes(symbols: string[]): Promise<Quotes> {
+    if (symbols.length === 0) return { quotes: [] };
+    const qs = new URLSearchParams({ symbols: symbols.join(",") });
+    return request<Quotes>(`/api/quote?${qs.toString()}`);
+  },
+
+  async candlesticks(
+    symbol: string,
+    period: "today" | "5" | "7" | "15" | "30" | "60" | "90" = "today",
+    opts: {
+      // Only used when period === "today"; ignored otherwise.
+      granularity?: "分时" | "1min" | "2min" | "3min" | "5min";
+      sessions?: "regular" | "pre" | "post" | "overnight" | "all";
+    } = {},
+  ): Promise<Candlesticks> {
+    const qs = new URLSearchParams({ symbol, period });
+    if (opts.granularity) qs.set("granularity", opts.granularity);
+    if (opts.sessions) qs.set("sessions", opts.sessions);
+    return request<Candlesticks>(`/api/candlesticks?${qs.toString()}`);
+  },
+
+  async trades(ticker: string, limit = 200): Promise<Trades> {
+    const qs = new URLSearchParams({ ticker, limit: String(limit) });
+    return request<Trades>(`/api/trades?${qs.toString()}`);
+  },
+
+  /** Today's broker-side fills for the active account. Source of truth
+   *  for Day P/L — includes orders placed in the LongBridge app / web,
+   *  not just those submitted by signal-station's trader pipeline. */
+  async todayExecutions(): Promise<Executions> {
+    return request<Executions>("/api/broker/today_executions");
+  },
+
+  /** Replace the streaming quote watch set on the backend. Called by the
+   *  dashboard once positions resolve, and again after each account
+   *  switch. Backend diffs against the prior set, subscribes new
+   *  symbols, and unsubscribes dropped ones. Pass ``symbols: []`` to
+   *  clear (e.g. on dashboard close).
+   *
+   *  Throws ``HttpError(503)`` when the backend hasn't wired its
+   *  QuoteHub yet — typically the early-startup window before broker
+   *  init finishes. Callers should retry on the next positions tick. */
+  async watchQuotes(symbols: string[]): Promise<{ added: number; removed: number; total: number }> {
+    return request("/api/quotes/watch", {
+      method: "POST",
+      body: JSON.stringify({ symbols }),
+    });
+  },
+
+  /** Historical broker fills, optionally filtered by underlying ticker.
+   *  Used by the detail pane's trade list so manual fills surface
+   *  alongside signal-station's own submissions.
+   *
+   *  Paginated newest-first via ``offset`` / ``limit``; the response's
+   *  ``total_count`` + ``has_more`` let the caller decide whether to
+   *  fetch the next page. Server-side sync runs on every call (idempotent
+   *  upsert) so "加载更多" also picks up fresh fills. */
+  async executions(
+    ticker?: string,
+    opts: { days?: number; offset?: number; limit?: number } = {},
+  ): Promise<Executions> {
+    // ``days`` only governs the first-time-sync horizon on the server —
+    // once history is backfilled the response is the full DB slice
+    // regardless. Default omitted so the server's 730d (2-year) default
+    // applies; callers can still pass an override for custom horizons.
+    const { days, offset = 0, limit = 50 } = opts;
+    const qs = new URLSearchParams({
+      offset: String(offset),
+      limit: String(limit),
+    });
+    if (ticker) qs.set("ticker", ticker);
+    if (days != null) qs.set("days", String(days));
+    return request<Executions>(`/api/broker/executions?${qs.toString()}`);
+  },
+
+  // -------------------------------------------------------------------------
+  // 做T pair CRUD — server allocates qty FIFO when creating/extending.
+  // -------------------------------------------------------------------------
+
+  async listPairs(
+    ticker?: string,
+    opts: { offset?: number; limit?: number } = {},
+  ): Promise<TPairs> {
+    const { offset = 0, limit = 50 } = opts;
+    const qs = new URLSearchParams({
+      offset: String(offset),
+      limit: String(limit),
+    });
+    if (ticker) qs.set("ticker", ticker);
+    return request<TPairs>(`/api/pairs?${qs.toString()}`);
+  },
+
+  async createPair(body: TPairCreate): Promise<TPair> {
+    return request<TPair>("/api/pairs", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+
+  async extendPair(pairId: number, body: TPairExtendIn): Promise<TPair> {
+    return request<TPair>(`/api/pairs/${pairId}/extend`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+
+  async deletePair(pairId: number): Promise<void> {
+    const { baseUrl, token } = cfg();
+    const url = new URL(`/api/pairs/${pairId}`, baseUrl);
+    url.searchParams.set("token", token);
+    const resp = await fetch(url.toString(), { method: "DELETE" });
+    if (!resp.ok) {
+      const body = await resp.json().catch(() => null);
+      throw new HttpError(resp.status, body, `HTTP ${resp.status}`);
+    }
+  },
+
+  /** Account+ticker scoped做T aggregates (SQL SUM/COUNT). Used by
+   *  PairKPIs so the frontend never has to fetch every pair just to
+   *  display totals. Omit ``ticker`` for an account-wide aggregate. */
+  async pairAggregate(ticker?: string): Promise<PairAggregate> {
+    const qs = new URLSearchParams();
+    if (ticker) qs.set("ticker", ticker);
+    return request<PairAggregate>(
+      `/api/pairs/aggregate${qs.toString() ? "?" + qs.toString() : ""}`,
+    );
+  },
+
+  /** Broker fills with remaining (unallocated) qty + per-side totals.
+   *  Drives the "待做T" section in DetailPane. */
+  async pendingExecutions(
+    ticker?: string,
+    opts: { limit?: number } = {},
+  ): Promise<PendingExecutions> {
+    const { limit = 100 } = opts;
+    const qs = new URLSearchParams({ limit: String(limit) });
+    if (ticker) qs.set("ticker", ticker);
+    return request<PendingExecutions>(
+      `/api/broker/executions/pending?${qs.toString()}`,
     );
   },
 };
