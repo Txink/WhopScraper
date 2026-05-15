@@ -498,6 +498,16 @@ export function DetailChart({
     opts.plugins.zoom.limits.x.max = xMax;
 
     chart.update("none");
+
+    // Re-seed Effect C's local snapshot so the next live-tick reads the
+    // fresh bars/labels Effect B just installed (otherwise live-tick would
+    // overwrite this mutation with its stale snapshot). lastApplied is
+    // reset so the de-dup guard in tick() doesn't suppress the next push.
+    if (liveStateRef.current) {
+      liveStateRef.current.bars = visibleBarsRef.current.slice();
+      liveStateRef.current.labels = data.labels.slice();
+      liveStateRef.current.lastApplied = 0;
+    }
   }, [visibleBars, markers, avgCost, showAvgCost]);
 
   // liveCfg is null for 30D/60D/90D (daily K) and the today/分时, today/Nmin,
@@ -538,7 +548,12 @@ export function DetailChart({
       state.rafId = null;
       const q = useQuotesStore.getState().quotesBySymbol[symbol];
       const lastDone = q?.last_done;
-      if (lastDone == null || lastDone === 0) return;
+      if (lastDone == null || lastDone === 0) {
+        // Degraded quote (e.g. halted symbol) — hide the pulse so it doesn't
+        // animate against a stale position. The next valid push re-shows it.
+        pulseRef.current?.classList.remove("visible", "down");
+        return;
+      }
       const nowMs = Date.now();
 
       // RAF can fire faster than the quote stream — skip if neither price
