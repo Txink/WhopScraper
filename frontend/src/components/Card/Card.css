@@ -13,12 +13,14 @@
   background: var(--bg-hover);
 }
 
-/* ===== COMPACT ===== */
+/* ===== COMPACT =====
+ * The leading 44px TypeBadge column was removed; aggregate STOCK/OPTION
+ * counts surface in the panel header instead. Option rows get a small
+ * inline "OPT" chip next to the symbol (rare; stock is the default). */
 .card.compact {
   display: grid;
-  /* type | raw-msg (220-280) | symbol | side | details (elastic) | ts | elapsed | status */
+  /* raw-msg (220-280) | symbol | side | details (elastic) | ts | elapsed | status */
   grid-template-columns:
-    44px
     minmax(220px, 280px)
     minmax(96px, auto)
     44px
@@ -32,6 +34,23 @@
   font-size: 12px;
   min-height: 36px;
   cursor: pointer;
+}
+
+/* Inline OPT chip — sits inside the symbol cell for option rows so the
+ * type distinction is preserved without a dedicated leading column. */
+.card.compact .card-symbol .option-marker {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 9.5px;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  background: var(--type-option-bg);
+  color: var(--type-option-fg);
+  border: 1px solid var(--type-option-bd);
+  vertical-align: middle;
 }
 .card.compact:hover {
   border-color: var(--line-strong);

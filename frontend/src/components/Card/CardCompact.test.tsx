@@ -120,10 +120,16 @@ describe("CardCompact", () => {
     expect(screen.getByText("NVDA 135 CALL · 20260426")).toBeInTheDocument();
   });
 
-  it("option type badge shows 期权", () => {
+  it("option row has inline OPT marker (the leading TypeBadge column was removed)", () => {
     const { container } = render(<CardCompact task={optionTask} autoTrade={true} onExpand={vi.fn()} />);
-    expect(screen.getByText("期权")).toBeInTheDocument();
-    expect(container.querySelector(".type-badge.option")).toBeInTheDocument();
+    const marker = container.querySelector(".option-marker");
+    expect(marker).toBeInTheDocument();
+    expect(marker?.textContent).toBe("OPT");
+  });
+
+  it("stock row has no inline OPT marker (stock is the implicit default)", () => {
+    const { container } = render(<CardCompact task={stockTask} autoTrade={true} onExpand={vi.fn()} />);
+    expect(container.querySelector(".option-marker")).not.toBeInTheDocument();
   });
 
   it("has compact grid class", () => {

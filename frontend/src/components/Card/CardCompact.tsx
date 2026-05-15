@@ -1,5 +1,4 @@
 import type { TaskSummary } from "../../api/domain-types";
-import { TypeBadge } from "../common/TypeBadge";
 import { StatusPill } from "../common/StatusPill";
 import { ConfirmActions } from "./ConfirmActions";
 import { formatTitle, fmtTime, fmtElapsed, elapsedMs, displaySubmitPriceDollars } from "./cardHelpers";
@@ -18,7 +17,7 @@ function truncate(text: string, maxLen: number): string {
 
 export function CardCompact({ task, autoTrade, onExpand }: CardCompactProps) {
   const { type, status, instruction, message } = task;
-  const badgeType = type === "option" ? "option" : "stock";
+  const isOption = type === "option";
   const isParseError = status === "PARSE_ERROR";
   const isSkipped = status === "SKIPPED";
 
@@ -103,12 +102,21 @@ export function CardCompact({ task, autoTrade, onExpand }: CardCompactProps) {
   const rawMessageText = truncate(message.content || "", 200);
 
   // Symbol cell:
-  //   parsed → "TSLL.US" mono
+  //   parsed → "TSLL.US" mono, with inline "OPT" chip for option contracts
   //   PARSE_ERROR → 黄色"未识别" tag (the message text itself is in the
   //   raw-msg cell on the left, no need to repeat)
   //   pre-parse / no symbol → empty cell
+  //
+  // The leading STOCK/OPTION TypeBadge column was removed to give the
+  // raw-message cell more horizontal room; aggregate STOCK/OPTION counts
+  // surface in the panel header instead. For option rows we still need
+  // a per-row marker (rare, but visually distinct from stock) — a small
+  // "OPT" chip sits inline with the symbol.
   const symbolCell = parsedSymbol ? (
-    <span className="card-symbol">{parsedSymbol}</span>
+    <span className="card-symbol">
+      {isOption && <span className="option-marker">OPT</span>}
+      {parsedSymbol}
+    </span>
   ) : (
     <span className="card-symbol has-message">
       {isParseError && <span className="unidentified-tag">未识别</span>}
@@ -118,7 +126,6 @@ export function CardCompact({ task, autoTrade, onExpand }: CardCompactProps) {
   return (
     <div className="card compact" onClick={onExpand} role="button" tabIndex={0}
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onExpand(); }}>
-      <TypeBadge type={badgeType} />
       <span className="raw-msg" title={message.content}>{rawMessageText}</span>
       {symbolCell}
       {sideLabel ? (

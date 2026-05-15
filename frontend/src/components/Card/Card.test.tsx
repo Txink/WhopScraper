@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { render, fireEvent } from "@testing-library/react";
 import { Card } from "./Card";
 import type { TaskSummary } from "../../api/domain-types";
@@ -47,41 +47,39 @@ const filledTask: TaskSummary = {
 };
 
 describe("Card", () => {
-  it("defaultExpanded=false renders compact mode", () => {
+  it("expanded=false renders compact mode", () => {
     const { container } = render(
-      <Card task={filledTask} pushEvents={[]} defaultExpanded={false} autoTrade={true} />
+      <Card task={filledTask} pushEvents={[]} expanded={false} onToggle={vi.fn()} autoTrade={true} />
     );
     expect(container.querySelector(".card.compact")).toBeInTheDocument();
     expect(container.querySelector(".card.expanded")).not.toBeInTheDocument();
   });
 
-  it("defaultExpanded=true renders expanded mode", () => {
+  it("expanded=true renders expanded mode", () => {
     const { container } = render(
-      <Card task={filledTask} pushEvents={[]} defaultExpanded={true} autoTrade={true} />
+      <Card task={filledTask} pushEvents={[]} expanded={true} onToggle={vi.fn()} autoTrade={true} />
     );
     expect(container.querySelector(".card.expanded")).toBeInTheDocument();
     expect(container.querySelector(".card.compact")).not.toBeInTheDocument();
   });
 
-  it("clicking compact card expands it", () => {
+  it("clicking a compact card calls onToggle (parent decides — single accordion)", () => {
+    const onToggle = vi.fn();
     const { container } = render(
-      <Card task={filledTask} pushEvents={[]} defaultExpanded={false} autoTrade={true} />
+      <Card task={filledTask} pushEvents={[]} expanded={false} onToggle={onToggle} autoTrade={true} />
     );
     const compactCard = container.querySelector(".card.compact")!;
     fireEvent.click(compactCard);
-    expect(container.querySelector(".card.expanded")).toBeInTheDocument();
-    expect(container.querySelector(".card.compact")).not.toBeInTheDocument();
+    expect(onToggle).toHaveBeenCalledTimes(1);
   });
 
-  it("clicking the header in expanded mode collapses it", () => {
-    // The dedicated collapse button was removed; the entire .card-header
-    // is now the collapse hit-target (role=button, aria-label="收起").
+  it("clicking the header of an expanded card calls onToggle (= collapse)", () => {
+    const onToggle = vi.fn();
     const { container } = render(
-      <Card task={filledTask} pushEvents={[]} defaultExpanded={true} autoTrade={true} />
+      <Card task={filledTask} pushEvents={[]} expanded={true} onToggle={onToggle} autoTrade={true} />
     );
     const header = container.querySelector(".card.expanded .card-header")!;
     fireEvent.click(header);
-    expect(container.querySelector(".card.compact")).toBeInTheDocument();
-    expect(container.querySelector(".card.expanded")).not.toBeInTheDocument();
+    expect(onToggle).toHaveBeenCalledTimes(1);
   });
 });
