@@ -63,7 +63,7 @@ def _stock_task(
 
 def _config() -> LongPortConfig:
     return LongPortConfig(
-        mode="paper", app_key="k", app_secret="s", access_token="t",
+        account_id="test-cid",
         auto_trade=True, dry_run=False,
         max_option_total_price=500.0, max_option_quantity=3,
     )

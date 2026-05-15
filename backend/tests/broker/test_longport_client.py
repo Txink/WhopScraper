@@ -15,11 +15,7 @@ from app.broker.longport_client import LongPortClient
 
 def _dry_config(**overrides: Any) -> LongPortConfig:
     """Return a minimal LongPortConfig with dry_run=True."""
-    defaults: dict[str, Any] = dict(
-        mode="paper",
-        app_key="test-key",
-        app_secret="test-secret",
-        access_token="test-token",
+    defaults: dict[str, Any] = dict(        account_id="test-cid",
         dry_run=True,
     )
     defaults.update(overrides)
@@ -27,10 +23,14 @@ def _dry_config(**overrides: Any) -> LongPortConfig:
 
 
 # Patch both SDK context classes so the constructor never opens a connection.
+# Also stub the OAuth pieces so the test client never hits the SDK's local
+# callback server or probes ~/.longbridge/openapi/tokens/<client_id>.
 _SDK_PATCHES = (
     patch("app.broker.longport_client.QuoteContext"),
     patch("app.broker.longport_client.TradeContext"),
     patch("app.broker.longport_client.LPConfig"),
+    patch("app.broker.longport_client.OAuthBuilder"),
+    patch("app.broker.longport_client.is_authorized", return_value=True),
 )
 
 
@@ -39,7 +39,7 @@ class TestDryRun:
 
     def _make_client(self, **overrides: Any) -> LongPortClient:
         cfg = _dry_config(**overrides)
-        with _SDK_PATCHES[0], _SDK_PATCHES[1], _SDK_PATCHES[2]:
+        with _SDK_PATCHES[0], _SDK_PATCHES[1], _SDK_PATCHES[2], _SDK_PATCHES[3], _SDK_PATCHES[4]:
             client = LongPortClient(cfg)
         return client
 
@@ -96,14 +96,14 @@ class TestProperties:
 
     def _make_client(self, **overrides: Any) -> LongPortClient:
         cfg = _dry_config(**overrides)
-        with _SDK_PATCHES[0], _SDK_PATCHES[1], _SDK_PATCHES[2]:
+        with _SDK_PATCHES[0], _SDK_PATCHES[1], _SDK_PATCHES[2], _SDK_PATCHES[3], _SDK_PATCHES[4]:
             return LongPortClient(cfg)
 
-    def test_is_paper_true_for_paper_mode(self) -> None:
-        assert self._make_client(mode="paper").is_paper is True
-
-    def test_is_paper_false_for_real_mode(self) -> None:
-        assert self._make_client(mode="real").is_paper is False
+    def test_is_paper_always_false_for_longport_client(self) -> None:
+        # LongBridge OpenAPI has no paper-trading mode — the SDK-backed
+        # client always reports is_paper=False regardless of which account
+        # it's bound to. (Noop / fake brokers can still claim True.)
+        assert self._make_client().is_paper is False
 
     def test_dry_run_property(self) -> None:
         assert self._make_client(dry_run=True).dry_run is True
@@ -117,7 +117,7 @@ class TestClose:
 
     def _make_client(self) -> LongPortClient:
         cfg = _dry_config()
-        with _SDK_PATCHES[0], _SDK_PATCHES[1], _SDK_PATCHES[2]:
+        with _SDK_PATCHES[0], _SDK_PATCHES[1], _SDK_PATCHES[2], _SDK_PATCHES[3], _SDK_PATCHES[4]:
             return LongPortClient(cfg)
 
     def test_close_is_idempotent(self) -> None:
@@ -137,7 +137,7 @@ class TestPushSubscription:
 
     def _make_client(self) -> LongPortClient:
         cfg = _dry_config()
-        with _SDK_PATCHES[0], _SDK_PATCHES[1], _SDK_PATCHES[2]:
+        with _SDK_PATCHES[0], _SDK_PATCHES[1], _SDK_PATCHES[2], _SDK_PATCHES[3], _SDK_PATCHES[4]:
             return LongPortClient(cfg)
 
     def test_subscribe_and_fanout(self) -> None:
@@ -197,7 +197,7 @@ class TestDynamicDryRun:
         **overrides: Any,
     ) -> LongPortClient:
         cfg = _dry_config(dry_run=False, **overrides)  # config snapshot says False
-        with _SDK_PATCHES[0], _SDK_PATCHES[1], _SDK_PATCHES[2]:
+        with _SDK_PATCHES[0], _SDK_PATCHES[1], _SDK_PATCHES[2], _SDK_PATCHES[3], _SDK_PATCHES[4]:
             return LongPortClient(cfg, dry_run_getter=getter)
 
     def test_getter_overrides_config_when_returns_true(self) -> None:
@@ -235,7 +235,7 @@ class TestDynamicDryRun:
     def test_no_getter_falls_back_to_config_value(self) -> None:
         """Without a getter the broker still honors config.dry_run as before."""
         cfg = _dry_config(dry_run=True)
-        with _SDK_PATCHES[0], _SDK_PATCHES[1], _SDK_PATCHES[2]:
+        with _SDK_PATCHES[0], _SDK_PATCHES[1], _SDK_PATCHES[2], _SDK_PATCHES[3], _SDK_PATCHES[4]:
             client = LongPortClient(cfg)
         assert client.dry_run is True
         order_id = client.submit_stock_order(

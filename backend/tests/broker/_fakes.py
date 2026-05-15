@@ -83,8 +83,101 @@ class FakeBrokerClient:
     def get_quote(self, symbols: list[str]) -> dict[str, Any]:
         return {s: {"last_done": float(self.quote_by_symbol.get(s, 0.0))} for s in symbols}
 
+    def stock_positions(self) -> list[dict[str, Any]]:
+        """Return the test-configured holdings list (default: empty)."""
+        return list(getattr(self, "stock_positions_list", []))
+
+    @property
+    def account_id(self) -> str:
+        """User-configurable account id (default test-acct) for sync tests."""
+        return str(getattr(self, "account_id_value", "test-acct"))
+
+    def today_executions(self) -> list[dict[str, Any]]:
+        """Return the test-configured execution list (default: empty)."""
+        return list(getattr(self, "executions_list", []))
+
+    def history_executions(
+        self,
+        *,
+        ticker: str | None = None,
+        days: int = 30,
+        start_at: "datetime | None" = None,
+        end_at: "datetime | None" = None,
+    ) -> list[dict[str, Any]]:
+        items = list(getattr(self, "history_executions_list", []))
+        if ticker is not None:
+            items = [e for e in items if e.get("ticker") == ticker]
+        # When an explicit UTC range is provided (incremental backfill
+        # path), filter to that window so tests can assert that the sync
+        # function actually iterates ranges correctly. ``start_at`` is
+        # inclusive, ``end_at`` exclusive — matches LongBridge's convention.
+        if start_at is not None and end_at is not None:
+            from datetime import timezone
+
+            def _aware(t):
+                return t if t.tzinfo is not None else t.replace(tzinfo=timezone.utc)
+            s, e = _aware(start_at), _aware(end_at)
+            items = [r for r in items if r.get("ts") is not None and s <= _aware(r["ts"]) < e]
+        return items
+
+    def get_candlesticks(
+        self,
+        symbol: str,
+        *,
+        period: str,
+        count: int,
+        sessions: str = "regular",  # noqa: ARG002 — accepted for protocol compat
+    ) -> list[dict[str, Any]]:
+        """Deterministic stub: returns ``count`` bars seeded from symbol hash
+        so tests can assert structure without a real broker connection.
+        Tests can also override by monkey-patching ``candlesticks_by_symbol``."""
+        override = getattr(self, "candlesticks_by_symbol", {}).get(symbol)
+        if override is not None:
+            return list(override[:count])
+        base = (sum(ord(c) for c in symbol) % 200) + 50  # 50..250
+        bars: list[dict[str, Any]] = []
+        for i in range(count):
+            p = float(base + (i * 0.5))
+            bars.append({
+                "timestamp": f"2026-01-{(i % 28) + 1:02d}T16:00:00",
+                "open": p,
+                "high": p + 1.0,
+                "low": p - 1.0,
+                "close": p + 0.3,
+                "volume": 1_000_000 + i * 1000,
+                "turnover": p * 1_000_000,
+            })
+        return bars
+
     def subscribe_order_push(self, handler: Callable[[Any], None]) -> None:
         self.push_handlers.append(handler)
+
+    def set_on_quote(self, handler: Callable[[str, dict[str, Any]], None]) -> None:
+        """Quote-push handler (one per broker, owned by QuoteHub)."""
+        self.quote_handler = handler
+
+    def subscribe_quotes(self, symbols: list[str]) -> None:
+        """Record symbols added to the quote-watch set."""
+        if not hasattr(self, "subscribed_quote_symbols"):
+            self.subscribed_quote_symbols = set()
+        for s in symbols:
+            self.subscribed_quote_symbols.add(s)
+
+    def unsubscribe_quotes(self, symbols: list[str]) -> None:
+        """Record symbols removed from the quote-watch set."""
+        if not hasattr(self, "subscribed_quote_symbols"):
+            self.subscribed_quote_symbols = set()
+        for s in symbols:
+            self.subscribed_quote_symbols.discard(s)
+
+    def fetch_trading_sessions(self) -> dict[str, list[tuple[Any, Any, str]]]:
+        """Test helper — defaults to the override ``trading_sessions_map``
+        if set, else returns the empty dict (so MarketSchedule falls
+        back to its clock heuristic)."""
+        return dict(getattr(self, "trading_sessions_map", {}))
+
+    def fetch_trading_days(self, *, days_back: int = 3) -> dict[str, list[Any]]:
+        return dict(getattr(self, "trading_days_map", {}))
 
     def close(self) -> None:
         pass
@@ -93,6 +186,13 @@ class FakeBrokerClient:
         """Test helper: fire a push event to all subscribers."""
         for h in self.push_handlers:
             h(event_obj)
+
+    def emit_quote(self, symbol: str, quote: dict[str, Any]) -> None:
+        """Test helper: fire a quote-push event to the registered handler.
+        Tests use this to assert QuoteHub → bus → WS path end-to-end."""
+        handler = getattr(self, "quote_handler", None)
+        if handler is not None:
+            handler(symbol, quote)
 
 
 @dataclass

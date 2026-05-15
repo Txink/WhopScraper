@@ -88,11 +88,7 @@ def _option_task(
 
 
 def _config(**overrides: object) -> LongPortConfig:
-    defaults: dict = dict(
-        mode="paper",
-        app_key="k",
-        app_secret="s",
-        access_token="t",
+    defaults: dict = dict(        account_id="test-cid",
         auto_trade=True,
         dry_run=False,
         max_option_total_price=500.0,

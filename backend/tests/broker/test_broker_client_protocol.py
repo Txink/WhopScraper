@@ -157,17 +157,15 @@ class TestProtocolStructuralSubtyping:
         assert result.startswith("FAKE-")
 
     def test_longport_client_satisfies_protocol_dry_run(self) -> None:
-        cfg = LongPortConfig(
-            mode="paper",
-            app_key="k",
-            app_secret="s",
-            access_token="t",
+        cfg = LongPortConfig(            account_id="test-cid",
             dry_run=True,
         )
         with (
             patch("app.broker.longport_client.QuoteContext"),
             patch("app.broker.longport_client.TradeContext"),
             patch("app.broker.longport_client.LPConfig"),
+            patch("app.broker.longport_client.OAuthBuilder"),
+            patch("app.broker.longport_client.is_authorized", return_value=True),
         ):
             client = LongPortClient(cfg)
 

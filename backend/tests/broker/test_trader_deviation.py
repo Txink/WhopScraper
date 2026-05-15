@@ -142,11 +142,7 @@ class _RecordingBroker:
 
 
 def _config() -> LongPortConfig:
-    return LongPortConfig(
-        mode="paper",
-        app_key="",
-        app_secret="",
-        access_token="",
+    return LongPortConfig(        account_id="test-cid",
         auto_trade=True,
         dry_run=False,
         max_option_total_price=10000,

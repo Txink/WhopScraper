@@ -10,30 +10,130 @@ from __future__ import annotations
 import logging
 import uuid
 from collections.abc import Callable
+from datetime import date, time
 from decimal import Decimal
 from typing import Any
 
-from longport.openapi import (
+from longbridge.openapi import (
     Config as LPConfig,
 )
-from longport.openapi import (
+from longbridge.openapi import (
+    OAuthBuilder,
+)
+from longbridge.openapi import (
     OrderSide as LPOrderSide,
 )
-from longport.openapi import (
+from longbridge.openapi import (
     OrderType as LPOrderType,
 )
-from longport.openapi import (
+from longbridge.openapi import (
+    AdjustType,
+    Period,
+    PushQuote,
     QuoteContext,
+    SubType,
     TimeInForceType,
     TopicType,
     TradeContext,
+    TradeSessions,
 )
+
+
+# LongBridge ``TradeSession`` enum → our wire state. The SDK returns one
+# Intraday window for regular sessions, plus optionally Pre/Post/Overnight
+# windows for US markets. Anything outside all listed windows is "closed".
+_TRADE_SESSION_TO_STATE: dict[str, str] = {
+    "Intraday": "regular",
+    "Pre": "pre",
+    "Post": "post",
+    "Overnight": "overnight",
+}
+
+# Trading-session schedule + day calendar live in ``MarketSchedule``
+# now (app.broker.market_schedule). LongPortClient just delegates state
+# lookups to whichever instance ``bind_market_schedule`` injects.
 
 from app.broker.broker_client import OrderSide, OrderType
 from app.broker.config import LongPortConfig
+from app.broker.oauth import is_authorized
 from app.broker.order_id_norm import normalize_broker_order_id
 
 logger = logging.getLogger(__name__)
+
+
+def _quote_to_dict(q: Any, state: str | None = None) -> dict[str, Any]:
+    """Normalize an SDK SecurityQuote / OptionQuote into our wire shape.
+
+    Session-aware change% reference (the bit users care about):
+
+      - **盘前 / 盘中** → reference = yesterday's RTH close
+        (``SecurityQuote.prev_close``). Change = today's price vs yesterday.
+      - **盘后 / 夜盘** → reference = TODAY's RTH close
+        (``SecurityQuote.last_done`` — frozen at the 16:00 ET close once
+        post-market starts). Change = post/overnight tick vs today's close.
+
+    These two "closes" are intentionally different values: during Wed
+    post-market, "yesterday's close" is Tuesday's; "today's close" is
+    Wed's (just frozen). The user wants the post-market chip to show
+    the move since 16:00 today, NOT cumulative since yesterday.
+
+    ``today_close`` is surfaced as its own field (``None`` outside
+    post/overnight) so the frontend can decide how to display it and so
+    the push-handler cache can pick it up via a per-symbol seed.
+
+    Tier selection for displayed ``last_done`` is unchanged:
+      - ``"pre"``       → ``pre_market_quote`` (US)
+      - ``"post"``      → ``post_market_quote`` (US)
+      - ``"overnight"`` → ``overnight_quote`` (US)
+      - else → regular SecurityQuote
+    """
+    if state is None:
+        from app.broker.market_hours import market_state_for
+        symbol = str(getattr(q, "symbol", ""))
+        state = market_state_for(symbol)
+
+    tier = {
+        "pre": getattr(q, "pre_market_quote", None),
+        "post": getattr(q, "post_market_quote", None),
+        "overnight": getattr(q, "overnight_quote", None),
+    }.get(state)
+    if tier is None or float(getattr(tier, "last_done", 0) or 0) <= 0:
+        chosen = q
+    else:
+        chosen = tier
+
+    last_done = float(getattr(chosen, "last_done", 0) or 0)
+    prev_close = float(getattr(q, "prev_close", 0) or 0)
+    # today_close: only meaningful once today's RTH session has ended.
+    # During post / overnight, SecurityQuote.last_done is frozen at the
+    # 16:00 ET close — that IS today's close. Outside those sessions
+    # there's no "today's close" yet (or it would equal prev_close).
+    if state in ("post", "overnight"):
+        today_close = float(getattr(q, "last_done", 0) or 0) or None
+    else:
+        today_close = None
+
+    reference = today_close if (state in ("post", "overnight") and today_close) else prev_close
+    if reference > 0:
+        change = last_done - reference
+        change_pct = (change / reference) * 100.0
+    else:
+        change = 0.0
+        change_pct = 0.0
+
+    return {
+        "last_done": last_done,
+        "prev_close": prev_close,
+        "today_close": today_close,
+        "open": float(getattr(q, "open", 0) or 0),
+        "high": float(getattr(chosen, "high", 0) or 0),
+        "low": float(getattr(chosen, "low", 0) or 0),
+        "volume": int(getattr(chosen, "volume", 0) or 0),
+        "turnover": float(getattr(chosen, "turnover", 0) or 0),
+        "change": change,
+        "change_pct": change_pct,
+        "trade_session": state,
+    }
 
 
 class LongPortClient:
@@ -55,18 +155,47 @@ class LongPortClient:
         self._config = config
         self._dry_run_getter = dry_run_getter
         self._push_handlers: list[Callable[[Any], None]] = []
+        # Quote push: single handler (owned by QuoteHub), populated via
+        # set_on_quote. Symbols this client has SDK-subscribed are tracked
+        # so subscribe/unsubscribe is idempotent.
+        self._quote_handler: Callable[[str, dict[str, Any]], None] | None = None
+        self._subscribed_quote_symbols: set[str] = set()
+        # Per-symbol reference-price cache used by the push handler. SDK
+        # ``PushQuote`` events carry only the live last_done — they omit
+        # ``prev_close`` and the pre/post/overnight tier sub-quotes. We
+        # seed this cache on ``subscribe_quotes`` with a one-shot
+        # ``get_quote`` so the push handler can compute change% against
+        # the correct reference (yesterday's RTH close or today's RTH
+        # close, depending on session). Entries are refreshed on
+        # session transition so today_close picks up when RTH ends.
+        # Shape: ``symbol → {prev_close, today_close, last_session}``.
+        self._ref_price_cache: dict[str, dict[str, Any]] = {}
         self._closed = False
 
-        lp_config = LPConfig(
-            app_key=config.app_key,
-            app_secret=config.app_secret,
-            access_token=config.access_token,
-        )
+        # OAuth construction: the SDK persists tokens on disk per
+        # account_id (= the OAuth client_id we registered for this
+        # account). build() reuses the cached token when one exists; we
+        # guard with ``is_authorized`` so this path is only entered when a
+        # token cache exists — the caller (broker init) catches the
+        # ValueError below and falls back to NoopBrokerClient with a
+        # "未授权" status.
+        if not is_authorized(config.account_id):
+            raise ValueError(
+                f"OAuth token cache missing for account_id={config.account_id!r}; "
+                "complete the LongBridge login flow in the UI first."
+            )
+        oauth = OAuthBuilder(config.account_id).build(lambda url: None)
+        lp_config = LPConfig.from_oauth(oauth)
 
         # QuoteContext first (mirrors old broker — avoids connection-count
         # leak if TradeContext creation fails).
         self._quote_ctx: QuoteContext | None = QuoteContext(lp_config)
         self._trade_ctx: TradeContext | None = TradeContext(lp_config)
+        # Bound by ``bind_market_schedule`` once the global
+        # ``MarketSchedule`` instance is created at lifespan startup.
+        # Until then, ``_market_state_for`` falls back to the static
+        # clock heuristic in ``market_hours``.
+        self._market_schedule: Any | None = None
 
         # Wire push callback — fans out to all registered handlers.
         self._trade_ctx.set_on_order_changed(self._on_order_changed)
@@ -76,13 +205,35 @@ class LongPortClient:
         # pushes anything and submitted orders sit at PENDING forever.
         self._trade_ctx.subscribe([TopicType.Private])
 
+        # Quote push trampoline: SDK fires set_on_quote callback for any
+        # symbol we've subscribed via QuoteContext.subscribe([SubType.Quote]).
+        # ``_on_quote`` normalizes PushQuote → dict then delegates to the
+        # handler installed by QuoteHub. Registering up-front keeps the
+        # dispatch path in place before the first subscribe.
+        self._quote_ctx.set_on_quote(self._on_quote)
+
     # ------------------------------------------------------------------ #
     # Properties                                                           #
     # ------------------------------------------------------------------ #
 
     @property
+    def account_id(self) -> str:
+        """OAuth client_id of the active account; used for DB tagging so
+        trades / pairs / tasks etc. can be filtered by account."""
+        return self._config.account_id
+
+    @property
+    def account_label(self) -> str:
+        """User-chosen display label for the active account."""
+        return self._config.label
+
+    @property
     def is_paper(self) -> bool:
-        return self._config.mode == "paper"
+        """LongBridge OpenAPI has no paper-trading mode — every authorized
+        account hits the live endpoint. Kept on the Protocol for backward
+        compat (and so the noop/sim brokers can claim ``is_paper=True``),
+        but always False for the real SDK-backed client. """
+        return False
 
     @property
     def dry_run(self) -> bool:
@@ -177,23 +328,352 @@ class LongPortClient:
     # Quotes                                                               #
     # ------------------------------------------------------------------ #
 
+    def _market_state_for(self, symbol: str) -> str:
+        """Resolve current trading state for ``symbol``'s market.
+
+        Delegates to the project-wide ``MarketSchedule`` singleton when
+        one has been bound via :meth:`bind_market_schedule` (main.py wires
+        this during lifespan). If no schedule is bound (early startup or
+        unit-test paths), falls back to the static clock heuristic — same
+        windows as the SDK schedule for normal trading days, ignores
+        holidays.
+        """
+        market = symbol.rsplit(".", 1)[-1].upper() if "." in symbol else ""
+        if market not in {"US", "HK", "SH", "SZ"}:
+            return "regular"
+
+        if self._market_schedule is not None:
+            return self._market_schedule.state_for(market)
+
+        from app.broker.market_hours import market_state_for
+        return market_state_for(symbol)
+
+    def bind_market_schedule(self, schedule: Any) -> None:
+        """Inject the global :class:`MarketSchedule` so quote/state
+        lookups delegate to it. Called by main.py after the schedule
+        is constructed for this broker."""
+        self._market_schedule = schedule
+
+    def fetch_trading_sessions(self) -> dict[str, list[tuple[time, time, str]]]:
+        """BrokerClient implementation — pulls one ``trading_session()``
+        and normalises the SDK ``MarketTradingSession`` list into the
+        protocol-defined ``{market: [(begin, end, state)]}`` shape."""
+        if self._quote_ctx is None:
+            return {}
+        resp = self._quote_ctx.trading_session()
+        out: dict[str, list[tuple[time, time, str]]] = {}
+        for mkt in resp or []:
+            market_str = str(getattr(mkt, "market", "")).rsplit(".", 1)[-1].upper()
+            if not market_str:
+                continue
+            windows: list[tuple[time, time, str]] = []
+            for w in getattr(mkt, "trade_sessions", []) or []:
+                begin = getattr(w, "begin_time", None)
+                end = getattr(w, "end_time", None)
+                session = str(getattr(w, "trade_session", "")).rsplit(".", 1)[-1]
+                state = _TRADE_SESSION_TO_STATE.get(session, "regular")
+                windows.append((begin, end, state))
+            out[market_str] = windows
+        return out
+
+    def fetch_trading_days(self, *, days_back: int = 3) -> dict[str, list[date]]:
+        """BrokerClient implementation — pulls ``trading_days`` per
+        market for a look-back window and returns the newest-first list.
+
+        The SDK requires explicit ``Market`` enums; we iterate the three
+        markets we actually surface (US / HK / CN) so callers don't have
+        to enumerate them. Failure for one market leaves it out of the
+        result; other markets still load.
+        """
+        if self._quote_ctx is None:
+            return {}
+        from longbridge.openapi import Market as LPMarket
+
+        end = date.today()
+        # Pull a wider calendar window than ``days_back`` to absorb
+        # weekends and holidays — 14 days back gives us at least 3 trading
+        # days in every reasonable holiday pattern.
+        begin = end - __import__("datetime").timedelta(days=14)
+        markets = (("US", LPMarket.US), ("HK", LPMarket.HK), ("CN", LPMarket.CN))
+        out: dict[str, list[date]] = {}
+        for code, market_enum in markets:
+            try:
+                resp = self._quote_ctx.trading_days(market_enum, begin, end)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(
+                    "trading_days fetch for %s failed: %s — skipping", code, exc,
+                )
+                continue
+            trading: list[date] = list(getattr(resp, "trading_days", []) or [])
+            # Newest-first, capped to ``days_back``. half_trading_days
+            # (HK 半日) are also trading days for our purposes — include them.
+            trading.extend(getattr(resp, "half_trading_days", []) or [])
+            trading.sort(reverse=True)
+            out[code] = trading[:days_back]
+        return out
+
     def get_quote(self, symbols: list[str]) -> dict[str, dict[str, Any]]:
-        """Fetch latest quotes; returns ``{symbol: {last_done, open, ...}}``."""
+        """Fetch latest quotes; returns ``{symbol: {last_done, open, ...}}``.
+
+        Option symbols (OCC format like ``TSLA250117C300000.US``) need the
+        dedicated ``option_quote`` SDK call — the regular ``quote`` API only
+        covers equities/ETFs/indices. We classify each symbol and call the
+        appropriate endpoint, then merge.
+        """
+        if self._quote_ctx is None:
+            raise RuntimeError("LongPortClient has been closed")
+        from app.broker.symbol_classify import parse_option_symbol
+
+        stock_syms: list[str] = []
+        option_syms: list[str] = []
+        for s in symbols:
+            (option_syms if parse_option_symbol(s) is not None else stock_syms).append(s)
+
+        result: dict[str, dict[str, Any]] = {}
+        if stock_syms:
+            for q in self._quote_ctx.quote(stock_syms):
+                result[q.symbol] = _quote_to_dict(q, self._market_state_for(q.symbol))
+        if option_syms:
+            # ``option_quote`` returns OptionQuote with the same last_done /
+            # prev_close / open / high / low / volume / turnover fields, so
+            # the same converter handles both.
+            for q in self._quote_ctx.option_quote(option_syms):
+                result[q.symbol] = _quote_to_dict(q, self._market_state_for(q.symbol))
+        return result
+
+    def _fetch_executions_window(
+        self,
+        *,
+        ticker: str | None,
+        start: "datetime",
+        end: "datetime",
+    ) -> list[dict[str, Any]]:
+        """Common path for ``today_executions`` / ``history_executions``.
+
+        Pulls a time-windowed slice of broker fills + orders, joins to
+        recover side, and shapes each row into the dict our wire schema
+        expects. The optional ``ticker`` filter is applied AFTER fetching
+        because the SDK's ``symbol`` filter accepts only one symbol at a
+        time — for option positions on a ticker we want all contracts.
+        """
+        from datetime import datetime, timedelta, timezone
+        from app.broker.symbol_classify import parse_option_symbol
+
+        if self._trade_ctx is None:
+            raise RuntimeError("LongPortClient has been closed")
+
+        # start / end are arguments now — kept as locals below so the
+        # downstream broker SDK call signatures don't need to change.
+        now = end
+
+        side_by_order: dict[str, str] = {}
+        try:
+            orders_resp = self._trade_ctx.history_orders(start_at=start, end_at=now)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("history_orders fetch failed: %s", exc)
+            orders_resp = []
+        for o in orders_resp or []:
+            side_attr = getattr(o, "side", None)
+            side_str = str(side_attr).split(".")[-1].upper() if side_attr is not None else ""
+            order_id = str(getattr(o, "order_id", ""))
+            if order_id:
+                side_by_order[order_id] = side_str
+
+        try:
+            execs_resp = self._trade_ctx.history_executions(start_at=start, end_at=now)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("history_executions fetch failed: %s", exc)
+            return []
+
+        out: list[dict[str, Any]] = []
+        for e in execs_resp or []:
+            order_id = str(getattr(e, "order_id", ""))
+            side = side_by_order.get(order_id, "")
+            if side not in ("BUY", "SELL"):
+                continue
+            symbol = str(getattr(e, "symbol", ""))
+            leg = parse_option_symbol(symbol)
+            if leg is not None:
+                row_ticker = leg.ticker
+            else:
+                row_ticker = symbol.split(".")[0] if "." in symbol else symbol
+            if ticker is not None and row_ticker != ticker:
+                continue
+            qty_raw = getattr(e, "quantity", 0)
+            price_raw = getattr(e, "price", 0)
+            try:
+                qty = int(qty_raw)
+            except (TypeError, ValueError):
+                qty = 0
+            try:
+                price = float(price_raw)
+            except (TypeError, ValueError):
+                price = 0.0
+            ts = getattr(e, "trade_done_at", None)
+            if ts is None:
+                continue
+            # LongBridge returns trade_done_at as a naive datetime in HK
+            # local time. Pin to UTC+8 before serializing.
+            if isinstance(ts, datetime) and ts.tzinfo is None:
+                ts = ts.replace(tzinfo=timezone(timedelta(hours=8)))
+            out.append({
+                "order_id": order_id,
+                "trade_id": str(getattr(e, "trade_id", "")),
+                "symbol": symbol,
+                "ticker": row_ticker,
+                "side": side,
+                "qty": qty,
+                "price": price,
+                "ts": ts,
+            })
+        return out
+
+    def today_executions(self) -> list[dict[str, Any]]:
+        """Fetch the current US trading day's broker-side fills.
+
+        LongBridge's own ``today_executions`` SDK call uses HK/BJ calendar
+        day boundaries (UTC+8 midnight), so it MISSES fills during the US
+        regular session — those land in early-morning BJ which the broker
+        calls "yesterday". We pull a 30-hour window via
+        ``history_executions`` (covers the full ET session window with
+        margin); frontend filters to the current ET trading day.
+        """
+        from datetime import datetime, timedelta, timezone
+
+        now = datetime.now(timezone.utc)
+        return self._fetch_executions_window(
+            ticker=None, start=now - timedelta(hours=30), end=now,
+        )
+
+    def history_executions(
+        self,
+        *,
+        ticker: str | None = None,
+        days: int = 30,
+        start_at: "datetime | None" = None,
+        end_at: "datetime | None" = None,
+    ) -> list[dict[str, Any]]:
+        """Historical fills, either over an explicit UTC range
+        (``start_at`` / ``end_at``) or the rolling ``days`` window.
+
+        The explicit-range form is used by the first-time-sync backfill,
+        which iterates 90-day chunks backwards to cover ~2 years without
+        hitting the broker's per-call row cap. The ``days`` form is used
+        by incremental gap-from-MAX(ts) refreshes.
+        """
+        from datetime import datetime, timedelta, timezone
+
+        if start_at is not None and end_at is not None:
+            return self._fetch_executions_window(
+                ticker=ticker, start=start_at, end=end_at,
+            )
+        now = datetime.now(timezone.utc)
+        return self._fetch_executions_window(
+            ticker=ticker, start=now - timedelta(days=days), end=now,
+        )
+
+    def stock_positions(self) -> list[dict[str, Any]]:
+        """Fetch current stock holdings (and option contracts — Longbridge
+        ships both under the same channel; option symbols carry OCC suffix).
+
+        Zero-quantity rows are filtered out: switching trading mode brings
+        in a different account whose positions are entirely different, and
+        the broker can echo back stale "previously held" rows with qty=0
+        that would otherwise clutter the dashboard.
+        """
+        if self._trade_ctx is None:
+            raise RuntimeError("LongPortClient has been closed")
+        resp = self._trade_ctx.stock_positions()
+        out: list[dict[str, Any]] = []
+        for channel in getattr(resp, "channels", []) or []:
+            for p in getattr(channel, "positions", []) or []:
+                symbol = str(getattr(p, "symbol", ""))
+                qty = int(getattr(p, "quantity", 0) or 0)
+                if qty == 0:
+                    continue
+                # Derive a user-facing ticker by removing the market suffix.
+                # Symbols are always "<TICKER>.<MARKET>"; if not, use as-is.
+                ticker = symbol.split(".")[0] if "." in symbol else symbol
+                out.append({
+                    "symbol": symbol,
+                    "ticker": ticker,
+                    "name": str(getattr(p, "symbol_name", "")) or None,
+                    "quantity": qty,
+                    "avg_cost": float(getattr(p, "cost_price", 0) or 0) or None,
+                    "currency": str(getattr(p, "currency", "")) or None,
+                })
+        return out
+
+    # SDK period name → enum, in the values supported by /api/candlesticks.
+    _SDK_PERIODS = {
+        "min_1": Period.Min_1,
+        "min_2": Period.Min_2,
+        "min_3": Period.Min_3,
+        "min_5": Period.Min_5,
+        "min_15": Period.Min_15,
+        "min_30": Period.Min_30,
+        "min_60": Period.Min_60,
+        "day": Period.Day,
+        # Legacy alias retained so older callers that pass "intraday" keep
+        # working without a code change.
+        "intraday": Period.Min_5,
+    }
+
+    _SDK_SESSIONS = {
+        "regular": TradeSessions.Intraday,
+        "all": TradeSessions.All,
+    }
+
+    def get_candlesticks(
+        self,
+        symbol: str,
+        *,
+        period: str,
+        count: int,
+        sessions: str = "regular",
+    ) -> list[dict[str, Any]]:
+        """Fetch historical candlesticks at the requested granularity.
+
+        ``period`` accepts the granular SDK-style names ``min_1`` / ``min_5``
+        / ``min_15`` / ``min_30`` / ``min_60`` / ``day`` — the HTTP layer
+        translates user-facing period strings (``today`` / ``5`` / … /
+        ``90``) into a (granularity, count) pair before calling here.
+        """
         if self._quote_ctx is None:
             raise RuntimeError("LongPortClient has been closed")
 
-        resp = self._quote_ctx.quote(symbols)
-        result: dict[str, dict[str, Any]] = {}
-        for q in resp:
-            result[q.symbol] = {
-                "last_done": float(q.last_done) if q.last_done else 0.0,
-                "prev_close": float(q.prev_close) if q.prev_close else 0.0,
-                "open": float(q.open) if q.open else 0.0,
-                "high": float(q.high) if q.high else 0.0,
-                "low": float(q.low) if q.low else 0.0,
-                "volume": int(q.volume) if q.volume else 0,
-                "turnover": float(q.turnover) if q.turnover else 0.0,
-            }
+        sdk_period = self._SDK_PERIODS.get(period)
+        if sdk_period is None:
+            raise ValueError(
+                f"unknown period {period!r}; expected one of "
+                f"{sorted(self._SDK_PERIODS)}"
+            )
+        sdk_sessions = self._SDK_SESSIONS.get(sessions)
+        if sdk_sessions is None:
+            raise ValueError(
+                f"unknown sessions {sessions!r}; expected 'regular' or 'all'"
+            )
+
+        bars = self._quote_ctx.candlesticks(
+            symbol,
+            sdk_period,
+            count,
+            AdjustType.NoAdjust,
+            trade_sessions=sdk_sessions,
+        )
+        result: list[dict[str, Any]] = []
+        for c in bars:
+            # SDK returns timestamp as datetime in exchange tz; ISO-format for
+            # JSON serialization downstream.
+            result.append({
+                "timestamp": c.timestamp.isoformat() if c.timestamp else None,
+                "open": float(c.open) if c.open else 0.0,
+                "high": float(c.high) if c.high else 0.0,
+                "low": float(c.low) if c.low else 0.0,
+                "close": float(c.close) if c.close else 0.0,
+                "volume": int(c.volume) if c.volume else 0,
+                "turnover": float(c.turnover) if c.turnover else 0.0,
+            })
         return result
 
     # ------------------------------------------------------------------ #
@@ -203,6 +683,158 @@ class LongPortClient:
     def subscribe_order_push(self, handler: Callable[[Any], None]) -> None:
         """Register a callback for order-change push events."""
         self._push_handlers.append(handler)
+
+    def set_on_quote(
+        self, handler: Callable[[str, dict[str, Any]], None]
+    ) -> None:
+        """Install QuoteHub's adapter as the (single) quote-push handler."""
+        self._quote_handler = handler
+
+    def subscribe_quotes(self, symbols: list[str]) -> None:
+        """SDK-subscribe Quote sub-type for ``symbols``. Dedups against
+        the local ``_subscribed_quote_symbols`` set so repeated watch
+        updates with overlapping lists don't blast the SDK.
+
+        Also seeds the per-symbol reference-price cache with one SDK
+        ``get_quote`` so the first push for each symbol already has the
+        right change% reference. Seeding failure is logged but doesn't
+        block the subscribe.
+        """
+        if self._quote_ctx is None:
+            return
+        new_syms = [s for s in symbols if s not in self._subscribed_quote_symbols]
+        if not new_syms:
+            return
+        try:
+            self._quote_ctx.subscribe(new_syms, [SubType.Quote])
+            self._subscribed_quote_symbols.update(new_syms)
+            logger.info(
+                "LongPortClient: subscribed %d quote symbol(s): %s",
+                len(new_syms), new_syms,
+            )
+        except Exception:
+            logger.exception("LongPortClient: subscribe_quotes failed for %s", new_syms)
+        self._seed_ref_price_cache(new_syms)
+
+    def _seed_ref_price_cache(self, symbols: list[str]) -> None:
+        """Populate ``_ref_price_cache`` from one ``get_quote`` per batch.
+
+        Splits options vs stocks because the SDK uses different endpoints
+        — options also lack the pre/post tier fields, but their cache
+        entry still records ``prev_close`` so option-card change% works.
+        """
+        if not symbols or self._quote_ctx is None:
+            return
+        from app.broker.symbol_classify import parse_option_symbol
+
+        stock_syms = [s for s in symbols if parse_option_symbol(s) is None]
+        option_syms = [s for s in symbols if parse_option_symbol(s) is not None]
+        try:
+            if stock_syms:
+                for q in self._quote_ctx.quote(stock_syms):
+                    self._update_ref_cache(q.symbol, q)
+            if option_syms:
+                for q in self._quote_ctx.option_quote(option_syms):
+                    self._update_ref_cache(q.symbol, q)
+        except Exception:
+            logger.exception("LongPortClient: ref-price cache seed failed for %s", symbols)
+
+    def _update_ref_cache(self, symbol: str, q: Any) -> None:
+        """Refresh one cache entry from a fresh SecurityQuote / OptionQuote."""
+        state = self._market_state_for(symbol)
+        prev = float(getattr(q, "prev_close", 0) or 0)
+        # today_close: only valid during post/overnight (SDK has frozen
+        # last_done at the RTH close). During pre/regular, leave it None
+        # so the push handler falls back to prev_close.
+        if state in ("post", "overnight"):
+            today = float(getattr(q, "last_done", 0) or 0) or None
+        else:
+            today = None
+        self._ref_price_cache[symbol] = {
+            "prev_close": prev,
+            "today_close": today,
+            "last_session": state,
+        }
+
+    def unsubscribe_quotes(self, symbols: list[str]) -> None:
+        """SDK-unsubscribe Quote sub-type. Gates via the local set so the
+        SDK only sees symbols we actually subscribed (cleaner logs)."""
+        if self._quote_ctx is None:
+            return
+        old_syms = [s for s in symbols if s in self._subscribed_quote_symbols]
+        if not old_syms:
+            return
+        try:
+            self._quote_ctx.unsubscribe(old_syms, [SubType.Quote])
+            self._subscribed_quote_symbols.difference_update(old_syms)
+            logger.info(
+                "LongPortClient: unsubscribed %d quote symbol(s): %s",
+                len(old_syms), old_syms,
+            )
+        except Exception:
+            logger.exception("LongPortClient: unsubscribe_quotes failed for %s", old_syms)
+
+    def _on_quote(self, symbol: str, event: PushQuote) -> None:
+        """SDK quote-push trampoline → normalized dict → user handler.
+
+        Computes change% session-aware: 盘前/盘中 vs yesterday's RTH
+        close (prev_close), 盘后/夜盘 vs today's RTH close (today_close).
+        Both reference prices live in ``_ref_price_cache`` — seeded by
+        ``subscribe_quotes`` and refreshed lazily on session transition
+        (e.g. regular → post crossing the 16:00 ET boundary), so the
+        push handler doesn't need to call back into the SDK on every tick.
+
+        Runs on the SDK's own thread. The downstream handler (the
+        SubscriptionManager fan-out) marshals onto asyncio via
+        ``loop.call_soon_threadsafe`` for bus publish.
+        """
+        handler = self._quote_handler
+        if handler is None:
+            return
+        try:
+            state = self._market_state_for(symbol)
+            cache = self._ref_price_cache.get(symbol)
+            # Session transition (e.g. regular → post at 16:00 ET) →
+            # re-seed so today_close picks up the just-frozen RTH close.
+            # Skipped if cache is missing entirely (next branch handles it).
+            if cache is not None and cache.get("last_session") != state:
+                self._seed_ref_price_cache([symbol])
+                cache = self._ref_price_cache.get(symbol)
+            elif cache is None:
+                self._seed_ref_price_cache([symbol])
+                cache = self._ref_price_cache.get(symbol)
+
+            prev_close = float((cache or {}).get("prev_close") or 0)
+            today_close = (cache or {}).get("today_close")
+            reference = (
+                float(today_close)
+                if (state in ("post", "overnight") and today_close)
+                else prev_close
+            )
+            last_done = float(getattr(event, "last_done", 0) or 0)
+            if reference > 0:
+                change = last_done - reference
+                change_pct = (change / reference) * 100.0
+            else:
+                change = 0.0
+                change_pct = 0.0
+
+            quote_dict: dict[str, Any] = {
+                "last_done": last_done,
+                "prev_close": prev_close,
+                "today_close": float(today_close) if today_close else None,
+                "open": float(getattr(event, "open", 0) or 0),
+                "high": float(getattr(event, "high", 0) or 0),
+                "low": float(getattr(event, "low", 0) or 0),
+                "volume": int(getattr(event, "volume", 0) or 0),
+                "turnover": float(getattr(event, "turnover", 0) or 0),
+                "change": change,
+                "change_pct": change_pct,
+                "trade_session": state,
+            }
+            handler(symbol, quote_dict)
+        except Exception:
+            logger.exception("LongPortClient: quote-push handler raised")
 
     def _on_order_changed(self, event: Any) -> None:
         """SDK callback — fans out to all registered subscribers.
@@ -236,7 +868,10 @@ class LongPortClient:
         if self._closed:
             return
         self._closed = True
-        for attr_name, ctx in (("_quote_ctx", self._quote_ctx), ("_trade_ctx", self._trade_ctx)):
+        for attr_name, ctx in (
+            ("_quote_ctx", self._quote_ctx),
+            ("_trade_ctx", self._trade_ctx),
+        ):
             if ctx is None:
                 continue
             try:

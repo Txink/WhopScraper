@@ -36,6 +36,12 @@ class NoopBrokerClient:
     def dry_run(self) -> bool:
         return True
 
+    @property
+    def account_id(self) -> str:
+        # Noop broker has no real account — empty string disables
+        # account-scoped sync paths gracefully.
+        return ""
+
     def submit_option_order(
         self,
         *,
@@ -84,12 +90,45 @@ class NoopBrokerClient:
     def cancel_order(self, order_id: str) -> None:
         logger.warning("noop broker would cancel %s — no real cancel", order_id)
 
+    def today_executions(self) -> list[dict[str, Any]]:
+        # Noop broker: no actual fills.
+        return []
+
+    def history_executions(
+        self,
+        *,
+        ticker: str | None = None,
+        days: int = 30,
+        start_at: "datetime | None" = None,
+        end_at: "datetime | None" = None,
+    ) -> list[dict[str, Any]]:
+        return []
+
     def get_quote(self, symbols: list[str]) -> dict[str, dict[str, Any]]:
         return {s: {"last_done": 0.0} for s in symbols}
 
     def subscribe_order_push(self, handler: Callable[[Any], None]) -> None:
         # No real push stream — handler will never be invoked
         pass
+
+    def set_on_quote(self, handler: Callable[[str, dict[str, Any]], None]) -> None:
+        # Noop broker has no quote push channel; QuoteHub can still call
+        # this without crashing during account-unauthorized states.
+        pass
+
+    def subscribe_quotes(self, symbols: list[str]) -> None:
+        pass
+
+    def unsubscribe_quotes(self, symbols: list[str]) -> None:
+        pass
+
+    def fetch_trading_sessions(self) -> dict[str, list[tuple[Any, Any, str]]]:
+        # Noop broker has no live SDK — MarketSchedule falls back to its
+        # static clock heuristic when this returns empty.
+        return {}
+
+    def fetch_trading_days(self, *, days_back: int = 3) -> dict[str, list[Any]]:
+        return {}
 
     def close(self) -> None:
         pass
