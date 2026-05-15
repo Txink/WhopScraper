@@ -34,6 +34,8 @@ import { buildSessionSlots } from "./sessionSlots";
 import type { Period } from "../../stores/candlesticks";
 import { fmtBjHM, fmtBjDate, fmtBjRel, classifyETSession, tradingDayOfET, currentTradingDay } from "./timeFmt";
 import { usePrefsStore } from "../../stores/prefs";
+import { useQuotesStore } from "../../stores/quotes";
+import { applyLiveTick, bucketKey, liveConfig } from "./liveTick";
 
 Chart.register(
   LineController, ScatterController,
@@ -115,6 +117,17 @@ export function DetailChart({
   const markersRef = useRef<{ x: number; y: number; raw: Trade }[]>([]);
   const avgCostRef = useRef<number | null>(null);
   const showAvgCostRef = useRef<boolean>(false);
+
+  const pulseRef = useRef<HTMLDivElement | null>(null);
+  // Local mutable state for live mode. We keep extended bars HERE (not in
+  // the bars store) so DetailPane's barsInitialized gate and other
+  // downstream consumers aren't churned by quote-push frequency.
+  const liveStateRef = useRef<{
+    bars: Candlestick[];
+    labels: string[];
+    rafId: number | null;
+    lastApplied: number;
+  } | null>(null);
 
   // Snap each trade to the index of its nearest bar in time. Skip trades
   // outside the chart window so they don't anchor to (0, 0) of the axis.
@@ -487,6 +500,139 @@ export function DetailChart({
     chart.update("none");
   }, [visibleBars, markers, avgCost, showAvgCost]);
 
+  // liveCfg is null for 30D/60D/90D (daily K) and the today/分时, today/Nmin,
+  // 5D, 7D, 15D views all get a (periodMinutes, allowAppend) pair.
+  const liveCfg = liveConfig(period, todayGranularity);
+  const isLiveMode = liveCfg != null;
+
+  // Effect C — live tick. Drives all minute-level views (1/5/15-min).
+  // RAF-throttled so a tight quote burst doesn't trigger N chart updates
+  // per frame. Mutates Chart data in place (never the bars store) and
+  // repositions a DOM pulse dot at the last bar.
+  useEffect(() => {
+    if (!liveCfg) return;
+    const chart = chartRef.current;
+    if (!chart) return;
+    const seedData = dataRef.current;
+    if (!seedData) return;
+
+    liveStateRef.current = {
+      bars: visibleBarsRef.current.slice(),
+      labels: seedData.labels.slice(),
+      rafId: null,
+      lastApplied: 0,
+    };
+
+    const { periodMinutes, allowAppend } = liveCfg;
+
+    // Find the price-line dataset by label rather than by index 0 — keeps
+    // the live path robust against future dataset reorderings (avg-cost
+    // is inserted/removed dynamically by Effect B).
+    const priceDataset = chart.data.datasets.find(
+      (d) => (d as { label?: string }).label === "成交价",
+    ) as { data: unknown } | undefined;
+
+    const tick = () => {
+      const state = liveStateRef.current;
+      if (!state) return;
+      state.rafId = null;
+      const q = useQuotesStore.getState().quotesBySymbol[symbol];
+      const lastDone = q?.last_done;
+      if (lastDone == null || lastDone === 0) return;
+      const nowMs = Date.now();
+
+      // RAF can fire faster than the quote stream — skip if neither price
+      // nor bucket changed since last apply.
+      const lastTs = state.bars[state.bars.length - 1]?.timestamp;
+      const lastBucket = lastTs
+        ? bucketKey(Date.parse(lastTs), periodMinutes)
+        : -1;
+      if (lastDone === state.lastApplied && bucketKey(nowMs, periodMinutes) === lastBucket) {
+        return;
+      }
+
+      const out = applyLiveTick({
+        bars: state.bars,
+        labels: state.labels,
+        lastDone,
+        nowMs,
+        periodMinutes,
+        allowAppend,
+      });
+      // If the helper bailed (stale guard, empty bars, etc.) we still want
+      // to position the pulse dot — but no chart mutation is needed.
+      const dataChanged = out.bars !== state.bars;
+      state.bars = out.bars;
+      state.labels = out.labels;
+      state.lastApplied = lastDone;
+
+      const ch = chartRef.current;
+      if (!ch || !priceDataset) return;
+
+      if (dataChanged) {
+        ch.data.labels = out.labels;
+        const priceData = priceDataset.data as unknown as number[];
+        if (out.crossedBoundary) {
+          priceData.push(lastDone);
+        } else {
+          priceData[priceData.length - 1] = lastDone;
+        }
+        const xMax = priceData.length - 1;
+        const opts = ch.options as unknown as {
+          scales: { x: { max: number; min: number } };
+          plugins: { zoom: { limits: { x: { max: number } } } };
+        };
+        // Stretch right edge only if user hasn't manually panned away.
+        if ((ch.scales.x.max as number) >= xMax - 1) {
+          opts.scales.x.max = xMax;
+        }
+        opts.plugins.zoom.limits.x.max = xMax;
+        ch.update("none");
+      }
+
+      // Position the pulse dot at the last (x, y) data point.
+      const pulse = pulseRef.current;
+      if (pulse) {
+        const priceArr = priceDataset.data as unknown as number[];
+        const lastIdx = priceArr.length - 1;
+        const px = ch.scales.x.getPixelForValue(lastIdx);
+        const py = ch.scales.y.getPixelForValue(lastDone);
+        if (Number.isFinite(px) && Number.isFinite(py)) {
+          pulse.style.left = `${px}px`;
+          pulse.style.top = `${py}px`;
+          pulse.classList.add("visible");
+          const isDown = (q?.change ?? 0) < 0;
+          pulse.classList.toggle("down", isDown);
+        }
+      }
+    };
+
+    // Each store push schedules a single RAF.
+    const unsub = useQuotesStore.subscribe((s, prev) => {
+      const next = s.quotesBySymbol[symbol]?.last_done;
+      const old = prev.quotesBySymbol[symbol]?.last_done;
+      if (next === old) return;
+      const state = liveStateRef.current;
+      if (!state || state.rafId != null) return;
+      state.rafId = requestAnimationFrame(tick);
+    });
+
+    // Kick once at mount so the dot is positioned on the most-recent
+    // already-pushed quote without waiting for the next push.
+    liveStateRef.current.rafId = requestAnimationFrame(tick);
+
+    return () => {
+      unsub();
+      const state = liveStateRef.current;
+      if (state?.rafId != null) cancelAnimationFrame(state.rafId);
+      liveStateRef.current = null;
+      pulseRef.current?.classList.remove("visible", "down");
+    };
+    // Re-seeds on view changes (period/granularity/symbol). The other deps
+    // are read via refs at tick-time, not at effect-mount time.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [period, todayGranularity, symbol]);
+
   // Period switch destroys + recreates the chart, so reset the zoomed
   // indicator independently.
   useEffect(() => { setIsZoomed(false); }, [period]);
@@ -499,6 +645,7 @@ export function DetailChart({
   return (
     <div className="chart-canvas-wrap">
       <canvas ref={canvasRef} />
+      {isLiveMode && <div ref={pulseRef} className="live-pulse" aria-hidden />}
       {isZoomed && (
         <button
           className="chart-reset-btn"

@@ -1,0 +1,942 @@
+/* Detail pane — single-stock drill-down rendered in place of the
+ * positions grid. Stacks: back button → summary → chart → KPIs →
+ * trade table → pair list, all sharing the right-rail max-width. */
+
+.detail-pane {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.detail-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 4px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--fg-2);
+  align-self: flex-start;
+  cursor: pointer;
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+.detail-back:hover { background: var(--bg-hover); color: var(--fg-1); }
+
+/* ─── Summary card (single-row) ───
+ * Compressed from a two-row layout (top: name+price; bottom: 4 stat cols)
+ * into one horizontal row: left cluster has ticker+symbol+price+change
+ * pill, right cluster has 持仓/均价/市值/浮盈 inline. Frees ~50px of
+ * vertical space and reads as one glance. */
+.detail-summary {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  padding: 12px 16px;
+}
+.detail-summary.single-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  /* Force the left + right clusters onto a single visual row. Combined
+   * with ``ds-right { flex-wrap: wrap }`` below, very narrow viewports
+   * still degrade gracefully (right cluster wraps internally) without
+   * the whole row breaking. */
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+.ds-left {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  /* Keep ticker + price + change on one line. The price font is sized
+   * small enough below that this fits even on a 1280px viewport. */
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+.ds-right {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  flex-wrap: wrap;
+  /* Allow the right cluster to shrink when the row is tight so the
+   * left ticker block keeps its preferred width. */
+  min-width: 0;
+}
+.detail-ticker {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 600;
+}
+.detail-sym { font-size: 11px; color: var(--fg-3); font-family: var(--font-mono); }
+.detail-price {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 600;
+  /* Widen the ticker → price gap (+8) on top of ``.ds-left { gap: 6 }``,
+   * while still pulling the change pill snug to the price (-2 on the
+   * right). Net: ticker→price ≈ 14px, price→change ≈ 4px. */
+  margin-left: 8px;
+  margin-right: -2px;
+}
+.detail-change {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 2px 5px;
+  border-radius: var(--radius-chip);
+}
+.detail-change.pos { color: var(--up-color); background: var(--up-soft); }
+.detail-change.neg { color: var(--down-color); background: var(--down-soft); }
+.detail-price.pos { color: var(--up-color); }
+.detail-price.neg { color: var(--down-color); }
+
+/* head-stat shared between detail summary right cluster + PairKPIs subtitles.
+ * In single-row mode the lbl + val sit inline (label left of value) rather
+ * than stacked. */
+.detail-summary.single-row .head-stat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.detail-summary.single-row .head-stat .lbl {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+  margin-bottom: 0;
+}
+.detail-summary.single-row .head-stat .val {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 500;
+}
+.detail-summary.single-row .head-stat .val.pos { color: var(--up-color); }
+.detail-summary.single-row .head-stat .val.neg { color: var(--down-color); }
+.detail-summary.single-row .head-stat .val .ds-pl-pct {
+  font-size: 11px;
+  color: var(--fg-3);
+  margin-left: 4px;
+  font-weight: 400;
+}
+
+/* ─── Chart card ─── */
+.detail-chart-card {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  padding: 12px 14px 14px;
+}
+.detail-chart-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+.detail-chart-head h4 {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+  font-weight: 500;
+}
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--fg-2);
+}
+.legend .it { display: inline-flex; align-items: center; gap: 5px; }
+.legend .glyph {
+  width: 14px; height: 14px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono); font-size: 11px;
+}
+.legend .glyph.buy { color: var(--up-color); }
+.legend .glyph.sell { color: var(--down-color); }
+.legend .glyph.avg {
+  border-top: 1px dashed var(--info);
+  height: 2px;
+  width: 18px;
+  margin-top: 4px;
+}
+.legend .toggle-mini {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  color: var(--fg-2);
+  font-size: 10.5px;
+  cursor: pointer;
+}
+.legend .toggle-mini.on {
+  background: rgba(63, 181, 197, 0.14);
+  border-color: rgba(63, 181, 197, 0.32);
+  color: var(--brand);
+}
+
+.period-tabs {
+  display: inline-flex;
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 3px;
+  gap: 2px;
+}
+.period-tabs .p {
+  padding: 4px 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-2);
+  border: 0;
+  background: transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+.period-tabs .p.active { background: var(--brand); color: #00131a; font-weight: 600; }
+.period-tabs .p:hover:not(.active) { background: var(--bg-hover); color: var(--fg-1); }
+.period-tabs .p .caret {
+  margin-left: 4px;
+  font-size: 9px;
+  opacity: 0.85;
+}
+
+/* ─── Today sub-options dropdown ───
+ * Hidden by default; opens when the user clicks the active "日内" tab.
+ * Anchors below the chart-head row inside the chart card so the chart
+ * never reflows when the dropdown toggles. */
+.today-dropdown {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 10px;
+  margin: 6px 0 10px;
+  background: var(--bg-1);
+  border: 1px solid var(--line-strong);
+  border-radius: 5px;
+  flex-wrap: wrap;
+}
+.today-dropdown .subopt-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.today-dropdown .subopt-group .lbl {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+  margin-right: 4px;
+}
+.today-dropdown .pill {
+  padding: 4px 10px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  background: var(--bg-2);
+  color: var(--fg-2);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+.today-dropdown .pill:hover { background: var(--bg-hover); color: var(--fg-1); }
+.today-dropdown .pill.active {
+  background: rgba(63, 181, 197, 0.14);
+  border-color: rgba(63, 181, 197, 0.4);
+  color: var(--brand);
+  font-weight: 500;
+}
+
+.detail-chart-wrap { height: 380px; position: relative; }
+
+/* Canvas wrapper hosts the reset-zoom button (when zoomed). Must be 100%
+ * height + relative so Chart.js measures the parent correctly and our
+ * absolutely-positioned reset button anchors to the chart's corner. */
+.chart-canvas-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+.chart-reset-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  background: var(--bg-1);
+  border: 1px solid var(--line-strong);
+  color: var(--fg-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  cursor: pointer;
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+.chart-reset-btn:hover {
+  background: var(--bg-hover);
+  color: var(--fg-1);
+}
+
+.empty-pat {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--fg-3);
+  font-size: 12px;
+}
+
+/* ─── KPI strip ─── */
+.kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+}
+.kpi-cell {
+  background: var(--bg-2);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.kpi-cell .k {
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+.kpi-cell .v {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--fg-1);
+  letter-spacing: -0.01em;
+}
+.kpi-cell .v.pos { color: var(--up-color); }
+.kpi-cell .v.neg { color: var(--down-color); }
+.kpi-cell .v.warn { color: var(--warn); }
+.kpi-cell .sub {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--fg-3);
+}
+
+@media (max-width: 1240px) {
+  .kpi-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+/* ─── Panel (shared by trade + pair list) ─── */
+.panel {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  position: relative;
+}
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px 8px;
+  border-bottom: 1px solid var(--line);
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+.panel-head h4 {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+  font-weight: 500;
+}
+.panel-head .meta {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-2);
+}
+/* "上次更新：xxx" tail of the trade-list meta line — slightly muted so it
+ * reads as supplementary context, not a primary stat. */
+.panel-head .meta .last-synced {
+  color: var(--fg-3);
+}
+
+/* ─── Trade table ─── */
+.trade-tbl-wrap { overflow-y: auto; max-height: 360px; }
+.trade-tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+.trade-tbl th {
+  text-align: left;
+  font-weight: 500;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-2);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.trade-tbl th.compact, .trade-tbl td.compact { padding: 9px 6px; width: 32px; }
+.trade-tbl td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  vertical-align: middle;
+}
+.trade-tbl tr:last-child td { border-bottom: 0; }
+.trade-tbl tr.t-row { cursor: pointer; }
+.trade-tbl tr.t-row:hover td { background: var(--bg-hover); }
+.trade-tbl tr.t-row.selected td { background: rgba(63, 181, 197, 0.06); }
+/* Pad rows preserve table height when the last page has < PAGE_SIZE
+ * trades — no pointer events, no hover, no separator visual. */
+.trade-tbl tr.t-row-empty {
+  cursor: default;
+  pointer-events: none;
+}
+.trade-tbl tr.t-row-empty:hover td { background: transparent; }
+.trade-tbl td.tic { color: var(--fg-2); font-size: 11px; }
+.trade-tbl td .qty-avail {
+  color: var(--fg-3);
+  font-size: 10px;
+  margin-left: 4px;
+}
+
+.cell-side {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.cell-side.buy { color: var(--up-color); }
+.cell-side.sell { color: var(--down-color); }
+
+.pair-chip-row { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+.pair-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 9.5px;
+  font-family: var(--font-mono);
+  background: color-mix(in srgb, var(--pair-color, var(--fg-3)) 16%, transparent);
+  color: var(--pair-color, var(--fg-3));
+  border: 1px solid color-mix(in srgb, var(--pair-color, var(--fg-3)) 36%, transparent);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: box-shadow var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+.pair-chip:hover {
+  background: color-mix(in srgb, var(--pair-color, var(--fg-3)) 28%, transparent);
+}
+.pair-chip.active {
+  box-shadow: 0 0 0 1px var(--pair-color),
+              0 0 0 3px color-mix(in srgb, var(--pair-color, var(--fg-3)) 32%, transparent);
+}
+.pair-chip .dotty {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--pair-color, var(--fg-3));
+}
+.pair-chip .qty-suffix { opacity: 0.7; margin-left: 2px; }
+
+/* Selection checkbox tint: green for BUY, red for SELL */
+input[type="checkbox"].sel-buy:checked {
+  background: var(--ok);
+  border-color: var(--ok);
+}
+input[type="checkbox"].sel-sell:checked {
+  background: var(--err);
+  border-color: var(--err);
+}
+
+/* ─── Bind builder (sticky bottom of trade panel) ─── */
+.bind-builder {
+  position: sticky;
+  bottom: 0;
+  background: var(--bg-1);
+  border-top: 1px solid var(--line-strong);
+  padding: 11px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 -12px 24px rgba(0, 0, 0, 0.35);
+  flex-wrap: wrap;
+}
+.bind-builder .group { display: flex; align-items: baseline; gap: 5px; }
+.bind-builder .gk {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+.bind-builder .gv { font-family: var(--font-mono); font-size: 14px; font-weight: 600; }
+.bind-builder .gv.buy { color: var(--up-color); }
+.bind-builder .gv.sell { color: var(--down-color); }
+.bind-builder .gsub { font-family: var(--font-mono); font-size: 10px; color: var(--fg-3); }
+.bind-builder .sep { color: var(--fg-3); font-family: var(--font-mono); }
+.bind-builder .diff {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+.bind-builder .diff.match {
+  color: var(--ok);
+  background: rgba(61, 214, 140, 0.14);
+}
+.bind-builder .diff.mismatch {
+  color: var(--warn);
+  background: rgba(231, 167, 61, 0.14);
+}
+.bind-builder .preview {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-2);
+}
+.bind-builder .preview .v.pos { color: var(--up-color); }
+.bind-builder .preview .v.neg { color: var(--down-color); }
+.bind-builder .acts { margin-left: auto; display: inline-flex; gap: 6px; }
+
+.btn {
+  font: inherit;
+  font-size: 11px;
+  padding: 5px 11px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  border: 1px solid transparent;
+  transition: all var(--dur) var(--ease);
+}
+.btn.ghost {
+  background: var(--bg-2);
+  color: var(--fg-2);
+  border-color: var(--line);
+}
+.btn.ghost:hover { background: var(--bg-hover); color: var(--fg-1); }
+.btn.primary { background: var(--brand); color: #00131a; }
+.btn.primary:hover { background: #5cd2e0; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.bind-builder .extend-row {
+  flex-basis: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-top: 8px;
+  margin-top: 2px;
+  border-top: 1px dashed var(--line);
+  font-size: 11px;
+  flex-wrap: wrap;
+}
+.bind-builder .extend-label {
+  color: var(--fg-3);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+.bind-builder .extend-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  background: color-mix(in srgb, var(--pair-color, var(--fg-3)) 14%, transparent);
+  color: var(--pair-color, var(--fg-3));
+  border: 1px solid color-mix(in srgb, var(--pair-color, var(--fg-3)) 36%, transparent);
+  cursor: pointer;
+}
+.bind-builder .extend-chip:hover {
+  background: color-mix(in srgb, var(--pair-color, var(--fg-3)) 28%, transparent);
+}
+
+/* ─── Pair status tag (inside PairList) ─── */
+.pair-status-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 9.5px;
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
+.pair-status-tag.complete {
+  background: rgba(61, 214, 140, 0.14);
+  color: var(--ok);
+}
+.pair-status-tag.partial {
+  background: rgba(231, 167, 61, 0.14);
+  color: var(--warn);
+}
+.pair-status-tag .dotty {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* ─── Pair list rows ─── */
+.pair-list { display: flex; flex-direction: column; }
+.pair-row {
+  display: grid;
+  grid-template-columns: 4px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+  transition: background var(--dur) var(--ease);
+}
+.pair-row:last-child { border-bottom: 0; }
+.pair-row:hover { background: var(--bg-hover); }
+.pair-row.active {
+  background: color-mix(in srgb, var(--pair-color, var(--brand)) 10%, transparent);
+}
+.pair-rail {
+  width: 4px;
+  height: 100%;
+  min-height: 36px;
+  border-radius: 3px;
+  background: var(--pair-color, var(--fg-3));
+}
+.pair-mid { min-width: 0; }
+.pair-mid-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--fg-1);
+  flex-wrap: wrap;
+}
+.pair-mid-top .qb { color: var(--ok); }
+.pair-mid-top .qs { color: var(--err); }
+.pair-mid-top .arr { color: var(--fg-3); }
+.pair-mid-top .gsub { color: var(--fg-3); font-size: 11px; }
+.pair-mid-bot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 3px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-3);
+  flex-wrap: wrap;
+}
+.pair-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+}
+.pair-profit {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 600;
+}
+.pair-profit.pos { color: var(--ok); }
+.pair-profit.neg { color: var(--err); }
+.pair-profit-pct {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-3);
+}
+.pair-actions {
+  display: inline-flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity var(--dur) var(--ease);
+}
+.pair-row:hover .pair-actions,
+.pair-row.active .pair-actions { opacity: 1; }
+.pair-unbind {
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--fg-3);
+  border: 1px solid var(--line);
+  cursor: pointer;
+}
+.pair-unbind:hover {
+  background: rgba(239, 91, 91, 0.14);
+  color: var(--err);
+  border-color: rgba(239, 91, 91, 0.3);
+}
+
+/* ─── Pair detail modal (#4) ─── */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.modal-card {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--pair-color, var(--fg-3));
+  border-radius: var(--radius-card);
+  min-width: 480px;
+  max-width: 720px;
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 16px 20px 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.modal-head h3 {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+}
+.modal-head .pair-chip-mini {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--pair-color, var(--fg-3));
+  background: color-mix(in srgb, var(--pair-color, var(--fg-3)) 18%, transparent);
+  padding: 2px 8px;
+  border-radius: var(--radius-chip);
+}
+.modal-head .pair-chip-mini .dotty {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--pair-color, var(--fg-3));
+}
+.modal-head .partial-tag {
+  font-size: 10px;
+  color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 15%, transparent);
+  padding: 1px 6px;
+  border-radius: var(--radius-chip);
+  font-weight: 500;
+}
+.modal-close {
+  background: none;
+  border: 0;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--fg-3);
+  cursor: pointer;
+  padding: 0 4px;
+}
+.modal-close:hover { color: var(--fg-1); }
+
+.pair-summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  padding: 12px;
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
+.pair-summary .ps-cell { display: flex; flex-direction: column; gap: 4px; }
+.pair-summary .ps-cell .k {
+  font-size: 10px;
+  color: var(--fg-3);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.pair-summary .ps-cell .v {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 500;
+}
+.pair-summary .ps-cell .v.pos { color: var(--up-color); }
+.pair-summary .ps-cell .v.neg { color: var(--down-color); }
+.pair-summary .ps-cell .v .sub {
+  font-size: 11px;
+  margin-left: 4px;
+  color: var(--fg-3);
+  font-weight: 400;
+}
+
+.pair-allocations h4 {
+  font-size: 12px;
+  color: var(--fg-2);
+  margin: 0 0 8px;
+}
+.modal-tbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.modal-tbl th {
+  text-align: left;
+  font-weight: 500;
+  color: var(--fg-3);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+}
+.modal-tbl td {
+  padding: 6px 8px;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 50%, transparent);
+}
+
+/* ─── Pending做T panel ─── */
+.pending-panel .panel-head .meta {
+  display: inline-flex;
+  gap: 6px;
+}
+.pending-toggle {
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.pending-toggle .caret { color: var(--fg-3); font-size: 11px; }
+.pending-pill {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: var(--radius-chip);
+}
+.pending-pill.buy {
+  color: var(--up-color);
+  background: var(--up-soft);
+}
+.pending-pill.sell {
+  color: var(--down-color);
+  background: var(--down-soft);
+}
+
+.trade-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 14px;
+  border-top: 1px dashed var(--line);
+  font-family: var(--font-mono);
+}
+.trade-pagination .page-btn {
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--fg-2);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+}
+.trade-pagination .page-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--fg-2) 8%, transparent);
+  color: var(--fg-1);
+}
+.trade-pagination .page-btn.active {
+  background: var(--accent, #5aa0ff);
+  border-color: var(--accent, #5aa0ff);
+  color: #fff;
+}
+.trade-pagination .page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.trade-pagination .page-gap {
+  color: var(--fg-3);
+  padding: 0 2px;
+}
+
+.unmatched-buys {
+  padding: 10px 14px;
+  border-top: 1px dashed var(--line);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--fg-3);
+}
+.unmatched-buys .warn-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--warn);
+  box-shadow: 0 0 0 3px rgba(231, 167, 61, 0.18);
+}
+.unmatched-buys .num {
+  color: var(--warn);
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+/* Live-mode "now" indicator overlaid on the last bar's data point. Mounted
+ * in all minute-level views (today/分时, today/Nmin, 5D/7D/15D) — see
+ * DetailChart.tsx's liveCfg gate. Positioned by JS via
+ * chart.scales.{x,y}.getPixelForValue; the pulse is purely cosmetic. */
+.live-pulse {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--up-color);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+.live-pulse.visible {
+  opacity: 1;
+  animation: live-pulse-anim 1.2s ease-out infinite;
+}
+.live-pulse.down { background: var(--down-color); }
+
+@keyframes live-pulse-anim {
+  0%   { transform: translate(-50%, -50%) scale(1);   opacity: 1;   }
+  60%  { transform: translate(-50%, -50%) scale(2.2); opacity: 0;   }
+  100% { transform: translate(-50%, -50%) scale(2.2); opacity: 0;   }
+}
