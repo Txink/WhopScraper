@@ -23,6 +23,16 @@
   --info: #5aa0ff;
   --neutral: #8a93a1;
 
+  /* Direction colors — swap-able via prefs (US default vs CN red-up).
+   * Components referencing 涨跌 should use --up-color / --down-color
+   * instead of --ok / --err so the user's preference flows through
+   * automatically. ``--ok / --err`` stay semantic (success / error),
+   * unrelated to price direction. */
+  --up-color: #3dd68c;
+  --up-soft: rgba(61, 214, 140, 0.14);
+  --down-color: #ef5b5b;
+  --down-soft: rgba(239, 91, 91, 0.14);
+
   /* Type badges */
   --type-stock-bg: rgba(63, 181, 197, 0.14);
   --type-stock-fg: #6cd5e3;

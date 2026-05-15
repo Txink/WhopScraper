@@ -6,10 +6,21 @@
 
 .main {
   display: grid;
-  grid-template-columns: 1fr 320px;
+  /* Right rail widened from 320 → 720 to host the positions grid + detail
+   * pane (做T binding). Left column flexes; the message-row grid in
+   * Card.css keeps its column widths compact so rows still wrap legibly
+   * even at narrower left widths on smaller screens. */
+  grid-template-columns: minmax(0, 1fr) 720px;
   gap: 16px;
   padding: 16px;
   background: var(--bg-1);
+}
+
+@media (max-width: 1440px) {
+  .main { grid-template-columns: minmax(0, 1fr) 620px; }
+}
+@media (max-width: 1240px) {
+  .main { grid-template-columns: minmax(0, 1fr) 540px; }
 }
 
 .stream {

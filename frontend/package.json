@@ -13,7 +13,10 @@
     "gen:types": "uv run --project ../backend python ../scripts/dump_openapi.py ./openapi.json && openapi-typescript ./openapi.json -o src/api/types.ts"
   },
   "dependencies": {
+    "chart.js": "^4.4.4",
+    "chartjs-plugin-zoom": "^2.2.0",
     "react": "^18.3.1",
+    "react-chartjs-2": "^5.2.0",
     "react-dom": "^18.3.1",
     "zustand": "^5.0.1"
   },

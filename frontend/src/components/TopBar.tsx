@@ -8,7 +8,9 @@ export interface TopBarProps {
    *  fallback (init failed). Null/undefined = haven't fetched broker status. */
   brokerIsReal?: boolean | null;
   brokerInitError?: string | null;
-  mode: "paper" | "real";
+  /** Active account label (e.g. "paper" / "real" / "副账户"). Empty when
+   *  no account is configured. Replaces the prior paper/real-only mode. */
+  mode: string;
   dryRun: boolean;
   autoTrade?: boolean;
   onOpenLongportSettings?: () => void;

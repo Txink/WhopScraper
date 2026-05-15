@@ -5,10 +5,13 @@ import { useConnStore } from "./stores/conn";
 import { useTasksStore, selectTasksByUrl } from "./stores/tasks";
 import { useStatsStore } from "./stores/stats";
 import { usePositionsStore } from "./stores/positions";
+import { useQuotesStore } from "./stores/quotes";
+import { useExecutionsStore } from "./stores/executions";
+import type { Quote, Execution } from "./api/domain-types";
 import { useViewStore } from "./stores/view";
 import { usePageTabsStore } from "./stores/pageTabs";
 import { TopBar } from "./components/TopBar";
-import { RightRail } from "./components/RightRail";
+import { PositionsPanel } from "./components/Positions/PositionsPanel";
 import { Login } from "./components/Login";
 import { WhopPanel } from "./components/WhopPanel/WhopPanel";
 import { PageTabs } from "./components/Dashboard/PageTabs";
@@ -88,9 +91,6 @@ function Dashboard({ token }: { token: string }) {
   const activeTabId = usePageTabsStore((s) => s.activeTabId);
   const setPages = usePageTabsStore((s) => s.setPages);
   const setOrphanCount = usePageTabsStore((s) => s.setOrphanCount);
-  const expandMode = usePageTabsStore((s) =>
-    activeTabId ? (s.expandModeByTab[activeTabId] ?? "smart") : "smart",
-  );
   const orphanCount = usePageTabsStore((s) => s.orphanCount);
   const pagesLoaded = usePageTabsStore((s) => s.pagesLoaded);
 
@@ -121,11 +121,7 @@ function Dashboard({ token }: { token: string }) {
       try {
         const lp = await api.getLongportSettings();
         if (alive) {
-          useConnStore.getState().setRuntimeSettings({
-            mode: lp.mode,
-            dry_run: lp.dry_run,
-            auto_trade: lp.auto_trade,
-          });
+          useConnStore.getState().setRuntimeSettings(lp);
         }
       } catch (e) {
         console.warn("longport settings fetch failed:", e);
@@ -163,6 +159,22 @@ function Dashboard({ token }: { token: string }) {
       onEvent: (evt) => {
         if (evt.type === "whop.page_changed") {
           usePageTabsStore.getState().applyPageChanged(evt);
+        } else if (evt.type === "quote.snapshot") {
+          // Streaming broker quote — overlay into quotesStore so the
+          // PositionCard's last_done updates in real time. payload shape:
+          // ``{ symbol: string, quote: QuoteOut-ish }``.
+          const payload = evt.payload as { symbol?: string; quote?: Quote };
+          if (payload?.symbol && payload.quote) {
+            useQuotesStore.getState().upsertQuote(payload.symbol, payload.quote);
+          }
+        } else if (evt.type === "execution.update") {
+          // Streaming fill — upsert into executionsStore by order_id so
+          // PositionCard's Day P/L stays current without polling
+          // /api/broker/today_executions. payload mirrors ExecutionOut.
+          const p = evt.payload as Execution;
+          if (p?.order_id) {
+            useExecutionsStore.getState().upsertExecution(p);
+          }
         } else {
           applyWs(evt);
         }
@@ -280,14 +292,14 @@ function Dashboard({ token }: { token: string }) {
         ) : (
           <TaskStream
             pushEventsByTask={pushEventsByTask}
-            expandMode={expandMode}
             autoTrade={autoTrade}
             groups={groups}
             currentWeekKey={currentWeekKey}
+            tabKey={isOrphanTab ? "orphan" : (activeTabId ?? "orphan")}
           />
         )}
       </section>
-      <RightRail />
+      <PositionsPanel />
       {settingsOpen && activePage && (
         <PageSettingsModal page={activePage} onClose={() => setSettingsOpen(false)} />
       )}
@@ -320,7 +332,7 @@ function DatabaseView() {
       <section className="stream">
         <DatabaseRecordsPanel pageNameByUrl={pageNameByUrl} />
       </section>
-      <RightRail />
+      <PositionsPanel />
     </main>
   );
 }
@@ -410,11 +422,7 @@ export default function App() {
         <LongportSettingsModal
           onClose={() => setLongportSettingsOpen(false)}
           onSaved={(saved) => {
-            useConnStore.getState().setRuntimeSettings({
-              mode: saved.mode,
-              dry_run: saved.dry_run,
-              auto_trade: saved.auto_trade,
-            });
+            useConnStore.getState().setRuntimeSettings(saved);
           }}
         />
       )}
