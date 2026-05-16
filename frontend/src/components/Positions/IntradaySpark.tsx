@@ -74,19 +74,30 @@ export function IntradaySpark({
 
   /** Bars enriched with the live tip (last close overwritten by
    *  lastDone, or a new bar appended at the current minute). Skipped
-   *  in closed state — the chart is a frozen historical snapshot of
-   *  the last trading day and shouldn't be perturbed by stale or
-   *  weekend quote pushes. */
+   *  outside the active window — closed (weekend / holiday) and
+   *  overnight (chart excludes overnight; the frozen pre+regular+post
+   *  snapshot shouldn't be perturbed by overnight quote pushes), or
+   *  whenever nowMs is past the window's end. */
   const renderedBars = useMemo(() => {
     if (!bars || bars.length === 0) return bars ?? [];
-    if (session === "closed" || lastDone == null) return bars;
+    if (session === "closed" || session === "overnight" || lastDone == null) {
+      return bars;
+    }
     const nowMs = Date.now();
     const lastBar = bars[bars.length - 1];
     const lastBarMs = parseAsBJ(lastBar.timestamp);
     const lastBarSlot = win.msToSlot(lastBarMs);
     const nowSlot = win.msToSlot(nowMs);
 
-    if (nowSlot < 0 || nowSlot < lastBarSlot) {
+    if (nowSlot < 0) {
+      // Outside the window (past end, or in a gap like HK lunch). Keep
+      // bars as-is — overwriting the last bar's close with a stale or
+      // out-of-window quote would corrupt the historical snapshot.
+      return bars;
+    }
+    if (nowSlot < lastBarSlot) {
+      // Clock jumped backwards (rare — system clock change?). Treat as
+      // "in-place update" to be defensive without losing a real bar.
       return [...bars.slice(0, -1), { ...lastBar, close: lastDone }];
     }
     if (nowSlot === lastBarSlot) {
@@ -104,7 +115,11 @@ export function IntradaySpark({
     }];
   }, [bars, lastDone, win, session]);
 
-  const isClosed = session === "closed";
+  // ``isClosed`` gates the "static snapshot" styling (dimmed line, no
+  // pulse, no active-region highlight). Overnight is treated the same
+  // visually because the chart doesn't include the 夜盘 region; the
+  // pulse and live-region highlight have no slot to land in.
+  const isClosed = session === "closed" || session === "overnight";
 
   // Project bars → (x, close) pairs. Drop:
   //   • bars outside the window (HK lunch; stale data from sessions=all)

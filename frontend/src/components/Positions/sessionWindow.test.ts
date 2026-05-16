@@ -6,80 +6,77 @@ import { resolveSessionWindow, effectiveSession } from "./sessionWindow";
 
 function ts(iso: string): number { return Date.parse(iso); }
 
-describe("resolveSessionWindow — US unified day window", () => {
-  // The US window is a 1440-slot x-axis spanning ET 20:00 (prev day) →
-  // ET 20:00 (chart day), so sessions read 夜盘 → 盘前 → 盘中 → 盘后
-  // left-to-right. The `session` prop only affects the `label` field
-  // (used for live-state styling); the window shape is identical
-  // across sessions.
-  it("regular session → window spans Mon 20:00 ET → Tue 20:00 ET, 1440 slots", () => {
+describe("resolveSessionWindow — US 16h day window (no overnight)", () => {
+  // The US window spans ET 04:00 (pre open) → ET 20:00 (post close).
+  // 夜盘 is excluded by product decision — overnight quote pushes will
+  // arrive but neither move the chart nor trigger a live-tip merge.
+  it("regular session → ET 04:00 → 20:00, 960 slots", () => {
     // NOW = 2026-05-14T17:00:00Z = 13:00 ET (Thursday). chart day = Thu.
-    // Window starts at Wed 20:00 ET = Thu 00:00 UTC.
+    // Window starts at Thu 04:00 ET = Thu 08:00 UTC.
     const win = resolveSessionWindow("US", "regular", ts("2026-05-14T17:00:00Z"));
     expect(win.label).toBe("盘中");
-    expect(win.slotCount).toBe(1440);
-    expect(new Date(win.startMs).toISOString()).toBe("2026-05-14T00:00:00.000Z"); // Wed 20:00 ET
-    expect(new Date(win.endMs).toISOString()).toBe("2026-05-15T00:00:00.000Z");   // Thu 20:00 ET
+    expect(win.slotCount).toBe(960);
+    expect(new Date(win.startMs).toISOString()).toBe("2026-05-14T08:00:00.000Z");
+    expect(new Date(win.endMs).toISOString()).toBe("2026-05-15T00:00:00.000Z");
   });
 
   it("pre session → same window shape, label changes to 盘前", () => {
-    const win = resolveSessionWindow("US", "pre", ts("2026-05-14T10:00:00Z")); // 06:00 ET
+    const win = resolveSessionWindow("US", "pre", ts("2026-05-14T10:00:00Z"));
     expect(win.label).toBe("盘前");
-    expect(win.slotCount).toBe(1440);
-    expect(new Date(win.startMs).toISOString()).toBe("2026-05-14T00:00:00.000Z");
+    expect(win.slotCount).toBe(960);
   });
 
-  it("post session label = 盘后", () => {
-    const win = resolveSessionWindow("US", "post", ts("2026-05-14T22:00:00Z")); // 18:00 ET
+  it("post session label = 盘后, slotCount = 960", () => {
+    const win = resolveSessionWindow("US", "post", ts("2026-05-14T22:00:00Z"));
     expect(win.label).toBe("盘后");
-    expect(win.slotCount).toBe(1440);
-    expect(new Date(win.startMs).toISOString()).toBe("2026-05-14T00:00:00.000Z");
+    expect(win.slotCount).toBe(960);
   });
 
-  it("overnight at ET 23:00 (Thu) → chart day = Fri; window starts Thu 20:00 ET", () => {
-    // 03:00 UTC on 5/15 = 23:00 ET on 5/14 (Thu). hour >= 20 → chart day
-    // is tomorrow = Fri 2026-05-15. Window starts at Thu 20:00 ET.
+  it("overnight at ET 23:00 (Thu) → chart day is still today (Thu)", () => {
+    // 03:00 UTC on 5/15 = 23:00 ET on 5/14 (Thu). hour >= 4 → chart
+    // day = today (Thu). Window starts at Thu 04:00 ET.
     const win = resolveSessionWindow("US", "overnight", ts("2026-05-15T03:00:00Z"));
     expect(win.label).toBe("夜盘");
-    expect(new Date(win.startMs).toISOString()).toBe("2026-05-15T00:00:00.000Z"); // Thu 20:00 ET
-    expect(new Date(win.endMs).toISOString()).toBe("2026-05-16T00:00:00.000Z");   // Fri 20:00 ET
+    expect(new Date(win.startMs).toISOString()).toBe("2026-05-14T08:00:00.000Z");
   });
 
-  it("overnight at ET 02:00 (Fri morning) → chart day = today (Fri)", () => {
-    // 06:00 UTC on 5/15 = 02:00 ET on 5/15 (Fri). hour < 20 → chart day
-    // = today (Fri). Window starts at Thu 20:00 ET.
+  it("overnight at ET 02:00 (Fri morning) → chart day = yesterday (Thu)", () => {
+    // 06:00 UTC on 5/15 = 02:00 ET on 5/15 (Fri). hour < 4 → chart day
+    // = yesterday (Thu). Window starts at Thu 04:00 ET.
     const win = resolveSessionWindow("US", "overnight", ts("2026-05-15T06:00:00Z"));
-    expect(new Date(win.startMs).toISOString()).toBe("2026-05-15T00:00:00.000Z");
+    expect(new Date(win.startMs).toISOString()).toBe("2026-05-14T08:00:00.000Z");
   });
 
   it("closed on weekend → falls back to last weekday's window", () => {
-    // Sat 10:00 UTC = 06:00 ET. lastTradingDateKey = Friday 2026-05-15.
-    // Window = Thu 20:00 ET → Fri 20:00 ET.
+    // Sat 10:00 UTC. lastTradingDateKey = Friday 2026-05-15.
     const win = resolveSessionWindow("US", "closed", ts("2026-05-16T10:00:00Z"));
     expect(win.label).toBe("休市");
-    expect(win.slotCount).toBe(1440);
-    expect(new Date(win.startMs).toISOString()).toBe("2026-05-15T00:00:00.000Z");
+    expect(win.slotCount).toBe(960);
+    expect(new Date(win.startMs).toISOString()).toBe("2026-05-15T08:00:00.000Z");
+  });
+
+  it("closed on Monday morning BJ → falls back to Friday's window", () => {
+    const win = resolveSessionWindow("US", "closed", ts("2026-05-18T02:00:00Z"));
+    expect(new Date(win.startMs).toISOString()).toBe("2026-05-15T08:00:00.000Z");
   });
 });
 
-describe("resolveSessionWindow — US regions (夜盘 first)", () => {
-  it("regions order: 夜盘 → 盘前 → 盘中 → 盘后", () => {
+describe("resolveSessionWindow — US regions (3, no 夜盘)", () => {
+  it("regions order: 盘前 → 盘中 → 盘后", () => {
     const win = resolveSessionWindow("US", "regular", ts("2026-05-14T17:00:00Z"));
     expect(win.regions).toEqual([
-      { label: "夜盘", startSlot: 0,    endSlot: 480 },
-      { label: "盘前", startSlot: 480,  endSlot: 810 },
-      { label: "盘中", startSlot: 810,  endSlot: 1200 },
-      { label: "盘后", startSlot: 1200, endSlot: 1440 },
+      { label: "盘前", startSlot: 0,   endSlot: 330 },
+      { label: "盘中", startSlot: 330, endSlot: 720 },
+      { label: "盘后", startSlot: 720, endSlot: 960 },
     ]);
   });
 
-  it("slot 0 → ET 20:00 (start of overnight), slot 810 → ET 09:30 (regular open)", () => {
+  it("slot 0 → ET 04:00 (pre open), slot 330 → ET 09:30 (regular open)", () => {
     const win = resolveSessionWindow("US", "regular", ts("2026-05-14T17:00:00Z"));
-    expect(new Date(win.slotToMs(0)).toISOString()).toBe("2026-05-14T00:00:00.000Z");   // Wed 20:00 ET
-    expect(new Date(win.slotToMs(480)).toISOString()).toBe("2026-05-14T08:00:00.000Z"); // Thu 04:00 ET
-    expect(new Date(win.slotToMs(810)).toISOString()).toBe("2026-05-14T13:30:00.000Z"); // Thu 09:30 ET
-    expect(new Date(win.slotToMs(1200)).toISOString()).toBe("2026-05-14T20:00:00.000Z"); // Thu 16:00 ET
-    expect(new Date(win.slotToMs(1439)).toISOString()).toBe("2026-05-14T23:59:00.000Z");
+    expect(new Date(win.slotToMs(0)).toISOString()).toBe("2026-05-14T08:00:00.000Z");   // 04:00 ET
+    expect(new Date(win.slotToMs(330)).toISOString()).toBe("2026-05-14T13:30:00.000Z"); // 09:30 ET
+    expect(new Date(win.slotToMs(720)).toISOString()).toBe("2026-05-14T20:00:00.000Z"); // 16:00 ET
+    expect(new Date(win.slotToMs(959)).toISOString()).toBe("2026-05-14T23:59:00.000Z"); // 19:59 ET
   });
 });
 
@@ -163,19 +160,19 @@ describe("resolveSessionWindow — CN", () => {
 });
 
 describe("resolveSessionWindow — progress", () => {
-  it("US: ET 13:00 = 17h after Wed 20:00 anchor → 17/24 ≈ 0.708", () => {
+  it("US: ET 13:00 = 9h after 04:00 anchor → 9/16 = 0.5625", () => {
     const win = resolveSessionWindow("US", "regular", ts("2026-05-14T17:00:00Z"));
-    expect(win.progress(ts("2026-05-14T17:00:00Z"))).toBeCloseTo(17 / 24, 3);
+    expect(win.progress(ts("2026-05-14T17:00:00Z"))).toBeCloseTo(9 / 16, 3);
   });
 
   it("clamps to 0 before start", () => {
     const win = resolveSessionWindow("US", "regular", ts("2026-05-14T17:00:00Z"));
-    expect(win.progress(ts("2026-05-13T22:00:00Z"))).toBe(0);
+    expect(win.progress(ts("2026-05-14T05:00:00Z"))).toBe(0);
   });
 
   it("clamps to 1 after end", () => {
     const win = resolveSessionWindow("US", "regular", ts("2026-05-14T17:00:00Z"));
-    expect(win.progress(ts("2026-05-16T00:00:00Z"))).toBe(1);
+    expect(win.progress(ts("2026-05-15T08:00:00Z"))).toBe(1);
   });
 
   it("closed always returns 1", () => {
@@ -187,24 +184,20 @@ describe("resolveSessionWindow — progress", () => {
 describe("resolveSessionWindow — DST", () => {
   it("US window spans DST start (2026-03-08) correctly", () => {
     // 2026-03-09 (Mon after DST start) → ET = UTC-4
-    // Window starts at Sun 20:00 ET = Mon 00:00 UTC
+    // Window starts at Mon 04:00 ET = Mon 08:00 UTC
     const win = resolveSessionWindow("US", "regular", ts("2026-03-09T15:00:00Z"));
-    expect(new Date(win.startMs).toISOString()).toBe("2026-03-09T00:00:00.000Z");
+    expect(new Date(win.startMs).toISOString()).toBe("2026-03-09T08:00:00.000Z");
   });
   it("US window spans DST end (2026-11-01) correctly", () => {
     // 2026-11-02 (Mon after DST end) → ET = UTC-5
-    // Window starts at Sun 20:00 ET = Mon 01:00 UTC
+    // Window starts at Mon 04:00 ET = Mon 09:00 UTC
     const win = resolveSessionWindow("US", "regular", ts("2026-11-02T16:00:00Z"));
-    expect(new Date(win.startMs).toISOString()).toBe("2026-11-02T01:00:00.000Z");
+    expect(new Date(win.startMs).toISOString()).toBe("2026-11-02T09:00:00.000Z");
   });
 });
 
 describe("effectiveSession — weekend guard", () => {
-  // US Saturday 04:00 ET — backend may misreport as "pre" because its
-  // cached weekday session windows match the time-of-day. Frontend
-  // guard forces this to "closed".
   it("US Saturday → closed regardless of broker state", () => {
-    // 2026-05-16T08:00:00Z = Sat 04:00 ET
     const sat = ts("2026-05-16T08:00:00Z");
     expect(effectiveSession("US", "pre", sat)).toBe("closed");
     expect(effectiveSession("US", "regular", sat)).toBe("closed");
@@ -212,28 +205,23 @@ describe("effectiveSession — weekend guard", () => {
   });
 
   it("US Sunday before ET 20:00 → closed", () => {
-    // 2026-05-17T18:00:00Z = Sun 14:00 ET
     expect(effectiveSession("US", "pre", ts("2026-05-17T18:00:00Z"))).toBe("closed");
   });
 
-  it("US Sunday after ET 20:00 → broker state passes through (overnight may be live)", () => {
-    // 2026-05-18T01:00:00Z = Sun 21:00 ET
+  it("US Sunday after ET 20:00 → broker state passes through", () => {
     expect(effectiveSession("US", "overnight", ts("2026-05-18T01:00:00Z"))).toBe("overnight");
   });
 
   it("US weekday → broker state passes through", () => {
-    // 2026-05-14T17:00:00Z = Thu 13:00 ET
     expect(effectiveSession("US", "regular", ts("2026-05-14T17:00:00Z"))).toBe("regular");
     expect(effectiveSession("US", "pre", ts("2026-05-14T10:00:00Z"))).toBe("pre");
   });
 
   it("HK Saturday → closed", () => {
-    // 2026-05-16T04:00:00Z = Sat 12:00 HKT
     expect(effectiveSession("HK", "regular", ts("2026-05-16T04:00:00Z"))).toBe("closed");
   });
 
   it("HK weekday → broker state passes through", () => {
-    // 2026-05-14T02:00:00Z = Thu 10:00 HKT
     expect(effectiveSession("HK", "regular", ts("2026-05-14T02:00:00Z"))).toBe("regular");
   });
 
