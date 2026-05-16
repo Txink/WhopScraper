@@ -435,13 +435,21 @@
 .trade-tbl tr.t-row { cursor: pointer; }
 .trade-tbl tr.t-row:hover td { background: var(--bg-hover); }
 .trade-tbl tr.t-row.selected td { background: rgba(63, 181, 197, 0.06); }
-/* Pad rows preserve table height when the last page has < PAGE_SIZE
- * trades — no pointer events, no hover, no separator visual. */
-.trade-tbl tr.t-row-empty {
-  cursor: default;
+/* Infinite-scroll sentinel + loading/end caption row. Sits below the
+ * last real trade; the IntersectionObserver in TradeList watches this
+ * to fire the next ``onRequestMore`` call. Visually muted — it's a
+ * status line, not a trade. */
+.trade-tbl tr.t-row-sentinel {
   pointer-events: none;
 }
-.trade-tbl tr.t-row-empty:hover td { background: transparent; }
+.trade-tbl tr.t-row-sentinel td {
+  text-align: center;
+  color: var(--fg-3);
+  font-size: 11px;
+  padding: 10px 12px;
+  border-bottom: 0;
+  background: transparent;
+}
 .trade-tbl td.tic { color: var(--fg-2); font-size: 11px; }
 .trade-tbl td .qty-avail {
   color: var(--fg-3);
@@ -1002,42 +1010,6 @@ input[type="checkbox"].sel-sell:checked {
 /* "上次更新：xxx" — slightly muted so it reads as supplementary
  * context, not a primary stat. */
 .trade-foot-meta .last-synced { color: var(--fg-3); }
-
-.trade-pagination {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-family: var(--font-mono);
-}
-.trade-pagination .page-btn {
-  min-width: 28px;
-  height: 28px;
-  padding: 0 8px;
-  background: transparent;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  color: var(--fg-2);
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 12px;
-}
-.trade-pagination .page-btn:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--fg-2) 8%, transparent);
-  color: var(--fg-1);
-}
-.trade-pagination .page-btn.active {
-  background: var(--accent, #5aa0ff);
-  border-color: var(--accent, #5aa0ff);
-  color: #fff;
-}
-.trade-pagination .page-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-.trade-pagination .page-gap {
-  color: var(--fg-3);
-  padding: 0 2px;
-}
 
 .unmatched-buys {
   padding: 10px 14px;

@@ -31,12 +31,6 @@ function GearIcon({ size = 14 }: { size?: number }) {
   );
 }
 
-// Local pagination size. The whole ticker's trades (up to 500) live in
-// the store from the moment the pane opens, so cross-page做T binding is
-// safe — selectedBuys/selectedSells reference IDs that remain resolvable
-// regardless of which page is currently in view.
-const PAGE_SIZE = 8;
-
 // Default 3 — only ``fmt(t.price)`` uses the default; qty / 金额 /
 // 已实现 / pct all pass d=0 or d=2 explicitly.
 function fmt(n: number, d = 3): string {
@@ -58,11 +52,7 @@ interface Props {
   trades: Trade[];
   pairs: TPair[];
   /** Ticker the table is currently rendering. Used as the reset key for
-   *  local pagination: switching to a different ticker rewinds to page 1,
-   *  while appending more rows for the SAME ticker preserves the page
-   *  index. (Earlier impl reset on every ``trades`` array identity
-   *  change and clobbered the user's page jump when ``onRequestMore``
-   *  loaded more rows.) */
+   *  scroll position — switching ticker rewinds the table to the top. */
   ticker?: string;
   /** Wall-clock moment of the most recent broker→DB sync. Rendered as a
    *  small "上次更新：xxx" caption above the table. ``null`` when no
@@ -73,22 +63,27 @@ interface Props {
    *  stock-only concept. */
   disableBinding?: boolean;
   /** Total trade count reported by the server (for the current ticker).
-   *  Drives the pagination control's totalPages — local ``trades.length``
-   *  reflects only the rows currently loaded into the store. */
+   *  Used to know whether the bottom sentinel should still trigger
+   *  ``onRequestMore`` — local ``trades.length`` reflects only the rows
+   *  currently loaded into the store. */
   totalCount?: number;
-  /** ``true`` while an outstanding ``onRequestMore`` fetch is in flight. */
+  /** ``true`` while an outstanding ``onRequestMore`` fetch is in flight.
+   *  Drives the inline "加载中…" indicator at the bottom of the scroll
+   *  area AND throttles the IntersectionObserver so a sentinel that
+   *  stays in view doesn't fire repeatedly during a single fetch. */
   loading?: boolean;
-  /** Called when the user navigates to a page whose rows aren't yet in
-   *  the store. Caller fetches the next chunk and appends it. */
+  /** Called when the bottom sentinel scrolls into view and there are
+   *  still un-fetched server rows. Caller fetches the next chunk and
+   *  appends it to the store. */
   onRequestMore?(): void | Promise<void>;
   onConfirmBind(): Promise<void> | void;
   onExtendPair(pairId: number): Promise<void> | void;
   /** Tri-state filter on the table rows; "all" shows everything,
    *  "untagged" shows only trades with no做T binding (including those
    *  with leftover available qty on partial pairs), "tagged" shows only
-   *  trades that have at least one做T entry. Filter is applied over
-   *  the loaded subset of trades; pagination operates on the filtered
-   *  result. */
+   *  trades that have at least one做T entry. Filter is applied client-
+   *  side over the already-loaded rows; switch back to "all" to keep
+   *  scrolling for more. */
   filter?: TradeListFilter;
   onFilterChange?(f: TradeListFilter): void;
   /** Settings-menu actions. Each is fired with no args; the caller
@@ -121,12 +116,10 @@ export function TradeList({
 }: Props) {
   const sorted = useMemo(() => [...trades].sort((a, b) => Date.parse(b.ts) - Date.parse(a.ts)), [trades]);
 
-  // Filter applies over the loaded subset; pagination operates on the
-  // result. Filter modes are intentionally a client-side concept — the
-  // server still returns the unfiltered slice, and the user can switch
-  // back to "all" + page through to load more rows for the filter to
-  // pull from. Avoids a new server-side "where t_pair_tags is empty"
-  // query path while keeping the common case (browsing one page) fast.
+  // Filter is purely client-side — the server still returns the
+  // unfiltered slice, and the user keeps scrolling in "all" mode to
+  // pull more rows for the filter to consume. Avoids a new server-side
+  // "where t_pair_tags is empty" query path.
   const filteredSorted = useMemo(() => {
     if (filter === "all") return sorted;
     return sorted.filter((t) => {
@@ -135,37 +128,45 @@ export function TradeList({
     });
   }, [sorted, filter]);
 
-  // Local pagination. Reset to page 1 when the ticker or filter changes
-  // (both reframe what "page N" means). Plain appends to ``trades``
-  // must NOT reset — that was the original pagination bug.
-  const [page, setPage] = useState(1);
-  useEffect(() => { setPage(1); }, [ticker, filter]);
-  // Pagination is server-driven IN ALL MODE: ``totalCount`` is the full
-  // ticker's trade count. In filtered mode the slice is local — total
-  // pages reflect the filtered set among loaded rows. Switching back to
-  // "all" + paging restores the server-driven flow.
   const serverTotal = typeof totalCount === "number" && totalCount > 0
     ? totalCount
     : sorted.length;
   const displayedTotal = filter === "all" ? serverTotal : filteredSorted.length;
-  const totalPages = Math.max(1, Math.ceil(displayedTotal / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
+  // In "all" mode there may still be unfetched server rows behind the
+  // bottom sentinel; in filtered mode the view is purely local so no
+  // further fetch is meaningful.
+  const hasMoreToFetch = filter === "all" && sorted.length < serverTotal;
 
-  // Fire ``onRequestMore`` whenever the current page's first row isn't
-  // yet in the in-memory list. Only meaningful in "all" mode — in
-  // filtered modes the visible set is bounded by what's already loaded.
+  // Reset the scroll position to the top whenever the ticker or filter
+  // changes — both reframe what the user is looking at, and keeping the
+  // old offset would land them in the middle of a different list.
+  const scrollRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
-    if (filter !== "all") return;
-    const firstRowIdx = (safePage - 1) * PAGE_SIZE;
-    if (firstRowIdx >= sorted.length && firstRowIdx < serverTotal && !loading) {
-      void onRequestMore?.();
-    }
-  }, [safePage, sorted.length, serverTotal, loading, onRequestMore, filter]);
+    scrollRef.current?.scrollTo({ top: 0 });
+  }, [ticker, filter]);
 
-  const pageRows = useMemo(
-    () => filteredSorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE),
-    [filteredSorted, safePage],
-  );
+  // IntersectionObserver-driven infinite scroll. The sentinel sits just
+  // below the last row; when it enters the scroll container's viewport
+  // we fire ``onRequestMore`` (unless one is already in flight). The
+  // ``loading`` guard matters because the sentinel can remain in view
+  // across renders while the new chunk is being fetched.
+  const sentinelRef = useRef<HTMLTableRowElement | null>(null);
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    const root = scrollRef.current;
+    if (!sentinel || !root || !hasMoreToFetch) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry?.isIntersecting && !loading) {
+          void onRequestMore?.();
+        }
+      },
+      { root, rootMargin: "120px 0px" },
+    );
+    obs.observe(sentinel);
+    return () => obs.disconnect();
+  }, [hasMoreToFetch, loading, onRequestMore]);
 
   // Settings menu open/close state + click-outside dismiss.
   const [menuOpen, setMenuOpen] = useState(false);
@@ -229,7 +230,7 @@ export function TradeList({
 
   return (
     <div className="panel trade-panel">
-      <div className="trade-tbl-wrap">
+      <div className="trade-tbl-wrap" ref={scrollRef}>
         <table className="trade-tbl">
           <thead>
             <tr>
@@ -243,7 +244,7 @@ export function TradeList({
             </tr>
           </thead>
           <tbody>
-            {pageRows.map((t) => {
+            {filteredSorted.map((t) => {
               // Server denormalizes ``[[pair_id, qty], ...]`` into each
               // trade row so the chip column can render without scanning
               // every pair (and so pending-做T SQL is just a column read).
@@ -332,30 +333,30 @@ export function TradeList({
                 </tr>
               );
             })}
-            {/* Pad the last page with blank rows so the pagination control
-               doesn't shift up when fewer than PAGE_SIZE real trades land
-               on the current page. 7 columns matches the thead. */}
-            {Array.from({ length: Math.max(0, PAGE_SIZE - pageRows.length) }).map(
-              (_, i) => (
-                <tr key={`pad-${i}`} className="t-row t-row-empty" aria-hidden>
-                  <td className="compact" />
-                  <td className="tic">&nbsp;</td>
-                  <td />
-                  <td />
-                  <td />
-                  <td />
-                  <td />
-                </tr>
-              ),
+            {/* Bottom sentinel — when it scrolls into the container's
+               viewport (rootMargin 120px) the effect above fires
+               ``onRequestMore``. Inline 加载中 / 已全部加载 caption sits
+               in the same row so the layout doesn't jump as more rows
+               stream in. Hidden entirely in filtered modes since the
+               visible set is already bounded by what's loaded. */}
+            {filter === "all" && (
+              <tr ref={sentinelRef} className="t-row-sentinel" aria-hidden>
+                <td colSpan={7}>
+                  {loading
+                    ? "加载中…"
+                    : hasMoreToFetch
+                      ? ""
+                      : sorted.length > 0 ? "已全部加载" : ""}
+                </td>
+              </tr>
             )}
           </tbody>
         </table>
       </div>
-      {/* Footer strip: 3-column grid. Left = settings menu + section
-       *  identity (交易记录 · N 笔), center = pagination, right =
-       *  supplementary meta (做T 配对 count + 上次更新). Replaces the
-       *  standalone ``.panel-head`` above the table — saves ~36px of
-       *  vertical real estate while keeping pagination centered. */}
+      {/* Footer strip: settings menu + section identity (交易记录 · N
+       *  笔) on the left, supplementary meta (做T 配对 count + 上次更新)
+       *  on the right. The center slot used to host pagination buttons;
+       *  with infinite scroll it collapses (auto-width when empty). */}
       <div className="trade-foot">
         <span className="trade-foot-meta trade-foot-left">
           {!disableBinding && (
@@ -425,15 +426,7 @@ export function TradeList({
           <span className="trade-foot-label">交易记录</span>
           {displayedTotal} 笔
         </span>
-        <span className="trade-foot-center">
-          {totalPages > 1 && (
-            <Pagination
-              page={safePage}
-              totalPages={totalPages}
-              onChange={setPage}
-            />
-          )}
-        </span>
+        <span className="trade-foot-center" />
         <span className="trade-foot-meta trade-foot-right">
           {!disableBinding && <>{pairs.length} 个做T 配对</>}
           {lastSyncedAt && (
@@ -528,61 +521,3 @@ export function TradeList({
   );
 }
 
-/**
- * Numbered pagination control. Shows ‹ 1 … N-1 N N+1 … last › with the
- * current page highlighted. Adjacent pages around the cursor + first /
- * last are always rendered so the user can jump-cursor without scrolling
- * through a long row of buttons when there are many pages.
- */
-function Pagination({
-  page,
-  totalPages,
-  onChange,
-}: {
-  page: number;
-  totalPages: number;
-  onChange(p: number): void;
-}) {
-  const pages = useMemo(() => {
-    // Window of 1 page either side of cursor, plus first/last.
-    const set = new Set<number>([1, totalPages, page - 1, page, page + 1]);
-    return [...set]
-      .filter((p) => p >= 1 && p <= totalPages)
-      .sort((a, b) => a - b);
-  }, [page, totalPages]);
-
-  const items: (number | "…")[] = [];
-  for (let i = 0; i < pages.length; i++) {
-    items.push(pages[i]!);
-    const next = pages[i + 1];
-    if (next != null && next - pages[i]! > 1) items.push("…");
-  }
-
-  return (
-    <div className="trade-pagination">
-      <button
-        className="page-btn"
-        onClick={() => onChange(page - 1)}
-        disabled={page <= 1}
-        aria-label="上一页"
-      >‹</button>
-      {items.map((it, idx) =>
-        it === "…" ? (
-          <span key={`gap-${idx}`} className="page-gap">…</span>
-        ) : (
-          <button
-            key={it}
-            className={`page-btn ${it === page ? "active" : ""}`}
-            onClick={() => onChange(it)}
-          >{it}</button>
-        ),
-      )}
-      <button
-        className="page-btn"
-        onClick={() => onChange(page + 1)}
-        disabled={page >= totalPages}
-        aria-label="下一页"
-      >›</button>
-    </div>
-  );
-}
