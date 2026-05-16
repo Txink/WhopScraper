@@ -632,28 +632,38 @@
   overflow: visible;
 }
 
-/* 背景水印 — 大字号低透明度居中。SVG <text>。 */
+/* 背景水印 — HTML 元素叠层（不进 SVG，避免 preserveAspectRatio
+ * 把字体压扁）。绝对定位居中，pointer-events disabled 让点击穿到
+ * 卡片。 */
 .ispark-watermark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   font-family: var(--font-sans);
   font-size: 22px;
   font-weight: 700;
   letter-spacing: 0.18em;
-  text-anchor: middle;
-  dominant-baseline: central;
-  fill: var(--fg-3);
-  opacity: 0.10;
+  color: var(--fg-2);
+  opacity: 0.18;
   pointer-events: none;
   user-select: none;
+  white-space: nowrap;
+  /* Sit behind the line + area paths visually. SVG sibling has
+   * default z-index 0; setting watermark to 0 too plus DOM order
+   * (watermark before SVG in JSX) puts the SVG on top. */
+  z-index: 0;
 }
 .ispark.is-closed .ispark-watermark {
-  opacity: 0.08;
+  opacity: 0.14;
   letter-spacing: 0.22em;
 }
 
-/* 曲线 — 颜色跟 .ispark.pos / .ispark.neg 切换 */
+/* 曲线 — 颜色跟 .ispark.pos / .ispark.neg 切换。粗一点（1.8px）以
+ * 在 60px 高度的卡片里仍然清晰可读。 */
 .ispark-line {
   fill: none;
-  stroke-width: 1.4;
+  stroke-width: 1.8;
   stroke-linejoin: round;
   stroke-linecap: round;
   vector-effect: non-scaling-stroke;

@@ -198,8 +198,13 @@ export function IntradaySpark({
 
   return (
     <div ref={containerRef} className={rootClass}>
+      {/* Watermark lives OUTSIDE the SVG. Inside, preserveAspectRatio
+        * ="none" would stretch the <text> element to the container's
+        * aspect ratio — typically squashing the 22px glyphs into a thin
+        * unreadable strip. Rendered as an HTML overlay it keeps its
+        * intended dimensions and stays crisp. */}
+      <span className="ispark-watermark" aria-hidden>{win.label}</span>
       <svg className="ispark-svg" viewBox={`0 0 ${VB_W} ${VB_H}`} preserveAspectRatio="none">
-        <text className="ispark-watermark" x="50%" y="58%">{win.label}</text>
         {areaPath && <path className="ispark-area" d={areaPath} fill={`url(#${fillId})`} />}
         {linePath && (
           <path
