@@ -24,8 +24,8 @@ interface Props {
  *
  * 做T-related aggregates ("做T 已实现", "待做T") are intentionally NOT
  * shown here — the stock list page no longer references做T at all. Pair
- * accounting lives entirely in the per-stock detail pane (PairKPIs +
- * PairList), keeping the dashboard scan-friendly and avoiding cross-tab
+ * accounting lives entirely in the per-stock detail pane (DetailSummary's
+ *做T row + the做T detail popup), keeping the dashboard scan-friendly and avoiding cross-tab
  * coupling on the trades / pairs stores.
  */
 export function PortfolioSummary({ stocks, options = [] }: Props) {

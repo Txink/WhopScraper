@@ -409,8 +409,8 @@ export const api = {
   },
 
   /** Account+ticker scoped做T aggregates (SQL SUM/COUNT). Used by
-   *  PairKPIs so the frontend never has to fetch every pair just to
-   *  display totals. Omit ``ticker`` for an account-wide aggregate. */
+   *  DetailSummary's做T row so the frontend never has to fetch every pair
+   *  just to display totals. Omit ``ticker`` for an account-wide aggregate. */
   async pairAggregate(ticker?: string): Promise<PairAggregate> {
     const qs = new URLSearchParams();
     if (ticker) qs.set("ticker", ticker);

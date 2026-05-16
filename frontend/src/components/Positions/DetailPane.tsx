@@ -9,7 +9,6 @@ import { useDetailViewStore } from "../../stores/detailView";
 import { DetailSummary } from "./DetailSummary";
 import { DetailChart } from "./DetailChart";
 import { PairDetailModal } from "./PairDetailModal";
-import { PairKPIs } from "./PairKPIs";
 import { TradeList } from "./TradeList";
 
 const PERIODS: { id: Period; label: string }[] = [
@@ -100,7 +99,8 @@ export function DetailPane({ position, onBack }: Props) {
   // 做T pair list UI was removed (#3), so the detail pane no longer
   // paginates pairs. Fetch once up to the backend's per-call max (500)
   // — the entire ticker's pairs land in the store so TradeList chips +
-  // PairKPIs + the做T detail popup all read from one source. An account
+  // DetailSummary's做T row + the做T detail popup all read from one source.
+  // An account
   // that accumulates >500 pairs for a single ticker is implausible.
   const PAIRS_PAGE_SIZE = 500;
   // Same idea as ``tradesInitialized``. For options we skip the pairs
@@ -272,7 +272,7 @@ export function DetailPane({ position, onBack }: Props) {
         <span style={{ fontFamily: "var(--font-mono)" }}>←</span> 返回持仓总览
       </button>
 
-      <DetailSummary position={position} quote={quote} />
+      <DetailSummary position={position} quote={quote} pairsCount={pairs.length} />
 
       <div className="detail-chart-card">
         <div className="detail-chart-head">
@@ -396,8 +396,6 @@ export function DetailPane({ position, onBack }: Props) {
           )}
         </div>
       </div>
-
-      {!isOption && <PairKPIs ticker={ticker} pairsCount={pairs.length} />}
 
       <TradeList
         trades={trades}

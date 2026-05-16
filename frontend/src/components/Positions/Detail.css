@@ -24,28 +24,42 @@
 }
 .detail-back:hover { background: var(--bg-hover); color: var(--fg-1); }
 
-/* ─── Summary card (single-row) ───
- * Compressed from a two-row layout (top: name+price; bottom: 4 stat cols)
- * into one horizontal row: left cluster has ticker+symbol+price+change
- * pill, right cluster has 持仓/均价/市值/浮盈 inline. Frees ~50px of
- * vertical space and reads as one glance. */
+/* ─── Summary card ───
+ * Stocks render two ``ds-row``s: row 1 has ticker+price+change on the
+ * left and 持仓/均价/市值/浮盈 on the right; row 2 carries 做T 统计
+ * (次数/累计已实现/平均单笔/胜率). Options render only row 1. */
 .detail-summary {
   background: var(--bg-2);
   border: 1px solid var(--line);
   border-radius: var(--radius-card);
   padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
-.detail-summary.single-row {
+.detail-summary .ds-row {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: var(--space-3);
-  /* Force the left + right clusters onto a single visual row. Combined
-   * with ``ds-right { flex-wrap: wrap }`` below, very narrow viewports
+  /* Combined with ``ds-right { flex-wrap: wrap }``, very narrow viewports
    * still degrade gracefully (right cluster wraps internally) without
    * the whole row breaking. */
   flex-wrap: nowrap;
   min-width: 0;
+}
+.detail-summary .ds-row-pair {
+  /* Subtle separator + slightly muted typography so the做T row reads as
+   * secondary content under the headline position stats. */
+  border-top: 1px dashed var(--line);
+  padding-top: 8px;
+}
+.ds-row-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-3);
 }
 .ds-left {
   display: flex;
@@ -92,29 +106,29 @@
 .detail-price.pos { color: var(--up-color); }
 .detail-price.neg { color: var(--down-color); }
 
-/* head-stat shared between detail summary right cluster + PairKPIs subtitles.
- * In single-row mode the lbl + val sit inline (label left of value) rather
- * than stacked. */
-.detail-summary.single-row .head-stat {
+/* head-stat: compact label/value pair used inside ``ds-right`` for both
+ * the position-stats row and the做T-stats row. ``lbl`` is left of ``val``
+ * on one baseline, no internal stack. */
+.detail-summary .head-stat {
   display: inline-flex;
   align-items: baseline;
   gap: 6px;
 }
-.detail-summary.single-row .head-stat .lbl {
+.detail-summary .head-stat .lbl {
   font-size: 10px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--fg-3);
   margin-bottom: 0;
 }
-.detail-summary.single-row .head-stat .val {
+.detail-summary .head-stat .val {
   font-family: var(--font-mono);
   font-size: 13px;
   font-weight: 500;
 }
-.detail-summary.single-row .head-stat .val.pos { color: var(--up-color); }
-.detail-summary.single-row .head-stat .val.neg { color: var(--down-color); }
-.detail-summary.single-row .head-stat .val .ds-pl-pct {
+.detail-summary .head-stat .val.pos { color: var(--up-color); }
+.detail-summary .head-stat .val.neg { color: var(--down-color); }
+.detail-summary .head-stat .val .ds-pl-pct {
   font-size: 11px;
   color: var(--fg-3);
   margin-left: 4px;

@@ -82,7 +82,7 @@ export type TPairExtendIn = components["schemas"]["TPairExtendIn"];
 
 /** Aggregate做T stats for a (account, ticker) — sourced from
  *  ``GET /api/pairs/aggregate``. Server computes via SQL SUM/COUNT, so
- *  PairKPIs can render without pulling every pair into memory. */
+ *  DetailSummary's做T row can render without pulling every pair into memory. */
 export interface PairAggregate {
   profit_total: number;
   count: number;
