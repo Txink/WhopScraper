@@ -107,17 +107,28 @@ class FakeBrokerClient:
         items = list(getattr(self, "history_executions_list", []))
         if ticker is not None:
             items = [e for e in items if e.get("ticker") == ticker]
-        # When an explicit UTC range is provided (incremental backfill
-        # path), filter to that window so tests can assert that the sync
-        # function actually iterates ranges correctly. ``start_at`` is
-        # inclusive, ``end_at`` exclusive — matches LongBridge's convention.
+        # LongBridge's history_executions / history_orders cap each call
+        # at a 90-day window. Mirror that here so the test suite actually
+        # catches callers that issue a single wide-range request instead
+        # of iterating 90-day chunks. See knowledge/longbridge-api-limits.md.
         if start_at is not None and end_at is not None:
-            from datetime import timezone
+            from datetime import timedelta, timezone
 
             def _aware(t):
                 return t if t.tzinfo is not None else t.replace(tzinfo=timezone.utc)
             s, e = _aware(start_at), _aware(end_at)
+            if (e - s) > timedelta(days=90):
+                raise ValueError(
+                    f"history_executions window too wide: "
+                    f"{(e - s).days}d > 90d (LongBridge cap)"
+                )
+            # ``start_at`` inclusive, ``end_at`` exclusive — matches
+            # LongBridge's convention.
             items = [r for r in items if r.get("ts") is not None and s <= _aware(r["ts"]) < e]
+        elif days > 90:
+            raise ValueError(
+                f"history_executions window too wide: {days}d > 90d (LongBridge cap)"
+            )
         return items
 
     def get_candlesticks(

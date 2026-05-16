@@ -205,8 +205,12 @@ async def test_push_event_row_multiple_per_task(
 async def test_position_row_option_fields_optional(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    """Stock position with no option fields must insert without error."""
+    """Stock position with no option fields must insert without error.
+
+    PK is composite ``(account_id, symbol)`` — both required on insert.
+    """
     stock_pos = PositionRow(
+        account_id="acct-A",
         symbol="AAPL",
         type="stock",
         ticker="AAPL",
@@ -222,12 +226,13 @@ async def test_position_row_option_fields_optional(
         await session.commit()
 
     async with session_factory() as session:
-        fetched = await session.get(PositionRow, "AAPL")
+        fetched = await session.get(PositionRow, ("acct-A", "AAPL"))
         assert fetched is not None
         assert fetched.type == "stock"
         assert fetched.option_strike is None
         assert fetched.option_expiry is None
         assert fetched.option_type is None
+        assert fetched.history_synced is False  # default
 
 
 # ---------------------------------------------------------------------------

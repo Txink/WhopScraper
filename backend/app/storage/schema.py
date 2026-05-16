@@ -170,10 +170,20 @@ class PushEventRow(Base):
 
 
 class PositionRow(Base):
-    """ORM mapping for the ``positions`` table."""
+    """ORM mapping for the ``positions`` table.
+
+    Account-scoped: PK is ``(account_id, symbol)`` so multiple accounts can
+    coexist in DB. ``history_synced`` is the per-ticker (per account)
+    "we've fully backfilled broker_executions" anchor — set true after
+    a full chunked backfill completes for the ticker; the detail-pane
+    sync path uses it to decide between a full walk vs. a gap-only update.
+    Surviving sells: rows with ``quantity = 0`` are kept so the
+    ``history_synced`` flag persists across close/re-open cycles.
+    """
 
     __tablename__ = "positions"
 
+    account_id: Mapped[str] = mapped_column(String, primary_key=True)
     symbol: Mapped[str] = mapped_column(String, primary_key=True)
     type: Mapped[str] = mapped_column(String, nullable=False)
     ticker: Mapped[str] = mapped_column(String, nullable=False)
@@ -183,6 +193,9 @@ class PositionRow(Base):
     option_strike: Mapped[float | None] = mapped_column(nullable=True)
     option_expiry: Mapped[date | None] = mapped_column(Date(), nullable=True)
     option_type: Mapped[str | None] = mapped_column(String, nullable=True)
+    history_synced: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("0")
+    )
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 

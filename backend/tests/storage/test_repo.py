@@ -810,3 +810,169 @@ async def test_save_and_load_task_default_is_historical_false(
 
     assert loaded is not None
     assert loaded.is_historical is False
+
+
+# ---------------------------------------------------------------------------
+# positions persistence — account-scoped + history_synced flag
+# ---------------------------------------------------------------------------
+
+
+async def test_upsert_positions_inserts_with_history_synced_false_default(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """First upsert seeds rows with history_synced=False (default)."""
+    from app.storage.repo import (
+        list_positions_for_account,
+        upsert_positions,
+    )
+
+    rows = [
+        {"symbol": "TSLL.US", "ticker": "TSLL", "quantity": 100, "avg_cost": 15.0},
+    ]
+    async with session_factory() as session:
+        await upsert_positions(session, account_id="acct-A", rows=rows)
+
+    async with session_factory() as session:
+        positions = await list_positions_for_account(session, account_id="acct-A")
+    assert len(positions) == 1
+    assert positions[0].symbol == "TSLL.US"
+    assert positions[0].quantity == 100
+    assert positions[0].history_synced is False
+
+
+async def test_upsert_positions_preserves_history_synced_on_refresh(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """Refreshing positions from the broker MUST NOT reset history_synced.
+
+    Reason: positions endpoint is hit on every dashboard load, but
+    backfill only runs on detail-page open. If the refresh reset the
+    flag, every dashboard reload would forget the backfill was done.
+    """
+    from app.storage.repo import (
+        list_positions_for_account,
+        mark_position_history_synced,
+        upsert_positions,
+    )
+
+    rows = [{"symbol": "TSLL.US", "ticker": "TSLL", "quantity": 100, "avg_cost": 15.0}]
+    async with session_factory() as session:
+        await upsert_positions(session, account_id="acct-A", rows=rows)
+        await mark_position_history_synced(session, account_id="acct-A", ticker="TSLL")
+
+    # Simulate a subsequent /api/positions hit — broker reports same row,
+    # qty changed slightly.
+    rows[0]["quantity"] = 200
+    async with session_factory() as session:
+        await upsert_positions(session, account_id="acct-A", rows=rows)
+
+    async with session_factory() as session:
+        positions = await list_positions_for_account(session, account_id="acct-A")
+    assert len(positions) == 1
+    assert positions[0].quantity == 200
+    assert positions[0].history_synced is True  # preserved across refresh
+
+
+async def test_upsert_positions_zeroes_out_missing_symbols(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """Symbols not in the new broker pull get qty=0 (not deleted) so that
+    history_synced persists across close/re-open of the same ticker."""
+    from app.storage.repo import (
+        list_positions_for_account,
+        mark_position_history_synced,
+        upsert_positions,
+    )
+
+    async with session_factory() as session:
+        await upsert_positions(session, account_id="acct-A", rows=[
+            {"symbol": "TSLL.US", "ticker": "TSLL", "quantity": 100, "avg_cost": 15.0},
+            {"symbol": "HOOD.US", "ticker": "HOOD", "quantity": 50, "avg_cost": 12.0},
+        ])
+        await mark_position_history_synced(session, account_id="acct-A", ticker="TSLL")
+
+    # User sold TSLL — broker only reports HOOD now.
+    async with session_factory() as session:
+        await upsert_positions(session, account_id="acct-A", rows=[
+            {"symbol": "HOOD.US", "ticker": "HOOD", "quantity": 50, "avg_cost": 12.0},
+        ])
+
+    # Default list (qty>0): only HOOD.
+    async with session_factory() as session:
+        active = await list_positions_for_account(session, account_id="acct-A")
+    assert [p.symbol for p in active] == ["HOOD.US"]
+
+    # Including zero-qty: TSLL row still there with history_synced preserved.
+    async with session_factory() as session:
+        all_pos = await list_positions_for_account(
+            session, account_id="acct-A", include_zero_qty=True
+        )
+    tsll = next(p for p in all_pos if p.symbol == "TSLL.US")
+    assert tsll.quantity == 0
+    assert tsll.history_synced is True  # survives close
+
+
+async def test_positions_isolated_across_accounts(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """Different account_ids must not see each other's positions or flags."""
+    from app.storage.repo import (
+        is_position_history_synced,
+        list_positions_for_account,
+        mark_position_history_synced,
+        upsert_positions,
+    )
+
+    async with session_factory() as session:
+        await upsert_positions(session, account_id="acct-A", rows=[
+            {"symbol": "TSLL.US", "ticker": "TSLL", "quantity": 100, "avg_cost": 15.0},
+        ])
+        await upsert_positions(session, account_id="acct-B", rows=[
+            {"symbol": "TSLL.US", "ticker": "TSLL", "quantity": 200, "avg_cost": 16.0},
+        ])
+        await mark_position_history_synced(session, account_id="acct-A", ticker="TSLL")
+
+    async with session_factory() as session:
+        a_pos = await list_positions_for_account(session, account_id="acct-A")
+        b_pos = await list_positions_for_account(session, account_id="acct-B")
+        a_synced = await is_position_history_synced(
+            session, account_id="acct-A", ticker="TSLL"
+        )
+        b_synced = await is_position_history_synced(
+            session, account_id="acct-B", ticker="TSLL"
+        )
+
+    assert a_pos[0].quantity == 100
+    assert b_pos[0].quantity == 200
+    assert a_synced is True
+    assert b_synced is False  # B's flag must be unaffected by A's mark
+
+
+async def test_mark_history_synced_covers_stock_and_option_under_same_ticker(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """One backfill call covers both stock and option contracts for the
+    ticker — marking the flag should hit ALL positions rows under that
+    (account_id, ticker), not just the symbol that triggered the sync.
+    """
+    from app.storage.repo import (
+        list_positions_for_account,
+        mark_position_history_synced,
+        upsert_positions,
+    )
+
+    async with session_factory() as session:
+        await upsert_positions(session, account_id="acct-A", rows=[
+            {"symbol": "TSLL.US", "ticker": "TSLL", "quantity": 100, "avg_cost": 15.0},
+            {"symbol": "TSLL260618C20000.US", "ticker": "TSLL",
+             "quantity": 5, "avg_cost": 0.5},
+        ])
+        updated = await mark_position_history_synced(
+            session, account_id="acct-A", ticker="TSLL"
+        )
+
+    assert updated == 2  # both stock + option row marked
+
+    async with session_factory() as session:
+        positions = await list_positions_for_account(session, account_id="acct-A")
+    assert all(p.history_synced for p in positions)

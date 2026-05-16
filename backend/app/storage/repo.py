@@ -709,6 +709,169 @@ async def list_positions(session: AsyncSession) -> list[PositionRow]:
     return list(result.scalars())
 
 
+async def list_positions_for_account(
+    session: AsyncSession,
+    *,
+    account_id: str,
+    include_zero_qty: bool = False,
+) -> list[PositionRow]:
+    """Return positions for ``account_id``. Sold-off rows (qty=0) are filtered
+    by default — we keep them in the table so ``history_synced`` survives
+    close/re-open cycles, but the dashboard only wants current holdings."""
+    stmt = (
+        select(PositionRow)
+        .where(PositionRow.account_id == account_id)
+        .order_by(PositionRow.symbol)
+    )
+    if not include_zero_qty:
+        stmt = stmt.where(PositionRow.quantity > 0)
+    result = await session.execute(stmt)
+    return list(result.scalars())
+
+
+async def upsert_positions(
+    session: AsyncSession,
+    *,
+    account_id: str,
+    rows: list[dict[str, Any]],
+) -> int:
+    """Upsert the broker's current positions for ``account_id``.
+
+    Each row mirrors ``broker.stock_positions()`` output (broker emits
+    both stock and option contracts under the same channel — option
+    symbols carry OCC suffix). Symbols not present in ``rows`` are
+    zeroed out (``quantity = 0``) rather than deleted so the
+    ``history_synced`` flag survives close/re-open of the same ticker.
+
+    Returns the number of rows the broker reported for this account.
+    """
+    from app.broker.symbol_classify import parse_option_symbol
+
+    now = datetime.now(UTC)
+    seen_symbols: set[str] = set()
+    payloads: list[dict[str, Any]] = []
+    for r in rows:
+        symbol = str(r.get("symbol") or "")
+        if not symbol:
+            continue
+        seen_symbols.add(symbol)
+        option_leg = parse_option_symbol(symbol)
+        if option_leg is not None:
+            pos_type = "option"
+            ticker = option_leg.ticker
+            strike: float | None = option_leg.strike
+            # ``OptionLeg.expiry`` is an ISO string ("YYYY-MM-DD"); the DB
+            # column wants ``date``.
+            expiry: date | None = date.fromisoformat(option_leg.expiry)
+            cp: str | None = option_leg.cp
+        else:
+            pos_type = "stock"
+            ticker = str(r.get("ticker") or "") or (
+                symbol.split(".")[0] if "." in symbol else symbol
+            )
+            strike = None
+            expiry = None
+            cp = None
+        avg_raw = r.get("avg_cost")
+        try:
+            avg_cost = float(avg_raw) if avg_raw is not None else None
+        except (TypeError, ValueError):
+            avg_cost = None
+        payloads.append({
+            "account_id": account_id,
+            "symbol": symbol,
+            "type": pos_type,
+            "ticker": ticker,
+            "quantity": int(r.get("quantity", 0) or 0),
+            "avg_cost": avg_cost,
+            "option_strike": strike,
+            "option_expiry": expiry,
+            "option_type": cp,
+            "updated_at": now,
+        })
+
+    if payloads:
+        stmt = sqlite_insert(PositionRow).values(payloads)
+        stmt = stmt.on_conflict_do_update(
+            index_elements=["account_id", "symbol"],
+            set_={
+                "type": stmt.excluded.type,
+                "ticker": stmt.excluded.ticker,
+                "quantity": stmt.excluded.quantity,
+                "avg_cost": stmt.excluded.avg_cost,
+                "option_strike": stmt.excluded.option_strike,
+                "option_expiry": stmt.excluded.option_expiry,
+                "option_type": stmt.excluded.option_type,
+                "updated_at": stmt.excluded.updated_at,
+                # NOTE: history_synced intentionally NOT in set_ — it is
+                # owned by the executions-sync path; refreshing the
+                # holdings snapshot must not reset it.
+            },
+        )
+        await session.execute(stmt)
+
+    # Zero out rows that the broker no longer reports for this account.
+    zeroed_stmt = (
+        PositionRow.__table__.update()
+        .where(PositionRow.account_id == account_id)
+        .where(PositionRow.quantity > 0)
+    )
+    if seen_symbols:
+        zeroed_stmt = zeroed_stmt.where(~PositionRow.symbol.in_(seen_symbols))
+    zeroed_stmt = zeroed_stmt.values(quantity=0, updated_at=now)
+    await session.execute(zeroed_stmt)
+
+    await session.commit()
+    return len(payloads)
+
+
+async def is_position_history_synced(
+    session: AsyncSession,
+    *,
+    account_id: str,
+    ticker: str,
+) -> bool:
+    """True iff any positions row for ``(account_id, ticker)`` carries
+    ``history_synced = True``.
+
+    Per-ticker rather than per-symbol: a backfill call covers both stock
+    and option contracts on the same ticker in one broker request, so any
+    matching row carrying the flag implies the whole ticker is synced.
+    """
+    stmt = (
+        select(func.count())
+        .select_from(PositionRow)
+        .where(PositionRow.account_id == account_id)
+        .where(PositionRow.ticker == ticker)
+        .where(PositionRow.history_synced.is_(True))
+    )
+    result = await session.execute(stmt)
+    return (result.scalar() or 0) > 0
+
+
+async def mark_position_history_synced(
+    session: AsyncSession,
+    *,
+    account_id: str,
+    ticker: str,
+) -> int:
+    """Set ``history_synced = True`` on every positions row matching
+    ``(account_id, ticker)``. Returns the count of rows updated.
+
+    Called by the executions-sync path after a full chunked backfill
+    completes successfully for the ticker.
+    """
+    stmt = (
+        PositionRow.__table__.update()
+        .where(PositionRow.account_id == account_id)
+        .where(PositionRow.ticker == ticker)
+        .values(history_synced=True)
+    )
+    result = await session.execute(stmt)
+    await session.commit()
+    return result.rowcount or 0
+
+
 def _canonicalize_url(url: str | None) -> str | None:
     """Normalize a Whop URL for case + trailing-slash insensitive comparison.
 

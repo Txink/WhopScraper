@@ -549,6 +549,12 @@ class LongPortClient:
         expects. The optional ``ticker`` filter is applied AFTER fetching
         because the SDK's ``symbol`` filter accepts only one symbol at a
         time — for option positions on a ticker we want all contracts.
+
+        Caller contract: ``end - start`` MUST be ≤ 90 days. LongBridge
+        rejects wider single calls to both ``history_orders`` and
+        ``history_executions``; the chunking happens in
+        ``executions_sync._sync_chunked``. See
+        ``knowledge/longbridge-api-limits.md``.
         """
         from datetime import datetime, timedelta, timezone
         from app.broker.symbol_classify import parse_option_symbol
@@ -650,10 +656,10 @@ class LongPortClient:
         """Historical fills, either over an explicit UTC range
         (``start_at`` / ``end_at``) or the rolling ``days`` window.
 
-        The explicit-range form is used by the first-time-sync backfill,
-        which iterates 90-day chunks backwards to cover ~2 years without
-        hitting the broker's per-call row cap. The ``days`` form is used
-        by incremental gap-from-MAX(ts) refreshes.
+        Either form MUST resolve to a window ≤ 90 days — LongBridge's
+        ``history_executions`` rejects anything wider. Chunking lives
+        in ``executions_sync._sync_chunked``; this method delegates
+        one chunk per call.
         """
         from datetime import datetime, timedelta, timezone
 

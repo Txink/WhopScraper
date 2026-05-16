@@ -286,11 +286,16 @@ def build_http_router(
     async def list_positions_endpoint() -> PositionsOut:
         """Return current positions split into stocks and options.
 
-        Pulls live from the broker on every call (no DB cache yet) so the
-        dashboard cards reflect the latest holdings without a periodic sync
-        job. If the broker is down we fall back to ``[]`` rather than 502 —
-        the dashboard treats absence as "no positions" and skips quote/
-        candlestick fetches.
+        Pulls live from the broker on every call so the dashboard cards
+        reflect the latest holdings without a periodic sync job, and
+        upserts the result into the ``positions`` table (account-scoped)
+        as a side-effect. The DB row is the anchor for
+        ``history_synced`` — the per-(account, ticker) "broker_executions
+        is fully backfilled" flag the detail-pane sync path consults.
+
+        Symbols no longer reported by the broker are zeroed out
+        (``quantity = 0``) rather than deleted so ``history_synced``
+        survives close/re-open cycles. The dashboard read filters qty>0.
 
         Longbridge's ``stock_positions`` endpoint actually returns BOTH
         stocks and option contracts the user holds (the option contracts
@@ -299,13 +304,28 @@ def build_http_router(
         """
         from app.broker.symbol_classify import parse_option_symbol
 
+        broker = _get_broker()
+        account_id = getattr(broker, "account_id", "") or None
         stocks: list[PositionOut] = []
         options: list[PositionOut] = []
         try:
-            raw = _get_broker().stock_positions()
+            raw = broker.stock_positions()
         except Exception as exc:  # pragma: no cover — broker SDK errors
             logger.warning("stock_positions fetch failed: %s", exc)
             raw = []
+
+        # Persist as a side-effect so the detail-pane sync path has an
+        # anchor for history_synced. Noop broker (account_id="") skips
+        # silently — nothing to scope by.
+        if account_id:
+            try:
+                async with session_scope(session_factory) as session:
+                    await repo.upsert_positions(
+                        session, account_id=account_id, rows=raw
+                    )
+            except Exception as exc:  # noqa: BLE001 — DB hiccup shouldn't 502
+                logger.warning("upsert_positions failed: %s", exc)
+
         for p in raw:
             symbol = str(p.get("symbol", ""))
             option_leg = parse_option_symbol(symbol)
@@ -782,11 +802,12 @@ def build_http_router(
     ) -> ExecutionsOut:
         """Broker-side fill history for the detail pane's trade list.
 
-        Sync semantics:
+        Sync semantics (both modes iterate 90-day chunks — LongBridge
+        rejects wider single calls; see knowledge/longbridge-api-limits.md):
           - Incremental: starts from ``MAX(ts)`` already in DB for this
-            account (+ optional ticker), pulls only the gap. Single
-            broker call.
-          - First-ever sync: iterates 90-day chunks backwards up to
+            account (+ optional ticker), walks 90-day chunks back to
+            cover the gap.
+          - First-ever sync: walks 90-day chunks backwards up to
             ``days`` total (default 730 = 2 years) so the user's complete
             history materializes on initial detail-pane open. Stops
             early on any empty window — saves wasted calls when the

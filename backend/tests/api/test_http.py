@@ -1161,6 +1161,181 @@ def test_history_executions_endpoint_backfills_across_windows(
     assert ids == ["old", "recent"]
 
 
+def test_history_executions_endpoint_incremental_gap_over_90d_chunks(
+    client_and_broker: tuple[TestClient, FakeBrokerClient],
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """Once ``history_synced=True``, gap-from-MAX(ts) sync walks 90-day
+    chunks when the gap exceeds the broker's per-call cap.
+
+    Pre-condition: a positions row exists with ``history_synced=True``
+    (i.e. we've previously full-backfilled this ticker). Seeds the DB
+    with a 200-day-old fill so MAX(ts) is 200 days ago. The sync must
+    walk the 200-day gap in 90-day chunks; a single wide call would be
+    rejected by FakeBroker mirroring the broker's cap.
+    """
+    import asyncio
+    from datetime import UTC, datetime, timedelta
+
+    client, broker = client_and_broker
+    broker.account_id_value = "test-acct"  # type: ignore[attr-defined]
+    now = datetime.now(UTC)
+
+    async def _seed() -> None:
+        async with session_factory() as session:
+            await repo.upsert_positions(
+                session,
+                account_id="test-acct",
+                rows=[{
+                    "symbol": "TSLA.US",
+                    "ticker": "TSLA",
+                    "quantity": 100,
+                    "avg_cost": 100.0,
+                }],
+            )
+            await repo.mark_position_history_synced(
+                session, account_id="test-acct", ticker="TSLA"
+            )
+            await repo.upsert_broker_executions(
+                session,
+                account_id="test-acct",
+                rows=[{
+                    "order_id": "seed-old",
+                    "symbol": "TSLA.US",
+                    "ticker": "TSLA",
+                    "side": "BUY",
+                    "qty": 10,
+                    "price": 100.0,
+                    "ts": now - timedelta(days=200),
+                }],
+            )
+
+    asyncio.get_event_loop().run_until_complete(_seed())
+
+    # New broker-side fill arrived 10 days ago — must be reachable via
+    # the chunked gap sync (first chunk: now → now-90d covers it).
+    broker.history_executions_list = [  # type: ignore[attr-defined]
+        {
+            "order_id": "new-fill",
+            "symbol": "TSLA.US",
+            "ticker": "TSLA",
+            "side": "SELL",
+            "qty": 5,
+            "price": 120.0,
+            "ts": now - timedelta(days=10),
+        },
+    ]
+
+    r = client.get(
+        "/api/broker/executions",
+        params={"token": _TOKEN, "ticker": "TSLA", "limit": 50},
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    ids = sorted(e["order_id"] for e in body["executions"])
+    assert ids == ["new-fill", "seed-old"]
+    assert body["total_count"] == 2
+
+
+def test_history_executions_endpoint_full_backfill_even_with_narrow_sync_residue(
+    client_and_broker: tuple[TestClient, FakeBrokerClient],
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """Regression: a residual row from the 2-day ``today_executions`` sync
+    must NOT prevent the detail-pane open from doing the full backfill.
+
+    Setup mirrors what we observed on the user's machine:
+    - ``positions`` has a TSLA row with ``history_synced=False`` (just
+      created by the dashboard's /api/positions fetch).
+    - ``broker_executions`` has 1 recent TSLA fill written by the 2-day
+      ``today_executions`` sync.
+    - The broker has many more TSLA fills going back 200 days.
+
+    Expected: opening the detail page triggers the FULL backfill (not the
+    1-day gap from MAX(ts)) and ``history_synced`` flips to True.
+    """
+    import asyncio
+    from datetime import UTC, datetime, timedelta
+
+    client, broker = client_and_broker
+    broker.account_id_value = "test-acct"  # type: ignore[attr-defined]
+    now = datetime.now(UTC)
+
+    async def _seed() -> None:
+        async with session_factory() as session:
+            await repo.upsert_positions(
+                session,
+                account_id="test-acct",
+                rows=[{
+                    "symbol": "TSLA.US",
+                    "ticker": "TSLA",
+                    "quantity": 100,
+                    "avg_cost": 100.0,
+                }],
+            )
+            # today_executions 2-day sync seeded a single recent fill.
+            await repo.upsert_broker_executions(
+                session,
+                account_id="test-acct",
+                rows=[{
+                    "order_id": "narrow-recent",
+                    "symbol": "TSLA.US",
+                    "ticker": "TSLA",
+                    "side": "BUY",
+                    "qty": 100,
+                    "price": 110.0,
+                    "ts": now - timedelta(days=1),
+                }],
+            )
+
+    asyncio.get_event_loop().run_until_complete(_seed())
+
+    # Broker has the recent fill PLUS a much older one (200 days ago)
+    # that the 2-day sync never touched.
+    broker.history_executions_list = [  # type: ignore[attr-defined]
+        {
+            "order_id": "narrow-recent",
+            "symbol": "TSLA.US",
+            "ticker": "TSLA",
+            "side": "BUY",
+            "qty": 100,
+            "price": 110.0,
+            "ts": now - timedelta(days=1),
+        },
+        {
+            "order_id": "ancient",
+            "symbol": "TSLA.US",
+            "ticker": "TSLA",
+            "side": "BUY",
+            "qty": 50,
+            "price": 90.0,
+            "ts": now - timedelta(days=200),
+        },
+    ]
+
+    r = client.get(
+        "/api/broker/executions",
+        params={"token": _TOKEN, "ticker": "TSLA", "days": 730, "limit": 50},
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    ids = sorted(e["order_id"] for e in body["executions"])
+    assert ids == ["ancient", "narrow-recent"], (
+        "full backfill must reach the 200-day-old fill, not stop at MAX(ts)"
+    )
+
+    # And history_synced must now be True so subsequent opens take the
+    # cheap path.
+    async def _check_flag() -> bool:
+        async with session_factory() as session:
+            return await repo.is_position_history_synced(
+                session, account_id="test-acct", ticker="TSLA"
+            )
+
+    flagged = asyncio.get_event_loop().run_until_complete(_check_flag())
+    assert flagged is True
+
+
 def test_quotes_watch_endpoint_diffs_subscriptions(
     tmp_path,
     session_factory: async_sessionmaker[AsyncSession],
