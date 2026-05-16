@@ -336,7 +336,9 @@
 @media (prefers-reduced-motion: reduce) {
   .minline-pulse::before { animation: none; }
 }
-.pcard-chart-skeleton {
+.pcard-chart-skeleton,
+.ocard-chart-skeleton,
+.ispark-skeleton {
   height: 100%;
   background: linear-gradient(
     90deg, transparent, rgba(255, 255, 255, 0.03), transparent
@@ -552,14 +554,8 @@
   margin: 4px -4px 2px;
   position: relative;
 }
-.ocard-chart-skeleton {
-  height: 100%;
-  background: linear-gradient(
-    90deg, transparent, rgba(255, 255, 255, 0.03), transparent
-  );
-  border-radius: 3px;
-  animation: pcard-shimmer 1.4s linear infinite;
-}
+/* .ocard-chart-skeleton styled jointly with .pcard-chart-skeleton +
+ * .ispark-skeleton above — same shimmer treatment, one rule. */
 
 /* Price row mirrors the stock card: large mono price + small change-pct
  * chip + large day-P/L pushed to the right. Same scale so the eye reads
@@ -679,7 +675,10 @@
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  background: var(--pulse-color);
+  /* Fallback to --up-color in case neither .pos nor .neg ancestor class
+   * is attached (defensive — keeps the dot visible even in transient
+   * loading states). */
+  background: var(--pulse-color, var(--up-color));
   transform: translate(-50%, -50%);
   pointer-events: none;
   box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.4);
@@ -691,7 +690,7 @@
   position: absolute;
   inset: -2px;
   border-radius: 50%;
-  background: var(--pulse-color);
+  background: var(--pulse-color, var(--up-color));
   opacity: 0.5;
   animation: minline-pulse 1.8s ease-out infinite;
 }
@@ -699,12 +698,5 @@
   .ispark-pulse::before { animation: none; }
 }
 
-/* Skeleton — 与 .pcard-chart-skeleton 视觉一致 */
-.ispark-skeleton {
-  height: 100%;
-  background: linear-gradient(
-    90deg, transparent, rgba(255, 255, 255, 0.03), transparent
-  );
-  border-radius: 3px;
-  animation: pcard-shimmer 1.4s linear infinite;
-}
+/* .ispark-skeleton styling lives with the shared chart-skeleton rule
+ * earlier in this file (search ".pcard-chart-skeleton"). */
