@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import type { Position, Quote, Candlesticks, Execution } from "../../api/domain-types";
 import { IntradaySpark } from "./IntradaySpark";
 import { marketOf } from "../Card/cardHelpers";
+import { effectiveSession } from "./sessionWindow";
 import { toUsd } from "../../utils/currency";
 import { tradingDayOfET, currentTradingDay } from "./timeFmt";
 
@@ -75,6 +76,13 @@ export function PositionCard({ position, quote, intraday, executions, onClick }:
 
   const prevClose = toUsd(sym, quote?.prev_close);
 
+  // Trade session — guarded against backend cache bugs that misreport
+  // weekend ET 04:00 as "pre" (cached weekday session windows match
+  // today's wall-clock-of-day). effectiveSession downgrades to "closed"
+  // when the date in market tz isn't a real trading weekday.
+  const rawSession = quote?.trade_session ?? "regular";
+  const tradeSession = effectiveSession(marketOf(position.symbol), rawSession, Date.now());
+
   // Day P/L baseline matches the backend's session-aware change_pct rule:
   //   pre / regular / closed → yesterday's RTH close (prev_close)
   //   post / overnight       → today's RTH close (today_close, frozen at
@@ -82,7 +90,6 @@ export function PositionCard({ position, quote, intraday, executions, onClick }:
   // today_close is null in non-post/overnight sessions; we fall back to
   // prev_close to keep the dayPl formula well-defined even on transient
   // data gaps.
-  const tradeSession = quote?.trade_session ?? "regular";
   const todayClose = toUsd(sym, quote?.today_close);
   const dayBaseline =
     (tradeSession === "post" || tradeSession === "overnight") && todayClose != null
@@ -146,12 +153,12 @@ export function PositionCard({ position, quote, intraday, executions, onClick }:
             </span>
           ) : null;
         })()}
-        {/* Session pill — surfaces which broker session ``last_done`` came
-            from. 盘前/盘后/夜盘 gets a distinct color so the user notices
-            they're not looking at an RTH price. */}
-        {quote?.trade_session && (
-          <span className={`pcard-session sess-${quote.trade_session}`}>
-            {SESSION_LABEL[quote.trade_session] ?? quote.trade_session}
+        {/* Session pill — uses the *effective* session (guarded against
+            weekend cache bugs in the backend), not the raw broker value,
+            so the pill matches the chart's actual state. */}
+        {tradeSession && (
+          <span className={`pcard-session sess-${tradeSession}`}>
+            {SESSION_LABEL[tradeSession] ?? tradeSession}
           </span>
         )}
         <span className="pcard-arrow" aria-hidden>→</span>

@@ -1,7 +1,19 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { PositionCard } from "./PositionCard";
 import type { Position, Quote, Candlesticks } from "../../api/domain-types";
+
+// Pin Date.now() to a known US weekday so effectiveSession in
+// PositionCard doesn't downgrade live sessions to "closed" on weekends.
+// 2026-05-14T14:30:00Z = Thursday 10:30 ET (mid-regular session).
+const TEST_NOW = Date.parse("2026-05-14T14:30:00Z");
+beforeEach(() => {
+  vi.useFakeTimers();
+  vi.setSystemTime(TEST_NOW);
+});
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 const position: Position = {
   symbol: "TSLA.US",

@@ -33,7 +33,7 @@ function regionTexts(container: HTMLElement): string[] {
 }
 
 describe("IntradaySpark", () => {
-  it("renders SVG with line + area + four US region labels", () => {
+  it("renders SVG with line + area + four US region labels (夜盘 first)", () => {
     const { container } = render(
       <IntradaySpark
         symbol="TSLA.US" market="US" session="regular"
@@ -41,7 +41,7 @@ describe("IntradaySpark", () => {
       />,
     );
     expect(container.querySelector(".ispark-svg")).not.toBeNull();
-    expect(regionTexts(container)).toEqual(["盘前", "盘中", "盘后", "夜盘"]);
+    expect(regionTexts(container)).toEqual(["夜盘", "盘前", "盘中", "盘后"]);
     expect(container.querySelector(".ispark-line")).not.toBeNull();
     expect(container.querySelector(".ispark-area")).not.toBeNull();
   });
@@ -109,7 +109,7 @@ describe("IntradaySpark", () => {
     expect(container.querySelector(".ispark.is-closed")).not.toBeNull();
     // All four region labels still render — they describe the day shape;
     // none gets the .active highlight because the market is closed.
-    expect(regionTexts(container)).toEqual(["盘前", "盘中", "盘后", "夜盘"]);
+    expect(regionTexts(container)).toEqual(["夜盘", "盘前", "盘中", "盘后"]);
     expect(container.querySelector(".ispark-region-label.active")).toBeNull();
   });
 
@@ -132,7 +132,7 @@ describe("IntradaySpark", () => {
       />,
     );
     expect(container.querySelector(".ispark-line")).toBeNull();
-    expect(regionTexts(container)).toEqual(["盘前", "盘中", "盘后", "夜盘"]);
+    expect(regionTexts(container)).toEqual(["夜盘", "盘前", "盘中", "盘后"]);
   });
 
   it("line path is non-empty when bars have data", () => {

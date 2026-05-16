@@ -125,31 +125,85 @@ function lastTradingDateKey(now: number, market: Market): string {
   return dateKeyInTz(ms, market);
 }
 
-/** Current US trading-day ET calendar date.
- *
- * A trading day spans ET 04:00 → ET 04:00 next day. Bars at ET 00:00-04:00
- * still belong to the prior day's overnight tail (matches the backend's
- * MarketSchedule + tradingDayOfET in timeFmt.ts). */
-function currentUSTradingDateKey(now: number): string {
+/** ET hour-of-day for a UTC instant. Handles DST via Intl. */
+function getEtHour(ms: number): number {
   const fmt = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/New_York",
     hour: "2-digit", hour12: false,
   });
-  const h = parseInt(fmt.format(new Date(now)), 10);
-  const hour = h === 24 ? 0 : h;
-  if (hour < 4) return dateKeyInTz(now - 24 * 60 * 60 * 1000, "US");
+  const h = parseInt(fmt.format(new Date(ms)), 10);
+  return h === 24 ? 0 : h;
+}
+
+/** Current US "chart day" — the ET calendar date whose regular session
+ *  the chart is anchored around. The chart's 24h window spans ET 20:00
+ *  of (chartDay - 1) through ET 20:00 of chartDay, so the four sessions
+ *  read left-to-right as 夜盘 → 盘前 → 盘中 → 盘后.
+ *
+ *  - ET 20:00+: overnight leading into TOMORROW's regular → chartDay = tomorrow
+ *  - else:      pre/regular/post or overnight tail of today → chartDay = today
+ */
+function currentUSChartDayKey(now: number): string {
+  if (getEtHour(now) >= 20) {
+    return dateKeyInTz(now + 24 * 60 * 60 * 1000, "US");
+  }
   return dateKeyInTz(now, "US");
 }
 
+/** Anchor = ET 20:00 of the day BEFORE the chart day, so the overnight
+ *  session (Thu 20:00 → Fri 04:00 for Friday's chart) sits at slot 0.
+ *  We anchor date arithmetic at NOON UTC of the chartDayKey — that
+ *  instant is unambiguously inside the chartDayKey ET calendar day for
+ *  every tz we care about, so subtracting 24h lands cleanly on the
+ *  previous ET date. (Using midnight UTC would put us at 20:00 ET of
+ *  the previous day, breaking the rollback by one full day.) */
+function chartAnchorMsUS(chartDayKey: string): number {
+  const [y, m, d] = chartDayKey.split("-").map(Number);
+  const noonUtc = Date.UTC(y, m - 1, d, 12);
+  const prevDayKey = dateKeyInTz(noonUtc - 24 * 60 * 60 * 1000, "US");
+  return localToUtcMs(prevDayKey, 20, 0, "US");
+}
+
 /** Fixed slot offsets for the four US sessions inside the unified
- *  1440-min day window. Boundaries are ET wall clocks; the window
- *  itself anchors at ET 04:00 = slot 0. */
+ *  1440-min day window. Order: 夜盘 → 盘前 → 盘中 → 盘后, so the chart
+ *  reads chronologically left-to-right starting at the prior evening's
+ *  overnight open. */
 const US_REGIONS: SessionRegion[] = [
-  { label: "盘前", startSlot: 0,   endSlot: 330 },   // 04:00 → 09:30
-  { label: "盘中", startSlot: 330, endSlot: 720 },   // 09:30 → 16:00
-  { label: "盘后", startSlot: 720, endSlot: 960 },   // 16:00 → 20:00
-  { label: "夜盘", startSlot: 960, endSlot: 1440 },  // 20:00 → 04:00+1d
+  { label: "夜盘", startSlot: 0,    endSlot: 480 },   // 20:00 → 04:00+1d
+  { label: "盘前", startSlot: 480,  endSlot: 810 },   // 04:00 → 09:30
+  { label: "盘中", startSlot: 810,  endSlot: 1200 },  // 09:30 → 16:00
+  { label: "盘后", startSlot: 1200, endSlot: 1440 },  // 16:00 → 20:00
 ];
+
+/** Defensive guard: the backend's MarketSchedule.state_for can be wrong
+ *  on weekends/holidays if its trading-session cache is stale and
+ *  matches a weekday's session window against today's wall-clock time
+ *  (e.g. Saturday ET 04:00 matches the 04:00-09:30 pre window, so the
+ *  pushed quote claims "pre" when in fact markets are closed).
+ *
+ *  This function downgrades the broker's session to "closed" when the
+ *  date in market tz is not a known trading weekday. Holidays still
+ *  slip through (we don't have a holiday calendar), but weekends are
+ *  the common case and they're the one most visibly broken. */
+export function effectiveSession(
+  market: Market,
+  brokerSession: SessionLabel,
+  now: number,
+): SessionLabel {
+  if (brokerSession === "closed") return "closed";
+  const wd = weekdayInTz(now, market);
+  if (market === "US") {
+    // US trades overnight Sun→Fri (Sunday 20:00 → Friday 20:00 ET).
+    // Saturday: fully closed. Sunday: closed until 20:00 ET when
+    // overnight session re-opens.
+    if (wd === 6) return "closed";              // Saturday
+    if (wd === 0 && getEtHour(now) < 20) return "closed"; // Sunday before evening
+    return brokerSession;
+  }
+  // HK / CN never trade weekends.
+  if (wd === 0 || wd === 6) return "closed";
+  return brokerSession;
+}
 
 // ---------- main resolver ---------- //
 
@@ -164,16 +218,18 @@ export function resolveSessionWindow(
 }
 
 function resolveUS(session: SessionLabel, now: number): SessionWindow {
-  // Unified day window: a single 1440-minute x-axis spanning ET 04:00 of
-  // the trading day through ET 04:00 of the next day. Bars from any of
-  // the four sessions render into the same window at their slot offsets.
-  // The `session` prop is preserved as `label` for live-state styling
-  // decisions (closed-state dimming, active region highlight in
-  // IntradaySpark) but it does NOT shape the window.
+  // Unified day window: 1440-minute x-axis anchored at ET 20:00 of the
+  // day BEFORE the chart day, so 夜盘 → 盘前 → 盘中 → 盘后 read left-to-
+  // right. On a non-trading day (weekend), session is already "closed"
+  // (callers pre-filter via effectiveSession); we anchor the window on
+  // the last trading day's chart (Thu 20:00 → Fri 20:00 for "Friday's
+  // chart" shown over the weekend).
   const closed = session === "closed";
-  const dk = closed ? lastTradingDateKey(now, "US") : currentUSTradingDateKey(now);
-  const startMs = localToUtcMs(dk, 4, 0, "US"); // pre starts ET 04:00
-  const slotCount = 1440;                       // 24h = 1440 minutes
+  const chartDayKey = closed
+    ? lastTradingDateKey(now, "US")
+    : currentUSChartDayKey(now);
+  const startMs = chartAnchorMsUS(chartDayKey);
+  const slotCount = 1440;
   const endMs = startMs + slotCount * 60_000;
 
   return {
