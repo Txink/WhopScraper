@@ -51,7 +51,7 @@ interface Props {
  *  Left cluster keeps its original "ticker · price · change" single-line
  *  identity. The right cluster stacks two compact stat lines —
  *  position basics (持仓/均价/市值/浮盈) and做T 统计
- *  (做T次数/累计已实现/平均单笔/胜率) — sharing the panel's vertical
+ *  (做T次数/累计已实现/胜率) — sharing the panel's vertical
  *  centerline so total card height stays close to the prior single-row
  *  layout. Options render only the position line (做T binding is a
  *  stock-only concept). */
@@ -89,9 +89,6 @@ export function DetailSummary({ position, quote, pairsCount, onBack }: Props) {
   const pairCount = agg?.count ?? 0;
   const profitTotal = agg?.profit_total ?? 0;
   const winCount = agg?.win_count ?? 0;
-  // Average over all pairs (including partial / one-sided which contribute 0).
-  // Matches a "what is one做T worth on average" read.
-  const avgPair = pairCount > 0 ? profitTotal / pairCount : 0;
   const losses = Math.max(0, pairCount - winCount);
   const winRate = pairCount > 0 ? (winCount / pairCount) * 100 : 0;
   const totalSign = profitTotal >= 0 ? "pos" : "neg";
@@ -160,12 +157,6 @@ export function DetailSummary({ position, quote, pairsCount, onBack }: Props) {
               <span className="lbl">累计已实现</span>
               <span className={`val ${totalSign}`}>
                 {profitTotal >= 0 ? "+" : ""}${fmt(profitTotal, 0)}
-              </span>
-            </div>
-            <div className="head-stat">
-              <span className="lbl">平均单笔</span>
-              <span className={`val ${avgPair >= 0 ? "pos" : "neg"}`}>
-                {avgPair >= 0 ? "+" : ""}${fmt(avgPair, 0)}
               </span>
             </div>
             <div className="head-stat">

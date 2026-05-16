@@ -393,7 +393,17 @@
 
 /* ─── Trade table ─── */
 .trade-tbl-wrap { overflow-y: auto; max-height: 360px; }
-.trade-tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+/* ``table-layout: fixed`` makes the browser distribute width equally
+ * across all data columns (时间 / 方向 / 数量 / 成交价 / 金额 / 做T)
+ * after the fixed-width checkbox column. Without this, auto-layout
+ * gives wider content (e.g. "05/15 22:01" 时间 cells) more pixels and
+ * fans the columns out unevenly. */
+.trade-tbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  table-layout: fixed;
+}
 .trade-tbl th {
   text-align: left;
   font-weight: 500;

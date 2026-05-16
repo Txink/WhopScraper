@@ -161,7 +161,7 @@ export function TradeList({
             <tr>
               <th className="compact"></th>
               <th>时间</th>
-              <th>方向</th>
+              <th style={{ textAlign: "center" }}>方向</th>
               <th style={{ textAlign: "right" }}>数量</th>
               <th style={{ textAlign: "right" }}>成交价</th>
               <th style={{ textAlign: "right" }}>金额</th>
@@ -214,7 +214,7 @@ export function TradeList({
                     )}
                   </td>
                   <td className="tic">{fmtBjRel(t.ts)}</td>
-                  <td>
+                  <td style={{ textAlign: "center" }}>
                     <span className={`cell-side ${t.side.toLowerCase()}`}>{t.side}</span>
                   </td>
                   <td style={{ textAlign: "right" }}>
@@ -277,14 +277,14 @@ export function TradeList({
           </tbody>
         </table>
       </div>
-      {/* Footer strip: 3-column grid. Left = section identity (买卖记录 ·
+      {/* Footer strip: 3-column grid. Left = section identity (交易记录 ·
        *  N 笔), center = pagination, right = supplementary meta (做T 配对
        *  count + 上次更新). Replaces the standalone ``.panel-head`` above
        *  the table — saves ~36px of vertical real estate while keeping
        *  the pagination buttons visually centered. */}
       <div className="trade-foot">
         <span className="trade-foot-meta trade-foot-left">
-          <span className="trade-foot-label">买卖记录</span>
+          <span className="trade-foot-label">交易记录</span>
           {serverTotal} 笔
         </span>
         <span className="trade-foot-center">
