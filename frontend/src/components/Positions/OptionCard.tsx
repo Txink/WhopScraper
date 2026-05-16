@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import type { Position, Quote, Candlesticks, Execution } from "../../api/domain-types";
 import { MiniLine } from "./MiniLine";
 import { toUsd } from "../../utils/currency";
-import { tradingDayOfET, currentTradingDay } from "./timeFmt";
+import { tradingDayOfET, currentOrLastTradingDay } from "./timeFmt";
 
 /** US equity options: 1 contract = 100 shares of underlying. Premium is
  *  quoted per-share, so dollar economics multiply by this factor. */
@@ -99,7 +99,10 @@ export function OptionCard({ position, quote, history, executions, onClick }: Pr
   // pollute the calc.
   const dayPl = useMemo(() => {
     if (last == null || prev == null) return null;
-    const todayKey = currentTradingDay();
+    // Use last-trading-day fallback so weekend views still attribute the
+    // most recent session's fills as "today's trades" (see PositionCard
+    // for the same fix on stocks).
+    const todayKey = currentOrLastTradingDay();
     let buysCost = 0;
     let sellsProceeds = 0;
     let buysQty = 0;

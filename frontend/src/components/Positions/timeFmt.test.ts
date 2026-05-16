@@ -1,10 +1,11 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   fmtBjHM,
   fmtBjDate,
   fmtBjRel,
   classifyETSession,
   tradingDayOfET,
+  currentOrLastTradingDay,
 } from "./timeFmt";
 
 describe("timeFmt — Beijing-time projection", () => {
@@ -110,5 +111,44 @@ describe("tradingDayOfET — trades within one US session", () => {
     // marker. Native ``new Date`` would parse as LOCAL time and shift by
     // the browser's offset — parseUtc forces UTC interpretation.
     expect(tradingDayOfET("2026-05-14T13:30:00")).toBe("2026-05-14");
+  });
+});
+
+describe("currentOrLastTradingDay", () => {
+  function withClock(iso: string, fn: () => void): void {
+    vi.useFakeTimers();
+    vi.setSystemTime(Date.parse(iso));
+    try { fn(); } finally { vi.useRealTimers(); }
+  }
+
+  it("returns today on a Thursday", () => {
+    // 2026-05-14T17:00:00Z = Thu 13:00 ET
+    withClock("2026-05-14T17:00:00Z", () => {
+      expect(currentOrLastTradingDay()).toBe("2026-05-14");
+    });
+  });
+
+  it("steps back to Friday on a Saturday", () => {
+    // 2026-05-16T10:00:00Z = Sat 06:00 ET. tradingDayOfET returns
+    // "2026-05-16" (hour ≥ 4); currentOrLastTradingDay walks back over
+    // Sat to Fri.
+    withClock("2026-05-16T10:00:00Z", () => {
+      expect(currentOrLastTradingDay()).toBe("2026-05-15");
+    });
+  });
+
+  it("steps back to Friday on Sunday afternoon", () => {
+    // Sun 14:00 ET
+    withClock("2026-05-17T18:00:00Z", () => {
+      expect(currentOrLastTradingDay()).toBe("2026-05-15");
+    });
+  });
+
+  it("steps back to Friday from Monday ET 02:00 (within Sun overnight tail)", () => {
+    // Mon ET 02:00 → tradingDayOfET rolls hour<4 back to Sun → then
+    // currentOrLastTradingDay steps Sun back to Fri.
+    withClock("2026-05-18T06:00:00Z", () => {
+      expect(currentOrLastTradingDay()).toBe("2026-05-15");
+    });
   });
 });

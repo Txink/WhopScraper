@@ -4,7 +4,7 @@ import { IntradaySpark } from "./IntradaySpark";
 import { marketOf } from "../Card/cardHelpers";
 import { effectiveSession } from "./sessionWindow";
 import { toUsd } from "../../utils/currency";
-import { tradingDayOfET, currentTradingDay } from "./timeFmt";
+import { tradingDayOfET, currentOrLastTradingDay } from "./timeFmt";
 
 interface Props {
   position: Position;
@@ -110,7 +110,11 @@ export function PositionCard({ position, quote, intraday, executions, onClick }:
     if (last == null || dayBaseline == null) {
       return change != null ? change * qty : null;
     }
-    const todayKey = currentTradingDay();
+    // Use last-trading-day fallback so Friday's executions count toward
+    // Day P/L on a Saturday view (vanilla currentTradingDay returns the
+    // calendar date, which would filter Friday's trades out and leave
+    // qtyStart over-stated).
+    const todayKey = currentOrLastTradingDay();
     let buysCost = 0;
     let sellsProceeds = 0;
     let buysQty = 0;

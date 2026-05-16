@@ -124,6 +124,28 @@ export function currentTradingDay(): string {
   return tradingDayOfET(new Date(Date.now()));
 }
 
+/** Like ``currentTradingDay`` but on weekends/holidays walks back to the
+ *  most recent weekday. Use this for filters that match "today's trades"
+ *  in contexts where Saturday should treat Friday's session as today —
+ *  Day P/L on a closed weekend, for instance, where Friday's executions
+ *  are the most recent activity to attribute. (Holidays aren't checked
+ *  against a calendar; we step over Sat/Sun only.) */
+export function currentOrLastTradingDay(): string {
+  const today = currentTradingDay();
+  const [y, m, d] = today.split("-").map(Number);
+  // Reference noon UTC of the candidate date so DST / midnight edge
+  // cases don't flip which day we land on.
+  let ms = Date.UTC(y, m - 1, d, 12);
+  for (let i = 0; i < 7; i++) {
+    const wd = new Date(ms).getUTCDay(); // 0 = Sun, 6 = Sat
+    if (wd >= 1 && wd <= 5) {
+      return _ET_DATE.format(new Date(ms));
+    }
+    ms -= 24 * 60 * 60 * 1000;
+  }
+  return today;
+}
+
 export function classifyETSession(iso: string): ETSession {
   const d = new Date(iso);
   const parts = _ET_HM.formatToParts(d);
