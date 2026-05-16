@@ -3,7 +3,21 @@
 export type Market = "US" | "HK" | "CN";
 export type SessionLabel = "pre" | "regular" | "post" | "overnight" | "closed";
 
+/** One sub-region of the x-axis, e.g. for US the full day is split into
+ *  四个区段 (盘前/盘中/盘后/夜盘). HK/CN windows return a single region. */
+export interface SessionRegion {
+  /** Watermark text — anchors which broker session this region covers. */
+  label: "盘前" | "盘中" | "盘后" | "夜盘";
+  /** First slot index this region claims (inclusive). */
+  startSlot: number;
+  /** Last slot index this region claims (exclusive). */
+  endSlot: number;
+}
+
 export interface SessionWindow {
+  /** Live indicator — matches the current trade_session prop. Used for
+   *  closed-state styling decisions; the per-region labels are what's
+   *  actually shown on the chart. */
   label: "盘前" | "盘中" | "盘后" | "夜盘" | "休市";
   /** UTC ms of the session's first minute boundary. */
   startMs: number;
@@ -18,6 +32,10 @@ export interface SessionWindow {
   /** [0..1] progress of nowMs through the window. Clamped at the ends.
    *  Always 1 for closed-state windows. */
   progress(nowMs: number): number;
+  /** Sub-regions across the x-axis. US has 4 (pre/regular/post/overnight);
+   *  HK + CN have 1 (regular only). Vertical dividers are drawn between
+   *  consecutive regions, region labels are watermarked at their midpoints. */
+  regions: SessionRegion[];
 }
 
 const LABEL_MAP: Record<SessionLabel, SessionWindow["label"]> = {
@@ -107,6 +125,32 @@ function lastTradingDateKey(now: number, market: Market): string {
   return dateKeyInTz(ms, market);
 }
 
+/** Current US trading-day ET calendar date.
+ *
+ * A trading day spans ET 04:00 → ET 04:00 next day. Bars at ET 00:00-04:00
+ * still belong to the prior day's overnight tail (matches the backend's
+ * MarketSchedule + tradingDayOfET in timeFmt.ts). */
+function currentUSTradingDateKey(now: number): string {
+  const fmt = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    hour: "2-digit", hour12: false,
+  });
+  const h = parseInt(fmt.format(new Date(now)), 10);
+  const hour = h === 24 ? 0 : h;
+  if (hour < 4) return dateKeyInTz(now - 24 * 60 * 60 * 1000, "US");
+  return dateKeyInTz(now, "US");
+}
+
+/** Fixed slot offsets for the four US sessions inside the unified
+ *  1440-min day window. Boundaries are ET wall clocks; the window
+ *  itself anchors at ET 04:00 = slot 0. */
+const US_REGIONS: SessionRegion[] = [
+  { label: "盘前", startSlot: 0,   endSlot: 330 },   // 04:00 → 09:30
+  { label: "盘中", startSlot: 330, endSlot: 720 },   // 09:30 → 16:00
+  { label: "盘后", startSlot: 720, endSlot: 960 },   // 16:00 → 20:00
+  { label: "夜盘", startSlot: 960, endSlot: 1440 },  // 20:00 → 04:00+1d
+];
+
 // ---------- main resolver ---------- //
 
 export function resolveSessionWindow(
@@ -120,39 +164,36 @@ export function resolveSessionWindow(
 }
 
 function resolveUS(session: SessionLabel, now: number): SessionWindow {
-  if (session === "closed") {
-    const dk = lastTradingDateKey(now, "US");
-    return buildLinear({
-      label: LABEL_MAP.closed,
-      market: "US",
-      dateKey: dk,
-      startH: 16, startM: 0,
-      lenMin: 240,
-      closed: true,
-    });
-  }
-  const todayKey = dateKeyInTz(now, "US");
-  if (session === "overnight") {
-    return buildLinear({
-      label: LABEL_MAP.overnight,
-      market: "US",
-      dateKey: todayKey,
-      startH: 20, startM: 0,
-      lenMin: 480,
-    });
-  }
-  const spec = {
-    pre:     { startH: 4,  startM: 0,  lenMin: 330 },
-    regular: { startH: 9,  startM: 30, lenMin: 390 },
-    post:    { startH: 16, startM: 0,  lenMin: 240 },
-  }[session as "pre" | "regular" | "post"];
-  return buildLinear({
-    label: LABEL_MAP[session as "pre" | "regular" | "post"],
-    market: "US",
-    dateKey: todayKey,
-    startH: spec.startH, startM: spec.startM,
-    lenMin: spec.lenMin,
-  });
+  // Unified day window: a single 1440-minute x-axis spanning ET 04:00 of
+  // the trading day through ET 04:00 of the next day. Bars from any of
+  // the four sessions render into the same window at their slot offsets.
+  // The `session` prop is preserved as `label` for live-state styling
+  // decisions (closed-state dimming, active region highlight in
+  // IntradaySpark) but it does NOT shape the window.
+  const closed = session === "closed";
+  const dk = closed ? lastTradingDateKey(now, "US") : currentUSTradingDateKey(now);
+  const startMs = localToUtcMs(dk, 4, 0, "US"); // pre starts ET 04:00
+  const slotCount = 1440;                       // 24h = 1440 minutes
+  const endMs = startMs + slotCount * 60_000;
+
+  return {
+    label: LABEL_MAP[session],
+    startMs,
+    endMs,
+    slotCount,
+    slotToMs: (idx) => startMs + idx * 60_000,
+    msToSlot: (ms) => {
+      const off = Math.floor((ms - startMs) / 60_000);
+      return off >= 0 && off < slotCount ? off : -1;
+    },
+    progress: (nowMs) => {
+      if (closed) return 1;
+      if (nowMs <= startMs) return 0;
+      if (nowMs >= endMs) return 1;
+      return (nowMs - startMs) / (endMs - startMs);
+    },
+    regions: US_REGIONS,
+  };
 }
 
 function resolveHK(session: SessionLabel, now: number): SessionWindow {
@@ -204,6 +245,7 @@ function resolveHK(session: SessionLabel, now: number): SessionWindow {
       );
       return (morningSlots + off) / totalSlots;
     },
+    regions: [{ label: "盘中", startSlot: 0, endSlot: totalSlots }],
   };
 }
 
@@ -258,37 +300,7 @@ function resolveCN(session: SessionLabel, now: number): SessionWindow {
       );
       return (morningSlots + off) / totalSlots;
     },
+    regions: [{ label: "盘中", startSlot: 0, endSlot: totalSlots }],
   };
 }
 
-interface LinearWin {
-  label: SessionWindow["label"];
-  market: Market;
-  dateKey: string;
-  startH: number;
-  startM: number;
-  lenMin: number;
-  closed?: boolean;
-}
-
-function buildLinear(w: LinearWin): SessionWindow {
-  const startMs = localToUtcMs(w.dateKey, w.startH, w.startM, w.market);
-  const endMs = startMs + w.lenMin * 60_000;
-  return {
-    label: w.label,
-    startMs,
-    endMs,
-    slotCount: w.lenMin,
-    slotToMs: (idx) => startMs + idx * 60_000,
-    msToSlot: (ms) => {
-      const off = Math.floor((ms - startMs) / 60_000);
-      return off >= 0 && off < w.lenMin ? off : -1;
-    },
-    progress: (nowMs) => {
-      if (w.closed) return 1;
-      if (nowMs <= startMs) return 0;
-      if (nowMs >= endMs) return 1;
-      return (nowMs - startMs) / (endMs - startMs);
-    },
-  };
-}

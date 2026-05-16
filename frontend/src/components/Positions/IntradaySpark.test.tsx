@@ -27,8 +27,13 @@ const baseBars: Candlestick[] = [
   bar("2026-05-14T21:32:00", 102),
 ];
 
+function regionTexts(container: HTMLElement): string[] {
+  return Array.from(container.querySelectorAll(".ispark-region-label"))
+    .map((el) => el.textContent ?? "");
+}
+
 describe("IntradaySpark", () => {
-  it("renders SVG with watermark, line, area", () => {
+  it("renders SVG with line + area + four US region labels", () => {
     const { container } = render(
       <IntradaySpark
         symbol="TSLA.US" market="US" session="regular"
@@ -36,9 +41,30 @@ describe("IntradaySpark", () => {
       />,
     );
     expect(container.querySelector(".ispark-svg")).not.toBeNull();
-    expect(container.querySelector(".ispark-watermark")?.textContent).toBe("盘中");
+    expect(regionTexts(container)).toEqual(["盘前", "盘中", "盘后", "夜盘"]);
     expect(container.querySelector(".ispark-line")).not.toBeNull();
     expect(container.querySelector(".ispark-area")).not.toBeNull();
+  });
+
+  it("marks the currently-active US region label with .active", () => {
+    const { container } = render(
+      <IntradaySpark
+        symbol="TSLA.US" market="US" session="regular"
+        bars={baseBars} lastDone={103} openPrice={100}
+      />,
+    );
+    const active = container.querySelector(".ispark-region-label.active");
+    expect(active?.textContent).toBe("盘中");
+  });
+
+  it("renders three dividers between four US regions", () => {
+    const { container } = render(
+      <IntradaySpark
+        symbol="TSLA.US" market="US" session="regular"
+        bars={baseBars} lastDone={103} openPrice={100}
+      />,
+    );
+    expect(container.querySelectorAll(".ispark-divider")).toHaveLength(3);
   });
 
   it("applies .pos when lastDone >= openPrice", () => {
@@ -72,7 +98,7 @@ describe("IntradaySpark", () => {
     expect(container.querySelector(".ispark-pulse")).not.toBeNull();
   });
 
-  it("omits pulse dot when session === closed", () => {
+  it("omits pulse dot when session === closed; no region marked active", () => {
     const { container } = render(
       <IntradaySpark
         symbol="TSLA.US" market="US" session="closed"
@@ -80,8 +106,11 @@ describe("IntradaySpark", () => {
       />,
     );
     expect(container.querySelector(".ispark-pulse")).toBeNull();
-    expect(container.querySelector(".ispark-watermark")?.textContent).toBe("休市");
     expect(container.querySelector(".ispark.is-closed")).not.toBeNull();
+    // All four region labels still render — they describe the day shape;
+    // none gets the .active highlight because the market is closed.
+    expect(regionTexts(container)).toEqual(["盘前", "盘中", "盘后", "夜盘"]);
+    expect(container.querySelector(".ispark-region-label.active")).toBeNull();
   });
 
   it("renders skeleton when bars undefined", () => {
@@ -95,7 +124,7 @@ describe("IntradaySpark", () => {
     expect(container.querySelector(".ispark-line")).toBeNull();
   });
 
-  it("renders watermark even when bars present but empty", () => {
+  it("renders region labels even when bars present but empty", () => {
     const { container } = render(
       <IntradaySpark
         symbol="TSLA.US" market="US" session="regular"
@@ -103,7 +132,7 @@ describe("IntradaySpark", () => {
       />,
     );
     expect(container.querySelector(".ispark-line")).toBeNull();
-    expect(container.querySelector(".ispark-watermark")?.textContent).toBe("盘中");
+    expect(regionTexts(container)).toEqual(["盘前", "盘中", "盘后", "夜盘"]);
   });
 
   it("line path is non-empty when bars have data", () => {
@@ -118,10 +147,9 @@ describe("IntradaySpark", () => {
     expect(d.startsWith("M")).toBe(true);
   });
 
-  it("HK regular renders 盘中 watermark + still renders line when bars include lunch slot", () => {
+  it("HK regular renders a single 盘中 region + no dividers", () => {
     vi.setSystemTime(Date.parse("2026-05-14T02:00:00Z")); // 10:00 HKT
-    // 12:30 HKT = 04:30Z; BJ wall-clock equivalent is 12:30 = "2026-05-14T12:30:00" (no offset)
-    // Actually IntradaySpark's parseAsBJ assumes naive BJ timestamps. 12:30 HKT == 12:30 BJ (same tz).
+    // 12:30 HKT bar should be dropped from the path (lunch slot returns -1)
     const lunchBar = bar("2026-05-14T12:30:00", 50);
     const { container } = render(
       <IntradaySpark
@@ -130,7 +158,8 @@ describe("IntradaySpark", () => {
         lastDone={52} openPrice={48}
       />,
     );
-    expect(container.querySelector(".ispark-watermark")?.textContent).toBe("盘中");
+    expect(regionTexts(container)).toEqual(["盘中"]);
+    expect(container.querySelectorAll(".ispark-divider")).toHaveLength(0);
     expect(container.querySelector(".ispark-line")).not.toBeNull();
   });
 });

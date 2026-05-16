@@ -632,31 +632,49 @@
   overflow: visible;
 }
 
-/* 背景水印 — HTML 元素叠层（不进 SVG，避免 preserveAspectRatio
- * 把字体压扁）。绝对定位居中，pointer-events disabled 让点击穿到
- * 卡片。 */
-.ispark-watermark {
+/* Per-region watermark labels — HTML overlays positioned at each
+ * region's slot midpoint. SVG <text> can't be used because the spark
+ * SVG uses preserveAspectRatio="none" which would distort the glyphs.
+ * Active region (matches the live trade_session) gets a brighter
+ * tint so the user knows where they are in the day. */
+.ispark-region-label {
   position: absolute;
   top: 50%;
-  left: 50%;
   transform: translate(-50%, -50%);
   font-family: var(--font-sans);
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  color: var(--fg-2);
-  opacity: 0.18;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: var(--fg-3);
+  opacity: 0.22;
   pointer-events: none;
   user-select: none;
   white-space: nowrap;
-  /* Sit behind the line + area paths visually. SVG sibling has
-   * default z-index 0; setting watermark to 0 too plus DOM order
-   * (watermark before SVG in JSX) puts the SVG on top. */
   z-index: 0;
 }
-.ispark.is-closed .ispark-watermark {
-  opacity: 0.14;
-  letter-spacing: 0.22em;
+.ispark-region-label.active {
+  color: var(--fg-2);
+  opacity: 0.42;
+}
+.ispark.is-closed .ispark-region-label {
+  opacity: 0.18;
+}
+
+/* Vertical dashed dividers between regions. Drawn as a thin
+ * absolutely-positioned column behind the line so the eye reads the
+ * day-section boundaries without competing with the price curve. */
+.ispark-divider {
+  position: absolute;
+  top: 8%;
+  bottom: 8%;
+  width: 0;
+  border-left: 1px dashed var(--line-strong);
+  opacity: 0.5;
+  pointer-events: none;
+  z-index: 0;
+}
+.ispark.is-closed .ispark-divider {
+  opacity: 0.3;
 }
 
 /* 曲线 — 颜色跟 .ispark.pos / .ispark.neg 切换。粗一点（1.8px）以

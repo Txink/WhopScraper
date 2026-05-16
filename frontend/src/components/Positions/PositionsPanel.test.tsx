@@ -145,9 +145,11 @@ describe("PositionsPanel — session-aware candle fetch", () => {
 
     render(<PositionsPanel />);
     await waitFor(() => {
+      // US always fetches sessions=all now — single broker call covers
+      // all four regions of the unified 24h day window.
       expect(candleSpy).toHaveBeenCalledWith(
         "TSLA.US", "today",
-        expect.objectContaining({ granularity: "分时", sessions: "regular" }),
+        expect.objectContaining({ granularity: "分时", sessions: "all" }),
       );
     });
   });
@@ -179,9 +181,13 @@ describe("PositionsPanel — session-aware candle fetch", () => {
 
     await waitFor(() => {
       expect(candleSpy).toHaveBeenCalledTimes(2);
+      // Even though the live session changed, US still fetches "all" —
+      // the refetch is to pull fresh bars across the trading-day
+      // boundary (overnight → pre), not to swap a session-specific
+      // window.
       expect(candleSpy).toHaveBeenLastCalledWith(
         "TSLA.US", "today",
-        expect.objectContaining({ granularity: "分时", sessions: "post" }),
+        expect.objectContaining({ granularity: "分时", sessions: "all" }),
       );
     });
   });

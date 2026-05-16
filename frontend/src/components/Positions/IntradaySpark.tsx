@@ -196,14 +196,46 @@ export function IntradaySpark({
 
   const fillId = isPos ? "ispark-fill-up" : "ispark-fill-down";
 
+  /** Region label → live SessionLabel — used to mark the active region's
+   *  watermark with a brighter tint so the user knows where the pulse
+   *  sits in the broader day. */
+  const REGION_TO_SESSION: Record<string, SessionLabel> = {
+    "盘前": "pre",
+    "盘中": "regular",
+    "盘后": "post",
+    "夜盘": "overnight",
+  };
+
   return (
     <div ref={containerRef} className={rootClass}>
-      {/* Watermark lives OUTSIDE the SVG. Inside, preserveAspectRatio
-        * ="none" would stretch the <text> element to the container's
-        * aspect ratio — typically squashing the 22px glyphs into a thin
-        * unreadable strip. Rendered as an HTML overlay it keeps its
-        * intended dimensions and stays crisp. */}
-      <span className="ispark-watermark" aria-hidden>{win.label}</span>
+      {/* Per-region watermark labels (HTML overlay — SVG <text> would get
+        * squashed by preserveAspectRatio="none"). Each label sits at the
+        * midpoint of its slot range. Vertical dashed dividers separate
+        * consecutive regions so the user can read the day structure. */}
+      {win.regions.map((region, i) => {
+        const startPct = (region.startSlot / win.slotCount) * 100;
+        const midPct = ((region.startSlot + region.endSlot) / 2 / win.slotCount) * 100;
+        const isActiveRegion =
+          !isClosed && REGION_TO_SESSION[region.label] === session;
+        return (
+          <span key={region.label}>
+            {i > 0 && (
+              <span
+                className="ispark-divider"
+                style={{ left: `${startPct}%` }}
+                aria-hidden
+              />
+            )}
+            <span
+              className={`ispark-region-label ${isActiveRegion ? "active" : ""}`}
+              style={{ left: `${midPct}%` }}
+              aria-hidden
+            >
+              {region.label}
+            </span>
+          </span>
+        );
+      })}
       <svg className="ispark-svg" viewBox={`0 0 ${VB_W} ${VB_H}`} preserveAspectRatio="none">
         {areaPath && <path className="ispark-area" d={areaPath} fill={`url(#${fillId})`} />}
         {linePath && (

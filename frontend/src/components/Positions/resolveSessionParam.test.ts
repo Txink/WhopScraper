@@ -2,15 +2,12 @@ import { describe, it, expect } from "vitest";
 import { resolveSessionParam } from "./resolveSessionParam";
 
 describe("resolveSessionParam", () => {
-  it("passes US active sessions through unchanged", () => {
-    expect(resolveSessionParam("US", "pre")).toBe("pre");
-    expect(resolveSessionParam("US", "regular")).toBe("regular");
-    expect(resolveSessionParam("US", "post")).toBe("post");
-    expect(resolveSessionParam("US", "overnight")).toBe("overnight");
-  });
-
-  it("US closed → falls back to post", () => {
-    expect(resolveSessionParam("US", "closed")).toBe("post");
+  it("US always returns 'all' (unified day window covers every region)", () => {
+    expect(resolveSessionParam("US", "pre")).toBe("all");
+    expect(resolveSessionParam("US", "regular")).toBe("all");
+    expect(resolveSessionParam("US", "post")).toBe("all");
+    expect(resolveSessionParam("US", "overnight")).toBe("all");
+    expect(resolveSessionParam("US", "closed")).toBe("all");
   });
 
   it("HK regular → regular", () => {
