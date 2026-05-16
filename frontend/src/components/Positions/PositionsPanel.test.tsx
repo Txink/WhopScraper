@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { PositionsPanel } from "./PositionsPanel";
 import { usePositionsStore } from "../../stores/positions";
@@ -122,6 +122,9 @@ describe("PositionsPanel — session-aware candle fetch", () => {
     useQuotesStore.setState({ quotesBySymbol: {}, lastUpdatedAt: null });
     useCandlesticksStore.setState({ byKey: {} });
     useExecutionsStore.setState({ executions: [], lastSyncedAt: null });
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("fetches granularity=分时 with the current session on mount", async () => {
