@@ -387,6 +387,13 @@
   border-radius: var(--radius-card);
   background: var(--bg-2);
   overflow: hidden;
+  /* As a flex child of .stream, take all available height so the table
+   * can flex to fill it. Head + pagination are flex:0 0 auto (default);
+   * .db-table-wrap carries the scroll via flex:1 + min-height:0 below. */
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 .db-panel-head {
   display: flex;
@@ -434,8 +441,13 @@
   background: rgba(207, 111, 111, 0.08);
 }
 .db-table-wrap {
+  /* Sole scroll container for the database page. Drops the old
+   * max-height: calc(100vh - 240px) hack now that .db-panel itself is
+   * a flex column with bounded height — flex:1 + min-height:0 lets
+   * this region grow to fill the panel and scroll its overflow. */
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: auto;
-  max-height: calc(100vh - 240px);
 }
 .db-table {
   width: 100%;

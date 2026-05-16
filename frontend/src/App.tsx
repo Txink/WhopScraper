@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { configureHttp, api, HttpError } from "./api/http";
 import { createWsClient } from "./api/ws";
 import { useConnStore } from "./stores/conn";
@@ -253,40 +253,50 @@ function Dashboard({ token }: { token: string }) {
     onPastWeek ? Math.max(0, realCurrentCount - seenCurrentRef.current) : 0;
 
   if (pages.length === 0 && orphanCount === 0) {
-    return <main className="main"><EmptyState /></main>;
+    return <EmptyState />;
   }
 
+  // Returns ONLY the left-zone content (children of <section
+  // className="stream">) — the .main shell and PositionsPanel are
+  // owned by ContentRouter so they survive view switches without
+  // remounting (would otherwise destroy the chart, reset trade list
+  // scroll, re-subscribe quotes, etc.).
   return (
-    <main className="main">
-      <section className="stream">
-        <PageTabs />
-        <div className="page-meta-row">
-          <div className="page-meta-stack">
-            <PageInfoBar
-              page={activePage}
-              orphanCount={orphanCount}
-              mode={isOrphanTab ? "orphan" : "page"}
-              newMessageCount={isOrphanTab ? 0 : newMessageCount}
-              onJumpToCurrent={() => setCurrentWeekKey(realCurrentWeekKey)}
-            />
-            {!isOrphanTab && activePage && activePage.source === "stock" && (
-              <PageWhitelistBar page={activePage} />
-            )}
-          </div>
-          {weeks.length > 0 && currentWeekKey && (
-            <WeekPaginator
-              weeks={weeks}
-              currentWeekKey={currentWeekKey}
-              onSelect={setCurrentWeekKey}
-            />
-          )}
-          <PageActionBar
+    <>
+      <PageTabs />
+      <div className="page-meta-row">
+        <div className="page-meta-stack">
+          <PageInfoBar
             page={activePage}
+            orphanCount={orphanCount}
             mode={isOrphanTab ? "orphan" : "page"}
-            onOpenSettings={() => setSettingsOpen(true)}
+            newMessageCount={isOrphanTab ? 0 : newMessageCount}
+            onJumpToCurrent={() => setCurrentWeekKey(realCurrentWeekKey)}
           />
+          {!isOrphanTab && activePage && activePage.source === "stock" && (
+            <PageWhitelistBar page={activePage} />
+          )}
         </div>
-        {isOrphanTab && <OrphanCleanupBar orphanTasks={filteredTasks} />}
+        {weeks.length > 0 && currentWeekKey && (
+          <WeekPaginator
+            weeks={weeks}
+            currentWeekKey={currentWeekKey}
+            onSelect={setCurrentWeekKey}
+          />
+        )}
+        <PageActionBar
+          page={activePage}
+          mode={isOrphanTab ? "orphan" : "page"}
+          onOpenSettings={() => setSettingsOpen(true)}
+        />
+      </div>
+      {isOrphanTab && <OrphanCleanupBar orphanTasks={filteredTasks} />}
+      {/* Scrollable wrapper for the message list — tabs and meta-row
+          above stay pinned (they're outside this div), only the day-
+          grouped Card stream scrolls. Without an explicit wrapper the
+          <TaskStream> fragment would render directly into .stream and
+          inherit its overflow:hidden, hiding overflow rows entirely. */}
+      <div className="stream-scroll">
         {filteredTasks.length === 0 ? (
           <div className="empty-state"><p>该监听页暂无任务。</p></div>
         ) : (
@@ -298,12 +308,14 @@ function Dashboard({ token }: { token: string }) {
             tabKey={isOrphanTab ? "orphan" : (activeTabId ?? "orphan")}
           />
         )}
-      </section>
-      <PositionsPanel />
+      </div>
+      {/* PageSettingsModal is viewport-level (position:fixed); rendering
+          it inside .stream is purely structural — it visually anchors to
+          the viewport regardless. */}
       {settingsOpen && activePage && (
         <PageSettingsModal page={activePage} onClose={() => setSettingsOpen(false)} />
       )}
-    </main>
+    </>
   );
 }
 
@@ -327,21 +339,27 @@ function DatabaseView() {
     };
   }, []);
 
-  return (
-    <main className="main">
-      <section className="stream">
-        <DatabaseRecordsPanel pageNameByUrl={pageNameByUrl} />
-      </section>
-      <PositionsPanel />
-    </main>
-  );
+  return <DatabaseRecordsPanel pageNameByUrl={pageNameByUrl} />;
 }
 
 function ContentRouter({ token }: { token: string }) {
+  // The .main shell and <PositionsPanel/> are rendered ONCE here so the
+  // right zone keeps its React identity (and thus all internal state:
+  // selected symbol's detail pane, chart canvas, trade list scroll,
+  // quote subscriptions) when the user switches the left view between
+  // monitor / database / whop. Only the .stream child swaps.
   const view = useViewStore((s) => s.view);
-  if (view === "whop") return <WhopPanel />;
-  if (view === "database") return <DatabaseView />;
-  return <Dashboard token={token} />;
+  let leftContent: ReactNode;
+  if (view === "whop") leftContent = <WhopPanel />;
+  else if (view === "database") leftContent = <DatabaseView />;
+  else leftContent = <Dashboard token={token} />;
+
+  return (
+    <main className="main">
+      <section className="stream">{leftContent}</section>
+      <PositionsPanel />
+    </main>
+  );
 }
 
 export default function App() {

@@ -1,7 +1,11 @@
 .app {
-  min-height: 100vh;
+  height: 100vh;
   display: grid;
-  grid-template-rows: 48px 1fr;
+  /* minmax(0, 1fr) — without the explicit 0 min, grid rows refuse to
+   * shrink below their content size, and a tall left or right child
+   * would push the row past the viewport, breaking the "no page scroll"
+   * contract. */
+  grid-template-rows: 48px minmax(0, 1fr);
 }
 
 .main {
@@ -14,6 +18,10 @@
   gap: 16px;
   padding: 16px;
   background: var(--bg-1);
+  /* .main fills the .app's 1fr row exactly — no growing past viewport.
+   * Children (.stream / .positions-panel) carry their own scroll. */
+  min-height: 0;
+  overflow: hidden;
 }
 
 @media (max-width: 1440px) {
@@ -24,6 +32,26 @@
 }
 
 .stream {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  /* Left-zone container: tabs + meta-row are fixed-height (flex:0 0 auto
+   * by default), the message list inside .stream-scroll takes the rest
+   * with its own overflow. .stream itself MUST NOT scroll — that's what
+   * keeps the page-level no-scroll contract. */
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Scrollable message-list wrapper inside .stream. Sits below the tabs
+ * and meta-row, takes all remaining height, and is the ONLY scroll
+ * container on the left side for the monitor view. The min-height:0 is
+ * load-bearing — without it, flex children refuse to shrink and the
+ * scroll never engages. */
+.stream-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 6px;

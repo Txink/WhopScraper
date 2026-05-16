@@ -5,24 +5,33 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  position: sticky;
-  top: var(--rail-top, 64px);
-  align-self: start;
-  max-height: calc(100vh - var(--rail-top, 64px) - 32px);
-  overflow-y: auto;
+  /* Right-zone container: fills the grid cell exactly, internal scroll
+   * lives on .positions-body / DetailPane's trade list. The panel
+   * itself must NOT scroll — the page-shell contract requires that. */
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
-/* Tabs + portfolio summary stay pinned to the top of the scroll
- * container so they don't get covered when the user scrolls the card
- * grid. Z-index above the cards; opaque bg covers any overlap. */
+/* Tabs + portfolio summary sit at the top of the right zone. No longer
+ * uses position:sticky — with the panel itself capped at 100% height
+ * and the scrollable region pushed onto .positions-body, the top block
+ * is simply a fixed flex header (flex:0 0 auto by default). */
 .positions-panel-top {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  position: sticky;
-  top: 0;
-  z-index: 2;
   background: var(--bg-1);
+}
+
+/* Card-grid scroll host. Wraps .positions-grid (or the empty-state
+ * placeholder) so only the cards scroll when the list outgrows the
+ * panel — the top tabs + portfolio summary stay pinned. min-height:0
+ * is load-bearing for the flex parent to actually shrink this. */
+.positions-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .positions-panel-head {

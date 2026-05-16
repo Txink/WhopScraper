@@ -1,13 +1,18 @@
 .whop-panel {
   padding: var(--space-4);
   background: var(--bg-1);
-  min-height: calc(100vh - 48px);
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  max-width: 1200px;
-  margin: 0 auto;
   width: 100%;
+  /* Embedded in the left .stream zone — fills the available height and
+   * scrolls as a single unit when content overflows. (Previously the
+   * Whop view was its own top-level <main> and grew to fit content; now
+   * the page shell is locked to viewport height so the panel must
+   * carry its own scroll instead of pushing the page taller.) */
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .panel-card {

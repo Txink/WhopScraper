@@ -76,7 +76,12 @@ html, body, #root {
   font-size: 13px;
   line-height: 1.5;
   font-feature-settings: "tnum" on, "lnum" on;
-  min-height: 100vh;
+  /* Lock the page shell to viewport height — the app's left and right
+   * zones each carry their own internal scroll containers, so the page
+   * itself must never scroll. Anything that needs to scroll declares it
+   * explicitly via overflow:auto on a flex:1 child with min-height:0. */
+  height: 100vh;
+  overflow: hidden;
 }
 
 button {

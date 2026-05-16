@@ -13,6 +13,14 @@
    * dialog visually pops up in the middle of the detail pane rather
    * than the whole viewport. */
   position: relative;
+  /* Fill the right-zone container exactly. Summary + chart are fixed-
+   * height; .trade-panel flexes to take the remainder, and its inner
+   * .trade-tbl-wrap is where the actual scroll happens. min-height:0
+   * propagates the shrink permission down the chain. Uses flex:1
+   * (not height:100%) because the parent .positions-panel uses gap,
+   * and height:100% wouldn't subtract the gap. */
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 /* Inline back chevron icon rendered inside the summary card's left
@@ -397,7 +405,23 @@
  * longer needs a header strip. Frees ~36px of vertical real estate. */
 
 /* ─── Trade table ─── */
-.trade-tbl-wrap { overflow-y: auto; max-height: 360px; }
+/* TradeList wrapper (.panel.trade-panel) takes all leftover detail-pane
+ * height after the summary + 340px chart. Without flex:1 here it would
+ * collapse to content height and the trade list inside wouldn't have
+ * any room to scroll. */
+.trade-panel {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+/* The actual scroll container. Was a fixed 360px box; now grows to fill
+ * .trade-panel and scrolls when the list overflows that height. The
+ * sticky table header (.trade-tbl thead) keeps the column titles pinned
+ * to the top of THIS container as the user scrolls. */
+.trade-tbl-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
 /* ``table-layout: fixed`` makes the browser distribute width equally
  * across all data columns (时间 / 方向 / 数量 / 成交价 / 金额 / 做T)
  * after the fixed-width checkbox column. Without this, auto-layout

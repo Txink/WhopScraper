@@ -34,11 +34,11 @@ export function WhopPanel() {
   const refresh = () => setRefreshKey((k) => k + 1);
 
   return (
-    <main className="whop-panel">
+    <section className="whop-panel">
       <CookieSection cookie={cookie} onRefresh={refresh} />
       <AddPageSection onAdded={refresh} />
       <PagesListSection pages={pages} loading={loading} onRefresh={refresh} error={error} />
-    </main>
+    </section>
   );
 }
 

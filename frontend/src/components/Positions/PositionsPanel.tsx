@@ -259,6 +259,9 @@ export function PositionsPanel() {
         <header className="positions-panel-head">{tabs}</header>
         {summary}
       </div>
+      {/* .positions-body is the right zone's sole scroll container —
+          tabs + portfolio summary above stay pinned, cards scroll. */}
+      <div className="positions-body">
       {view === "stocks" ? (
         sortedStocks.length === 0 ? (
           <div className="positions-empty">暂无正股持仓</div>
@@ -296,6 +299,7 @@ export function PositionsPanel() {
           ))}
         </div>
       )}
+      </div>
     </aside>
   );
 }
