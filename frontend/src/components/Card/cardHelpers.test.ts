@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fmtTime, elapsedMs, fmtBeijingFull } from "./cardHelpers";
+import { fmtTime, elapsedMs, fmtBeijingFull, marketOf } from "./cardHelpers";
 
 describe("fmtTime", () => {
   it("renders a real-UTC timestamp as Beijing HH:MM:SS", () => {
@@ -38,5 +38,22 @@ describe("fmtBeijingFull", () => {
 
   it("crosses the date boundary forwards", () => {
     expect(fmtBeijingFull("2026-04-24T16:30:00Z")).toBe("2026-04-25 00:30:00");
+  });
+});
+
+describe("marketOf", () => {
+  it("returns 'US' for .US suffix", () => {
+    expect(marketOf("TSLA.US")).toBe("US");
+  });
+  it("returns 'HK' for .HK suffix", () => {
+    expect(marketOf("0700.HK")).toBe("HK");
+  });
+  it("returns 'CN' for .SH and .SZ suffixes", () => {
+    expect(marketOf("600519.SH")).toBe("CN");
+    expect(marketOf("000001.SZ")).toBe("CN");
+  });
+  it("returns 'US' as default for unknown / missing suffix", () => {
+    expect(marketOf("NOSUFFIX")).toBe("US");
+    expect(marketOf("FOO.XX")).toBe("US");
   });
 });

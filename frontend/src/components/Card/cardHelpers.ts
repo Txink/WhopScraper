@@ -148,3 +148,22 @@ const _BJ_DATE = new Intl.DateTimeFormat("en-CA", {
 export function fmtBeijingDate(iso: string): string {
   return _BJ_DATE.format(new Date(iso));
 }
+
+/**
+ * Resolve a broker-canonical symbol's market segment.
+ *   "TSLA.US"   → "US"
+ *   "0700.HK"   → "HK"
+ *   "600519.SH" → "CN"
+ *   "000001.SZ" → "CN"
+ *   unknown     → "US" (default — US is the most common; misroute is
+ *                 harmless for the session-window resolver since HK/CN
+ *                 share a window shape distinct from US's).
+ */
+export function marketOf(symbol: string): "US" | "HK" | "CN" {
+  const m = symbol.match(/\.([A-Z]+)$/);
+  if (!m) return "US";
+  const code = m[1];
+  if (code === "HK") return "HK";
+  if (code === "SH" || code === "SZ") return "CN";
+  return "US";
+}
