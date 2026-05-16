@@ -170,6 +170,16 @@ class LongPortClient:
         # session transition so today_close picks up when RTH ends.
         # Shape: ``symbol → {prev_close, today_close, last_session}``.
         self._ref_price_cache: dict[str, dict[str, Any]] = {}
+        # Trading-day-prev close cache for closed-state quote override.
+        # On a closed view (weekend / holiday), the SDK's ``prev_close``
+        # points at the most recent trading day's close (Friday's close
+        # on Saturday), which would give a post-market-only change. Day
+        # P/L and 涨跌幅 should reflect the full last-session move, so
+        # we override with the close of the trading day BEFORE the most
+        # recent one (Thursday's close on Saturday). Lazily filled by
+        # ``_prev_session_close``; dropped per-symbol when the session
+        # transitions out of closed.
+        self._prev_session_close_cache: dict[str, float] = {}
         self._closed = False
 
         # OAuth construction: the SDK persists tokens on disk per
@@ -439,7 +449,10 @@ class LongPortClient:
         result: dict[str, dict[str, Any]] = {}
         if stock_syms:
             for q in self._quote_ctx.quote(stock_syms):
-                result[q.symbol] = _quote_to_dict(q, self._market_state_for(q.symbol))
+                state = self._market_state_for(q.symbol)
+                row = _quote_to_dict(q, state)
+                self._apply_closed_state_baseline(q.symbol, state, row)
+                result[q.symbol] = row
         if option_syms:
             # ``option_quote`` returns OptionQuote with the same last_done /
             # prev_close / open / high / low / volume / turnover fields, so
@@ -447,6 +460,66 @@ class LongPortClient:
             for q in self._quote_ctx.option_quote(option_syms):
                 result[q.symbol] = _quote_to_dict(q, self._market_state_for(q.symbol))
         return result
+
+    def _prev_session_close(self, symbol: str) -> float | None:
+        """Return the close of the trading day BEFORE the most recent one.
+
+        Used to anchor change% / Day P/L on closed-state views (weekend
+        / holiday). The SDK's regular ``prev_close`` points at the most
+        recent close (= Friday's close on Saturday) — that's only one
+        session away from ``last_done``, so the implied change is tiny.
+        The user wants "Friday's full session move", which requires the
+        close BEFORE Friday's session = Thursday's close.
+
+        Fetches the last 2 daily candles (RTH only) and returns the
+        older one's close. Cached per-symbol; dropped when the session
+        transitions out of closed (see ``_update_ref_cache``).
+        """
+        if self._quote_ctx is None:
+            return None
+        cached = self._prev_session_close_cache.get(symbol)
+        if cached is not None:
+            return cached
+        try:
+            bars = self._quote_ctx.candlesticks(
+                symbol,
+                Period.Day,
+                2,
+                AdjustType.NoAdjust,
+                trade_sessions=TradeSessions.Intraday,
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "LongPortClient: prev-session-close fetch failed for %s: %s",
+                symbol, exc,
+            )
+            return None
+        if not bars or len(bars) < 2:
+            return None
+        # candlesticks() returns oldest-first; the second-from-last is the
+        # one we want (the close BEFORE the most recent trading day).
+        prev = float(getattr(bars[-2], "close", 0) or 0)
+        if prev <= 0:
+            return None
+        self._prev_session_close_cache[symbol] = prev
+        return prev
+
+    def _apply_closed_state_baseline(
+        self, symbol: str, state: str, row: dict[str, Any],
+    ) -> None:
+        """Mutate ``row`` in place so closed-state change/change_pct are
+        anchored at the previous trading day's close. No-op for other
+        states. Used by both ``get_quote`` (HTTP) and the push handler
+        path (via ``_update_ref_cache``)."""
+        if state != "closed":
+            return
+        prev = self._prev_session_close(symbol)
+        if prev is None or prev <= 0:
+            return
+        last = float(row.get("last_done") or 0)
+        row["prev_close"] = prev
+        row["change"] = last - prev
+        row["change_pct"] = (row["change"] / prev) * 100.0 if prev > 0 else 0.0
 
     def _fetch_executions_window(
         self,
@@ -757,6 +830,17 @@ class LongPortClient:
             today = float(getattr(q, "last_done", 0) or 0) or None
         else:
             today = None
+        # Closed state: override prev_close with the close of the trading
+        # day BEFORE the most recent one (Thursday's close on Saturday)
+        # so the push handler's change% / Day P/L reflects the full last-
+        # session move. Drop the override when state transitions out of
+        # closed so a future re-seed picks up fresh broker semantics.
+        if state == "closed":
+            override = self._prev_session_close(symbol)
+            if override is not None and override > 0:
+                prev = override
+        else:
+            self._prev_session_close_cache.pop(symbol, None)
         self._ref_price_cache[symbol] = {
             "prev_close": prev,
             "today_close": today,

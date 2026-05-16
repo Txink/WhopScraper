@@ -257,3 +257,88 @@ class TestDynamicDryRun:
         flag["v"] = False
         client.cancel_order("ORD-Y")
         client._trade_ctx.cancel_order.assert_called_once_with("ORD-Y")
+
+
+class TestClosedStateBaseline:
+    """``_apply_closed_state_baseline`` overrides the broker's prev_close
+    with the trading-day-prev close so a Saturday view of Friday's chart
+    shows Friday's full-session move (vs Thursday's close), not just the
+    post-market move."""
+
+    def _make_client(self) -> LongPortClient:
+        cfg = _dry_config()
+        with _SDK_PATCHES[0], _SDK_PATCHES[1], _SDK_PATCHES[2], _SDK_PATCHES[3], _SDK_PATCHES[4]:
+            client = LongPortClient(cfg)
+        return client
+
+    def test_non_closed_state_is_a_no_op(self) -> None:
+        """pre / regular / post / overnight already have correct
+        prev_close from the SDK; the helper must not touch them."""
+        client = self._make_client()
+        row = {
+            "last_done": 246.0,
+            "prev_close": 240.0,
+            "change": 6.0,
+            "change_pct": 2.5,
+        }
+        client._apply_closed_state_baseline("TSLA.US", "regular", row)
+        assert row["prev_close"] == 240.0
+        assert row["change"] == 6.0
+
+    def test_closed_state_overrides_with_prev_session_close(self) -> None:
+        """Closed → override prev_close from _prev_session_close and
+        recompute change/change_pct."""
+        client = self._make_client()
+        # Stub: pretend Thursday's close was 220.0 (vs Friday's close
+        # 240.0 which the SDK would have returned as prev_close).
+        client._prev_session_close = lambda _s: 220.0  # type: ignore[method-assign]
+        row = {
+            "last_done": 246.0,
+            "prev_close": 240.0,
+            "change": 6.0,
+            "change_pct": 2.5,
+        }
+        client._apply_closed_state_baseline("TSLA.US", "closed", row)
+        assert row["prev_close"] == 220.0
+        assert row["change"] == 26.0  # 246 - 220
+        # 26/220 * 100 ≈ 11.818
+        assert abs(row["change_pct"] - (26.0 / 220.0 * 100.0)) < 1e-9
+
+    def test_closed_state_no_override_when_helper_returns_none(self) -> None:
+        """If the daily-bar fetch fails or yields too few bars,
+        ``_prev_session_close`` returns None — leave the row untouched."""
+        client = self._make_client()
+        client._prev_session_close = lambda _s: None  # type: ignore[method-assign]
+        row = {
+            "last_done": 246.0,
+            "prev_close": 240.0,
+            "change": 6.0,
+            "change_pct": 2.5,
+        }
+        client._apply_closed_state_baseline("TSLA.US", "closed", row)
+        assert row["prev_close"] == 240.0
+        assert row["change"] == 6.0
+
+    def test_prev_session_close_cache_hit_skips_fetch(self) -> None:
+        """Cached value is returned without hitting the SDK again."""
+        client = self._make_client()
+        client._prev_session_close_cache["TSLA.US"] = 220.0
+        # Make the SDK call blow up if invoked — proves the cache hit
+        # short-circuited the fetch path.
+        client._quote_ctx.candlesticks.side_effect = AssertionError("should not be called")
+        assert client._prev_session_close("TSLA.US") == 220.0
+
+    def test_prev_session_close_cache_dropped_when_state_leaves_closed(self) -> None:
+        """Transition out of closed → cache is invalidated so a future
+        seed picks up fresh broker semantics on the next weekend."""
+        client = self._make_client()
+        client._prev_session_close_cache["TSLA.US"] = 220.0
+        # Fake quote object with a prev_close attr
+        class _Q:
+            prev_close = 240.0
+            last_done = 245.0
+        # Force the state to "regular" so _update_ref_cache takes the
+        # eviction branch.
+        client._market_state_for = lambda _s: "regular"  # type: ignore[method-assign]
+        client._update_ref_cache("TSLA.US", _Q())
+        assert "TSLA.US" not in client._prev_session_close_cache
