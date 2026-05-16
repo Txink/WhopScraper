@@ -268,11 +268,12 @@ export function DetailPane({ position, onBack }: Props) {
 
   return (
     <div className="detail-pane">
-      <button className="detail-back" onClick={onBack}>
-        <span style={{ fontFamily: "var(--font-mono)" }}>←</span> 返回持仓总览
-      </button>
-
-      <DetailSummary position={position} quote={quote} pairsCount={pairs.length} />
+      <DetailSummary
+        position={position}
+        quote={quote}
+        pairsCount={pairs.length}
+        onBack={onBack}
+      />
 
       <div className="detail-chart-card">
         <div className="detail-chart-head">

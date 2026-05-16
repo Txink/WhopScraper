@@ -2,6 +2,27 @@ import { useEffect, useState } from "react";
 import { api } from "../../api/http";
 import type { PairAggregate, Position, Quote } from "../../api/domain-types";
 
+/** Chevron-left back glyph. Inline SVG using ``currentColor`` so the
+ *  parent button drives the visual state via plain CSS ``color``. Same
+ *  authoring style as ``Dashboard/icons.tsx``. */
+function ChevronLeftIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      width={size}
+      height={size}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <polyline points="10 3 5 8 10 13" />
+    </svg>
+  );
+}
+
 // Default precision is 3 because this file's only ``fmt(x)`` callsites
 // are prices (last_done / avg_cost). Quantity / P&L / market value pass
 // d=0 explicitly; the pct() helper passes d=2 explicitly.
@@ -20,14 +41,21 @@ interface Props {
    *  the做T aggregate: a create/extend/delete mutation changes ``length``
    *  and forces a fresh ``GET /api/pairs/aggregate`` round-trip. */
   pairsCount: number;
+  /** Click handler for the inline back button rendered before the ticker.
+   *  Replaces the older standalone "返回持仓总览" pill above the card. */
+  onBack(): void;
 }
 
 /** Top-of-detail summary card.
  *
- *  Stocks render two rows: position basics (持仓/均价/市值/浮盈) up top,
- *  做T statistics (次数/累计已实现/平均单笔/胜率) below. Options render
- *  only row 1 — 做T binding is a stock-only concept. */
-export function DetailSummary({ position, quote, pairsCount }: Props) {
+ *  Left cluster keeps its original "ticker · price · change" single-line
+ *  identity. The right cluster stacks two compact stat lines —
+ *  position basics (持仓/均价/市值/浮盈) and做T 统计
+ *  (做T次数/累计已实现/平均单笔/胜率) — sharing the panel's vertical
+ *  centerline so total card height stays close to the prior single-row
+ *  layout. Options render only the position line (做T binding is a
+ *  stock-only concept). */
+export function DetailSummary({ position, quote, pairsCount, onBack }: Props) {
   const isOption = position.type === "option";
   const last = quote?.last_done ?? null;
   const change = quote?.change ?? null;
@@ -70,26 +98,38 @@ export function DetailSummary({ position, quote, pairsCount }: Props) {
 
   return (
     <div className="detail-summary">
-      <div className="ds-row">
-        {/* Left cluster: ticker + live price + change pill — all on one
-         *  baseline so the eye reads "what is this and where is it now". */}
-        <div className="ds-left">
-          <span className="detail-ticker">{position.ticker}</span>
-          {last != null && (
-            <span
-              className={`detail-price ${change != null ? (isPos ? "pos" : "neg") : ""}`}
-            >
-              {fmt(last)}
-            </span>
-          )}
-          {change != null && (
-            <span className={`detail-change ${isPos ? "pos" : "neg"}`}>
-              {pct(changePct)}
-            </span>
-          )}
-        </div>
-        {/* Right cluster: position stats as compact label/value pairs. */}
-        <div className="ds-right">
+      {/* Left cluster: ticker + live price + change pill — single line,
+       *  original font sizes. Vertically centered against the stacked
+       *  stats on the right via the parent flex ``align-items: center``. */}
+      <div className="ds-left">
+        <button
+          type="button"
+          className="ds-back"
+          onClick={onBack}
+          aria-label="返回持仓总览"
+          title="返回持仓总览"
+        >
+          <ChevronLeftIcon size={18} />
+        </button>
+        <span className="detail-ticker">{position.ticker}</span>
+        {last != null && (
+          <span
+            className={`detail-price ${change != null ? (isPos ? "pos" : "neg") : ""}`}
+          >
+            {fmt(last)}
+          </span>
+        )}
+        {change != null && (
+          <span className={`detail-change ${isPos ? "pos" : "neg"}`}>
+            {pct(changePct)}
+          </span>
+        )}
+      </div>
+      {/* Right cluster: two compact stat strips stacked. Typography is
+       *  shrunk vs. the original single-row layout so the panel doesn't
+       *  grow taller. */}
+      <div className="ds-right-stack">
+        <div className="ds-stats-line">
           <div className="head-stat">
             <span className="lbl">持仓</span>
             <span className="val">{fmt(position.quantity, 0)}</span>
@@ -110,16 +150,10 @@ export function DetailSummary({ position, quote, pairsCount }: Props) {
             </span>
           </div>
         </div>
-      </div>
-
-      {!isOption && (
-        <div className="ds-row ds-row-pair">
-          <div className="ds-left">
-            <span className="ds-row-label">做T</span>
-          </div>
-          <div className="ds-right">
+        {!isOption && (
+          <div className="ds-stats-line">
             <div className="head-stat">
-              <span className="lbl">次数</span>
+              <span className="lbl">做T 次数</span>
               <span className="val">{pairCount}</span>
             </div>
             <div className="head-stat">
@@ -144,8 +178,8 @@ export function DetailSummary({ position, quote, pairsCount }: Props) {
               </span>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

@@ -308,6 +308,10 @@ export function DetailChart({
         maintainAspectRatio: false,
         animation: { duration: 240 },
         interaction: { mode: "nearest", intersect: false, axis: "x" },
+        // Y-axis labels live on the right; left side has nothing to
+        // anchor, so flatten the left/right chartArea inset and let the
+        // canvas hug the card padding. Top/bottom default to 0 too.
+        layout: { padding: { left: 0, right: 0, top: 0, bottom: 0 } },
         plugins: {
           legend: { display: false },
           tooltip: {
@@ -378,6 +382,15 @@ export function DetailChart({
               color: C.fg3,
               font: { family: "IBM Plex Mono", size: 10 },
               maxRotation: 0, autoSkip: true, maxTicksLimit: 8,
+              // For periods that carry both date + time in the label
+              // ("MM/DD HH:MM" — 5/7/15D windows), split into two lines:
+              // time on top, date below. Other periods pass through.
+              // Chart.js renders array tick values as multi-line.
+              callback: function (this: { getLabelForValue: (v: number) => string }, value) {
+                const lbl = this.getLabelForValue(value as number);
+                const parts = lbl.split(/\s+/);
+                return parts.length === 2 ? [parts[1], parts[0]] : lbl;
+              },
             },
             border: { color: C.line },
           },

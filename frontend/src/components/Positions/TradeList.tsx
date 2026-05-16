@@ -155,17 +155,6 @@ export function TradeList({
 
   return (
     <div className="panel trade-panel">
-      <div className="panel-head">
-        <h4>买卖记录</h4>
-        <span className="meta">
-          {serverTotal} 笔
-          {totalPages > 1 && <> · 第 {safePage} / {totalPages} 页</>}
-          {!disableBinding && <> · {pairs.length} 个做T 配对</>}
-          {lastSyncedAt && (
-            <span className="last-synced"> · 上次更新 {fmtLastSynced(lastSyncedAt)}</span>
-          )}
-        </span>
-      </div>
       <div className="trade-tbl-wrap">
         <table className="trade-tbl">
           <thead>
@@ -288,13 +277,35 @@ export function TradeList({
           </tbody>
         </table>
       </div>
-      {totalPages > 1 && (
-        <Pagination
-          page={safePage}
-          totalPages={totalPages}
-          onChange={setPage}
-        />
-      )}
+      {/* Footer strip: 3-column grid. Left = section identity (买卖记录 ·
+       *  N 笔), center = pagination, right = supplementary meta (做T 配对
+       *  count + 上次更新). Replaces the standalone ``.panel-head`` above
+       *  the table — saves ~36px of vertical real estate while keeping
+       *  the pagination buttons visually centered. */}
+      <div className="trade-foot">
+        <span className="trade-foot-meta trade-foot-left">
+          <span className="trade-foot-label">买卖记录</span>
+          {serverTotal} 笔
+        </span>
+        <span className="trade-foot-center">
+          {totalPages > 1 && (
+            <Pagination
+              page={safePage}
+              totalPages={totalPages}
+              onChange={setPage}
+            />
+          )}
+        </span>
+        <span className="trade-foot-meta trade-foot-right">
+          {!disableBinding && <>{pairs.length} 个做T 配对</>}
+          {lastSyncedAt && (
+            <span className="last-synced">
+              {!disableBinding && " · "}上次更新 {fmtLastSynced(lastSyncedAt)}
+            </span>
+          )}
+        </span>
+      </div>
+
       {hasSelection && !disableBinding && (
         <div className="bind-builder">
           <div className="group">
