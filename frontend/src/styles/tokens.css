@@ -17,6 +17,7 @@
 
   /* Brand + Status */
   --brand: #3fb5c5;
+  --brand-rgb: 63, 181, 197;
   --ok: #3dd68c;
   --err: #ef5b5b;
   --warn: #e7a73d;
