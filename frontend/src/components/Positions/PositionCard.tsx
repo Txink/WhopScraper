@@ -91,13 +91,14 @@ export function PositionCard({ position, quote, intraday, executions, onClick }:
 
   // Intraday-aware Day P/L:
   //   Day P/L = last × qty_now + ∑sells_proceeds − ∑buys_cost
-  //             − prev_close × qty_start
-  // where qty_start = qty_now − ∑buys_qty + ∑sells_qty (today's trades).
+  //             − dayBaseline × qty_start
+  // where qty_start = qty_now − ∑buys_qty + ∑sells_qty (today's trades),
+  // and dayBaseline is the session-aware reference close (see above).
   //
   // Trades arrive in account currency (HKD for HK fills, USD for US fills);
   // we normalize the prices to USD via toUsd so the formula stays
-  // currency-consistent. Falls back to (last − prev_close) × qty when
-  // either prev_close is missing or trades haven't loaded yet.
+  // currency-consistent. Falls back to (change × qty) when either
+  // dayBaseline is missing or last is missing.
   const dayPl = useMemo(() => {
     if (last == null || dayBaseline == null) {
       return change != null ? change * qty : null;
