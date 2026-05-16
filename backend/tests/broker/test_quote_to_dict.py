@@ -129,6 +129,43 @@ def test_closed_state_uses_prev_close() -> None:
     assert d["change"] == 6.0
 
 
+def test_closed_state_prefers_post_market_last_done() -> None:
+    """When extended-hours data exists, closed views should reflect the
+    freshest reported tick (post-market last for US) — not the stale
+    RTH close. Matches LongBridge App's "现价" on a Saturday: TSLL
+    closed RTH at 15.060 but drifted to 14.760 in post-market; we want
+    14.760 as the chart's last_done so Day P/L includes that drift."""
+    q = _security_quote(
+        last_done=15.060,     # RTH close
+        prev_close=16.650,    # Thursday's close
+        post=_tier(last_done=14.760),  # post-market drift
+    )
+    d = _quote_to_dict(q, state="closed")
+    assert d["last_done"] == 14.760
+    assert d["prev_close"] == 16.650
+    # 14.760 - 16.650 = -1.890 (full Friday move incl. post)
+    assert d["change"] == pytest.approx(-1.890, rel=1e-4)
+
+
+def test_closed_state_prefers_overnight_over_post() -> None:
+    """Overnight is more recent than post; prefer it when both exist."""
+    q = _security_quote(
+        last_done=100.0,
+        prev_close=98.0,
+        post=_tier(last_done=99.0),
+        overnight=_tier(last_done=101.5),
+    )
+    d = _quote_to_dict(q, state="closed")
+    assert d["last_done"] == 101.5
+
+
+def test_closed_state_falls_back_to_rth_when_no_extended_tiers() -> None:
+    """No post/overnight tier (e.g. HK on a weekend) → use RTH close."""
+    q = _security_quote(last_done=246.0, prev_close=240.0)
+    d = _quote_to_dict(q, state="closed")
+    assert d["last_done"] == 246.0
+
+
 def test_empty_tier_falls_back_to_regular_session_last() -> None:
     """If the chosen tier has zero last_done (post sub-quote empty
     e.g. at the start of post-market before first tick), use the regular

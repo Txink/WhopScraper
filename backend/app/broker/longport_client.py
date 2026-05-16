@@ -97,6 +97,20 @@ def _quote_to_dict(q: Any, state: str | None = None) -> dict[str, Any]:
         "post": getattr(q, "post_market_quote", None),
         "overnight": getattr(q, "overnight_quote", None),
     }.get(state)
+    # On closed state (weekend / holiday), the broker's main last_done
+    # is the most recent RTH close — but the user-visible "现价" should
+    # be the freshest reported tick, which is whichever extended-hours
+    # tier reported last. Prefer overnight > post > rth so the chart's
+    # current price + Day P/L reflect Friday's full session including
+    # the post-market drift (e.g. 14.760 not 15.060 if TSLL drifted
+    # down after the bell).
+    if state == "closed" and tier is None:
+        over = getattr(q, "overnight_quote", None)
+        post = getattr(q, "post_market_quote", None)
+        if over is not None and float(getattr(over, "last_done", 0) or 0) > 0:
+            tier = over
+        elif post is not None and float(getattr(post, "last_done", 0) or 0) > 0:
+            tier = post
     if tier is None or float(getattr(tier, "last_done", 0) or 0) <= 0:
         chosen = q
     else:
