@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../../api/http";
 import type { Position } from "../../api/domain-types";
 import { toUsd } from "../../utils/currency";
@@ -11,6 +11,9 @@ import { PositionCard } from "./PositionCard";
 import { OptionCard } from "./OptionCard";
 import { DetailPane } from "./DetailPane";
 import { PortfolioSummary } from "./PortfolioSummary";
+import { SparkDefs } from "./SparkDefs";
+import { resolveSessionParam } from "./resolveSessionParam";
+import { marketOf } from "../Card/cardHelpers";
 import "./Positions.css";
 import "./Detail.css";
 
@@ -55,9 +58,18 @@ function usePositionsData(stocks: Position[], options: Position[]): void {
     const fetchCandles = async () => {
       for (const p of stocks) {
         if (cancelled) return;
+        const sess =
+          useQuotesStore.getState().quotesBySymbol[p.symbol]?.trade_session ??
+          "regular";
+        const sessionParam = resolveSessionParam(marketOf(p.symbol), sess);
         try {
-          const c = await api.candlesticks(p.symbol, "today");
-          if (!cancelled) setBars(candleCacheKey(p.symbol, "today"), c);
+          const c = await api.candlesticks(p.symbol, "today", {
+            granularity: "分时",
+            sessions: sessionParam,
+          });
+          if (!cancelled) {
+            setBars(candleCacheKey(p.symbol, "today", "分时", sessionParam), c);
+          }
         } catch (e) {
           console.warn("candlesticks fetch failed", p.symbol, e);
         }
@@ -127,10 +139,43 @@ function usePositionsData(stocks: Position[], options: Position[]): void {
   ]);
 }
 
+/** Refetch a single stock's intraday bars when its trade_session changes.
+ *  We diff per-symbol via useRef so the effect doesn't fire on every push
+ *  (quotesBySymbol reference identity changes on every WS update). */
+function useSessionTransitionRefetch(stocks: Position[]): void {
+  const setBars = useCandlesticksStore((s) => s.setBars);
+  const quotesBySymbol = useQuotesStore((s) => s.quotesBySymbol);
+  const lastSessionRef = useRef<Record<string, string>>({});
+
+  useEffect(() => {
+    for (const p of stocks) {
+      const cur = quotesBySymbol[p.symbol]?.trade_session;
+      if (!cur) continue;
+      const prev = lastSessionRef.current[p.symbol];
+      if (prev !== cur) {
+        lastSessionRef.current[p.symbol] = cur;
+        if (prev !== undefined) {
+          // True transition — refetch with the new session.
+          const sessionParam = resolveSessionParam(marketOf(p.symbol), cur);
+          void api.candlesticks(p.symbol, "today", {
+            granularity: "分时",
+            sessions: sessionParam,
+          }).then((c) => {
+            setBars(candleCacheKey(p.symbol, "today", "分时", sessionParam), c);
+          }).catch((e) => {
+            console.warn("session-transition refetch failed", p.symbol, e);
+          });
+        }
+      }
+    }
+  }, [quotesBySymbol, stocks, setBars]);
+}
+
 export function PositionsPanel() {
   const stocks = usePositionsStore((s) => s.stocks);
   const options = usePositionsStore((s) => s.options);
   usePositionsData(stocks, options);
+  useSessionTransitionRefetch(stocks);
 
   const quotesBySymbol = useQuotesStore((s) => s.quotesBySymbol);
   const candleByKey = useCandlesticksStore((s) => s.byKey);
@@ -169,6 +214,7 @@ export function PositionsPanel() {
     if (pos) {
       return (
         <aside className="positions-panel">
+          <SparkDefs />
           <DetailPane position={pos} onBack={() => selectSymbol(null)} />
         </aside>
       );
@@ -208,6 +254,7 @@ export function PositionsPanel() {
 
   return (
     <aside className="positions-panel">
+      <SparkDefs />
       <div className="positions-panel-top">
         <header className="positions-panel-head">{tabs}</header>
         {summary}
@@ -222,7 +269,11 @@ export function PositionsPanel() {
                 key={p.symbol}
                 position={p}
                 quote={quotesBySymbol[p.symbol]}
-                intraday={candleByKey[candleCacheKey(p.symbol, "today")]}
+                intraday={(() => {
+                  const sess = quotesBySymbol[p.symbol]?.trade_session ?? "regular";
+                  const sessionParam = resolveSessionParam(marketOf(p.symbol), sess);
+                  return candleByKey[candleCacheKey(p.symbol, "today", "分时", sessionParam)];
+                })()}
                 executions={executions}
                 onClick={() => selectSymbol(p.symbol)}
               />
