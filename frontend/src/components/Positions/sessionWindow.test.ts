@@ -95,6 +95,37 @@ describe("resolveSessionWindow — HK", () => {
   });
 });
 
+describe("resolveSessionWindow — CN", () => {
+  // CN A-shares trade 09:30-11:30 + 13:00-15:00 CST = 4h. Lunch
+  // (11:30-13:00) is compressed off the x-axis. CST = UTC+8 year-round.
+  it("regular: 09:30→15:00 CST, 240 slots", () => {
+    const win = resolveSessionWindow("CN", "regular", ts("2026-05-14T02:00:00Z")); // 10:00 CST
+    expect(win.label).toBe("盘中");
+    expect(win.slotCount).toBe(240);
+    expect(new Date(win.startMs).toISOString()).toBe("2026-05-14T01:30:00.000Z");
+    expect(new Date(win.endMs).toISOString()).toBe("2026-05-14T07:00:00.000Z");
+  });
+
+  it("CN msToSlot rejects bars inside the lunch gap", () => {
+    const win = resolveSessionWindow("CN", "regular", ts("2026-05-14T02:00:00Z"));
+    expect(win.msToSlot(ts("2026-05-14T04:00:00Z"))).toBe(-1); // 12:00 CST (lunch)
+  });
+
+  it("CN msToSlot bridges morning ↔ afternoon correctly", () => {
+    const win = resolveSessionWindow("CN", "regular", ts("2026-05-14T02:00:00Z"));
+    expect(win.msToSlot(ts("2026-05-14T01:30:00Z"))).toBe(0);   // 09:30 CST
+    expect(win.msToSlot(ts("2026-05-14T03:29:00Z"))).toBe(119); // 11:29 CST
+    expect(win.msToSlot(ts("2026-05-14T05:00:00Z"))).toBe(120); // 13:00 CST
+    expect(win.msToSlot(ts("2026-05-14T06:59:00Z"))).toBe(239); // 14:59 CST
+  });
+
+  it("CN closed on Saturday → falls back to Friday regular", () => {
+    const win = resolveSessionWindow("CN", "closed", ts("2026-05-16T02:00:00Z"));
+    expect(win.label).toBe("休市");
+    expect(new Date(win.startMs).toISOString()).toBe("2026-05-15T01:30:00.000Z");
+  });
+});
+
 describe("resolveSessionWindow — progress", () => {
   it("US regular: ET 13:00 (3.5h in) → 3.5/6.5 ≈ 0.538", () => {
     const win = resolveSessionWindow("US", "regular", ts("2026-05-14T17:00:00Z"));

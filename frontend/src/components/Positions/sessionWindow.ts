@@ -115,6 +115,7 @@ export function resolveSessionWindow(
   now: number,
 ): SessionWindow {
   if (market === "US") return resolveUS(session, now);
+  if (market === "CN") return resolveCN(session, now);
   return resolveHK(session, now);
 }
 
@@ -169,6 +170,60 @@ function resolveHK(session: SessionLabel, now: number): SessionWindow {
 
   const startMs = morningStartMs;
   const endMs = afternoonStartMs + afternoonSlots * 60_000; // 16:00 HKT
+
+  return {
+    label: closed ? LABEL_MAP.closed : LABEL_MAP.regular,
+    startMs,
+    endMs,
+    slotCount: totalSlots,
+    slotToMs: (idx) => {
+      if (idx < morningSlots) return morningStartMs + idx * 60_000;
+      return afternoonStartMs + (idx - morningSlots) * 60_000;
+    },
+    msToSlot: (ms) => {
+      const morningOffset = Math.floor((ms - morningStartMs) / 60_000);
+      if (morningOffset >= 0 && morningOffset < morningSlots) return morningOffset;
+      const afternoonOffset = Math.floor((ms - afternoonStartMs) / 60_000);
+      if (afternoonOffset >= 0 && afternoonOffset < afternoonSlots) {
+        return morningSlots + afternoonOffset;
+      }
+      return -1;
+    },
+    progress: (nowMs) => {
+      if (closed) return 1;
+      if (nowMs <= morningStartMs) return 0;
+      if (nowMs >= endMs) return 1;
+      if (nowMs < afternoonStartMs - 60_000) {
+        const off = Math.min(morningSlots, Math.floor((nowMs - morningStartMs) / 60_000));
+        return off / totalSlots;
+      }
+      if (nowMs < afternoonStartMs) return morningSlots / totalSlots;
+      const off = Math.min(
+        afternoonSlots,
+        Math.floor((nowMs - afternoonStartMs) / 60_000),
+      );
+      return (morningSlots + off) / totalSlots;
+    },
+  };
+}
+
+function resolveCN(session: SessionLabel, now: number): SessionWindow {
+  // CN A-shares (Shanghai + Shenzhen): 09:30-11:30 morning (120 min)
+  // + 13:00-15:00 afternoon (120 min). Total 4h = 240 slots. Lunch
+  // (11:30-13:00 CST, 90 min) is compressed off the x-axis — slot 119
+  // → 11:29, slot 120 → 13:00. CST = UTC+8 year-round (no DST), so
+  // we reuse the HK Intl formatters in localToUtcMs.
+  const closed = session === "closed";
+  const dk = closed ? lastTradingDateKey(now, "HK") : dateKeyInTz(now, "HK");
+
+  const morningStartMs = localToUtcMs(dk, 9, 30, "HK");
+  const afternoonStartMs = localToUtcMs(dk, 13, 0, "HK");
+  const morningSlots = 120;
+  const afternoonSlots = 120;
+  const totalSlots = morningSlots + afternoonSlots; // 240
+
+  const startMs = morningStartMs;
+  const endMs = afternoonStartMs + afternoonSlots * 60_000; // 15:00 CST
 
   return {
     label: closed ? LABEL_MAP.closed : LABEL_MAP.regular,
