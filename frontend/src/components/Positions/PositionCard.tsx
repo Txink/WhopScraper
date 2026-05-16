@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import type { Position, Quote, Candlesticks, Execution } from "../../api/domain-types";
-import { MiniLine } from "./MiniLine";
+import { IntradaySpark } from "./IntradaySpark";
+import { marketOf } from "../Card/cardHelpers";
 import { toUsd } from "../../utils/currency";
 import { tradingDayOfET, currentTradingDay } from "./timeFmt";
 
@@ -67,29 +68,26 @@ export function PositionCard({ position, quote, intraday, executions, onClick }:
   const changePct = quote?.change_pct ?? 0;
   const isPos = (change ?? 0) >= 0;
 
-  // Sparkline source: intraday candle closes (oldest first; the backend
-  // returns chronological order). The last bar's close is overwritten
-  // with the live ``last_done`` so the sparkline head tracks the
-  // streaming quote push without re-fetching candlesticks every tick.
-  // Falls back to empty (skeleton) if candles haven't loaded yet.
-  const rawValues = useMemo(
-    () => intraday?.bars.map((b) => b.close) ?? [],
-    [intraday],
-  );
-  const values = useMemo(() => {
-    if (rawValues.length === 0) return rawValues;
-    if (last == null) return rawValues;
-    const copy = rawValues.slice();
-    copy[copy.length - 1] = last;
-    return copy;
-  }, [rawValues, last]);
-
   const qty = position.quantity;
   const avg = toUsd(sym, position.avg_cost);
   const pl = last != null && avg != null ? (last - avg) * qty : null;
   const plPct = last != null && avg != null && avg !== 0 ? ((last - avg) / avg) * 100 : null;
 
   const prevClose = toUsd(sym, quote?.prev_close);
+
+  // Day P/L baseline matches the backend's session-aware change_pct rule:
+  //   pre / regular / closed → yesterday's RTH close (prev_close)
+  //   post / overnight       → today's RTH close (today_close, frozen at
+  //                            16:00 ET when post starts)
+  // today_close is null in non-post/overnight sessions; we fall back to
+  // prev_close to keep the dayPl formula well-defined even on transient
+  // data gaps.
+  const tradeSession = quote?.trade_session ?? "regular";
+  const todayClose = toUsd(sym, quote?.today_close);
+  const dayBaseline =
+    (tradeSession === "post" || tradeSession === "overnight") && todayClose != null
+      ? todayClose
+      : prevClose;
 
   // Intraday-aware Day P/L:
   //   Day P/L = last × qty_now + ∑sells_proceeds − ∑buys_cost
@@ -101,7 +99,7 @@ export function PositionCard({ position, quote, intraday, executions, onClick }:
   // currency-consistent. Falls back to (last − prev_close) × qty when
   // either prev_close is missing or trades haven't loaded yet.
   const dayPl = useMemo(() => {
-    if (last == null || prevClose == null) {
+    if (last == null || dayBaseline == null) {
       return change != null ? change * qty : null;
     }
     const todayKey = currentTradingDay();
@@ -124,8 +122,8 @@ export function PositionCard({ position, quote, intraday, executions, onClick }:
       }
     }
     const qtyStart = qty - buysQty + sellsQty;
-    return last * qty + sellsProceeds - buysCost - prevClose * qtyStart;
-  }, [last, prevClose, change, qty, executions, sym]);
+    return last * qty + sellsProceeds - buysCost - dayBaseline * qtyStart;
+  }, [last, dayBaseline, change, qty, executions, sym]);
 
   const marketValue = last != null ? last * qty : null;
 
@@ -181,11 +179,14 @@ export function PositionCard({ position, quote, intraday, executions, onClick }:
       </div>
 
       <div className="pcard-chart">
-        {values.length > 0 ? (
-          <MiniLine values={values} openPrice={quote?.open ?? null} />
-        ) : (
-          <div className="pcard-chart-skeleton" aria-label="加载分时线..." />
-        )}
+        <IntradaySpark
+          symbol={position.symbol}
+          market={marketOf(position.symbol)}
+          bars={intraday?.bars}
+          session={tradeSession}
+          lastDone={last}
+          openPrice={quote?.open ?? null}
+        />
       </div>
 
       <div className="pcard-meta four">

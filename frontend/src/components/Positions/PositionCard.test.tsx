@@ -137,3 +137,71 @@ describe("PositionCard", () => {
     expect(text).toMatch(/\+\$1,580/);
   });
 });
+
+describe("PositionCard — session-aware Day P/L baseline", () => {
+  it("uses today_close as baseline in post session", () => {
+    const postQuote: Quote = {
+      ...quote,
+      trade_session: "post",
+      prev_close: 240,
+      today_close: 245,
+      last_done: 246,
+      change: 1,
+      change_pct: 0.41,
+    };
+    // No today trades — qty_start == qty_now == 240
+    // Day P/L = 246 × 240 + 0 - 0 - 245 × 240 = 240
+    render(
+      <PositionCard
+        position={position}
+        quote={postQuote}
+        intraday={intraday}
+        executions={[]}
+        onClick={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/\+\$240/)).toBeInTheDocument();
+  });
+
+  it("falls back to prev_close in regular session", () => {
+    render(
+      <PositionCard
+        position={position}
+        quote={quote}
+        intraday={intraday}
+        executions={[]}
+        onClick={vi.fn()}
+      />,
+    );
+    // Day P/L = (245.50 - 240) × 240 = 1320
+    expect(screen.getByText(/\+\$1,320/)).toBeInTheDocument();
+  });
+});
+
+describe("PositionCard — IntradaySpark wiring", () => {
+  it("mounts IntradaySpark when intraday bars are present", () => {
+    const { container } = render(
+      <PositionCard
+        position={position}
+        quote={quote}
+        intraday={intraday}
+        onClick={vi.fn()}
+      />,
+    );
+    expect(container.querySelector(".ispark")).not.toBeNull();
+    expect(container.querySelector(".minline")).toBeNull();
+  });
+
+  it("passes session=closed when quote.trade_session is closed", () => {
+    const closedQuote: Quote = { ...quote, trade_session: "closed" };
+    const { container } = render(
+      <PositionCard
+        position={position}
+        quote={closedQuote}
+        intraday={intraday}
+        onClick={vi.fn()}
+      />,
+    );
+    expect(container.querySelector(".ispark.is-closed")).not.toBeNull();
+  });
+});
