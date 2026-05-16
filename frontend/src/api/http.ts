@@ -408,6 +408,37 @@ export const api = {
     }
   },
 
+  /** Bulk-delete every做T pair for ``(active account, ticker)``. Each
+   *  affected trade's ``t_pair_tags`` is cleared server-side so the做T
+   *  chip column flips empty on the next trade fetch / patch. */
+  async deletePairsByTicker(ticker: string): Promise<void> {
+    const { baseUrl, token } = cfg();
+    const url = new URL("/api/pairs", baseUrl);
+    url.searchParams.set("token", token);
+    url.searchParams.set("ticker", ticker);
+    const resp = await fetch(url.toString(), { method: "DELETE" });
+    if (!resp.ok) {
+      const body = await resp.json().catch(() => null);
+      throw new HttpError(resp.status, body, `HTTP ${resp.status}`);
+    }
+  },
+
+  /** Wipe ``broker_executions`` rows for ``(active account, ticker)``
+   *  AND reset ``positions.history_synced`` so the next
+   *  ``executionsHistory(ticker)`` call re-triggers the full chunked
+   *  2-year backfill. */
+  async deleteBrokerExecutions(ticker: string): Promise<void> {
+    const { baseUrl, token } = cfg();
+    const url = new URL("/api/broker/executions", baseUrl);
+    url.searchParams.set("token", token);
+    url.searchParams.set("ticker", ticker);
+    const resp = await fetch(url.toString(), { method: "DELETE" });
+    if (!resp.ok) {
+      const body = await resp.json().catch(() => null);
+      throw new HttpError(resp.status, body, `HTTP ${resp.status}`);
+    }
+  },
+
   /** Account+ticker scoped做T aggregates (SQL SUM/COUNT). Used by
    *  DetailSummary's做T row so the frontend never has to fetch every pair
    *  just to display totals. Omit ``ticker`` for an account-wide aggregate. */

@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { api } from "../../api/http";
-import type { Position, TPair } from "../../api/domain-types";
+import type { Position, TPair, Trade } from "../../api/domain-types";
 import { useQuotesStore } from "../../stores/quotes";
 import { useCandlesticksStore, candleCacheKey, type Period } from "../../stores/candlesticks";
 import { useTradesStore } from "../../stores/trades";
@@ -9,7 +9,41 @@ import { useDetailViewStore } from "../../stores/detailView";
 import { DetailSummary } from "./DetailSummary";
 import { DetailChart } from "./DetailChart";
 import { PairDetailModal } from "./PairDetailModal";
-import { TradeList } from "./TradeList";
+import { TradeList, type TradeListFilter } from "./TradeList";
+import { ConfirmModal } from "./ConfirmModal";
+
+interface PendingConfirm {
+  title: string;
+  description: string;
+  confirmLabel: string;
+  danger?: boolean;
+  onConfirm(): Promise<void> | void;
+}
+
+/** Return the subset of ``trades`` referenced by ``pair``'s allocations,
+ *  each with ``t_pair_tags`` updated to reflect the pair's current
+ *  state. The server denormalises pair allocations into
+ *  ``broker_executions.t_pair_tags`` but does NOT re-send the affected
+ *  trade rows on a create/extend response — patching locally is what
+ *  makes the做T column chips appear immediately without a re-fetch.
+ *
+ *  Stale entries for ``pair.id`` are filtered out first so extending a
+ *  pair on an already-bound trade doesn't accumulate duplicate tags. */
+function patchTradesWithPair(trades: Trade[], pair: TPair): Trade[] {
+  const allocByTradeId = new Map<string, number>();
+  for (const a of pair.buys) allocByTradeId.set(a.trade_id, a.qty);
+  for (const a of pair.sells) allocByTradeId.set(a.trade_id, a.qty);
+  return trades
+    .filter((t) => allocByTradeId.has(t.id))
+    .map((t) => {
+      const allocQty = allocByTradeId.get(t.id)!;
+      const otherTags = (t.t_pair_tags ?? []).filter(([pid]) => pid !== pair.id);
+      return {
+        ...t,
+        t_pair_tags: [...otherTags, [pair.id, allocQty] as [number, number]],
+      };
+    });
+}
 
 const PERIODS: { id: Period; label: string }[] = [
   { id: "today", label: "日内" },
@@ -236,12 +270,20 @@ export function DetailPane({ position, onBack }: Props) {
         sell_trade_ids: [...selectedSells],
       });
       upsertPair(ticker, pair);
-      setActivePair(pair.id);
+      // Patch the affected trades' t_pair_tags locally so the做T column
+      // chips render immediately. Reads via ``getState()`` to bypass the
+      // stale-closure trap on subscribed values inside useCallback.
+      const currentTrades = useTradesStore.getState().byTicker[ticker] ?? [];
+      appendTrades(ticker, patchTradesWithPair(currentTrades, pair));
       clearSelection();
+      // Intentionally NOT calling setActivePair(pair.id) — auto-opening
+      // the PairDetailModal right after creation was confusing because
+      // the trade list already shows the new chips. The user can click
+      // a chip when they want the detail popup.
     } catch (e) {
       console.error("createPair failed", e);
     }
-  }, [ticker, symbol, selectedBuys, selectedSells, upsertPair, setActivePair, clearSelection]);
+  }, [ticker, symbol, selectedBuys, selectedSells, upsertPair, appendTrades, clearSelection]);
 
   const onExtendPair = useCallback(async (pairId: number) => {
     if (selectedBuys.size === 0 && selectedSells.size === 0) return;
@@ -251,12 +293,135 @@ export function DetailPane({ position, onBack }: Props) {
         sell_trade_ids: [...selectedSells],
       });
       upsertPair(ticker, pair);
-      setActivePair(pair.id);
+      const currentTrades = useTradesStore.getState().byTicker[ticker] ?? [];
+      appendTrades(ticker, patchTradesWithPair(currentTrades, pair));
       clearSelection();
+      // Same reasoning as onConfirmBind — don't auto-open the modal.
     } catch (e) {
       console.error("extendPair failed", e);
     }
-  }, [ticker, selectedBuys, selectedSells, upsertPair, setActivePair, clearSelection]);
+  }, [ticker, selectedBuys, selectedSells, upsertPair, appendTrades, clearSelection]);
+
+  // Trade-list settings-menu state. Ephemeral by intent: leaving and
+  // re-entering the detail pane resets to "all" (the user explicitly
+  // asked for "退出重进刷新过滤状态").
+  const [tradeFilter, setTradeFilter] = useState<TradeListFilter>("all");
+
+  // In-panel confirm dialog state. ``null`` = no dialog shown. Each
+  // destructive trade-menu action builds a PendingConfirm and the
+  // ConfirmModal renders it inside the detail-pane (NOT the viewport).
+  const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
+
+  const onClearAllPairs = useCallback(() => {
+    setPendingConfirm({
+      title: `清除 ${ticker} 的所有做T 绑定`,
+      description: `此操作不可恢复 —— 该股票下所有做T 配对会被删除，对应的交易记录"做T"列会清空。`,
+      confirmLabel: "确认清除",
+      danger: true,
+      onConfirm: async () => {
+        try {
+          await api.deletePairsByTicker(ticker);
+          setPairs(ticker, []);
+          setActivePair(null);
+          // Strip pair tags from any trade that previously carried them
+          // so the chip column flips empty without a re-fetch.
+          const currentTrades = useTradesStore.getState().byTicker[ticker] ?? [];
+          const cleared = currentTrades
+            .filter((t) => (t.t_pair_tags ?? []).length > 0)
+            .map((t) => ({ ...t, t_pair_tags: [] as [number, number][] }));
+          if (cleared.length > 0) appendTrades(ticker, cleared);
+        } catch (e) {
+          console.error("clearAllPairs failed", e);
+        }
+      },
+    });
+  }, [ticker, setPairs, setActivePair, appendTrades]);
+
+  const onClearAllTrades = useCallback(() => {
+    setPendingConfirm({
+      title: `清空 ${ticker} 的所有交易记录`,
+      description: `此操作不可恢复 —— 该股票下所有 broker 成交记录会从本地清空（broker 端的数据不受影响）。需要重新查看时可走"重新拉取"。`,
+      confirmLabel: "确认清空",
+      danger: true,
+      onConfirm: async () => {
+        try {
+          await api.deleteBrokerExecutions(ticker);
+          setTrades(ticker, []);
+          setTradesTotal(0);
+          setLastSyncedAt(null);
+        } catch (e) {
+          console.error("clearAllTrades failed", e);
+        }
+      },
+    });
+  }, [ticker, setTrades]);
+
+  const onUnbindPair = useCallback((pairId: number) => {
+    setPendingConfirm({
+      title: `解绑 T-${pairId} 配对`,
+      description: `该配对会被删除，关联的交易回到"未做T"状态，可重新参与其他做T 绑定。`,
+      confirmLabel: "解绑",
+      danger: true,
+      onConfirm: async () => {
+        try {
+          await api.deletePair(pairId);
+          // Drop the pair from the local store.
+          const livePairs = usePairsStore.getState().byTicker[ticker] ?? [];
+          setPairs(ticker, livePairs.filter((p) => p.id !== pairId));
+          // Strip [pairId, *] from any trade tags so the做T chip column
+          // updates immediately without a re-fetch.
+          const currentTrades = useTradesStore.getState().byTicker[ticker] ?? [];
+          const cleared = currentTrades
+            .filter((t) => (t.t_pair_tags ?? []).some(([pid]) => pid === pairId))
+            .map((t) => ({
+              ...t,
+              t_pair_tags: (t.t_pair_tags ?? []).filter(([pid]) => pid !== pairId),
+            }));
+          if (cleared.length > 0) appendTrades(ticker, cleared);
+          // Close the pair-detail modal by clearing activePairId.
+          setActivePair(null);
+        } catch (e) {
+          console.error("unbindPair failed", e);
+        }
+      },
+    });
+  }, [ticker, setPairs, appendTrades, setActivePair]);
+
+  const onRefetchTrades = useCallback(() => {
+    setPendingConfirm({
+      title: `重新拉取 ${ticker} 近 2 年交易记录`,
+      description: `现有本地缓存会先清空，再从 broker 重新分块回填（最多 8 次调用）。期间界面短暂显示"加载中…"。`,
+      confirmLabel: "重新拉取",
+      onConfirm: async () => {
+        try {
+          setTradesInitialized(false);
+          await api.deleteBrokerExecutions(ticker);
+          // history_synced is now false on the server, so this GET
+          // triggers the full chunked 2-year backfill.
+          const r = await api.executions(ticker, { offset: 0, limit: TRADES_PAGE_SIZE });
+          const trades = r.executions.map((e) => ({
+            id: e.order_id,
+            ticker: e.ticker,
+            symbol: e.symbol,
+            side: e.side,
+            qty: e.qty,
+            price: e.price,
+            ts: e.ts,
+            source: null,
+            tag: null,
+            t_pair_tags: (e as { t_pair_tags?: [number, number][] }).t_pair_tags ?? [],
+          }));
+          setTrades(ticker, trades);
+          setTradesTotal(r.total_count);
+          setLastSyncedAt(r.last_synced_at ?? null);
+        } catch (e) {
+          console.error("refetchTrades failed", e);
+        } finally {
+          setTradesInitialized(true);
+        }
+      },
+    });
+  }, [ticker, setTrades]);
 
   // Avg-cost line is opt-in per the prototype review — it often draws the
   // user's eye to a flat horizontal that visually pins the chart.
@@ -409,6 +574,11 @@ export function DetailPane({ position, onBack }: Props) {
         onRequestMore={loadMoreTrades}
         onConfirmBind={onConfirmBind}
         onExtendPair={onExtendPair}
+        filter={tradeFilter}
+        onFilterChange={setTradeFilter}
+        onClearAllPairs={onClearAllPairs}
+        onRefetchTrades={onRefetchTrades}
+        onClearAllTrades={onClearAllTrades}
       />
 
       {/* Clicking a T-N chip on a trade row sets activePairId in the
@@ -425,9 +595,29 @@ export function DetailPane({ position, onBack }: Props) {
             trades={trades}
             allPairs={pairs}
             onClose={() => setActivePair(null)}
+            onUnbind={onUnbindPair}
           />
         );
       })()}
+
+      {/* Panel-scoped confirm dialog for destructive trade-menu actions.
+         Anchors inside ``.detail-pane`` (which is ``position: relative``)
+         so the popover sits centered over the detail content rather
+         than over the whole viewport. */}
+      {pendingConfirm && (
+        <ConfirmModal
+          title={pendingConfirm.title}
+          description={pendingConfirm.description}
+          confirmLabel={pendingConfirm.confirmLabel}
+          danger={pendingConfirm.danger}
+          onCancel={() => setPendingConfirm(null)}
+          onConfirm={async () => {
+            const action = pendingConfirm.onConfirm;
+            setPendingConfirm(null);
+            await action();
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -1,8 +1,35 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { TPair, Trade } from "../../api/domain-types";
 import { useDetailViewStore } from "../../stores/detailView";
 import { pairColor } from "./pairMath";
 import { fmtBjRel } from "./timeFmt";
+
+/** Tri-state filter on the trade table. ``"untagged"`` keeps rows whose
+ *  ``t_pair_tags`` is empty (no做T binding at all); ``"tagged"`` keeps
+ *  rows with at least one做T entry (partial counts as tagged too). */
+export type TradeListFilter = "all" | "untagged" | "tagged";
+
+/** Settings-gear icon for the trade-list menu trigger. Inline SVG +
+ *  ``currentColor`` so it picks up the button's CSS color (project
+ *  convention — see Dashboard/icons.tsx). */
+function GearIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      width={size}
+      height={size}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="8" cy="8" r="2.4" />
+      <path d="M8 1.5v1.6 M8 12.9v1.6 M1.5 8h1.6 M12.9 8h1.6 M3.4 3.4l1.1 1.1 M11.5 11.5l1.1 1.1 M3.4 12.6l1.1-1.1 M11.5 4.5l1.1-1.1" />
+    </svg>
+  );
+}
 
 // Local pagination size. The whole ticker's trades (up to 500) live in
 // the store from the moment the pane opens, so cross-page做T binding is
@@ -56,6 +83,19 @@ interface Props {
   onRequestMore?(): void | Promise<void>;
   onConfirmBind(): Promise<void> | void;
   onExtendPair(pairId: number): Promise<void> | void;
+  /** Tri-state filter on the table rows; "all" shows everything,
+   *  "untagged" shows only trades with no做T binding (including those
+   *  with leftover available qty on partial pairs), "tagged" shows only
+   *  trades that have at least one做T entry. Filter is applied over
+   *  the loaded subset of trades; pagination operates on the filtered
+   *  result. */
+  filter?: TradeListFilter;
+  onFilterChange?(f: TradeListFilter): void;
+  /** Settings-menu actions. Each is fired with no args; the caller
+   *  knows the active ticker. */
+  onClearAllPairs?(): Promise<void> | void;
+  onRefetchTrades?(): Promise<void> | void;
+  onClearAllTrades?(): Promise<void> | void;
 }
 
 /** Trade table + sticky bind-builder. Trades with avail > 0 show a colored
@@ -73,38 +113,72 @@ export function TradeList({
   onRequestMore,
   onConfirmBind,
   onExtendPair,
+  filter = "all",
+  onFilterChange,
+  onClearAllPairs,
+  onRefetchTrades,
+  onClearAllTrades,
 }: Props) {
   const sorted = useMemo(() => [...trades].sort((a, b) => Date.parse(b.ts) - Date.parse(a.ts)), [trades]);
 
-  // Local pagination. Reset to page 1 only when the *ticker* changes —
-  // appending more rows for the same ticker (via onRequestMore) must
-  // preserve the user's page index. ``trades`` array identity is NOT a
-  // safe dep here: it changes on every append.
+  // Filter applies over the loaded subset; pagination operates on the
+  // result. Filter modes are intentionally a client-side concept — the
+  // server still returns the unfiltered slice, and the user can switch
+  // back to "all" + page through to load more rows for the filter to
+  // pull from. Avoids a new server-side "where t_pair_tags is empty"
+  // query path while keeping the common case (browsing one page) fast.
+  const filteredSorted = useMemo(() => {
+    if (filter === "all") return sorted;
+    return sorted.filter((t) => {
+      const hasTag = (t.t_pair_tags ?? []).length > 0;
+      return filter === "tagged" ? hasTag : !hasTag;
+    });
+  }, [sorted, filter]);
+
+  // Local pagination. Reset to page 1 when the ticker or filter changes
+  // (both reframe what "page N" means). Plain appends to ``trades``
+  // must NOT reset — that was the original pagination bug.
   const [page, setPage] = useState(1);
-  useEffect(() => { setPage(1); }, [ticker]);
-  // Pagination is server-driven: ``totalCount`` is the full ticker's
-  // trade count, while ``trades`` holds only the rows already fetched.
-  // When the user jumps to a page whose first row isn't loaded yet,
-  // ``onRequestMore`` fetches more and the store grows in place.
+  useEffect(() => { setPage(1); }, [ticker, filter]);
+  // Pagination is server-driven IN ALL MODE: ``totalCount`` is the full
+  // ticker's trade count. In filtered mode the slice is local — total
+  // pages reflect the filtered set among loaded rows. Switching back to
+  // "all" + paging restores the server-driven flow.
   const serverTotal = typeof totalCount === "number" && totalCount > 0
     ? totalCount
     : sorted.length;
-  const totalPages = Math.max(1, Math.ceil(serverTotal / PAGE_SIZE));
+  const displayedTotal = filter === "all" ? serverTotal : filteredSorted.length;
+  const totalPages = Math.max(1, Math.ceil(displayedTotal / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
 
   // Fire ``onRequestMore`` whenever the current page's first row isn't
-  // yet in the in-memory list.
+  // yet in the in-memory list. Only meaningful in "all" mode — in
+  // filtered modes the visible set is bounded by what's already loaded.
   useEffect(() => {
+    if (filter !== "all") return;
     const firstRowIdx = (safePage - 1) * PAGE_SIZE;
     if (firstRowIdx >= sorted.length && firstRowIdx < serverTotal && !loading) {
       void onRequestMore?.();
     }
-  }, [safePage, sorted.length, serverTotal, loading, onRequestMore]);
+  }, [safePage, sorted.length, serverTotal, loading, onRequestMore, filter]);
 
   const pageRows = useMemo(
-    () => sorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE),
-    [sorted, safePage],
+    () => filteredSorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE),
+    [filteredSorted, safePage],
   );
+
+  // Settings menu open/close state + click-outside dismiss.
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!menuOpen) return;
+    function onDocClick(e: MouseEvent) {
+      if (!menuRef.current) return;
+      if (!menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [menuOpen]);
 
   const selectedBuys = useDetailViewStore((s) => s.selectedBuys);
   const selectedSells = useDetailViewStore((s) => s.selectedSells);
@@ -277,15 +351,79 @@ export function TradeList({
           </tbody>
         </table>
       </div>
-      {/* Footer strip: 3-column grid. Left = section identity (交易记录 ·
-       *  N 笔), center = pagination, right = supplementary meta (做T 配对
-       *  count + 上次更新). Replaces the standalone ``.panel-head`` above
-       *  the table — saves ~36px of vertical real estate while keeping
-       *  the pagination buttons visually centered. */}
+      {/* Footer strip: 3-column grid. Left = settings menu + section
+       *  identity (交易记录 · N 笔), center = pagination, right =
+       *  supplementary meta (做T 配对 count + 上次更新). Replaces the
+       *  standalone ``.panel-head`` above the table — saves ~36px of
+       *  vertical real estate while keeping pagination centered. */}
       <div className="trade-foot">
         <span className="trade-foot-meta trade-foot-left">
+          {!disableBinding && (
+            <div className="trade-menu-wrap" ref={menuRef}>
+              <button
+                type="button"
+                className="trade-menu-btn"
+                onClick={() => setMenuOpen((v) => !v)}
+                aria-label="交易记录设置"
+                title="交易记录设置"
+              >
+                <GearIcon size={14} />
+              </button>
+              {menuOpen && (
+                <div className="trade-menu" role="menu">
+                  <button
+                    className="trade-menu-item"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      void onClearAllPairs?.();
+                    }}
+                  >
+                    清理所有做T 绑定
+                  </button>
+                  <div className="trade-menu-sep" />
+                  <button
+                    className={`trade-menu-item ${filter === "untagged" ? "active" : ""}`}
+                    onClick={() => {
+                      onFilterChange?.(filter === "untagged" ? "all" : "untagged");
+                      setMenuOpen(false);
+                    }}
+                  >
+                    {filter === "untagged" ? "✓ " : ""}只看未做T （含部分）
+                  </button>
+                  <button
+                    className={`trade-menu-item ${filter === "tagged" ? "active" : ""}`}
+                    onClick={() => {
+                      onFilterChange?.(filter === "tagged" ? "all" : "tagged");
+                      setMenuOpen(false);
+                    }}
+                  >
+                    {filter === "tagged" ? "✓ " : ""}只看已做T （含部分）
+                  </button>
+                  <div className="trade-menu-sep" />
+                  <button
+                    className="trade-menu-item"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      void onRefetchTrades?.();
+                    }}
+                  >
+                    重新拉取（近 2 年）
+                  </button>
+                  <button
+                    className="trade-menu-item danger"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      void onClearAllTrades?.();
+                    }}
+                  >
+                    清空交易记录
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
           <span className="trade-foot-label">交易记录</span>
-          {serverTotal} 笔
+          {displayedTotal} 笔
         </span>
         <span className="trade-foot-center">
           {totalPages > 1 && (

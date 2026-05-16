@@ -1336,6 +1336,97 @@ def test_history_executions_endpoint_full_backfill_even_with_narrow_sync_residue
     assert flagged is True
 
 
+def test_delete_broker_executions_clears_rows_and_history_synced(
+    client_and_broker: tuple[TestClient, FakeBrokerClient],
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """``DELETE /api/broker/executions?ticker=X`` wipes that ticker's
+    rows from ``broker_executions`` AND flips the corresponding
+    positions.history_synced back to False, so a follow-up GET re-
+    triggers the full chunked backfill from scratch. Other tickers
+    untouched."""
+    import asyncio
+    from datetime import UTC, datetime, timedelta
+
+    client, broker = client_and_broker
+    broker.account_id_value = "test-acct"  # type: ignore[attr-defined]
+    now = datetime.now(UTC)
+
+    async def _seed() -> None:
+        async with session_factory() as session:
+            await repo.upsert_positions(
+                session,
+                account_id="test-acct",
+                rows=[
+                    {"symbol": "TSLA.US", "ticker": "TSLA", "quantity": 50,
+                     "avg_cost": 100.0},
+                    {"symbol": "NVDA.US", "ticker": "NVDA", "quantity": 20,
+                     "avg_cost": 200.0},
+                ],
+            )
+            await repo.mark_position_history_synced(
+                session, account_id="test-acct", ticker="TSLA"
+            )
+            await repo.mark_position_history_synced(
+                session, account_id="test-acct", ticker="NVDA"
+            )
+            await repo.upsert_broker_executions(
+                session,
+                account_id="test-acct",
+                rows=[
+                    {"order_id": "tx-1", "symbol": "TSLA.US", "ticker": "TSLA",
+                     "side": "BUY", "qty": 10, "price": 100.0,
+                     "ts": now - timedelta(days=5)},
+                    {"order_id": "nx-1", "symbol": "NVDA.US", "ticker": "NVDA",
+                     "side": "BUY", "qty": 5, "price": 200.0,
+                     "ts": now - timedelta(days=5)},
+                ],
+            )
+
+    asyncio.get_event_loop().run_until_complete(_seed())
+
+    resp = client.delete(
+        "/api/broker/executions",
+        params={"token": _TOKEN, "ticker": "TSLA"},
+    )
+    assert resp.status_code == 204, resp.text
+
+    async def _verify() -> tuple[list[str], bool, bool]:
+        async with session_factory() as session:
+            from sqlalchemy import select
+            from app.storage.schema import BrokerExecutionRow
+
+            result = await session.execute(
+                select(BrokerExecutionRow.order_id, BrokerExecutionRow.ticker)
+                .where(BrokerExecutionRow.account_id == "test-acct")
+            )
+            rows = [r.ticker for r in result.all()]
+            tsla_synced = await repo.is_position_history_synced(
+                session, account_id="test-acct", ticker="TSLA"
+            )
+            nvda_synced = await repo.is_position_history_synced(
+                session, account_id="test-acct", ticker="NVDA"
+            )
+            return rows, tsla_synced, nvda_synced
+
+    tickers, tsla_synced, nvda_synced = asyncio.get_event_loop().run_until_complete(
+        _verify()
+    )
+    assert tickers == ["NVDA"]
+    assert tsla_synced is False, "TSLA history_synced must reset so next GET re-backfills"
+    assert nvda_synced is True, "NVDA flag must survive — other tickers untouched"
+
+
+def test_delete_broker_executions_requires_ticker(
+    client_and_broker: tuple[TestClient, FakeBrokerClient],
+) -> None:
+    """Bulk delete must specify ``ticker`` — there's no shortcut to
+    wipe across all tickers in a single account."""
+    client, _ = client_and_broker
+    resp = client.delete("/api/broker/executions", params={"token": _TOKEN})
+    assert resp.status_code in (400, 422), resp.text
+
+
 def test_quotes_watch_endpoint_diffs_subscriptions(
     tmp_path,
     session_factory: async_sessionmaker[AsyncSession],

@@ -19,6 +19,10 @@ interface Props {
    *  consistently with the row chip the user clicked from. */
   allPairs: TPair[];
   onClose(): void;
+  /** Triggered when the user clicks 解绑配对 in the footer. Caller is
+   *  expected to run a confirm prompt + delete the pair via the
+   *  backend + close this modal. */
+  onUnbind(pairId: number): Promise<void> | void;
 }
 
 function fmt(n: number, d = 2): string {
@@ -36,7 +40,7 @@ function fmt(n: number, d = 2): string {
  * binds the open state to ``detailView.activePairId``); ESC or backdrop
  * click closes by clearing that store field.
  */
-export function PairDetailModal({ pair, trades, allPairs, onClose }: Props) {
+export function PairDetailModal({ pair, trades, allPairs, onClose, onUnbind }: Props) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -57,7 +61,7 @@ export function PairDetailModal({ pair, trades, allPairs, onClose }: Props) {
   const partial = buyQtyTotal !== sellQtyTotal;
 
   return (
-    <div className="modal-backdrop" onClick={onClose} role="presentation">
+    <div className="pair-modal-backdrop" onClick={onClose} role="presentation">
       <div
         className="modal-card pair-modal"
         onClick={(e) => e.stopPropagation()}
@@ -98,7 +102,7 @@ export function PairDetailModal({ pair, trades, allPairs, onClose }: Props) {
             <span className="k">已实现</span>
             <span className={`v ${profit >= 0 ? "pos" : "neg"}`}>
               {profit >= 0 ? "+" : ""}${fmt(profit, 2)}
-              <span className="sub">
+              <span className={`sub-pct ${profit >= 0 ? "pos" : "neg"}`}>
                 {profit >= 0 ? " +" : " "}{fmt(profitPct, 2)}%
               </span>
             </span>
@@ -146,6 +150,16 @@ export function PairDetailModal({ pair, trades, allPairs, onClose }: Props) {
             </tbody>
           </table>
         </section>
+
+        <footer className="pair-modal-foot">
+          <button
+            type="button"
+            className="btn danger"
+            onClick={() => void onUnbind(pair.id)}
+          >
+            解绑配对
+          </button>
+        </footer>
       </div>
     </div>
   );

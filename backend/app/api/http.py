@@ -467,6 +467,24 @@ def build_http_router(
         if not ok:
             raise HTTPException(404, detail=f"pair {pair_id} not found")
 
+    @router.delete("/api/pairs", status_code=204)
+    async def delete_pairs_by_ticker_endpoint(
+        ticker: Annotated[str, Query(min_length=1)],
+    ) -> None:
+        """Bulk-delete every做T pair on the active account for ``ticker``.
+        Each affected trade's ``broker_executions.t_pair_tags`` is
+        rewritten so the做T chip column reflects the change immediately.
+        ``ticker`` is REQUIRED — there's no "wipe across all tickers"
+        shortcut, because that would be too easy to fat-finger.
+        """
+        account_id = getattr(_get_broker(), "account_id", "") or ""
+        if not account_id:
+            raise HTTPException(400, detail="no active broker account")
+        async with session_scope(session_factory) as session:
+            await repo.delete_pairs_for_ticker(
+                session, account_id=account_id, ticker=ticker
+            )
+
     @router.get("/api/pairs/aggregate", response_model=PairAggregateOut)
     async def pair_aggregate_endpoint(
         ticker: Annotated[str | None, Query()] = None,
@@ -871,6 +889,9 @@ def build_http_router(
                     qty=r.qty,
                     price=r.price,
                     ts=ts,
+                    t_pair_tags=[
+                        (int(pid), int(qty)) for pid, qty in (r.t_pair_tags or [])
+                    ],
                 )
             )
         if last_synced is not None and last_synced.tzinfo is None:
@@ -881,6 +902,25 @@ def build_http_router(
             total_count=total,
             has_more=(offset + len(executions)) < total,
         )
+
+    @router.delete("/api/broker/executions", status_code=204)
+    async def delete_broker_executions_endpoint(
+        ticker: Annotated[str, Query(min_length=1)],
+    ) -> None:
+        """Wipe ``broker_executions`` rows for the active account scoped
+        to ``ticker`` AND reset ``positions.history_synced`` to False.
+        After this, a follow-up GET ``/api/broker/executions?ticker=X``
+        re-triggers the full chunked 2-year backfill from scratch.
+
+        ``ticker`` is REQUIRED — keeps the bulk wipe scope explicit.
+        """
+        account_id = getattr(_get_broker(), "account_id", "") or ""
+        if not account_id:
+            raise HTTPException(400, detail="no active broker account")
+        async with session_scope(session_factory) as session:
+            await repo.delete_broker_executions_for_ticker(
+                session, account_id=account_id, ticker=ticker
+            )
 
     @router.get("/api/broker/today_executions", response_model=ExecutionsOut)
     async def today_executions_endpoint() -> ExecutionsOut:
@@ -928,6 +968,9 @@ def build_http_router(
                     qty=r.qty,
                     price=r.price,
                     ts=ts,
+                    t_pair_tags=[
+                        (int(pid), int(qty)) for pid, qty in (r.t_pair_tags or [])
+                    ],
                 )
             )
         return ExecutionsOut(executions=executions)

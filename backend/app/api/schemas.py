@@ -393,6 +393,13 @@ class ExecutionOut(BaseModel):
     the signal-station ``tasks`` row that submitted this order — present
     only for orders that went through the trader pipeline; manual fills
     placed via the LongBridge app / web have ``task_id = null``.
+
+    ``t_pair_tags`` is the server-denormalised做T allocation list:
+    ``[[pair_id, allocated_qty], ...]``. Lets the trade-list frontend
+    paint做T chips without a separate /api/pairs round-trip, AND
+    survives across page reloads — without it on the wire, a re-fetch
+    after detail-pane re-open silently dropped the chips. Defaults to
+    ``[]`` for fills that aren't bound to any pair.
     """
 
     order_id: str
@@ -403,6 +410,7 @@ class ExecutionOut(BaseModel):
     qty: int
     price: float
     ts: datetime
+    t_pair_tags: list[tuple[int, int]] = []
 
 
 class ExecutionsOut(BaseModel):

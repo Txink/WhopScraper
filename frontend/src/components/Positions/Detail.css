@@ -8,6 +8,11 @@
   /* 8px between cards (was 12). Tightens the vertical stack so the trade
    * list fits in a single viewport without page-level scroll. */
   gap: 8px;
+  /* Positioning anchor for the in-panel ConfirmModal — its backdrop is
+   * absolutely positioned and must scope inside ``.detail-pane`` so the
+   * dialog visually pops up in the middle of the detail pane rather
+   * than the whole viewport. */
+  position: relative;
 }
 
 /* Inline back chevron icon rendered inside the summary card's left
@@ -560,6 +565,14 @@ input[type="checkbox"].sel-sell:checked {
 .btn.ghost:hover { background: var(--bg-hover); color: var(--fg-1); }
 .btn.primary { background: var(--brand); color: #00131a; }
 .btn.primary:hover { background: #5cd2e0; }
+.btn.danger {
+  background: var(--err);
+  color: #fff;
+  border-color: var(--err);
+}
+.btn.danger:hover {
+  background: color-mix(in srgb, var(--err) 80%, #000);
+}
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .bind-builder .extend-row {
@@ -710,7 +723,26 @@ input[type="checkbox"].sel-sell:checked {
   border-color: rgba(239, 91, 91, 0.3);
 }
 
-/* ─── Pair detail modal (#4) ─── */
+/* ─── Pair detail modal (#4) ───
+ * Panel-scoped backdrop: anchors inside ``.detail-pane`` rather than
+ * the viewport so the pair-detail popup feels like part of the detail
+ * page instead of a separate dialog. ``.modal-card`` styling is shared
+ * with viewport-level callers elsewhere (PageSettingsModal etc.) — only
+ * the backdrop differs. */
+.pair-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  /* Top-anchored with a 60px inset rather than vertically centered —
+   * the card otherwise lands too far down for a panel-scoped overlay
+   * (the eye reads it as a popup, not a dialog). */
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 60px;
+  z-index: 60;
+  backdrop-filter: blur(2px);
+}
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -810,6 +842,17 @@ input[type="checkbox"].sel-sell:checked {
   color: var(--fg-3);
   font-weight: 400;
 }
+/* Suffix percent next to a realized P/L value — same size/weight as
+ * ``.sub`` but takes its own pos/neg color (matched to the parent's
+ * sign) instead of the muted gray. Lives in the pair-detail modal's
+ * 已实现 cell. */
+.pair-summary .ps-cell .v .sub-pct {
+  font-size: 11px;
+  margin-left: 4px;
+  font-weight: 400;
+}
+.pair-summary .ps-cell .v .sub-pct.pos { color: var(--up-color); }
+.pair-summary .ps-cell .v .sub-pct.neg { color: var(--down-color); }
 
 .pair-allocations h4 {
   font-size: 12px;
@@ -836,6 +879,15 @@ input[type="checkbox"].sel-sell:checked {
   border-bottom: 1px solid color-mix(in srgb, var(--line) 50%, transparent);
 }
 
+/* Pair-detail modal footer — hosts the 解绑配对 button right-aligned
+ * under the allocations table. No separator line; the spacing above
+ * carries the visual break on its own. */
+.pair-modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 14px;
+}
+
 /* Footer strip — 3-column grid so the pagination buttons stay visually
  * centered regardless of how wide the left ``买卖记录·N 笔`` label or
  * the right supplementary meta (做T 配对 / 上次更新) happen to be.
@@ -859,12 +911,83 @@ input[type="checkbox"].sel-sell:checked {
   flex-wrap: wrap;
   min-width: 0;
 }
-.trade-foot-left { justify-self: start; }
+.trade-foot-left {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
 .trade-foot-center {
   justify-self: center;
   display: inline-flex;
 }
 .trade-foot-right { justify-self: end; }
+
+/* Trade-list settings gear + dropdown. Menu is absolutely positioned
+ * upward from the gear so it doesn't push the table down on open. */
+.trade-menu-wrap {
+  position: relative;
+  display: inline-flex;
+}
+.trade-menu-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  color: var(--fg-3);
+  cursor: pointer;
+  border-radius: 4px;
+  transition: color var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+.trade-menu-btn:hover {
+  color: var(--fg-1);
+  background: var(--bg-hover);
+}
+.trade-menu {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  z-index: 5;
+  min-width: 200px;
+  background: var(--bg-2);
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  padding: 4px 0;
+  display: flex;
+  flex-direction: column;
+}
+.trade-menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  padding: 7px 12px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--fg-2);
+  cursor: pointer;
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+.trade-menu-item:hover {
+  background: var(--bg-hover);
+  color: var(--fg-1);
+}
+.trade-menu-item.active {
+  color: var(--brand);
+}
+.trade-menu-item.danger { color: var(--err, #e25e5e); }
+.trade-menu-item.danger:hover { background: rgba(239, 91, 91, 0.14); }
+.trade-menu-sep {
+  height: 1px;
+  background: var(--line);
+  margin: 4px 0;
+}
 /* "买卖记录" section label — slightly larger than the surrounding meta
  * digits so it still reads as the panel's identifier, but matches the
  * project's "section label" color scheme (--fg-3) used by panel heads
@@ -964,4 +1087,53 @@ input[type="checkbox"].sel-sell:checked {
   0%   { transform: translate(-50%, -50%) scale(1);   opacity: 1;   }
   60%  { transform: translate(-50%, -50%) scale(2.2); opacity: 0;   }
   100% { transform: translate(-50%, -50%) scale(2.2); opacity: 0;   }
+}
+
+/* ─── Panel-scoped confirm dialog ───
+ * Anchors inside ``.detail-pane`` (which carries ``position: relative``),
+ * NOT the viewport — keeps the dialog visually in the middle of the
+ * stock detail panel even when the page is scrolled. Matches the
+ * existing ``.modal-card`` typography but reuses ``var(--bg-2)`` /
+ * ``var(--line-strong)`` so the dialog reads as a peer of the other
+ * detail-pane cards rather than a viewport-level popover. */
+.confirm-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  /* 80 sits above ``.pair-modal-backdrop`` (60) so a confirm triggered
+   * from inside the pair detail modal (e.g. 解绑配对) overlays the
+   * pair detail rather than disappearing behind it. */
+  z-index: 80;
+  /* Subtle blur so the cards underneath read as receded rather than
+   * just darkened — feels less like a hard overlay. */
+  backdrop-filter: blur(2px);
+}
+.confirm-modal-card {
+  background: var(--bg-2);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-card);
+  padding: 18px 20px 14px;
+  min-width: 320px;
+  max-width: 440px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+.confirm-modal-title {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--fg-1);
+}
+.confirm-modal-desc {
+  margin: 0 0 16px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--fg-2);
+}
+.confirm-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }

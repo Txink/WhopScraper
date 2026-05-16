@@ -397,6 +397,83 @@ def test_delete_missing_pair_returns_404(client: TestClient) -> None:
     assert resp.status_code == 404
 
 
+def test_delete_pairs_by_ticker_bulk(
+    client: TestClient,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """``DELETE /api/pairs?ticker=X`` removes all pairs for the active
+    account scoped to ``X``, leaving other tickers' pairs intact AND
+    clearing the referenced trades' ``t_pair_tags`` so the做T chip
+    column flips back to empty immediately."""
+    import asyncio
+
+    async def seed() -> None:
+        # Two TSLA pairs
+        await _seed_filled_task(session_factory, "tb1", qty=10, price=1.0)
+        await _seed_filled_task(session_factory, "ts1", qty=10, price=2.0, side="SELL")
+        await _seed_filled_task(session_factory, "tb2", qty=20, price=1.1, offset=100)
+        await _seed_filled_task(
+            session_factory, "ts2", qty=20, price=2.1, side="SELL", offset=100,
+        )
+        # One NVDA pair — must survive the bulk delete
+        await _seed_filled_task(
+            session_factory, "nb1", qty=5, price=20.0, ticker="NVDA", offset=200,
+        )
+        await _seed_filled_task(
+            session_factory, "ns1", qty=5, price=22.0, ticker="NVDA",
+            side="SELL", offset=200,
+        )
+
+    asyncio.get_event_loop().run_until_complete(seed())
+
+    # Create 2 TSLA pairs + 1 NVDA pair
+    client.post(
+        "/api/pairs",
+        params={"token": _TOKEN},
+        json={"ticker": "TSLA", "buy_trade_ids": ["tb1"], "sell_trade_ids": ["ts1"]},
+    )
+    client.post(
+        "/api/pairs",
+        params={"token": _TOKEN},
+        json={"ticker": "TSLA", "buy_trade_ids": ["tb2"], "sell_trade_ids": ["ts2"]},
+    )
+    client.post(
+        "/api/pairs",
+        params={"token": _TOKEN},
+        json={"ticker": "NVDA", "buy_trade_ids": ["nb1"], "sell_trade_ids": ["ns1"]},
+    )
+
+    # Sanity: list shows all 3
+    pre = client.get("/api/pairs", params={"token": _TOKEN}).json()
+    assert pre["total_count"] == 3
+
+    # Bulk-delete TSLA only
+    resp = client.delete("/api/pairs", params={"token": _TOKEN, "ticker": "TSLA"})
+    assert resp.status_code == 204, resp.text
+
+    # Only NVDA survives
+    post = client.get("/api/pairs", params={"token": _TOKEN}).json()
+    assert post["total_count"] == 1
+    assert post["pairs"][0]["ticker"] == "NVDA"
+
+    # Affected TSLA trades have their做T tags cleared on broker_executions.
+    trades = client.get(
+        "/api/trades", params={"token": _TOKEN, "ticker": "TSLA"}
+    ).json()
+    for t in trades["trades"]:
+        assert t.get("t_pair_tags", []) == [], (
+            f"trade {t['id']} still carries做T tags after bulk delete"
+        )
+
+
+def test_delete_pairs_by_ticker_requires_ticker_param(client: TestClient) -> None:
+    """``DELETE /api/pairs`` without ``ticker`` is rejected — bulk delete
+    must be explicit about the scope; we never let it nuke all pairs
+    across all tickers by accident."""
+    resp = client.delete("/api/pairs", params={"token": _TOKEN})
+    assert resp.status_code in (400, 422), resp.text
+
+
 # ---------------------------------------------------------------------------
 # GET /api/pairs/aggregate — SQL-driven做T total / count / win
 # ---------------------------------------------------------------------------

@@ -1153,6 +1153,39 @@ async def delete_pair(session: AsyncSession, pair_id: int) -> bool:
     return True
 
 
+async def delete_pairs_for_ticker(
+    session: AsyncSession,
+    *,
+    account_id: str,
+    ticker: str,
+) -> int:
+    """Bulk-delete every做T pair for ``(account_id, ticker)``. Each
+    pair's tag cleanup runs against ``broker_executions.t_pair_tags``
+    so the做T chip column flips empty atomically. Single commit at the
+    end — cheaper than ``delete_pair`` in a loop.
+
+    Returns the number of pairs removed.
+    """
+    stmt = select(TPairRow).where(
+        TPairRow.account_id == account_id,
+        TPairRow.ticker == ticker,
+    )
+    pairs = list((await session.execute(stmt)).scalars().all())
+    for p in pairs:
+        await _sync_pair_tags(
+            session,
+            pair_id=p.id,
+            old_buys=list(p.buys_json or []),
+            old_sells=list(p.sells_json or []),
+            new_buys=[],
+            new_sells=[],
+        )
+        await session.delete(p)
+    if pairs:
+        await session.commit()
+    return len(pairs)
+
+
 def _price_map(rows: list[BrokerExecutionRow]) -> dict[str, float]:
     """``order_id → price`` lookup used by profit computation."""
     return {r.order_id: float(r.price) for r in rows}
@@ -1536,6 +1569,42 @@ async def upsert_broker_executions(
     await session.execute(stmt)
     await session.commit()
     return len(payloads)
+
+
+async def delete_broker_executions_for_ticker(
+    session: AsyncSession,
+    *,
+    account_id: str,
+    ticker: str,
+) -> int:
+    """Wipe ``broker_executions`` rows scoped to ``(account_id, ticker)``
+    AND reset ``positions.history_synced`` back to False so the next
+    detail-pane open re-triggers the full chunked backfill from scratch.
+
+    Returns the number of execution rows removed. Pair allocations
+    aren't cascade-cleaned here — bulk pair removal lives in
+    ``delete_pairs_for_ticker`` and the UI exposes it as a separate
+    action. (Wiping executions while pairs still point at them would
+    leave the pair rows with dangling trade_ids, but list_pairs already
+    handles the missing-fill case by counting allocations against zero.)
+    """
+    del_stmt = (
+        BrokerExecutionRow.__table__.delete()
+        .where(BrokerExecutionRow.account_id == account_id)
+        .where(BrokerExecutionRow.ticker == ticker)
+    )
+    result = await session.execute(del_stmt)
+    deleted = int(result.rowcount or 0)
+
+    flag_stmt = (
+        PositionRow.__table__.update()
+        .where(PositionRow.account_id == account_id)
+        .where(PositionRow.ticker == ticker)
+        .values(history_synced=False)
+    )
+    await session.execute(flag_stmt)
+    await session.commit()
+    return deleted
 
 
 async def list_broker_executions(
