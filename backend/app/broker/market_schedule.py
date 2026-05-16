@@ -147,9 +147,20 @@ class MarketSchedule:
         """Return ``"regular" / "pre" / "post" / "overnight" / "closed"``
         for ``market`` at ``now`` (default = ``datetime.now(UTC)``).
 
-        Looks up the cached schedule first. If no schedule is loaded
-        for the market (cold cache or SDK failure), returns ``"regular"``
-        for unknown markets and the static clock heuristic otherwise.
+        Cached session windows are time-of-day patterns from a recent
+        SDK fetch — they do NOT carry a date. Naively matching the
+        current local time against them is unsafe on weekends/holidays:
+        e.g. on Saturday ET 04:00 the cached weekday "pre" window
+        04:00-09:30 still matches, returning "pre" when markets are
+        clearly closed. This implementation validates each potential
+        match against the actual trading-date calendar (``_trading_days``)
+        so the result agrees with whether the market is open today
+        (and, for overnight, whether the adjacent ET dates are trading
+        days too — overnight only runs between two consecutive trading
+        weekdays).
+
+        Falls back to the static clock heuristic when the cache is
+        cold (broker init race).
         """
         if now is None:
             now = datetime.now(timezone.utc)
@@ -164,16 +175,68 @@ class MarketSchedule:
             return market_state_for(f"X.{market_key}", now)
 
         local = now.astimezone(_market_tz(market_key))
-        if local.weekday() > 4 and market_key != "US":
-            # HK / CN never trade on weekends; SDK only returns the
-            # current day's sessions, so on weekends the windows are
-            # empty and the loop below would also return "closed" — the
-            # early return is a clarity micro-optimization.
+        local_date = local.date()
+        tod = local.time()
+
+        def is_trading(d: date) -> bool:
+            """Holiday-aware trading-day check.
+
+            The cache holds the last few trading dates (days_back=3) so
+            we can't blanket-say "not in cache = not trading" — future
+            dates (e.g. tomorrow, needed for overnight validation) won't
+            be cached but may very well be trading days. Three-way logic:
+
+            1. ``d in cached`` → definitively a trading day.
+            2. Weekend → definitively closed.
+            3. Weekday inside cached date range but not listed → known
+               holiday (the broker returned the surrounding days but
+               omitted ``d``).
+            4. Weekday outside cached range OR cold cache → fall back to
+               the weekday heuristic (assume trading).
+            """
+            cached = self._trading_days.get(market_key, []) or []
+            if d in cached:
+                return True
+            if d.weekday() > 4:
+                return False
+            if cached:
+                oldest, newest = min(cached), max(cached)
+                if oldest <= d <= newest:
+                    return False  # gap inside cached range = holiday
+            return True
+
+        # HK / CN: only one (regular) session per trading day; no
+        # overnight, no weekend trading.
+        if market_key in ("HK", "CN"):
+            if not is_trading(local_date):
+                return "closed"
+            for begin, end, state in windows:
+                if begin <= tod < end:
+                    return state
             return "closed"
 
-        tod = local.time()
+        # US: pre/regular/post happen on a trading day; overnight
+        # bridges two consecutive trading days (20:00 → 04:00 next day).
+        from datetime import time as _t, timedelta
         for begin, end, state in windows:
-            if begin <= tod < end:
+            if not (begin <= tod < end):
+                continue
+            if state == "overnight":
+                # 20:00-23:59 → start of TODAY's overnight; requires
+                # both today and tomorrow to be trading days.
+                # 00:00-03:59 → tail of YESTERDAY's overnight; requires
+                # both yesterday and today to be trading days.
+                if tod >= _t(20, 0):
+                    if is_trading(local_date) and is_trading(local_date + timedelta(days=1)):
+                        return "overnight"
+                elif tod < _t(4, 0):
+                    if is_trading(local_date - timedelta(days=1)) and is_trading(local_date):
+                        return "overnight"
+                # Falls through to "closed" if either adjacent day is
+                # not a trading day.
+                continue
+            # pre / regular / post: today must be a trading day.
+            if is_trading(local_date):
                 return state
         return "closed"
 

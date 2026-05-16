@@ -655,16 +655,20 @@ def build_http_router(
     # GET /api/candlesticks — intraday or daily K bars for one symbol      #
     # ------------------------------------------------------------------ #
 
-    # Regular US session ~6.5h. ``all`` covers the full 24h trading day
-    # (pre + regular + post + overnight = 5.5 + 6.5 + 4 + 8 = 24h) so the
-    # frontend's unified day window has overnight bars to render.
+    # Regular US session ~6.5h. ``all`` aims for the full 24h trading
+    # day (pre + regular + post + overnight = 5.5 + 6.5 + 4 + 8 = 24h),
+    # but LongBridge caps the candlesticks API at 1000 bars per call —
+    # any larger ``count`` returns 502 from the SDK. We cap at 1000 for
+    # min_1, which covers pre+regular+post (16h = 960 bars) cleanly and
+    # picks up the first ~40 minutes of overnight at most. Beyond that
+    # the overnight region stays empty until we wire a separate fetch.
     # Both 分时 and 1min map to SDK Min_1; 分时 differs only in front-end
     # rendering (pads to fill the session window).
     _BARS_PER_DAY_REGULAR = {
         "min_1": 390, "min_2": 195, "min_3": 130, "min_5": 78,
     }
     _BARS_PER_DAY_ALL = {
-        "min_1": 1440, "min_2": 720, "min_3": 480, "min_5": 288,
+        "min_1": 1000, "min_2": 720, "min_3": 480, "min_5": 288,
     }
 
     # Longer-horizon (non-today) periods use a fixed granularity; granularity/

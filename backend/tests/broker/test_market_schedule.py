@@ -100,6 +100,105 @@ async def test_state_for_unknown_market_defaults_to_regular() -> None:
     assert sch.state_for("XX", now) == "regular"
 
 
+# --- weekend / holiday guards (the bug behind the user-reported pill flip) ---
+
+
+@pytest.mark.asyncio
+async def test_us_saturday_morning_is_closed_not_pre() -> None:
+    """User-reported regression: Sat ET 04:00 wall-clock matched the
+    cached weekday ``pre`` window 04:00-09:30 → ``state_for`` wrongly
+    returned ``pre`` when the market was clearly closed for the weekend.
+    """
+    sch = MarketSchedule(_seed_sessions_via_fake())
+    await sch.force_refresh()
+    # 2030-01-05 is a Saturday.  09:00 UTC = 04:00 ET (during the cached
+    # weekday "pre" window, but on a non-trading day).
+    now = datetime(2030, 1, 5, 9, 0, tzinfo=timezone.utc)
+    assert sch.state_for("US", now) == "closed"
+
+
+@pytest.mark.asyncio
+async def test_us_saturday_during_regular_hours_is_closed() -> None:
+    sch = MarketSchedule(_seed_sessions_via_fake())
+    await sch.force_refresh()
+    # Sat 14:30 UTC = 09:30 ET (would match the regular window on a
+    # weekday).
+    now = datetime(2030, 1, 5, 14, 30, tzinfo=timezone.utc)
+    assert sch.state_for("US", now) == "closed"
+
+
+@pytest.mark.asyncio
+async def test_us_sunday_evening_is_closed_not_overnight() -> None:
+    """Sun 22:00 ET would match the cached overnight window 20:00-24:00
+    but Sunday itself isn't a trading day, so the would-be overnight has
+    no regular session to feed into."""
+    sch = MarketSchedule(_seed_sessions_via_fake())
+    await sch.force_refresh()
+    # 2030-01-06 is a Sunday. 03:00 UTC next day = 22:00 ET Sun.
+    now = datetime(2030, 1, 7, 3, 0, tzinfo=timezone.utc)
+    assert sch.state_for("US", now) == "closed"
+
+
+@pytest.mark.asyncio
+async def test_us_monday_before_4am_is_closed_not_overnight() -> None:
+    """Mon 02:00 ET would match overnight window 00:00-04:00 but
+    yesterday (Sunday) wasn't a trading day, so no overnight ran."""
+    sch = MarketSchedule(_seed_sessions_via_fake())
+    await sch.force_refresh()
+    # Mon Jan 7, 2030 isn't in the cache's listed dates, but it's a
+    # weekday. The cache only has [Jan 2, Jan 1, Dec 31]. is_trading
+    # for Jan 7: > newest cached → weekday heuristic → True. is_trading
+    # for Sun Jan 6: weekend → False. Overnight rejected.
+    now = datetime(2030, 1, 7, 7, 0, tzinfo=timezone.utc)  # 02:00 ET Mon
+    assert sch.state_for("US", now) == "closed"
+
+
+@pytest.mark.asyncio
+async def test_us_friday_evening_is_closed_not_overnight() -> None:
+    """Fri 22:00 ET would match overnight 20:00-24:00 but tomorrow
+    (Saturday) isn't a trading day, so Friday's evening has no overnight."""
+    sch = MarketSchedule(_seed_sessions_via_fake())
+    await sch.force_refresh()
+    # Fri Jan 4, 2030. 03:00 UTC Sat = 22:00 ET Fri. Outside cache range
+    # → heuristic for Fri (weekday=True), Sat (weekend=False).
+    now = datetime(2030, 1, 5, 3, 0, tzinfo=timezone.utc)
+    assert sch.state_for("US", now) == "closed"
+
+
+@pytest.mark.asyncio
+async def test_us_holiday_inside_cached_range_is_closed() -> None:
+    """If the broker omits a weekday from the trading-days cache (e.g.
+    a holiday), state_for should treat that date as non-trading."""
+    broker = _seed_sessions_via_fake()
+    # Synthesize a "Mon Dec 31 is holiday" scenario by populating the
+    # cache with [Jan 2, Dec 30] only — Dec 31 inside [Dec 30, Jan 2]
+    # but absent.
+    broker.trading_days_map["US"] = [  # type: ignore[attr-defined]
+        date(2030, 1, 2), date(2029, 12, 30),
+    ]
+    sch = MarketSchedule(broker)
+    await sch.force_refresh()
+    # Dec 31, 2029 ET 11:00 = 16:00 UTC. Weekday heuristic would say
+    # trading; cache should override → closed.
+    now = datetime(2029, 12, 31, 16, 0, tzinfo=timezone.utc)
+    assert sch.state_for("US", now) == "closed"
+
+
+@pytest.mark.asyncio
+async def test_hk_holiday_inside_cached_range_is_closed() -> None:
+    """Same holiday-inside-cache guard for HK."""
+    broker = _seed_sessions_via_fake()
+    broker.trading_days_map["HK"] = [  # type: ignore[attr-defined]
+        date(2030, 1, 2), date(2029, 12, 30),
+    ]
+    sch = MarketSchedule(broker)
+    await sch.force_refresh()
+    # Dec 31, 2029 04:00 UTC = 12:00 HKT (would be lunch break on
+    # a real trading day, but here Dec 31 is excluded → fully closed).
+    now = datetime(2029, 12, 31, 2, 0, tzinfo=timezone.utc)  # 10:00 HKT
+    assert sch.state_for("HK", now) == "closed"
+
+
 @pytest.mark.asyncio
 async def test_cold_cache_falls_back_to_clock_heuristic() -> None:
     """Before the first refresh, ``state_for`` should still return a
