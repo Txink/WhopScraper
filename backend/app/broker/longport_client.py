@@ -185,7 +185,14 @@ class LongPortClient:
                 "complete the LongBridge login flow in the UI first."
             )
         oauth = OAuthBuilder(config.account_id).build(lambda url: None)
-        lp_config = LPConfig.from_oauth(oauth)
+        # enable_overnight=True is required to receive US overnight bars
+        # and quote pushes. Per LongBridge FAQ Q6 / Q7, overnight data is
+        # opt-in: even with the "LV1 Real-time (OpenAPI)" market-data card
+        # purchased, the SDK auth must signal need_over_night_quote=true
+        # for the broker to emit it. Without this flag, sessions=All
+        # candlestick calls silently exclude the overnight window.
+        # (HK doesn't have overnight; the flag is harmless there.)
+        lp_config = LPConfig.from_oauth(oauth, enable_overnight=True)
 
         # QuoteContext first (mirrors old broker — avoids connection-count
         # leak if TradeContext creation fails).
