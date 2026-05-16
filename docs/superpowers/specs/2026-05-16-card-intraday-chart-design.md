@@ -117,12 +117,18 @@ export interface SessionWindow {
 | US | post | ET 16:00 → 20:00 | 4h | 240 |
 | US | overnight | ET 20:00 → +1d 04:00 | 8h | 480 |
 | US | closed | prior trading day's post (ET 16:00 → 20:00) | 4h | 240 |
-| HK | regular | HKT 09:30→12:00 + 13:00→16:00 (lunch compressed) | 5h | 300 |
-| HK | closed | prior trading day's regular | 5h | 300 |
+| HK | regular | HKT 09:30→12:00 + 13:00→16:00 (lunch compressed) | 5.5h | 330 (150 + 180) |
+| HK | closed | prior trading day's regular | 5.5h | 330 |
+| CN | regular | CST 09:30→11:30 + 13:00→15:00 (lunch compressed) | 4h | 240 (120 + 120) |
+| CN | closed | prior trading day's regular | 4h | 240 |
 
 **HK lunch compression:**
-- `slotToMs(idx)`: `idx < 150 ? 09:30 + idx min : 13:00 + (idx-150) min`.
+- `slotToMs(idx)`: `idx < 150 ? 09:30 + idx min : 13:00 + (idx-150) min`. Afternoon spans 180 minutes (13:00→16:00 HKT), so total = 330 slots.
 - `msToSlot(ms)`: inverse; ms inside `[12:00, 13:00)` returns `-1`.
+
+**CN lunch compression:** same structure as HK but shorter:
+- Morning 09:30→11:30 CST = 120 slots; afternoon 13:00→15:00 CST = 120 slots; total 240.
+- `msToSlot(ms)` inside `[11:30, 13:00)` returns `-1`.
 
 **Closed fallback:** market-tz-aware. `currentTradingDay()` in `timeFmt.ts` is ET-pinned (works for US only); for HK we need an HKT-pinned equivalent. Add `lastTradingDayInMarket(market, now)` to `sessionWindow.ts`:
 
@@ -249,9 +255,10 @@ The `useRef` diff is critical: `quotesBySymbol` reference changes on every push,
 |---|---|---|
 | US | pre / regular / post / overnight | same |
 | US | closed | "post" |
-| HK / CN | regular | "regular" |
-| HK / CN | closed | "regular" |
-| HK / CN | pre / post / overnight (unreachable) | fallback "regular" |
+| HK | regular | "regular" |
+| HK | closed | "regular" |
+| HK | pre / post / overnight (unreachable) | fallback "regular" |
+| CN | regular / closed / anything | "regular" (CN never reports pre / post / overnight) |
 
 **Backend compatibility:** `/api/candlesticks` already accepts `sessions=pre|post|overnight` and folds them into SDK `All`-mode with frontend-side ET filtering (see `backend/app/api/http.py:732-734`). No backend change needed.
 
