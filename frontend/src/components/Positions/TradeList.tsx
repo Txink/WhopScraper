@@ -30,6 +30,13 @@ function fmtLastSynced(iso: string): string {
 interface Props {
   trades: Trade[];
   pairs: TPair[];
+  /** Ticker the table is currently rendering. Used as the reset key for
+   *  local pagination: switching to a different ticker rewinds to page 1,
+   *  while appending more rows for the SAME ticker preserves the page
+   *  index. (Earlier impl reset on every ``trades`` array identity
+   *  change and clobbered the user's page jump when ``onRequestMore``
+   *  loaded more rows.) */
+  ticker?: string;
   /** Wall-clock moment of the most recent broker→DB sync. Rendered as a
    *  small "上次更新：xxx" caption above the table. ``null`` when no
    *  sync has happened yet (first-ever open) — caption is omitted. */
@@ -58,6 +65,7 @@ interface Props {
 export function TradeList({
   trades,
   pairs,
+  ticker,
   lastSyncedAt,
   disableBinding = false,
   totalCount,
@@ -68,12 +76,12 @@ export function TradeList({
 }: Props) {
   const sorted = useMemo(() => [...trades].sort((a, b) => Date.parse(b.ts) - Date.parse(a.ts)), [trades]);
 
-  // Local pagination. Reset to page 1 whenever the trades list changes
-  // identity — typically when the user opens a different ticker — so the
-  // first page renders against the new data instead of trying to slice
-  // a now-too-short array at an out-of-range offset.
+  // Local pagination. Reset to page 1 only when the *ticker* changes —
+  // appending more rows for the same ticker (via onRequestMore) must
+  // preserve the user's page index. ``trades`` array identity is NOT a
+  // safe dep here: it changes on every append.
   const [page, setPage] = useState(1);
-  useEffect(() => { setPage(1); }, [trades]);
+  useEffect(() => { setPage(1); }, [ticker]);
   // Pagination is server-driven: ``totalCount`` is the full ticker's
   // trade count, while ``trades`` holds only the rows already fetched.
   // When the user jumps to a page whose first row isn't loaded yet,

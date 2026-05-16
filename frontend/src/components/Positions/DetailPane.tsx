@@ -405,6 +405,7 @@ export function DetailPane({ position, onBack }: Props) {
       <TradeList
         trades={trades}
         pairs={isOption ? [] : pairs}
+        ticker={ticker}
         lastSyncedAt={lastSyncedAt}
         disableBinding={isOption}
         totalCount={tradesTotal}
