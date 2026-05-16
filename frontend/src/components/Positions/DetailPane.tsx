@@ -10,7 +10,6 @@ import { DetailSummary } from "./DetailSummary";
 import { DetailChart } from "./DetailChart";
 import { PairDetailModal } from "./PairDetailModal";
 import { PairKPIs } from "./PairKPIs";
-import { PendingTrades } from "./PendingTrades";
 import { TradeList } from "./TradeList";
 
 const PERIODS: { id: Period; label: string }[] = [
@@ -399,8 +398,6 @@ export function DetailPane({ position, onBack }: Props) {
       </div>
 
       {!isOption && <PairKPIs ticker={ticker} pairsCount={pairs.length} />}
-
-      {!isOption && <PendingTrades ticker={ticker} pairsCount={pairs.length} />}
 
       <TradeList
         trades={trades}
