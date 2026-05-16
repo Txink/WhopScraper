@@ -16,7 +16,9 @@ interface Props {
 }
 
 // ViewBox is stretched via preserveAspectRatio="none" to fit the
-// container; non-scaling-stroke keeps the line at 1.4 logical px.
+// container. The line's vectorEffect="non-scaling-stroke" presentation
+// attribute (applied on the <path> below) keeps the stroke at 1.4
+// logical px regardless of the stretch.
 const VB_W = 100;
 const VB_H = 100;
 
@@ -153,7 +155,11 @@ export function IntradaySpark({
     }
     if (area) area += `L${lastX.toFixed(2)},${VB_H} L${firstX.toFixed(2)},${VB_H} Z`;
     return { linePath: line.trim(), areaPath: area.trim() };
-  }, [points, yFor, yLo, yHi]); // eslint-disable-line react-hooks/exhaustive-deps
+    // Deps list the scalars that drive yFor rather than yFor itself,
+    // because yFor is a fresh function reference each render. With yFor
+    // in the deps the memo would invalidate every render and the memo
+    // would be moot.
+  }, [points, yLo, yHi]);
 
   // Color decision: pos when last >= open, else neg.
   const lastClose = points.length > 0 ? points[points.length - 1].close : null;
@@ -170,7 +176,8 @@ export function IntradaySpark({
     const yVb = yFor(lastDone);
     const y = (yVb / VB_H) * containerSize.h;
     return { x, y };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Deps: yLo/yHi feed yFor; yFor itself is a fresh ref each render
+    // so excluded. `win` is stable across same-session renders.
   }, [isClosed, lastDone, containerSize.w, containerSize.h, win, yLo, yHi]);
 
   if (!bars) {
@@ -194,7 +201,13 @@ export function IntradaySpark({
       <svg className="ispark-svg" viewBox={`0 0 ${VB_W} ${VB_H}`} preserveAspectRatio="none">
         <text className="ispark-watermark" x="50%" y="58%">{win.label}</text>
         {areaPath && <path className="ispark-area" d={areaPath} fill={`url(#${fillId})`} />}
-        {linePath && <path className="ispark-line" d={linePath} />}
+        {linePath && (
+          <path
+            className="ispark-line"
+            d={linePath}
+            vectorEffect="non-scaling-stroke"
+          />
+        )}
       </svg>
       {pulse && (
         <span
