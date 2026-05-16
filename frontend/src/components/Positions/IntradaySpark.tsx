@@ -73,10 +73,13 @@ export function IntradaySpark({
   );
 
   /** Bars enriched with the live tip (last close overwritten by
-   *  lastDone, or a new bar appended at the current minute). */
+   *  lastDone, or a new bar appended at the current minute). Skipped
+   *  in closed state — the chart is a frozen historical snapshot of
+   *  the last trading day and shouldn't be perturbed by stale or
+   *  weekend quote pushes. */
   const renderedBars = useMemo(() => {
     if (!bars || bars.length === 0) return bars ?? [];
-    if (lastDone == null) return bars;
+    if (session === "closed" || lastDone == null) return bars;
     const nowMs = Date.now();
     const lastBar = bars[bars.length - 1];
     const lastBarMs = parseAsBJ(lastBar.timestamp);
@@ -99,27 +102,33 @@ export function IntradaySpark({
       open: lastDone, high: lastDone, low: lastDone, close: lastDone,
       volume: 0, turnover: 0,
     }];
-  }, [bars, lastDone, win]);
+  }, [bars, lastDone, win, session]);
 
   const isClosed = session === "closed";
 
-  // Project bars → (x, close) pairs, dropping bars outside the window
-  // (HK lunch, stale data leaking from sessions=all).
+  // Project bars → (x, close) pairs. Drop:
+  //   • bars outside the window (HK lunch; stale data from sessions=all)
+  //   • bars with close ≤ 0 — the backend emits close=0 for empty
+  //     minutes (where the broker had no tape), and including those in
+  //     the y-range collapses real prices into the top of the chart and
+  //     paints a phantom line plunging to baseline.
   const points = useMemo(() => {
     if (!renderedBars || renderedBars.length === 0) return [];
-    const out: { x: number; close: number | null }[] = [];
+    const out: { x: number; close: number }[] = [];
     for (const b of renderedBars) {
       const slot = win.msToSlot(parseAsBJ(b.timestamp));
       if (slot < 0) continue;
-      out.push({ x: (slot / win.slotCount) * VB_W, close: b.close ?? null });
+      const close = b.close;
+      if (close == null || close <= 0) continue;
+      out.push({ x: (slot / win.slotCount) * VB_W, close });
     }
     return out;
   }, [renderedBars, win]);
 
   // Y-axis bounds (pad ±20% so the line never touches the top/bottom edge).
   const { yLo, yHi } = useMemo(() => {
-    const closes = points.map((p) => p.close).filter((c): c is number => c != null);
-    if (closes.length === 0) return { yLo: 0, yHi: 1 };
+    if (points.length === 0) return { yLo: 0, yHi: 1 };
+    const closes = points.map((p) => p.close);
     const lo = Math.min(...closes);
     const hi = Math.max(...closes);
     const pad = (hi - lo) * 0.2 || Math.abs(lo) * 0.005 || 0.5;
@@ -129,31 +138,23 @@ export function IntradaySpark({
   const yFor = (close: number): number =>
     yHi === yLo ? VB_H / 2 : ((yHi - close) / (yHi - yLo)) * VB_H;
 
-  // Build line + area path strings. Null close → gap (next segment
-  // starts with M not L).
+  // Build line + area path strings. Points are filtered to a contiguous
+  // valid-close sequence already, so a single subpath spans them all:
+  //   line:  M x0,y0 L x1,y1 ... L xN,yN
+  //   area:  M x0,VB_H L x0,y0 L x1,y1 ... L xN,yN L xN,VB_H Z
   const { linePath, areaPath } = useMemo(() => {
     if (points.length === 0) return { linePath: "", areaPath: "" };
-    let line = "";
-    let area = "";
-    let segmentStart = true;
-    const firstX = points[0].x;
-    let lastX = points[0].x;
-    for (const p of points) {
-      if (p.close == null) {
-        segmentStart = true;
-        continue;
-      }
-      const cmd = segmentStart ? "M" : "L";
-      line += `${cmd}${p.x.toFixed(2)},${yFor(p.close).toFixed(2)} `;
-      if (segmentStart) {
-        area += `M${p.x.toFixed(2)},${VB_H} L${p.x.toFixed(2)},${yFor(p.close).toFixed(2)} `;
-      } else {
-        area += `L${p.x.toFixed(2)},${yFor(p.close).toFixed(2)} `;
-      }
-      lastX = p.x;
-      segmentStart = false;
+    const first = points[0];
+    const last = points[points.length - 1];
+    let line = `M${first.x.toFixed(2)},${yFor(first.close).toFixed(2)} `;
+    let area = `M${first.x.toFixed(2)},${VB_H} L${first.x.toFixed(2)},${yFor(first.close).toFixed(2)} `;
+    for (let i = 1; i < points.length; i++) {
+      const p = points[i];
+      const seg = `L${p.x.toFixed(2)},${yFor(p.close).toFixed(2)} `;
+      line += seg;
+      area += seg;
     }
-    if (area) area += `L${lastX.toFixed(2)},${VB_H} L${firstX.toFixed(2)},${VB_H} Z`;
+    area += `L${last.x.toFixed(2)},${VB_H} Z`;
     return { linePath: line.trim(), areaPath: area.trim() };
     // Deps list the scalars that drive yFor rather than yFor itself,
     // because yFor is a fresh function reference each render. With yFor

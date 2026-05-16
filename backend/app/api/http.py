@@ -655,14 +655,16 @@ def build_http_router(
     # GET /api/candlesticks — intraday or daily K bars for one symbol      #
     # ------------------------------------------------------------------ #
 
-    # Regular US session ~6.5h. Extended (pre+regular+post) ~16h.
+    # Regular US session ~6.5h. ``all`` covers the full 24h trading day
+    # (pre + regular + post + overnight = 5.5 + 6.5 + 4 + 8 = 24h) so the
+    # frontend's unified day window has overnight bars to render.
     # Both 分时 and 1min map to SDK Min_1; 分时 differs only in front-end
     # rendering (pads to fill the session window).
     _BARS_PER_DAY_REGULAR = {
         "min_1": 390, "min_2": 195, "min_3": 130, "min_5": 78,
     }
     _BARS_PER_DAY_ALL = {
-        "min_1": 960, "min_2": 480, "min_3": 320, "min_5": 192,
+        "min_1": 1440, "min_2": 720, "min_3": 480, "min_5": 288,
     }
 
     # Longer-horizon (non-today) periods use a fixed granularity; granularity/
