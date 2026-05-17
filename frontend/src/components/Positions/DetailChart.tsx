@@ -81,10 +81,10 @@ function fmtN(n: number, d = 3): string {
   return n.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
 }
 
-const TRADE_MARKER_W = 13;
-const TRADE_MARKER_H = 11;
-const TRADE_MARKER_GAP = 4;
-const TRADE_MARKER_XOFFSET = 5;
+const TRADE_MARKER_W = 17;
+const TRADE_MARKER_H = 15;
+const TRADE_MARKER_GAP = 2;
+const TRADE_MARKER_XOFFSET = 3;
 
 /** Draws B/S/T speech-bubble badges at aggregated trade scatter positions.
  *  Reads the three scatter datasets by label so it's order-independent.
@@ -101,43 +101,37 @@ const tradeMarkersPlugin: Plugin = {
       const w = TRADE_MARKER_W;
       const h = TRADE_MARKER_H;
       const r = 2.5;
+      const tailDX = 4;
+      const tailDY = 5;
       const cx = x + TRADE_MARKER_XOFFSET;
-      // Positioned ABOVE the point with the tail pointing down-left toward it.
       const top = y - TRADE_MARKER_GAP - h;
       const left = cx - w / 2;
 
       ctx.save();
       ctx.fillStyle = color;
-      // Tail: bottom-LEFT of bubble, slanting down-LEFT toward the data point.
-      // (Badge sits upper-right of point; tail points back toward it.)
       ctx.beginPath();
-      const tailBaseX = left + 3;      // start 3px in from the left edge
-      const tailBaseY = top + h;       // bottom edge of the body
-      const tailTipX = left - 2;       // tip 2px outside-left
-      const tailTipY = top + h + 5;    // 5px below the body
-      ctx.moveTo(tailBaseX, tailBaseY);
-      ctx.lineTo(tailBaseX + 5, tailBaseY);  // small base along the bottom edge
-      ctx.lineTo(tailTipX, tailTipY);
-      ctx.closePath();
-      ctx.fill();
-
-      // Rounded rect body
-      ctx.beginPath();
+      // Start at top-left rounded corner.
       ctx.moveTo(left + r, top);
+      // Top edge.
       ctx.lineTo(left + w - r, top);
       ctx.quadraticCurveTo(left + w, top, left + w, top + r);
+      // Right edge.
       ctx.lineTo(left + w, top + h - r);
       ctx.quadraticCurveTo(left + w, top + h, left + w - r, top + h);
+      // Bottom edge (going leftward).
       ctx.lineTo(left + r, top + h);
-      ctx.quadraticCurveTo(left, top + h, left, top + h - r);
+      // Slant down-left to tail tip.
+      ctx.lineTo(left - tailDX, top + h + tailDY);
+      // Back up to left edge above the cut.
+      ctx.lineTo(left, top + h - r);
+      // Left edge to top.
       ctx.lineTo(left, top + r);
       ctx.quadraticCurveTo(left, top, left + r, top);
       ctx.closePath();
       ctx.fill();
 
-      // Letter (white, slightly smaller font)
       ctx.fillStyle = "#ffffff";
-      ctx.font = "700 9px -apple-system, system-ui, sans-serif";
+      ctx.font = "700 11px -apple-system, system-ui, sans-serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(letter, cx, top + h / 2 + 0.5);
