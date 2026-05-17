@@ -1,11 +1,13 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { api } from "../../api/http";
 import type { Position, TPair, Trade } from "../../api/domain-types";
 import { useQuotesStore } from "../../stores/quotes";
-import { useCandlesticksStore, candleCacheKey, type Period } from "../../stores/candlesticks";
+import { useCandlesticksStore, candleCacheKey } from "../../stores/candlesticks";
 import { useTradesStore } from "../../stores/trades";
 import { usePairsStore } from "../../stores/pairs";
 import { useDetailViewStore } from "../../stores/detailView";
+import { resolveViewConfig, type ViewType } from "./viewConfig";
+import { TabPopover } from "./TabPopover";
 import { DetailSummary } from "./DetailSummary";
 import { DetailChart } from "./DetailChart";
 import { PairDetailModal } from "./PairDetailModal";
@@ -45,19 +47,165 @@ function patchTradesWithPair(trades: Trade[], pair: TPair): Trade[] {
     });
 }
 
-const PERIODS: { id: Period; label: string }[] = [
-  { id: "today", label: "日内" },
-  { id: "5",     label: "5D" },
-  { id: "7",     label: "7D" },
-  { id: "15",    label: "15D" },
-  { id: "30",    label: "30D" },
-  { id: "60",    label: "60D" },
-  { id: "90",    label: "90D" },
+const TABS: Array<{ view: ViewType; label: string; hasPopover: boolean }> = [
+  { view: "intraday", label: "日内",  hasPopover: true },
+  { view: "minute",   label: "分钟",  hasPopover: true },
+  { view: "multiday", label: "多日",  hasPopover: true },
+  { view: "day",      label: "日K",   hasPopover: false },
+  { view: "week",     label: "周K",   hasPopover: false },
+  { view: "month",    label: "月K",   hasPopover: false },
+  { view: "year",     label: "年K",   hasPopover: false },
 ];
 
 interface Props {
   position: Position;
   onBack(): void;
+}
+
+interface HeadProps {
+  view: ViewType;
+  setView(v: ViewType): void;
+  intradaySessions: import("./viewConfig").IntradaySession;
+  setIntradaySessions(s: import("./viewConfig").IntradaySession): void;
+  minuteGranularity: import("./viewConfig").MinuteGranularity;
+  setMinuteGranularity(g: import("./viewConfig").MinuteGranularity): void;
+  multidayWindow: import("./viewConfig").MultidayWindow;
+  setMultidayWindow(w: import("./viewConfig").MultidayWindow): void;
+  showAvgCost: boolean;
+  setShowAvgCost(v: boolean): void;
+}
+
+function DetailChartHead(props: HeadProps) {
+  const {
+    view, setView,
+    intradaySessions, setIntradaySessions,
+    minuteGranularity, setMinuteGranularity,
+    multidayWindow, setMultidayWindow,
+    showAvgCost, setShowAvgCost,
+  } = props;
+
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const intradayAnchor = useRef<HTMLButtonElement | null>(null);
+  const minuteAnchor = useRef<HTMLButtonElement | null>(null);
+  const multidayAnchor = useRef<HTMLButtonElement | null>(null);
+  const [openPopover, setOpenPopover] = useState<null | "intraday" | "minute" | "multiday">(null);
+
+  return (
+    <div className="detail-chart-head" ref={containerRef}>
+      <div className="legend-row">
+        <h4>价格</h4>
+        <div className="legend">
+          <span className="it"><span className="glyph buy">▲</span>买入</span>
+          <span className="it"><span className="glyph sell">▼</span>卖出</span>
+          <button
+            className={`toggle-mini ${showAvgCost ? "on" : ""}`}
+            onClick={() => setShowAvgCost(!showAvgCost)}
+            title="显示/隐藏成本均价参考线"
+          >
+            <span className="glyph avg" />成本{showAvgCost ? "" : " · 隐藏"}
+          </button>
+        </div>
+      </div>
+      <div className="chart-tabs">
+        {TABS.map((t) => {
+          const isActive = view === t.view;
+          // Every popover-tab carries its own sub-value as a quiet suffix
+          // so the user can see what each tab will switch to before clicking.
+          const ownSub =
+            t.view === "intraday" ? (
+              intradaySessions === "regular" ? "盘中"
+              : intradaySessions === "pre" ? "盘前"
+              : intradaySessions === "post" ? "盘后"
+              : intradaySessions === "overnight" ? "夜盘"
+              : "全部"
+            )
+            : t.view === "minute" ? minuteGranularity
+            : t.view === "multiday" ? `${multidayWindow}日`
+            : null;
+          const popoverOpen = openPopover === t.view;
+          return (
+            <button
+              key={t.view}
+              ref={
+                t.view === "intraday" ? intradayAnchor
+                : t.view === "minute" ? minuteAnchor
+                : t.view === "multiday" ? multidayAnchor
+                : undefined
+              }
+              className={`chart-tab ${isActive ? "active" : ""} ${popoverOpen ? "popover-open" : ""}`}
+              onClick={() => {
+                if (!isActive) {
+                  setView(t.view);
+                  setOpenPopover(null);
+                  return;
+                }
+                if (t.hasPopover) {
+                  setOpenPopover((cur) =>
+                    cur === t.view ? null : (t.view as "intraday" | "minute" | "multiday"),
+                  );
+                } else {
+                  setOpenPopover(null);
+                }
+              }}
+            >
+              <span>{t.label}</span>
+              {ownSub && <span className="sub">{ownSub}</span>}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* 日内 popover — sessions */}
+      <TabPopover
+        open={openPopover === "intraday"}
+        anchorRef={intradayAnchor}
+        containerRef={containerRef}
+        onClose={() => setOpenPopover(null)}
+      >
+        {(["regular", "pre", "post", "overnight", "all"] as const).map((s) => (
+          <button
+            key={s}
+            className={`popover-pill ${intradaySessions === s ? "active" : ""}`}
+            onClick={() => { setIntradaySessions(s); setOpenPopover(null); }}
+          >
+            {s === "regular" ? "盘中" : s === "pre" ? "盘前" : s === "post" ? "盘后" : s === "overnight" ? "夜盘" : "全部"}
+          </button>
+        ))}
+      </TabPopover>
+
+      {/* 分钟 popover — granularity */}
+      <TabPopover
+        open={openPopover === "minute"}
+        anchorRef={minuteAnchor}
+        containerRef={containerRef}
+        onClose={() => setOpenPopover(null)}
+      >
+        {(["1min", "2min", "3min", "5min"] as const).map((g) => (
+          <button
+            key={g}
+            className={`popover-pill ${minuteGranularity === g ? "active" : ""}`}
+            onClick={() => { setMinuteGranularity(g); setOpenPopover(null); }}
+          >{g}</button>
+        ))}
+      </TabPopover>
+
+      {/* 多日 popover — window */}
+      <TabPopover
+        open={openPopover === "multiday"}
+        anchorRef={multidayAnchor}
+        containerRef={containerRef}
+        onClose={() => setOpenPopover(null)}
+      >
+        {([5, 7] as const).map((w) => (
+          <button
+            key={w}
+            className={`popover-pill ${multidayWindow === w ? "active" : ""}`}
+            onClick={() => { setMultidayWindow(w); setOpenPopover(null); }}
+          >{w}日</button>
+        ))}
+      </TabPopover>
+    </div>
+  );
 }
 
 /** Drilled-down view for a single position. Fetches trades + the requested
@@ -76,17 +224,23 @@ export function DetailPane({ position, onBack }: Props) {
   const isOption = position.type === "option";
 
   const quote = useQuotesStore((s) => s.quotesBySymbol[symbol]);
-  const period = useDetailViewStore((s) => s.period);
-  const setPeriod = useDetailViewStore((s) => s.setPeriod);
-  const todayGranularity = useDetailViewStore((s) => s.todayGranularity);
-  const setTodayGranularity = useDetailViewStore((s) => s.setTodayGranularity);
-  const todaySessions = useDetailViewStore((s) => s.todaySessions);
-  const setTodaySessions = useDetailViewStore((s) => s.setTodaySessions);
+  const view = useDetailViewStore((s) => s.view);
+  const setView = useDetailViewStore((s) => s.setView);
+  const intradaySessions = useDetailViewStore((s) => s.intradaySessions);
+  const setIntradaySessions = useDetailViewStore((s) => s.setIntradaySessions);
+  const minuteGranularity = useDetailViewStore((s) => s.minuteGranularity);
+  const setMinuteGranularity = useDetailViewStore((s) => s.setMinuteGranularity);
+  const multidayWindow = useDetailViewStore((s) => s.multidayWindow);
+  const setMultidayWindow = useDetailViewStore((s) => s.setMultidayWindow);
   const selectedBuys = useDetailViewStore((s) => s.selectedBuys);
   const selectedSells = useDetailViewStore((s) => s.selectedSells);
   const activePairId = useDetailViewStore((s) => s.activePairId);
   const setActivePair = useDetailViewStore((s) => s.setActivePair);
   const clearSelection = useDetailViewStore((s) => s.clearSelection);
+
+  const viewCfg = resolveViewConfig(view, {
+    intradaySessions, minuteGranularity, multidayWindow,
+  });
 
   // For stocks: all trades on the underlying are pair-bindable.
   // For options: narrow to fills on THIS specific contract (same ticker
@@ -100,7 +254,7 @@ export function DetailPane({ position, onBack }: Props) {
   const pairs = usePairsStore((s) => s.byTicker[ticker]) ?? [];
   const upsertPair = usePairsStore((s) => s.upsertPair);
   const setPairs = usePairsStore((s) => s.setPairs);
-  const barsKey = candleCacheKey(symbol, period, todayGranularity, todaySessions);
+  const barsKey = candleCacheKey(symbol, viewCfg.period, viewCfg.granularity, viewCfg.sessions);
   const bars = useCandlesticksStore((s) => s.byKey[barsKey]);
   const setBars = useCandlesticksStore((s) => s.setBars);
   // Last bars cache key the period-fetch effect has fully resolved for.
@@ -239,26 +393,22 @@ export function DetailPane({ position, onBack }: Props) {
 
   useEffect(() => {
     let alive = true;
-    // For `today`, granularity + sessions affect both the request and the
-    // cache key; for other periods these are ignored on both sides.
-    const opts = period === "today"
-      ? { granularity: todayGranularity, sessions: todaySessions }
+    const opts = viewCfg.period === "today"
+      ? { granularity: viewCfg.granularity, sessions: viewCfg.sessions }
       : {};
-    const key = candleCacheKey(symbol, period, todayGranularity, todaySessions);
-    api.candlesticks(symbol, period, opts)
+    const key = candleCacheKey(symbol, viewCfg.period, viewCfg.granularity, viewCfg.sessions);
+    api.candlesticks(symbol, viewCfg.period, opts)
       .then((r) => {
         if (!alive) return;
         setBars(key, r);
       })
       .catch((e) => console.warn("candlesticks fetch failed", e))
       .finally(() => {
-        // Flip the gate AFTER setBars so a cached-bars hit doesn't
-        // mount the chart with stale data then rebuild when the fresh
-        // fetch lands. Single mount per period/granularity/session switch.
         if (alive) setFetchedBarsKey(key);
       });
     return () => { alive = false; };
-  }, [symbol, period, todayGranularity, todaySessions, setBars]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [symbol, view, intradaySessions, minuteGranularity, multidayWindow, setBars]);
 
   const onConfirmBind = useCallback(async () => {
     if (selectedBuys.size === 0 && selectedSells.size === 0) return;
@@ -426,10 +576,6 @@ export function DetailPane({ position, onBack }: Props) {
   // Avg-cost line is opt-in per the prototype review — it often draws the
   // user's eye to a flat horizontal that visually pins the chart.
   const [showAvgCost, setShowAvgCost] = useState(false);
-  // Today's sub-config (粒度 + 时段) lives in a dropdown that opens when
-  // the user clicks "日内" again after it's already active. Hidden by
-  // default to keep the chart header clean.
-  const [todayDropdownOpen, setTodayDropdownOpen] = useState(false);
 
   return (
     <div className="detail-pane">
@@ -441,119 +587,28 @@ export function DetailPane({ position, onBack }: Props) {
       />
 
       <div className="detail-chart-card">
-        <div className="detail-chart-head">
-          <div className="legend-row">
-            <h4>价格 · {
-              period === "today" ? (
-                `今日 ${todayGranularity} · ${
-                  todaySessions === "regular" ? "盘中"
-                  : todaySessions === "pre" ? "盘前"
-                  : todaySessions === "post" ? "盘后"
-                  : todaySessions === "overnight" ? "夜盘"
-                  : "全部"
-                }`
-              ) :
-              period === "5" || period === "7" ? `近 ${period} 日 · 5 分钟` :
-              period === "15" ? "近 15 日 · 15 分钟" :
-              `近 ${period} 日 · 日K`
-            }</h4>
-            <div className="legend">
-              <span className="it"><span className="glyph buy">▲</span>买入</span>
-              <span className="it"><span className="glyph sell">▼</span>卖出</span>
-              <button
-                className={`toggle-mini ${showAvgCost ? "on" : ""}`}
-                onClick={() => setShowAvgCost(!showAvgCost)}
-                title="显示/隐藏成本均价参考线"
-              >
-                <span className="glyph avg" />成本{showAvgCost ? "" : " · 隐藏"}
-              </button>
-            </div>
-          </div>
-          <div className="period-tabs">
-            {PERIODS.map((p) => {
-              const isActive = period === p.id;
-              // "日内" doubles as a dropdown trigger when it's already
-              // active — clicking it again toggles the 粒度/时段 picker.
-              // Other tabs are simple period switches.
-              const isTodayActive = p.id === "today" && isActive;
-              return (
-                <button
-                  key={p.id}
-                  className={`p ${isActive ? "active" : ""}`}
-                  onClick={() => {
-                    if (p.id === "today" && isActive) {
-                      setTodayDropdownOpen((v) => !v);
-                    } else {
-                      setPeriod(p.id);
-                      if (p.id !== "today") setTodayDropdownOpen(false);
-                    }
-                  }}
-                >
-                  {p.label}{isTodayActive && <span className="caret">▾</span>}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-        {period === "today" && todayDropdownOpen && (
-          <div className="today-dropdown" role="menu">
-            <div className="subopt-group">
-              <span className="lbl">粒度</span>
-              {(["分时", "1min", "2min", "3min", "5min"] as const).map((g) => (
-                <button
-                  key={g}
-                  className={`pill ${todayGranularity === g ? "active" : ""}`}
-                  onClick={() => setTodayGranularity(g)}
-                >{g}</button>
-              ))}
-            </div>
-            {/* 时段 selector only makes sense for 分时 (1-min line). For K-line
-               granularities (2/3/5min) we always show regular session, so
-               hide the row entirely to avoid an option with one choice. */}
-            {todayGranularity === "分时" && (
-              <div className="subopt-group">
-                <span className="lbl">时段</span>
-                <button
-                  className={`pill ${todaySessions === "regular" ? "active" : ""}`}
-                  onClick={() => setTodaySessions("regular")}
-                >盘中</button>
-                <button
-                  className={`pill ${todaySessions === "pre" ? "active" : ""}`}
-                  onClick={() => setTodaySessions("pre")}
-                >盘前</button>
-                <button
-                  className={`pill ${todaySessions === "post" ? "active" : ""}`}
-                  onClick={() => setTodaySessions("post")}
-                >盘后</button>
-                <button
-                  className={`pill ${todaySessions === "overnight" ? "active" : ""}`}
-                  onClick={() => setTodaySessions("overnight")}
-                >夜盘</button>
-                <button
-                  className={`pill ${todaySessions === "all" ? "active" : ""}`}
-                  onClick={() => setTodaySessions("all")}
-                >全部</button>
-              </div>
-            )}
-          </div>
-        )}
+        <DetailChartHead
+          view={view}
+          setView={setView}
+          intradaySessions={intradaySessions}
+          setIntradaySessions={setIntradaySessions}
+          minuteGranularity={minuteGranularity}
+          setMinuteGranularity={setMinuteGranularity}
+          multidayWindow={multidayWindow}
+          setMultidayWindow={setMultidayWindow}
+          showAvgCost={showAvgCost}
+          setShowAvgCost={setShowAvgCost}
+        />
         <div className="detail-chart-wrap">
-          {/* Gate the chart on bars + initial trades + initial pairs +
-             barsInitialized so it mounts exactly once on open AND on every
-             period/granularity/session switch. Without the bars gate, a
-             cached barsKey would mount the chart immediately and then
-             rebuild when the refetch landed — visible as the same 240ms
-             entry animation playing twice. */}
           {bars && bars.bars.length > 0 && tradesInitialized && pairsInitialized && barsInitialized ? (
             <DetailChart
               symbol={symbol}
               bars={bars.bars}
-              period={period}
+              view={view}
+              viewCfg={viewCfg}
               trades={trades}
               avgCost={position.avg_cost}
               showAvgCost={showAvgCost}
-              todayGranularity={todayGranularity}
-              todaySessions={todaySessions}
             />
           ) : (
             <div className="empty-pat" style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
