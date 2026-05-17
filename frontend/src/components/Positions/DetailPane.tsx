@@ -95,9 +95,6 @@ function DetailChartHead(props: HeadProps) {
       <div className="legend-row">
         <h4>价格</h4>
         <div className="legend">
-          <span className="it"><span className="glyph buy">B</span>买入</span>
-          <span className="it"><span className="glyph sell">S</span>卖出</span>
-          <span className="it"><span className="glyph t">T</span>做T</span>
           <button
             className={`toggle-mini ${showAvgCost ? "on" : ""}`}
             onClick={() => setShowAvgCost(!showAvgCost)}

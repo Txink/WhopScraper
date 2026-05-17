@@ -101,20 +101,23 @@ const tradeMarkersPlugin: Plugin = {
       const w = TRADE_MARKER_W;
       const h = TRADE_MARKER_H;
       const r = 2.5;
-      const tailH = 3;
       const cx = x + TRADE_MARKER_XOFFSET;
-      // Always positioned ABOVE the point with the tail pointing down to (cx, y - GAP).
-      const top = y - TRADE_MARKER_GAP - h - tailH;
+      // Positioned ABOVE the point with the tail pointing down-left toward it.
+      const top = y - TRADE_MARKER_GAP - h;
       const left = cx - w / 2;
 
       ctx.save();
       ctx.fillStyle = color;
-      // Tail (downward triangle from bottom of body to (cx, y - GAP))
+      // Tail: bottom-LEFT of bubble, slanting down-LEFT toward the data point.
+      // (Badge sits upper-right of point; tail points back toward it.)
       ctx.beginPath();
-      const tailTipY = y - TRADE_MARKER_GAP;
-      ctx.moveTo(cx - 3, top + h);
-      ctx.lineTo(cx, tailTipY);
-      ctx.lineTo(cx + 3, top + h);
+      const tailBaseX = left + 3;      // start 3px in from the left edge
+      const tailBaseY = top + h;       // bottom edge of the body
+      const tailTipX = left - 2;       // tip 2px outside-left
+      const tailTipY = top + h + 5;    // 5px below the body
+      ctx.moveTo(tailBaseX, tailBaseY);
+      ctx.lineTo(tailBaseX + 5, tailBaseY);  // small base along the bottom edge
+      ctx.lineTo(tailTipX, tailTipY);
       ctx.closePath();
       ctx.fill();
 
@@ -324,10 +327,16 @@ export function DetailChart({
         buys.length > 0 && sells.length > 0 ? "T"
         : buys.length > 0 ? "B"
         : "S";
-      out.push({ x, y: vwap, type, qty: totalQty, price: vwap, trades });
+      // In candle views, anchor the badge at the candle's top so badges form
+      // a clean above-bar row regardless of where trades happened within the bar.
+      // In line views, keep VWAP so the badge sits next to the actual price.
+      const bar = visibleBars[x];
+      const isCandleView = viewCfg.datasetType === "candlestick";
+      const y = isCandleView && bar ? bar.high : vwap;
+      out.push({ x, y, type, qty: totalQty, price: vwap, trades });
     });
     return out;
-  }, [visibleBars, visibleTrades, view]);
+  }, [visibleBars, visibleTrades, view, viewCfg.datasetType]);
 
   const chartData = useMemo(() => {
     const labels = visibleBars.map((b) => {
@@ -565,7 +574,7 @@ export function DetailChart({
               onPanComplete: ({ chart }) => { setIsZoomed(true); chart.update("none"); },
             },
             zoom: {
-              wheel: { enabled: true },
+              wheel: { enabled: true, speed: 0.05 },
               pinch: { enabled: true },
               mode: "x",
               onZoomComplete: ({ chart }) => { setIsZoomed(true); chart.update("none"); },

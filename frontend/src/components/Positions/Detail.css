@@ -190,26 +190,6 @@
   font-size: 11px;
   color: var(--fg-2);
 }
-.legend .it { display: inline-flex; align-items: center; gap: 5px; }
-.legend .glyph {
-  width: 14px; height: 14px;
-  display: inline-flex; align-items: center; justify-content: center;
-  font-family: var(--font-mono); font-size: 11px;
-}
-.legend .glyph.buy,
-.legend .glyph.sell,
-.legend .glyph.t {
-  width: 14px;
-  height: 12px;
-  border-radius: 2px;
-  font-size: 9px;
-  font-weight: 700;
-  color: #fff;
-  margin-right: 3px;
-}
-.legend .glyph.buy { background: #f59e0b; }
-.legend .glyph.sell { background: #3b82f6; }
-.legend .glyph.t { background: #a855f7; }
 .legend .glyph.avg {
   border-top: 1px dashed var(--info);
   height: 2px;
