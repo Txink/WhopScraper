@@ -518,7 +518,9 @@ export function DetailChart({
       chartRef.current?.destroy();
       chartRef.current = null;
     };
-    // Structural deps only — non-listed values are read via refs in callbacks.
+    // Structural deps only — Chart instance rebuilds when these change.
+    // Per-render values (visibleBars, markers, avgCost, showAvgCost) flow
+    // through Effect B's in-place mutations and are NOT listed here.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [symbol, view, viewCfg.granularity, viewCfg.sessions, viewCfg.datasetType, colorMode]);
 
@@ -532,8 +534,24 @@ export function DetailChart({
     if (!data) return;
 
     chart.data.labels = data.labels;
-    // dataset 0 is the price dataset — replace its data with the latest closes.
-    (chart.data.datasets[0]!.data as unknown as number[]) = data.closes;
+    // Find the price dataset by label so the branch is robust against future
+    // dataset insertions / reorderings.
+    const priceDs = chart.data.datasets.find(
+      (d) => (d as { label?: string }).label === "成交价",
+    ) as { data: unknown } | undefined;
+    if (priceDs) {
+      if (viewCfg.datasetType === "candlestick") {
+        priceDs.data = visibleBars.map((b, i) => ({
+          x: i,
+          o: b.open,
+          h: b.high,
+          l: b.low,
+          c: b.close,
+        }));
+      } else {
+        priceDs.data = data.closes;
+      }
+    }
 
     // Find / sync the avg-cost dataset. It's optional — present when
     // (avgCost != null && showAvgCost). We never reorder the underlying

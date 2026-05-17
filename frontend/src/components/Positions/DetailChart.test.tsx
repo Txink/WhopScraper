@@ -3,6 +3,8 @@ import { render, act } from "@testing-library/react";
 
 vi.mock("chartjs-plugin-zoom");
 
+let lastChartInstance: { data: { labels: unknown[]; datasets: Array<{ label: string; data: unknown[] }> } } | null = null;
+
 vi.mock("chart.js", () => {
   type ChartStub = {
     destroy: () => void;
@@ -23,7 +25,7 @@ vi.mock("chart.js", () => {
     this.update = vi.fn();
     this.data = {
       labels: [],
-      datasets: [{ label: "price", data: [] }],
+      datasets: [{ label: "成交价", data: [] }],
     };
     this.options = {
       scales: { x: { max: 0, min: 0 } },
@@ -34,6 +36,7 @@ vi.mock("chart.js", () => {
       },
     };
     this.scales = { x: { max: 0, min: 0 } };
+    lastChartInstance = this;
   }
   const Chart = ChartCtor as unknown as { new (): ChartStub; register: (...args: unknown[]) => void };
   Chart.register = vi.fn();
@@ -86,6 +89,16 @@ function renderView(view: ViewType, subOverrides: Partial<Parameters<typeof reso
     />,
   );
 }
+
+describe("DetailChart candlestick dataset shape", () => {
+  it("Effect B writes OHLC objects (not numbers) for view=day", () => {
+    renderView("day");
+    const ds = lastChartInstance?.data.datasets[0];
+    expect(Array.isArray(ds?.data)).toBe(true);
+    const first = (ds?.data as unknown[])[0];
+    expect(first).toMatchObject({ x: expect.any(Number), o: expect.any(Number), h: expect.any(Number), l: expect.any(Number), c: expect.any(Number) });
+  });
+});
 
 describe("DetailChart live-mode wiring", () => {
   it.each([
