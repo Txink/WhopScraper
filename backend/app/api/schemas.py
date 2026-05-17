@@ -352,7 +352,7 @@ class CandlestickOut(BaseModel):
 
 class CandlesticksOut(BaseModel):
     symbol: str
-    period: str  # "today" or "5"|"7"|"15"|"30"|"60"|"90"
+    period: str  # "today" | "5" | "7" | "30" | "day" | "week" | "month" | "year"
     bars: list[CandlestickOut]
 
 
