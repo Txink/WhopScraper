@@ -11,15 +11,15 @@
  *     body_top    = body_bottom - BODY_H
  */
 
-const BODY_W = 19;
-const BODY_H = 17;
-const CORNER_R = 3;
+const BODY_W = 14;
+const BODY_H = 12;
+const CORNER_R = 2;
 /** Tail tip is INSET this far right of the body's left edge. */
-const TIP_INSET_FROM_BODY_LEFT = 1.5;
+const TIP_INSET_FROM_BODY_LEFT = 1;
 /** Tail tip is this far below the body's bottom edge. */
-const TIP_BELOW_BODY = 6;
+const TIP_BELOW_BODY = 4;
 /** Where the tail rejoins the body's bottom edge (x distance from body's left). */
-const TAIL_REJOIN_X = 5;
+const TAIL_REJOIN_X = 4;
 
 export function drawBubble(
   ctx: CanvasRenderingContext2D,
@@ -58,7 +58,7 @@ export function drawBubble(
 
   // Letter inside, white, bold. Center on the BODY (not including tail).
   ctx.fillStyle = "#ffffff";
-  ctx.font = "700 11px -apple-system, system-ui, sans-serif";
+  ctx.font = "700 9px -apple-system, system-ui, sans-serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText(letter, (left + right) / 2, (top + bottom) / 2 + 0.5);
