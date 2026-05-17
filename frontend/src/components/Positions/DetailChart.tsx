@@ -121,11 +121,13 @@ const dayMarkersPlugin: Plugin<"line" | "candlestick"> = {
     let prevDay: string | null = null;
     ctx.save();
     // Brighter line for multiday since these ARE the primary ticks.
-    ctx.strokeStyle = showLabels
-      ? "rgba(255, 255, 255, 0.18)"
-      : "rgba(255, 255, 255, 0.08)";
+    // Match the horizontal grid color so vertical day-boundary ticks and
+    // the left border read as part of the same chart frame.
+    ctx.strokeStyle = C.line;
     ctx.lineWidth = 1;
-    ctx.setLineDash([3, 3]);
+    // Multiday uses solid day-boundary ticks + left border; the dashed
+    // variant is reserved for the non-label fallback path.
+    if (!showLabels) ctx.setLineDash([3, 3]);
     ctx.font = "500 9px 'IBM Plex Mono', ui-monospace, monospace";
     ctx.fillStyle = "#566071";  // C.fg3
     ctx.textAlign = "center";
@@ -134,12 +136,20 @@ const dayMarkersPlugin: Plugin<"line" | "candlestick"> = {
       const b = pluginBars[i]!;
       if (!b.timestamp) continue;
       const day = tradingDayOfET(b.timestamp);
-      // First-day label: at the very first bar, drop a label only (no line).
+      // First-day: draw a vertical line at the chart's left edge (serves as
+      // the multiday view's left border, since the x-grid is disabled here),
+      // and left-align the label so it renders fully without clipping.
       if (prevDay === null && showLabels && i === 0) {
         const x = xs.getPixelForValue(i);
         if (Number.isFinite(x)) {
+          ctx.beginPath();
+          ctx.moveTo(x, ys.top);
+          ctx.lineTo(x, ys.bottom);
+          ctx.stroke();
           const label = fmtBjDate(b.timestamp);
-          ctx.fillText(label, x, area.bottom + 4);
+          ctx.textAlign = "left";
+          ctx.fillText(label, x + 2, area.bottom + 4);
+          ctx.textAlign = "center";
         }
       }
       if (prevDay !== null && day !== prevDay) {
@@ -477,7 +487,17 @@ export function DetailChart({
         // Y-axis labels live on the right; left side has nothing to
         // anchor, so flatten the left/right chartArea inset and let the
         // canvas hug the card padding. Top/bottom default to 0 too.
-        layout: { padding: { left: 0, right: 0, top: 0, bottom: 0 } },
+        // Multiday view reserves bottom space for the dayMarkersPlugin
+        // day labels (x-axis ticks are disabled, so Chart.js doesn't
+        // auto-reserve space below the chart area).
+        layout: {
+          padding: {
+            left: 0,
+            right: 0,
+            top: 0,
+            bottom: view === "multiday" ? 4 : 0,
+          },
+        },
         plugins: {
           legend: { display: false },
           tooltip: { enabled: false },

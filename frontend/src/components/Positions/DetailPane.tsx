@@ -663,7 +663,7 @@ export function DetailPane({ position, onBack }: Props) {
           setMultidayWindow={setMultidayWindow}
           hoverInfo={hoverInfo}
         />
-        <div className="detail-chart-wrap">
+        <div className="detail-chart-wrap" data-view={view}>
           {bars && bars.bars.length > 0 && tradesInitialized && pairsInitialized && barsInitialized ? (
             <DetailChart
               symbol={symbol}

@@ -190,6 +190,13 @@
   position: relative;
   margin-left: -12px;
 }
+/* Multiday view keeps the chart inside the card's natural left padding so
+ * the chart's left border (drawn by dayMarkersPlugin at the first bar) has
+ * a visible gap from the card's outer edge. Other views still hug the edge
+ * via the negative margin above. */
+.detail-chart-wrap[data-view="multiday"] {
+  margin-left: 0;
+}
 
 /* Canvas wrapper hosts the reset-zoom button (when zoomed). Must be 100%
  * height + relative so Chart.js measures the parent correctly and our
