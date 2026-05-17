@@ -281,16 +281,23 @@ export function DetailChart({
             x: i,
             o: b.open, h: b.high, l: b.low, c: b.close,
           })),
-          borderColor: {
+          // chartjs-chart-financial reads `borderColors` / `backgroundColors`
+          // (plural) for per-direction coloring. The singular `borderColor` /
+          // `backgroundColor` must be scalar strings for Chart.js's own hover
+          // resolver; passing an object literal there causes a runtime crash
+          // ("value.toString is not a function").
+          borderColors: {
             up: cssVar("--up-color", "#3dd68c"),
             down: cssVar("--down-color", "#ef5b5b"),
             unchanged: C.fg3,
-          } as unknown as string,
-          backgroundColor: {
+          },
+          backgroundColors: {
             up: cssVar("--up-color", "#3dd68c"),
             down: cssVar("--down-color", "#ef5b5b"),
             unchanged: C.fg3,
-          } as unknown as string,
+          },
+          borderColor: cssVar("--up-color", "#3dd68c"),
+          backgroundColor: cssVar("--up-color", "#3dd68c"),
           borderWidth: 1,
           barPercentage: 0.9,
           categoryPercentage: 0.95,
