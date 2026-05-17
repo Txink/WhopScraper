@@ -1,5 +1,49 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+
+vi.mock("chartjs-plugin-zoom");
+vi.mock("chartjs-chart-financial", () => ({
+  CandlestickController: {},
+  CandlestickElement: {},
+  OhlcController: {},
+  OhlcElement: {},
+}));
+vi.mock("chart.js", () => {
+  type ChartStub = {
+    destroy: () => void;
+    update: () => void;
+    data: { labels: unknown[]; datasets: Array<{ label: string; data: unknown[] }> };
+    options: {
+      scales: { x: { max: number; min: number } };
+      plugins: {
+        sessionBg: { barCount: number };
+        zoom: { limits: { x: { max: number } } };
+      };
+    };
+    scales: { x: { max: number; min: number } };
+  };
+  function ChartCtor(this: ChartStub) {
+    this.destroy = vi.fn();
+    this.update = vi.fn();
+    this.data = { labels: [], datasets: [{ label: "price", data: [] }] };
+    this.options = {
+      scales: { x: { max: 0, min: 0 } },
+      plugins: { sessionBg: { barCount: 0 }, zoom: { limits: { x: { max: 0 } } } },
+    };
+    this.scales = { x: { max: 0, min: 0 } };
+  }
+  const Chart = ChartCtor as unknown as { new (): ChartStub; register: (...args: unknown[]) => void };
+  Chart.register = vi.fn();
+  return {
+    Chart,
+    LineController: {}, ScatterController: {},
+    LineElement: {}, PointElement: {},
+    LinearScale: {}, CategoryScale: {},
+    Filler: {},
+    Tooltip: { positioners: {} },
+  };
+});
+
 import { PositionsPanel } from "./PositionsPanel";
 import { usePositionsStore } from "../../stores/positions";
 import { useDetailViewStore } from "../../stores/detailView";

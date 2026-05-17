@@ -5,6 +5,13 @@ import { render, act } from "@testing-library/react";
 // HammerJS tries to attach to document during plugin registration, which fails.
 vi.mock("chartjs-plugin-zoom");
 
+vi.mock("chartjs-chart-financial", () => ({
+  CandlestickController: {},
+  CandlestickElement: {},
+  OhlcController: {},
+  OhlcElement: {},
+}));
+
 // Mock Chart.js to avoid 2d context issues in jsdom. We return stubs that
 // prevent the component from crashing while still allowing DOM rendering.
 // In a real test, Chart would be initialized, but here we just verify React wiring.

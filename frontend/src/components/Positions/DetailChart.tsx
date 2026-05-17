@@ -12,6 +12,12 @@ import {
   Filler,
   Tooltip,
 } from "chart.js";
+import {
+  CandlestickController,
+  CandlestickElement,
+  OhlcController,
+  OhlcElement,
+} from "chartjs-chart-financial";
 
 // Custom tooltip positioner: anchor the popup at the cursor instead of
 // the nearest data point. Registered once at module load (Chart.js stores
@@ -43,6 +49,8 @@ Chart.register(
   LinearScale, CategoryScale,
   Filler, Tooltip,
   zoomPlugin,
+  CandlestickController, CandlestickElement,
+  OhlcController, OhlcElement,
 );
 
 /** Resolve a CSS custom-property to its current hex string. Used so the
