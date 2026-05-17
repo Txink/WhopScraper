@@ -84,8 +84,6 @@ function renderView(view: ViewType, subOverrides: Partial<Parameters<typeof reso
       view={view}
       viewCfg={cfg}
       trades={[]}
-      avgCost={null}
-      showAvgCost={false}
     />,
   );
 }

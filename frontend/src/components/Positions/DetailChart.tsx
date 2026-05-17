@@ -207,17 +207,14 @@ interface Props {
   view: ViewType;
   viewCfg: ViewConfig;
   trades: Trade[];
-  avgCost: number | null;
-  showAvgCost: boolean;
 }
 
 /**
- * Detail chart: price line + BUY/SELL scatter markers + avg-cost reference
- * line. Markers are snapped to the nearest bar in time so they always land
- * on the x-axis grid.
+ * Detail chart: price line + BUY/SELL scatter markers. Markers are snapped
+ * to the nearest bar in time so they always land on the x-axis grid.
  */
 export function DetailChart({
-  symbol, bars, view, viewCfg, trades, avgCost, showAvgCost,
+  symbol, bars, view, viewCfg, trades,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const chartRef = useRef<Chart | null>(null);
@@ -239,8 +236,6 @@ export function DetailChart({
 
   const visibleBarsRef = useRef<Candlestick[]>([]);
   const markersRef = useRef<AggMarker[]>([]);
-  const avgCostRef = useRef<number | null>(null);
-  const showAvgCostRef = useRef<boolean>(false);
 
   const pulseRef = useRef<HTMLDivElement | null>(null);
   // Local mutable state for live mode. We keep extended bars HERE (not in
@@ -358,11 +353,9 @@ export function DetailChart({
   // without forcing the chart to rebuild.
   visibleBarsRef.current = visibleBars;
   markersRef.current = markers;
-  avgCostRef.current = avgCost;
-  showAvgCostRef.current = showAvgCost;
 
   // Effect A — create the Chart instance once per structural-deps combo
-  // (view/granularity/session/datasetType/color-mode). visibleBars / markers / avgCost
+  // (view/granularity/session/datasetType/color-mode). visibleBars / markers
   // flow through Effect B as in-place mutations so quote ticks don't tear
   // the chart down. Symbol switch is structural too (chart cleanly resets).
   useEffect(() => {
@@ -375,11 +368,6 @@ export function DetailChart({
       : data.closes.length;
     const xMax = data.closes.length - 1;
     const xMin = Math.max(0, xMax - initialCount + 1);
-
-    // Snapshot avgCost / showAvgCost at mount time. Subsequent changes
-    // flow through Effect B (it adds/removes the dataset entry as needed).
-    const initialAvgCost = avgCost;
-    const initialShowAvgCost = showAvgCost;
 
     const priceDataset = viewCfg.datasetType === "candlestick"
       ? ({
@@ -435,15 +423,6 @@ export function DetailChart({
         labels: data.labels,
         datasets: [
           priceDataset,
-          ...(initialAvgCost != null && initialShowAvgCost ? [{
-            label: "成本均价",
-            data: data.closes.map(() => initialAvgCost),
-            borderColor: C.info,
-            borderWidth: 1.2,
-            borderDash: [4, 4],
-            fill: false, pointRadius: 0, tension: 0,
-            order: 3,
-          }] : []),
           {
             label: "买入",
             type: "scatter" as const,
@@ -621,11 +600,6 @@ export function DetailChart({
                   if (m.y > vMax) vMax = m.y;
                 }
               }
-              const avgRef = avgCostRef.current;
-              if (showAvgCostRef.current && avgRef != null) {
-                if (avgRef < vMin) vMin = avgRef;
-                if (avgRef > vMax) vMax = avgRef;
-              }
               if (vMin === Infinity) return;
               const pad = (vMax - vMin) * 0.06 || Math.abs(vMax) * 0.005 || 0.5;
               scale.min = vMin - pad;
@@ -653,12 +627,12 @@ export function DetailChart({
       chartRef.current = null;
     };
     // Structural deps only — Chart instance rebuilds when these change.
-    // Per-render values (visibleBars, markers, avgCost, showAvgCost) flow
-    // through Effect B's in-place mutations and are NOT listed here.
+    // Per-render values (visibleBars, markers) flow through Effect B's
+    // in-place mutations and are NOT listed here.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [symbol, view, viewCfg.granularity, viewCfg.sessions, viewCfg.datasetType, colorMode]);
 
-  // Effect B — mutate chart data in place on data/marker/avg-cost change.
+  // Effect B — mutate chart data in place on data/marker change.
   // Skips when the chart hasn't been created yet (Effect A will pick up
   // the latest snapshot via dataRef on mount).
   useEffect(() => {
@@ -687,31 +661,8 @@ export function DetailChart({
       }
     }
 
-    // Find / sync the avg-cost dataset. It's optional — present when
-    // (avgCost != null && showAvgCost). We never reorder the underlying
-    // dataset positions; remove vs insert in-place.
-    const datasets = chart.data.datasets as Array<{ label?: string; data: unknown }>;
-    const avgIdx = datasets.findIndex((d) => d.label === "成本均价");
-    if (avgCost != null && showAvgCost) {
-      const avgData = data.closes.map(() => avgCost);
-      if (avgIdx === -1) {
-        datasets.splice(1, 0, {
-          label: "成本均价",
-          data: avgData,
-          borderColor: C.info,
-          borderWidth: 1.2,
-          borderDash: [4, 4],
-          fill: false, pointRadius: 0, tension: 0,
-          order: 3,
-        } as unknown as typeof datasets[number]);
-      } else {
-        (datasets[avgIdx]!.data as unknown as number[]) = avgData;
-      }
-    } else if (avgIdx !== -1) {
-      datasets.splice(avgIdx, 1);
-    }
-
     // Scatter datasets — find by label so order-independent.
+    const datasets = chart.data.datasets as Array<{ label?: string; data: unknown }>;
     const buyDs = datasets.find((d) => d.label === "买入");
     const sellDs = datasets.find((d) => d.label === "卖出");
     const tDs = datasets.find((d) => d.label === "做T");
@@ -754,7 +705,7 @@ export function DetailChart({
       liveStateRef.current.labels = data.labels.slice();
       liveStateRef.current.lastApplied = 0;
     }
-  }, [visibleBars, markers, avgCost, showAvgCost]);
+  }, [visibleBars, markers]);
 
   // liveCfg is null for day/week/month/year (K-line) views; live updates
   // are active for intraday, minute, and multiday views.
@@ -782,8 +733,7 @@ export function DetailChart({
     const { periodMinutes, allowAppend } = liveCfg;
 
     // Find the price-line dataset by label rather than by index 0 — keeps
-    // the live path robust against future dataset reorderings (avg-cost
-    // is inserted/removed dynamically by Effect B).
+    // the live path robust against future dataset reorderings.
     const priceDataset = chart.data.datasets.find(
       (d) => (d as { label?: string }).label === "成交价",
     ) as { data: unknown } | undefined;

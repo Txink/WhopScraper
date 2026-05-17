@@ -177,43 +177,6 @@
   color: var(--fg-3);
   font-weight: 500;
 }
-.legend-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-.legend {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 11px;
-  color: var(--fg-2);
-}
-.legend .glyph.avg {
-  border-top: 1px dashed var(--info);
-  height: 2px;
-  width: 18px;
-  margin-top: 4px;
-}
-.legend .toggle-mini {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 3px 8px;
-  border-radius: 4px;
-  background: var(--bg-1);
-  border: 1px solid var(--line);
-  color: var(--fg-2);
-  font-size: 10.5px;
-  cursor: pointer;
-}
-.legend .toggle-mini.on {
-  background: rgba(63, 181, 197, 0.14);
-  border-color: rgba(63, 181, 197, 0.32);
-  color: var(--brand);
-}
-
 /* 340px (was 380) — trimmed during the vertical-space compression round.
  * Reads cleanly at this height for all supported periods (today /
  * Nmin / 日K); 320 turned out a hair too short so we walked it back

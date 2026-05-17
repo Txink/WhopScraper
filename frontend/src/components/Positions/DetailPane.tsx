@@ -71,8 +71,6 @@ interface HeadProps {
   setMinuteGranularity(g: import("./viewConfig").MinuteGranularity): void;
   multidayWindow: import("./viewConfig").MultidayWindow;
   setMultidayWindow(w: import("./viewConfig").MultidayWindow): void;
-  showAvgCost: boolean;
-  setShowAvgCost(v: boolean): void;
 }
 
 function DetailChartHead(props: HeadProps) {
@@ -81,7 +79,6 @@ function DetailChartHead(props: HeadProps) {
     intradaySessions, setIntradaySessions,
     minuteGranularity, setMinuteGranularity,
     multidayWindow, setMultidayWindow,
-    showAvgCost, setShowAvgCost,
   } = props;
 
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -92,18 +89,6 @@ function DetailChartHead(props: HeadProps) {
 
   return (
     <div className="detail-chart-head" ref={containerRef}>
-      <div className="legend-row">
-        <h4>价格</h4>
-        <div className="legend">
-          <button
-            className={`toggle-mini ${showAvgCost ? "on" : ""}`}
-            onClick={() => setShowAvgCost(!showAvgCost)}
-            title="显示/隐藏成本均价参考线"
-          >
-            <span className="glyph avg" />成本{showAvgCost ? "" : " · 隐藏"}
-          </button>
-        </div>
-      </div>
       <div className="chart-tabs">
         {TABS.map((t) => {
           const isActive = view === t.view;
@@ -571,10 +556,6 @@ export function DetailPane({ position, onBack }: Props) {
     });
   }, [ticker, setTrades]);
 
-  // Avg-cost line is opt-in per the prototype review — it often draws the
-  // user's eye to a flat horizontal that visually pins the chart.
-  const [showAvgCost, setShowAvgCost] = useState(false);
-
   return (
     <div className="detail-pane">
       <DetailSummary
@@ -594,8 +575,6 @@ export function DetailPane({ position, onBack }: Props) {
           setMinuteGranularity={setMinuteGranularity}
           multidayWindow={multidayWindow}
           setMultidayWindow={setMultidayWindow}
-          showAvgCost={showAvgCost}
-          setShowAvgCost={setShowAvgCost}
         />
         <div className="detail-chart-wrap">
           {bars && bars.bars.length > 0 && tradesInitialized && pairsInitialized && barsInitialized ? (
@@ -605,8 +584,6 @@ export function DetailPane({ position, onBack }: Props) {
               view={view}
               viewCfg={viewCfg}
               trades={trades}
-              avgCost={position.avg_cost}
-              showAvgCost={showAvgCost}
             />
           ) : (
             <div className="empty-pat" style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
