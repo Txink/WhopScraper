@@ -74,6 +74,7 @@ function renderView(view: ViewType, subOverrides: Partial<Parameters<typeof reso
     intradaySessions: "regular" as const,
     minuteGranularity: "5min" as const,
     multidayWindow: 5 as const,
+    dayKGranularity: "day" as const,
     ...subOverrides,
   };
   const cfg = resolveViewConfig(view, sub);

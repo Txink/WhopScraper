@@ -56,15 +56,32 @@ export type HoverInfo =
   | { kind: "candle"; time: string; open: number; close: number; high: number; low: number; agg: AggMarker | null }
   | null;
 
-const TABS: Array<{ view: ViewType; label: string; hasPopover: boolean }> = [
-  { view: "intraday", label: "日内",  hasPopover: true },
-  { view: "minute",   label: "分钟",  hasPopover: true },
-  { view: "multiday", label: "多日",  hasPopover: true },
-  { view: "day",      label: "日K",   hasPopover: false },
-  { view: "week",     label: "周K",   hasPopover: false },
-  { view: "month",    label: "月K",   hasPopover: false },
-  { view: "year",     label: "年K",   hasPopover: false },
+/** Visible chart tabs. The `dayK` tab is a tab-group: it represents
+ *  whichever of day/week/month/year is currently set via its popover
+ *  (1 / 7 / 30 / 365日). Other tabs map 1:1 onto a single ViewType. */
+type TabId = "intraday" | "minute" | "multiday" | "dayK";
+const TABS: Array<{ id: TabId; label: string }> = [
+  { id: "intraday", label: "日内" },
+  { id: "minute",   label: "分钟" },
+  { id: "multiday", label: "多日" },
+  { id: "dayK",     label: "日K" },
 ];
+
+const DAYK_OPTIONS: Array<{ days: 1 | 7 | 30 | 365; view: import("./viewConfig").DayKGranularity }> = [
+  { days: 1,   view: "day" },
+  { days: 7,   view: "week" },
+  { days: 30,  view: "month" },
+  { days: 365, view: "year" },
+];
+
+function tabIdForView(view: ViewType): TabId {
+  if (view === "day" || view === "week" || view === "month" || view === "year") return "dayK";
+  return view;
+}
+
+function dayKDaysLabel(g: import("./viewConfig").DayKGranularity): string {
+  return DAYK_OPTIONS.find((o) => o.view === g)?.days.toString() + "日";
+}
 
 interface Props {
   position: Position;
@@ -80,6 +97,8 @@ interface HeadProps {
   setMinuteGranularity(g: import("./viewConfig").MinuteGranularity): void;
   multidayWindow: import("./viewConfig").MultidayWindow;
   setMultidayWindow(w: import("./viewConfig").MultidayWindow): void;
+  dayKGranularity: import("./viewConfig").DayKGranularity;
+  setDayKGranularity(g: import("./viewConfig").DayKGranularity): void;
   hoverInfo: HoverInfo;
 }
 
@@ -89,6 +108,7 @@ function DetailChartHead(props: HeadProps) {
     intradaySessions, setIntradaySessions,
     minuteGranularity, setMinuteGranularity,
     multidayWindow, setMultidayWindow,
+    dayKGranularity, setDayKGranularity,
     hoverInfo,
   } = props;
 
@@ -96,50 +116,52 @@ function DetailChartHead(props: HeadProps) {
   const intradayAnchor = useRef<HTMLButtonElement | null>(null);
   const minuteAnchor = useRef<HTMLButtonElement | null>(null);
   const multidayAnchor = useRef<HTMLButtonElement | null>(null);
-  const [openPopover, setOpenPopover] = useState<null | "intraday" | "minute" | "multiday">(null);
+  const dayKAnchor = useRef<HTMLButtonElement | null>(null);
+  const [openPopover, setOpenPopover] = useState<TabId | null>(null);
+
+  const activeTab = tabIdForView(view);
 
   return (
     <div className="detail-chart-head" ref={containerRef}>
       <div className="chart-tabs">
         {TABS.map((t) => {
-          const isActive = view === t.view;
+          const isActive = activeTab === t.id;
           // Every popover-tab carries its own sub-value as a quiet suffix
           // so the user can see what each tab will switch to before clicking.
           const ownSub =
-            t.view === "intraday" ? (
+            t.id === "intraday" ? (
               intradaySessions === "regular" ? "盘中"
               : intradaySessions === "pre" ? "盘前"
               : intradaySessions === "post" ? "盘后"
               : intradaySessions === "overnight" ? "夜盘"
               : "全部"
             )
-            : t.view === "minute" ? minuteGranularity
-            : t.view === "multiday" ? `${multidayWindow}日`
+            : t.id === "minute" ? minuteGranularity
+            : t.id === "multiday" ? `${multidayWindow}日`
+            : t.id === "dayK" ? dayKDaysLabel(dayKGranularity)
             : null;
-          const popoverOpen = openPopover === t.view;
+          const popoverOpen = openPopover === t.id;
+          const anchor =
+            t.id === "intraday" ? intradayAnchor
+            : t.id === "minute" ? minuteAnchor
+            : t.id === "multiday" ? multidayAnchor
+            : t.id === "dayK" ? dayKAnchor
+            : undefined;
           return (
             <button
-              key={t.view}
-              ref={
-                t.view === "intraday" ? intradayAnchor
-                : t.view === "minute" ? minuteAnchor
-                : t.view === "multiday" ? multidayAnchor
-                : undefined
-              }
+              key={t.id}
+              ref={anchor}
               className={`chart-tab ${isActive ? "active" : ""} ${popoverOpen ? "popover-open" : ""}`}
               onClick={() => {
                 if (!isActive) {
-                  setView(t.view);
+                  // dayK tab maps to whichever sub-view the user last picked.
+                  const targetView: ViewType =
+                    t.id === "dayK" ? dayKGranularity : t.id;
+                  setView(targetView);
                   setOpenPopover(null);
                   return;
                 }
-                if (t.hasPopover) {
-                  setOpenPopover((cur) =>
-                    cur === t.view ? null : (t.view as "intraday" | "minute" | "multiday"),
-                  );
-                } else {
-                  setOpenPopover(null);
-                }
+                setOpenPopover((cur) => (cur === t.id ? null : t.id));
               }}
             >
               <span>{t.label}</span>
@@ -225,6 +247,28 @@ function DetailChartHead(props: HeadProps) {
           >{w}日</button>
         ))}
       </TabPopover>
+
+      {/* 日K popover — collapses day/week/month/year into one tab; each
+          option remembers itself in dayKGranularity and immediately
+          switches the chart view to its bar size. */}
+      <TabPopover
+        open={openPopover === "dayK"}
+        anchorRef={dayKAnchor}
+        containerRef={containerRef}
+        onClose={() => setOpenPopover(null)}
+      >
+        {DAYK_OPTIONS.map((o) => (
+          <button
+            key={o.view}
+            className={`popover-pill ${dayKGranularity === o.view ? "active" : ""}`}
+            onClick={() => {
+              setDayKGranularity(o.view);
+              setView(o.view);
+              setOpenPopover(null);
+            }}
+          >{o.days}日</button>
+        ))}
+      </TabPopover>
     </div>
   );
 }
@@ -255,6 +299,8 @@ export function DetailPane({ position, onBack }: Props) {
   const setMinuteGranularity = useDetailViewStore((s) => s.setMinuteGranularity);
   const multidayWindow = useDetailViewStore((s) => s.multidayWindow);
   const setMultidayWindow = useDetailViewStore((s) => s.setMultidayWindow);
+  const dayKGranularity = useDetailViewStore((s) => s.dayKGranularity);
+  const setDayKGranularity = useDetailViewStore((s) => s.setDayKGranularity);
   const selectedBuys = useDetailViewStore((s) => s.selectedBuys);
   const selectedSells = useDetailViewStore((s) => s.selectedSells);
   const activePairId = useDetailViewStore((s) => s.activePairId);
@@ -262,7 +308,7 @@ export function DetailPane({ position, onBack }: Props) {
   const clearSelection = useDetailViewStore((s) => s.clearSelection);
 
   const viewCfg = resolveViewConfig(view, {
-    intradaySessions, minuteGranularity, multidayWindow,
+    intradaySessions, minuteGranularity, multidayWindow, dayKGranularity,
   });
 
   // For stocks: all trades on the underlying are pair-bindable.
@@ -630,9 +676,16 @@ export function DetailPane({ position, onBack }: Props) {
         price: (buyValue + sellValue) / totalQty,
       };
     }
-    const timeFormatted = viewCfg.datasetType === "candlestick"
-      ? fmtBjDate(bar.timestamp ?? "")
-      : fmtBjHM(bar.timestamp ?? "");
+    // Hover time field mirrors the chart's x-axis label for that view:
+    // intraday/minute = "HH:MM" (single trading day), multiday =
+    // "MM/DD HH:MM" (5-min bars across days), K-line views = "MM/DD".
+    const ts = bar.timestamp ?? "";
+    const timeFormatted =
+      view === "intraday" || view === "minute"
+        ? fmtBjHM(ts)
+        : view === "multiday"
+          ? `${fmtBjDate(ts)} ${fmtBjHM(ts)}`
+          : fmtBjDate(ts);
     if (viewCfg.datasetType === "candlestick") {
       return {
         kind: "candle",
@@ -668,6 +721,8 @@ export function DetailPane({ position, onBack }: Props) {
           setMinuteGranularity={setMinuteGranularity}
           multidayWindow={multidayWindow}
           setMultidayWindow={setMultidayWindow}
+          dayKGranularity={dayKGranularity}
+          setDayKGranularity={setDayKGranularity}
           hoverInfo={hoverInfo}
         />
         <div className="detail-chart-wrap" data-view={view}>

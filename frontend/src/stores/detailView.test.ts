@@ -11,6 +11,7 @@ describe("detailView store", () => {
       intradaySessions: "regular",
       minuteGranularity: "5min",
       multidayWindow: 5,
+      dayKGranularity: "day",
       selectedBuys: new Set(),
       selectedSells: new Set(),
     });

@@ -762,13 +762,40 @@ export function DetailChart({
 
       if (dataChanged) {
         ch.data.labels = out.labels;
-        const priceData = priceDataset.data as unknown as number[];
-        if (out.crossedBoundary) {
-          priceData.push(lastDone);
+        // Candle datasets carry {x,o,h,l,c} objects; line datasets carry
+        // plain close numbers. Mirror whichever shape the dataset uses so
+        // the live tick works for both intraday/multiday (line) and
+        // minute (candlestick).
+        let dataLen: number;
+        if (viewCfg.datasetType === "candlestick") {
+          const candleData = priceDataset.data as Array<{
+            x: number; o: number; h: number; l: number; c: number;
+          }>;
+          const lastBarIdx = out.bars.length - 1;
+          const lastBar = out.bars[lastBarIdx]!;
+          if (out.crossedBoundary) {
+            candleData.push({
+              x: lastBarIdx,
+              o: lastBar.open, h: lastBar.high, l: lastBar.low, c: lastBar.close,
+            });
+          } else if (candleData.length > 0) {
+            const last = candleData[candleData.length - 1]!;
+            last.o = lastBar.open;
+            last.h = lastBar.high;
+            last.l = lastBar.low;
+            last.c = lastBar.close;
+          }
+          dataLen = candleData.length;
         } else {
-          priceData[priceData.length - 1] = lastDone;
+          const priceData = priceDataset.data as unknown as number[];
+          if (out.crossedBoundary) {
+            priceData.push(lastDone);
+          } else {
+            priceData[priceData.length - 1] = lastDone;
+          }
+          dataLen = priceData.length;
         }
-        const xMax = priceData.length - 1;
+        const xMax = dataLen - 1;
         const opts = ch.options as unknown as {
           scales: { x: { max: number; min: number } };
           plugins: { zoom: { limits: { x: { max: number } } } };

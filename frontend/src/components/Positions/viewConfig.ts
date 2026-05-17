@@ -18,11 +18,17 @@ export type ViewType =
 export type IntradaySession = "regular" | "pre" | "post" | "overnight" | "all";
 export type MinuteGranularity = "1min" | "2min" | "3min" | "5min";
 export type MultidayWindow = 5 | 7;
+/** Which K-line granularity the日K tab popover is set to. The four
+ *  ``ViewType``s (day/week/month/year) share a single UI tab; this
+ *  remembers which one is selected so navigating away and back
+ *  restores the user's choice. */
+export type DayKGranularity = "day" | "week" | "month" | "year";
 
 export interface ViewSubState {
   intradaySessions: IntradaySession;
   minuteGranularity: MinuteGranularity;
   multidayWindow: MultidayWindow;
+  dayKGranularity: DayKGranularity;
 }
 
 export interface LiveCfg {
@@ -75,7 +81,7 @@ export function resolveViewConfig(view: ViewType, sub: ViewSubState): ViewConfig
         period: "today",
         granularity: sub.minuteGranularity,
         sessions: "regular",
-        datasetType: "line",
+        datasetType: "candlestick",
         initialVisibleCount: Number.POSITIVE_INFINITY,
         liveCfg: { periodMinutes: _MINUTE_LIVE[sub.minuteGranularity], allowAppend: true },
         sessionBgEnabled: false,

@@ -4,10 +4,11 @@ import type {
   IntradaySession,
   MinuteGranularity,
   MultidayWindow,
+  DayKGranularity,
 } from "../components/Positions/viewConfig";
 
 /** Re-export for callers that previously imported from this module. */
-export type { ViewType, IntradaySession as SessionMode, MinuteGranularity, MultidayWindow };
+export type { ViewType, IntradaySession as SessionMode, MinuteGranularity, MultidayWindow, DayKGranularity };
 
 /** Ephemeral UI state for the position detail pane:
  *  - which symbol (if any) is open. Symbol — not ticker — because the
@@ -29,6 +30,9 @@ interface DetailViewState {
   minuteGranularity: MinuteGranularity;
   /** Sub-config for the `multiday` tab — persisted independently. */
   multidayWindow: MultidayWindow;
+  /** Sub-config for the `dayK` tab group — day/week/month/year share one
+   *  visual tab; this is the granularity the popover is set to. */
+  dayKGranularity: DayKGranularity;
 
   selectedBuys: Set<string>;
   selectedSells: Set<string>;
@@ -40,6 +44,7 @@ interface DetailViewState {
   setIntradaySessions(s: IntradaySession): void;
   setMinuteGranularity(g: MinuteGranularity): void;
   setMultidayWindow(w: MultidayWindow): void;
+  setDayKGranularity(g: DayKGranularity): void;
   toggleTrade(tradeId: string, side: "BUY" | "SELL"): void;
   clearSelection(): void;
 }
@@ -52,6 +57,7 @@ export const useDetailViewStore = create<DetailViewState>((set) => ({
   intradaySessions: "regular",
   minuteGranularity: "5min",
   multidayWindow: 5,
+  dayKGranularity: "day",
   selectedBuys: new Set(),
   selectedSells: new Set(),
 
@@ -68,6 +74,7 @@ export const useDetailViewStore = create<DetailViewState>((set) => ({
   setIntradaySessions: (s) => set({ intradaySessions: s }),
   setMinuteGranularity: (g) => set({ minuteGranularity: g }),
   setMultidayWindow: (w) => set({ multidayWindow: w }),
+  setDayKGranularity: (g) => set({ dayKGranularity: g }),
   toggleTrade: (tradeId, side) =>
     set((state) => {
       if (side === "BUY") {

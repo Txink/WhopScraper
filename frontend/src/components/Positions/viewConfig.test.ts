@@ -6,6 +6,7 @@ describe("resolveViewConfig", () => {
     intradaySessions: "regular" as const,
     minuteGranularity: "5min" as const,
     multidayWindow: 5 as const,
+    dayKGranularity: "day" as const,
   };
 
   it("intraday → period=today, granularity=分时, line, sessionBg enabled, live", () => {
@@ -18,12 +19,12 @@ describe("resolveViewConfig", () => {
     expect(c.liveCfg).toEqual({ periodMinutes: 1, allowAppend: true });
   });
 
-  it("minute → period=today, line, no sessionBg, live at chosen minutes", () => {
+  it("minute → period=today, candlestick, no sessionBg, live at chosen minutes", () => {
     const c = resolveViewConfig("minute", { ...defaults, minuteGranularity: "3min" });
     expect(c.period).toBe("today");
     expect(c.granularity).toBe("3min");
     expect(c.sessions).toBe("regular");
-    expect(c.datasetType).toBe("line");
+    expect(c.datasetType).toBe("candlestick");
     expect(c.sessionBgEnabled).toBe(false);
     expect(c.liveCfg).toEqual({ periodMinutes: 3, allowAppend: true });
   });
