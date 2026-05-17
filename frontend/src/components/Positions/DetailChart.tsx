@@ -12,6 +12,7 @@ import {
   Filler,
   Tooltip,
 } from "chart.js";
+import type { Plugin } from "chart.js";
 import {
   CandlestickController,
   CandlestickElement,
@@ -37,11 +38,11 @@ import { sessionBgPlugin } from "./sessionBgPlugin";
 import { crosshairPlugin } from "./crosshairPlugin";
 import { minMaxLabelsPlugin } from "./minMaxLabelsPlugin";
 import { buildSessionSlots } from "./sessionSlots";
-import type { Period } from "../../stores/candlesticks";
-import { fmtBjHM, fmtBjDate, fmtBjRel, classifyETSession, tradingDayOfET, currentTradingDay } from "./timeFmt";
+import type { ViewType, ViewConfig } from "./viewConfig";
+import { fmtBjHM, fmtBjDate, fmtBjRel, fmtBjWeekISO, fmtBjMonth, fmtBjYear, classifyETSession, tradingDayOfET, currentTradingDay } from "./timeFmt";
 import { usePrefsStore } from "../../stores/prefs";
 import { useQuotesStore } from "../../stores/quotes";
-import { applyLiveTick, bucketKey, liveConfig } from "./liveTick";
+import { applyLiveTick, bucketKey } from "./liveTick";
 
 Chart.register(
   LineController, ScatterController,
@@ -80,19 +81,49 @@ function fmtN(n: number, d = 3): string {
   return n.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
 }
 
+/** Vertical guide lines at every trading-day boundary in `bars[]`. Only
+ *  drawn when `viewCfg.dayMarkersEnabled` is true (multiday view). */
+const dayMarkersPlugin: Plugin<"line" | "candlestick"> = {
+  id: "dayMarkers",
+  afterDraw(chart, _args, opts) {
+    const { enabled, bars: pluginBars } = opts as { enabled: boolean; bars: Candlestick[] };
+    if (!enabled || !pluginBars || pluginBars.length === 0) return;
+    const ctx = chart.ctx;
+    const xs = chart.scales.x;
+    const ys = chart.scales.y;
+    if (!xs || !ys) return;
+    let prevDay: string | null = null;
+    ctx.save();
+    ctx.strokeStyle = "rgba(255,255,255,0.08)";
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    for (let i = 0; i < pluginBars.length; i++) {
+      const b = pluginBars[i]!;
+      if (!b.timestamp) continue;
+      const day = tradingDayOfET(b.timestamp);
+      if (prevDay !== null && day !== prevDay) {
+        const x = xs.getPixelForValue(i);
+        if (Number.isFinite(x)) {
+          ctx.beginPath();
+          ctx.moveTo(x, ys.top);
+          ctx.lineTo(x, ys.bottom);
+          ctx.stroke();
+        }
+      }
+      prevDay = day;
+    }
+    ctx.restore();
+  },
+};
+
 interface Props {
   symbol: string;
   bars: Candlestick[];
-  period: Period;
+  view: ViewType;
+  viewCfg: ViewConfig;
   trades: Trade[];
   avgCost: number | null;
-  /** When false (default), the avg-cost reference line is omitted from the
-   *  chart. The legend toggle in DetailPane controls this. */
   showAvgCost: boolean;
-  /** Today-only sub-options that drive the session-background overlay
-   *  and the client-side session filtering for 分时 mode. */
-  todayGranularity: "分时" | "1min" | "2min" | "3min" | "5min";
-  todaySessions: "regular" | "pre" | "post" | "overnight" | "all";
 }
 
 /**
@@ -101,8 +132,7 @@ interface Props {
  * on the x-axis grid.
  */
 export function DetailChart({
-  symbol, bars, period, trades, avgCost, showAvgCost,
-  todayGranularity, todaySessions,
+  symbol, bars, view, viewCfg, trades, avgCost, showAvgCost,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const chartRef = useRef<Chart | null>(null);
@@ -139,49 +169,46 @@ export function DetailChart({
 
   // Snap each trade to the index of its nearest bar in time. Skip trades
   // outside the chart window so they don't anchor to (0, 0) of the axis.
-  // Today's intraday flow:
+  // Intraday flow:
   //   1. Trim raw bars to TODAY's trading day (ET 4:00 rollover semantics)
   //   2. Further trim by selected session for 分时 mode
   //   3. Only 分时 pads to a full slot array (so未到的 sessions占住 x 轴);
-  //      K-line granularities (2/3/5min) skip padding and render real bars
-  //      only — those views don't fixed-window the same way LongBridge does.
+  //      minute granularities skip padding and render real bars only.
   //
-  // Non-today periods skip all of this and use bars verbatim.
+  // Non-intraday views skip all of this and use bars verbatim.
   const visibleBars: Candlestick[] = useMemo(() => {
-    if (period !== "today") return bars;
+    // 分时 (intraday view) is the only mode that needs session padding/trim.
+    if (view !== "intraday") return bars;
     const today = currentTradingDay();
     const trimmed = bars.filter((b) => {
       if (!b.timestamp) return false;
       if (tradingDayOfET(b.timestamp) !== today) return false;
-      if (todayGranularity !== "分时") return true; // K-line shows all of today
-      if (todaySessions === "all") return true;
-      if (todaySessions === "regular") {
-        return classifyETSession(b.timestamp) === "regular";
-      }
-      return classifyETSession(b.timestamp) === todaySessions;
+      if (viewCfg.sessions === "all") return true;
+      if (viewCfg.sessions === "regular") return classifyETSession(b.timestamp) === "regular";
+      return classifyETSession(b.timestamp) === viewCfg.sessions;
     });
-    // Padding is 分时-only — K-line views render whatever bars exist.
-    if (todayGranularity !== "分时") return trimmed;
-    return buildSessionSlots(trimmed, todayGranularity, todaySessions);
-  }, [bars, period, todayGranularity, todaySessions]);
+    return buildSessionSlots(trimmed, "分时", viewCfg.sessions ?? "regular");
+  }, [bars, view, viewCfg.sessions]);
 
   const visibleTrades: Trade[] = useMemo(() => {
-    if (period !== "today") return trades;
+    if (view !== "intraday") return trades;
     const today = currentTradingDay();
     return trades.filter((t) => {
       if (tradingDayOfET(t.ts) !== today) return false;
-      if (todayGranularity !== "分时" || todaySessions === "all") return true;
-      return classifyETSession(t.ts) === todaySessions;
+      if (viewCfg.sessions === "all") return true;
+      if (viewCfg.sessions === "regular") return classifyETSession(t.ts) === "regular";
+      return classifyETSession(t.ts) === viewCfg.sessions;
     });
-  }, [trades, period, todayGranularity, todaySessions]);
+  }, [trades, view, viewCfg.sessions]);
 
   const markers = useMemo(() => {
     if (visibleBars.length === 0) return [];
     const barTs = visibleBars.map((b) => b.timestamp ? Date.parse(b.timestamp) : 0);
-    // Snap tolerance reflects bar granularity: intraday bars (5/15-min) tolerate
-    // up to 1h; daily bars tolerate up to 12h so weekend/after-hours fills still
-    // anchor to the right calendar day.
-    const isIntradayPeriod = period === "today" || period === "5" || period === "7" || period === "15";
+    // Snap tolerance reflects bar granularity: intraday/minute/multiday bars
+    // tolerate up to 1h; daily bars tolerate up to 12h so weekend/after-hours
+    // fills still anchor to the right calendar day.
+    const isIntradayPeriod =
+      view === "intraday" || view === "minute" || view === "multiday";
     const tolerance = isIntradayPeriod ? 60 * 60 * 1000 : 12 * 3600 * 1000;
     return visibleTrades
       .map((t) => {
@@ -196,23 +223,24 @@ export function DetailChart({
         return { x: best, y: t.price, raw: t };
       })
       .filter((m): m is { x: number; y: number; raw: Trade } => m != null);
-  }, [visibleBars, visibleTrades, period]);
+  }, [visibleBars, visibleTrades, view]);
 
   const chartData = useMemo(() => {
-    const SHOW_DATE_IN_LABEL = new Set<Period>(["5", "7", "15"]);
     const labels = visibleBars.map((b) => {
       if (!b.timestamp) return "";
-      if (period === "today") return fmtBjHM(b.timestamp);
-      if (SHOW_DATE_IN_LABEL.has(period)) {
-        return `${fmtBjDate(b.timestamp)} ${fmtBjHM(b.timestamp)}`;
-      }
+      if (view === "intraday" || view === "minute") return fmtBjHM(b.timestamp);
+      if (view === "multiday") return `${fmtBjDate(b.timestamp)} ${fmtBjHM(b.timestamp)}`;
+      if (view === "day") return fmtBjDate(b.timestamp);
+      if (view === "week") return fmtBjWeekISO(b.timestamp);
+      if (view === "month") return fmtBjMonth(b.timestamp);
+      if (view === "year") return fmtBjYear(b.timestamp);
       return fmtBjDate(b.timestamp);
     });
     const closes = visibleBars.map((b) => b.close);
     const buys = markers.filter((m) => m.raw.side === "BUY");
     const sells = markers.filter((m) => m.raw.side === "SELL");
     return { labels, closes, buys, sells };
-  }, [visibleBars, period, markers]);
+  }, [visibleBars, view, markers]);
 
   // Mirror into a ref so Effect A (mount-once) can read latest at create-time
   // without taking a deps subscription.
@@ -226,7 +254,7 @@ export function DetailChart({
   showAvgCostRef.current = showAvgCost;
 
   // Effect A — create the Chart instance once per structural-deps combo
-  // (period/granularity/session/color-mode). visibleBars / markers / avgCost
+  // (view/granularity/session/datasetType/color-mode). visibleBars / markers / avgCost
   // flow through Effect B as in-place mutations so quote ticks don't tear
   // the chart down. Symbol switch is structural too (chart cleanly resets).
   useEffect(() => {
@@ -234,16 +262,9 @@ export function DetailChart({
     const data = dataRef.current;
     if (!canvas || !data || data.closes.length === 0) return;
 
-    // Initial visible window per period — sized so the default view shows
-    // ~1 reading-unit of data and the rest is reachable by dragging.
-    const INITIAL_VISIBLE_COUNT: Record<Period, number> = {
-      today: data.closes.length,
-      "5": 78, "7": 78, "15": 52, "30": 20, "60": 25, "90": 30,
-    };
-    const initialCount = Math.min(
-      INITIAL_VISIBLE_COUNT[period] ?? data.closes.length,
-      data.closes.length,
-    );
+    const initialCount = Number.isFinite(viewCfg.initialVisibleCount)
+      ? Math.min(viewCfg.initialVisibleCount, data.closes.length)
+      : data.closes.length;
     const xMax = data.closes.length - 1;
     const xMin = Math.max(0, xMax - initialCount + 1);
 
@@ -252,27 +273,53 @@ export function DetailChart({
     const initialAvgCost = avgCost;
     const initialShowAvgCost = showAvgCost;
 
+    const priceDataset = viewCfg.datasetType === "candlestick"
+      ? ({
+          label: "成交价",
+          type: "candlestick" as const,
+          data: visibleBars.map((b, i) => ({
+            x: i,
+            o: b.open, h: b.high, l: b.low, c: b.close,
+          })),
+          borderColor: {
+            up: cssVar("--up-color", "#3dd68c"),
+            down: cssVar("--down-color", "#ef5b5b"),
+            unchanged: C.fg3,
+          } as unknown as string,
+          backgroundColor: {
+            up: cssVar("--up-color", "#3dd68c"),
+            down: cssVar("--down-color", "#ef5b5b"),
+            unchanged: C.fg3,
+          } as unknown as string,
+          borderWidth: 1,
+          barPercentage: 0.9,
+          categoryPercentage: 0.95,
+          order: 4,
+          parsing: false as const,
+        } as ChartConfiguration["data"]["datasets"][number])
+      : ({
+          label: "成交价",
+          data: data.closes,
+          borderColor: C.price,
+          backgroundColor: (ctx: ScriptableContext<"line">) => {
+            const area = ctx.chart.chartArea;
+            if (!area) return "transparent";
+            const grad = ctx.chart.ctx.createLinearGradient(0, area.top, 0, area.bottom);
+            grad.addColorStop(0, C.priceFill);
+            grad.addColorStop(1, "rgba(0,0,0,0)");
+            return grad;
+          },
+          borderWidth: 1.6, fill: true, tension: 0.26,
+          pointRadius: 0, pointHoverRadius: 0,
+          order: 4,
+        } as ChartConfiguration["data"]["datasets"][number]);
+
     const cfg: ChartConfiguration = {
       type: "line",
       data: {
         labels: data.labels,
         datasets: [
-          {
-            label: "成交价",
-            data: data.closes,
-            borderColor: C.price,
-            backgroundColor: (ctx: ScriptableContext<"line">) => {
-              const area = ctx.chart.chartArea;
-              if (!area) return "transparent";
-              const grad = ctx.chart.ctx.createLinearGradient(0, area.top, 0, area.bottom);
-              grad.addColorStop(0, C.priceFill);
-              grad.addColorStop(1, "rgba(0,0,0,0)");
-              return grad;
-            },
-            borderWidth: 1.6, fill: true, tension: 0.26,
-            pointRadius: 0, pointHoverRadius: 0,
-            order: 4,
-          },
+          priceDataset,
           ...(initialAvgCost != null && initialShowAvgCost ? [{
             label: "成本均价",
             data: data.closes.map(() => initialAvgCost),
@@ -310,7 +357,7 @@ export function DetailChart({
           } as ChartConfiguration["data"]["datasets"][number],
         ],
       },
-      plugins: [sessionBgPlugin, crosshairPlugin, minMaxLabelsPlugin],
+      plugins: [sessionBgPlugin, crosshairPlugin, minMaxLabelsPlugin, dayMarkersPlugin],
       options: {
         responsive: true,
         maintainAspectRatio: false,
@@ -357,16 +404,29 @@ export function DetailChart({
                   if (!raw) return "";
                   return ` ${fmtN(raw.qty, 0)} 股 @ $${fmtN(raw.price)}${raw.tag ? "  · " + raw.tag : ""}`;
                 }
+                if (ds.type === "candlestick") {
+                  const ohlc = item.raw as { o: number; h: number; l: number; c: number };
+                  return [
+                    ` 开 $${fmtN(ohlc.o)}`,
+                    ` 高 $${fmtN(ohlc.h)}`,
+                    ` 低 $${fmtN(ohlc.l)}`,
+                    ` 收 $${fmtN(ohlc.c)}`,
+                  ];
+                }
                 return ` 价格 $${fmtN(item.parsed.y as number)}`;
               },
             },
           },
           sessionBg: {
-            enabled: period === "today"
-              && (todayGranularity === "分时" || todaySessions === "all"),
-            granularity: todayGranularity,
+            enabled: viewCfg.sessionBgEnabled,
+            granularity: "分时" as const,
             barCount: data.closes.length,
-            session: todaySessions,
+            session: viewCfg.sessions ?? "regular",
+          },
+          // @ts-expect-error — dayMarkers is a custom plugin not in Chart.js types
+          dayMarkers: {
+            enabled: viewCfg.dayMarkersEnabled,
+            bars: visibleBars,
           },
           zoom: {
             pan: {
@@ -390,9 +450,9 @@ export function DetailChart({
               color: C.fg3,
               font: { family: "IBM Plex Mono", size: 10 },
               maxRotation: 0, autoSkip: true, maxTicksLimit: 8,
-              // For periods that carry both date + time in the label
-              // ("MM/DD HH:MM" — 5/7/15D windows), split into two lines:
-              // time on top, date below. Other periods pass through.
+              // For views that carry both date + time in the label
+              // (multiday window — "MM/DD HH:MM"), split into two lines:
+              // time on top, date below. Other views pass through.
               // Chart.js renders array tick values as multi-line.
               callback: function (this: { getLabelForValue: (v: number) => string }, value) {
                 const lbl = this.getLabelForValue(value as number);
@@ -407,17 +467,19 @@ export function DetailChart({
             afterDataLimits: (scale) => {
               const xScale = scale.chart.scales.x;
               if (!xScale || xScale.min == null || xScale.max == null) return;
-              // Read live closes/markers/avg-cost via refs so the y-fit
-              // reflects whatever Effect B / live-tick most recently wrote.
-              const closes = dataRef.current?.closes ?? [];
               const xLo = Math.max(0, Math.floor(xScale.min as number));
-              const xHi = Math.min(closes.length - 1, Math.ceil(xScale.max as number));
+              const xHi = Math.min(visibleBarsRef.current.length - 1, Math.ceil(xScale.max as number));
               let vMin = Infinity, vMax = -Infinity;
               for (let i = xLo; i <= xHi; i++) {
-                const v = closes[i];
-                if (v == null) continue;
-                if (v < vMin) vMin = v;
-                if (v > vMax) vMax = v;
+                const b = visibleBarsRef.current[i];
+                if (!b) continue;
+                if (viewCfg.datasetType === "candlestick") {
+                  if (b.low < vMin) vMin = b.low;
+                  if (b.high > vMax) vMax = b.high;
+                } else {
+                  if (b.close < vMin) vMin = b.close;
+                  if (b.close > vMax) vMax = b.close;
+                }
               }
               for (const m of markersRef.current) {
                 if (m.x >= xLo && m.x <= xHi) {
@@ -458,7 +520,7 @@ export function DetailChart({
     };
     // Structural deps only — non-listed values are read via refs in callbacks.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [symbol, period, todayGranularity, todaySessions, colorMode]);
+  }, [symbol, view, viewCfg.granularity, viewCfg.sessions, viewCfg.datasetType, colorMode]);
 
   // Effect B — mutate chart data in place on data/marker/avg-cost change.
   // Skips when the chart hasn't been created yet (Effect A will pick up
@@ -470,7 +532,7 @@ export function DetailChart({
     if (!data) return;
 
     chart.data.labels = data.labels;
-    // dataset 0 is the price line — replace its data with the latest closes.
+    // dataset 0 is the price dataset — replace its data with the latest closes.
     (chart.data.datasets[0]!.data as unknown as number[]) = data.closes;
 
     // Find / sync the avg-cost dataset. It's optional — present when
@@ -503,11 +565,15 @@ export function DetailChart({
     if (buyDs) (buyDs.data as unknown) = data.buys;
     if (sellDs) (sellDs.data as unknown) = data.sells;
 
-    // Keep scales / sessionBg in sync with the new bar count.
+    // Keep scales / sessionBg / dayMarkers in sync with the new bar count.
     const xMax = data.closes.length - 1;
     const opts = chart.options as unknown as {
       scales: { x: { max: number; min: number } };
-      plugins: { sessionBg: { barCount: number }; zoom: { limits: { x: { max: number } } } };
+      plugins: {
+        sessionBg: { barCount: number };
+        dayMarkers: { bars: Candlestick[] };
+        zoom: { limits: { x: { max: number } } };
+      };
     };
     // Only stretch x-max to the new last bar if the user hasn't panned away
     // from the tail — keeps manual pan/zoom from being yanked on every update.
@@ -516,6 +582,11 @@ export function DetailChart({
       opts.scales.x.max = xMax;
     }
     opts.plugins.sessionBg.barCount = data.closes.length;
+    // Update the dayMarkers plugin's bars reference too.
+    const opts2 = chart.options as unknown as {
+      plugins: { dayMarkers: { bars: Candlestick[] } };
+    };
+    opts2.plugins.dayMarkers.bars = visibleBars;
     opts.plugins.zoom.limits.x.max = xMax;
 
     chart.update("none");
@@ -531,12 +602,12 @@ export function DetailChart({
     }
   }, [visibleBars, markers, avgCost, showAvgCost]);
 
-  // liveCfg is null for 30D/60D/90D (daily K) and the today/分时, today/Nmin,
-  // 5D, 7D, 15D views all get a (periodMinutes, allowAppend) pair.
-  const liveCfg = liveConfig(period, todayGranularity);
+  // liveCfg is null for day/week/month/year (K-line) views; live updates
+  // are active for intraday, minute, and multiday views.
+  const liveCfg = viewCfg.liveCfg;
   const isLiveMode = liveCfg != null;
 
-  // Effect C — live tick. Drives all minute-level views (1/5/15-min).
+  // Effect C — live tick. Drives all minute-level views (intraday/minute/multiday).
   // RAF-throttled so a tight quote burst doesn't trigger N chart updates
   // per frame. Mutates Chart data in place (never the bars store) and
   // repositions a DOM pulse dot at the last bar.
@@ -664,14 +735,14 @@ export function DetailChart({
       liveStateRef.current = null;
       pulseRef.current?.classList.remove("visible", "down");
     };
-    // Re-seeds on view changes (period/granularity/symbol). The other deps
+    // Re-seeds on view changes (view/granularity/symbol). The other deps
     // are read via refs at tick-time, not at effect-mount time.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [period, todayGranularity, symbol]);
+  }, [view, viewCfg.granularity, symbol]);
 
-  // Period switch destroys + recreates the chart, so reset the zoomed
+  // View switch destroys + recreates the chart, so reset the zoomed
   // indicator independently.
-  useEffect(() => { setIsZoomed(false); }, [period]);
+  useEffect(() => { setIsZoomed(false); }, [view]);
 
   const handleResetZoom = () => {
     chartRef.current?.resetZoom();
