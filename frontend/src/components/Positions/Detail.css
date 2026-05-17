@@ -221,79 +221,6 @@
   color: var(--brand);
 }
 
-.period-tabs {
-  display: inline-flex;
-  background: var(--bg-1);
-  border: 1px solid var(--line);
-  border-radius: 5px;
-  padding: 3px;
-  gap: 2px;
-}
-.period-tabs .p {
-  padding: 4px 10px;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--fg-2);
-  border: 0;
-  background: transparent;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
-}
-.period-tabs .p.active { background: var(--brand); color: #00131a; font-weight: 600; }
-.period-tabs .p:hover:not(.active) { background: var(--bg-hover); color: var(--fg-1); }
-.period-tabs .p .caret {
-  margin-left: 4px;
-  font-size: 9px;
-  opacity: 0.85;
-}
-
-/* ─── Today sub-options dropdown ───
- * Hidden by default; opens when the user clicks the active "日内" tab.
- * Anchors below the chart-head row inside the chart card so the chart
- * never reflows when the dropdown toggles. */
-.today-dropdown {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 8px 10px;
-  margin: 6px 0 10px;
-  background: var(--bg-1);
-  border: 1px solid var(--line-strong);
-  border-radius: 5px;
-  flex-wrap: wrap;
-}
-.today-dropdown .subopt-group {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-.today-dropdown .subopt-group .lbl {
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--fg-3);
-  margin-right: 4px;
-}
-.today-dropdown .pill {
-  padding: 4px 10px;
-  font-size: 11px;
-  font-family: var(--font-mono);
-  background: var(--bg-2);
-  color: var(--fg-2);
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
-}
-.today-dropdown .pill:hover { background: var(--bg-hover); color: var(--fg-1); }
-.today-dropdown .pill.active {
-  background: rgba(63, 181, 197, 0.14);
-  border-color: rgba(63, 181, 197, 0.4);
-  color: var(--brand);
-  font-weight: 500;
-}
-
 /* 340px (was 380) — trimmed during the vertical-space compression round.
  * Reads cleanly at this height for all supported periods (today /
  * Nmin / 日K); 320 turned out a hair too short so we walked it back
@@ -1132,4 +1059,92 @@ input[type="checkbox"].sel-sell:checked {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+}
+
+/* ─── Chart tab bar ─── 7 flat tabs, 3 with anchored popovers.
+ * Replaces the old .period-tabs / .today-dropdown / .subopt-group blocks. */
+.chart-tabs {
+  display: inline-flex;
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 3px;
+  gap: 2px;
+}
+.chart-tab {
+  padding: 4px 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-2);
+  border: 0;
+  background: transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+.chart-tab:hover:not(.active):not(.popover-open) {
+  background: var(--bg-hover);
+  color: var(--fg-1);
+}
+.chart-tab.active {
+  background: var(--brand);
+  color: #00131a;
+  font-weight: 600;
+}
+.chart-tab.popover-open {
+  background: var(--bg-hover);
+  color: var(--fg-1);
+}
+.chart-tab .sub {
+  font-size: 10px;
+  opacity: 0.85;
+}
+.chart-tab.active .sub {
+  color: rgba(0, 19, 26, 0.7);
+}
+
+/* ─── Anchored popover ─── floats below the trigger tab. */
+.tab-popover {
+  position: absolute;
+  z-index: 5;
+  background: var(--bg-1);
+  border: 1px solid var(--line-strong);
+  border-radius: 5px;
+  padding: 8px 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.tab-popover-caret {
+  position: absolute;
+  top: -6px;
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: 6px solid var(--line-strong);
+}
+.popover-pill {
+  padding: 4px 10px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  background: var(--bg-2);
+  color: var(--fg-2);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+.popover-pill:hover { background: var(--bg-hover); color: var(--fg-1); }
+.popover-pill.active {
+  background: rgba(63, 181, 197, 0.14);
+  border-color: rgba(63, 181, 197, 0.4);
+  color: var(--brand);
+  font-weight: 500;
 }
