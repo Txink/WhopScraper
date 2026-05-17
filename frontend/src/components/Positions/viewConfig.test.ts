@@ -23,7 +23,7 @@ describe("resolveViewConfig", () => {
     const c = resolveViewConfig("minute", { ...defaults, minuteGranularity: "3min" });
     expect(c.period).toBe("today");
     expect(c.granularity).toBe("3min");
-    expect(c.sessions).toBe("regular");
+    expect(c.sessions).toBe("all");
     expect(c.datasetType).toBe("candlestick");
     expect(c.sessionBgEnabled).toBe(false);
     expect(c.liveCfg).toEqual({ periodMinutes: 3, allowAppend: true });

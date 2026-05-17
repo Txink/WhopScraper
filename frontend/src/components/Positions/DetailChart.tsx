@@ -863,7 +863,7 @@ export function DetailChart({
   return (
     <div className="chart-canvas-wrap">
       <canvas ref={canvasRef} />
-      {isLiveMode && <div ref={pulseRef} className="live-pulse" aria-hidden />}
+      {isLiveMode && viewCfg.livePulseEnabled && <div ref={pulseRef} className="live-pulse" aria-hidden />}
       {isZoomed && (
         <button
           className="chart-reset-btn"

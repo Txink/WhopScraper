@@ -57,6 +57,10 @@ export interface ViewConfig {
   sessionBgEnabled: boolean;
   /** Enable vertical day-separator guides — multiday line only. */
   dayMarkersEnabled: boolean;
+  /** Render the blinking dot at the latest price. Only the intraday line
+   *  view shows it; minute/multiday still drive live ticks but suppress
+   *  the visual since their bars carry the same "most recent" cue. */
+  livePulseEnabled: boolean;
 }
 
 const _MINUTE_LIVE: Record<MinuteGranularity, number> = {
@@ -75,17 +79,24 @@ export function resolveViewConfig(view: ViewType, sub: ViewSubState): ViewConfig
         liveCfg: { periodMinutes: 1, allowAppend: true },
         sessionBgEnabled: true,
         dayMarkersEnabled: false,
+        livePulseEnabled: true,
       };
     case "minute":
       return {
         period: "today",
         granularity: sub.minuteGranularity,
-        sessions: "regular",
+        // Always fetch the full session range — pre + regular + post +
+        // overnight — so the minute candle view shows the whole trading
+        // day without a session-picker. (Intraday still exposes the
+        // picker for the line view, where switching sessions is the way
+        // to zoom into a single period.)
+        sessions: "all",
         datasetType: "candlestick",
         initialVisibleCount: Number.POSITIVE_INFINITY,
         liveCfg: { periodMinutes: _MINUTE_LIVE[sub.minuteGranularity], allowAppend: true },
         sessionBgEnabled: false,
         dayMarkersEnabled: false,
+        livePulseEnabled: false,
       };
     case "multiday":
       return {
@@ -95,6 +106,7 @@ export function resolveViewConfig(view: ViewType, sub: ViewSubState): ViewConfig
         liveCfg: { periodMinutes: 5, allowAppend: false },
         sessionBgEnabled: false,
         dayMarkersEnabled: true,
+        livePulseEnabled: false,
       };
     case "day":
       return _candleConfig("day", 60);
@@ -115,5 +127,6 @@ function _candleConfig(period: Period, initialVisibleCount: number): ViewConfig 
     liveCfg: null,
     sessionBgEnabled: false,
     dayMarkersEnabled: false,
+    livePulseEnabled: false,
   };
 }

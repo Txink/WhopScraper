@@ -62,8 +62,8 @@ export type HoverInfo =
 type TabId = "intraday" | "minute" | "multiday" | "dayK";
 const TABS: Array<{ id: TabId; label: string }> = [
   { id: "intraday", label: "日内" },
-  { id: "minute",   label: "分钟" },
   { id: "multiday", label: "多日" },
+  { id: "minute",   label: "分钟" },
   { id: "dayK",     label: "日K" },
 ];
 

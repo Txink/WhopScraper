@@ -23,11 +23,14 @@ export const minMaxLabelsPlugin: Plugin = {
     if (dsIdx < 0) return;
 
     const meta = chart.getDatasetMeta(dsIdx);
-    const data = chart.data.datasets[dsIdx]?.data as Array<number | null>;
+    const data = chart.data.datasets[dsIdx]?.data as Array<
+      number | null | { o: number; h: number; l: number; c: number }
+    >;
     if (!data || data.length === 0) return;
     const xScale = chart.scales.x;
+    const yScale = chart.scales.y;
     const area = chart.chartArea;
-    if (!xScale || !area) return;
+    if (!xScale || !yScale || !area) return;
 
     const xMin = Math.max(0, Math.floor((xScale.min as number) ?? 0));
     const xMax = Math.min(
@@ -35,15 +38,27 @@ export const minMaxLabelsPlugin: Plugin = {
       Math.ceil((xScale.max as number) ?? data.length - 1),
     );
 
+    // Line dataset: a point is a single close number — high == low == close.
+    // Candle dataset: read h/l so the marker hits the wick, not the body.
     let maxV = -Infinity;
     let maxIdx = -1;
     let minV = Infinity;
     let minIdx = -1;
     for (let i = xMin; i <= xMax; i++) {
       const v = data[i];
-      if (v == null || Number.isNaN(v)) continue;
-      if (v > maxV) { maxV = v; maxIdx = i; }
-      if (v < minV) { minV = v; minIdx = i; }
+      if (v == null) continue;
+      let high: number;
+      let low: number;
+      if (typeof v === "number") {
+        if (Number.isNaN(v)) continue;
+        high = v;
+        low = v;
+      } else {
+        high = v.h;
+        low = v.l;
+      }
+      if (high > maxV) { maxV = high; maxIdx = i; }
+      if (low < minV) { minV = low; minIdx = i; }
     }
     // Need at least two distinct values to bother labeling both — for a
     // flat-ish slice the "min" and "max" would overlap visually.
@@ -59,21 +74,27 @@ export const minMaxLabelsPlugin: Plugin = {
       idx: number, value: number,
       position: "above" | "below",
     ) => {
-      const el = meta.data[idx] as { x?: number; y?: number } | undefined;
-      if (!el || el.x == null || el.y == null) return;
+      const el = meta.data[idx] as { x?: number } | undefined;
+      if (!el || el.x == null) return;
+      // y derives from the value via the scale (not from el.y) so the
+      // marker lands on the candle wick's high/low even when the
+      // dataset element's intrinsic y points at the close.
+      const py = yScale.getPixelForValue(value);
+      if (!Number.isFinite(py)) return;
+      const px = el.x;
 
       // White dot at the exact point. Drawn first so the label sits
       // over it visually.
       ctx.fillStyle = DOT_COLOR;
       ctx.beginPath();
-      ctx.arc(el.x, el.y, 2, 0, Math.PI * 2);
+      ctx.arc(px, py, 2, 0, Math.PI * 2);
       ctx.fill();
 
       // Price text adjacent. Anchor inside the chart area — flip side
       // when too close to the right edge so the label doesn't clip.
       const text = value.toFixed(3);
       const midX = (area.left + area.right) / 2;
-      const goLeft = el.x > midX;
+      const goLeft = px > midX;
       ctx.textAlign = goLeft ? "right" : "left";
       ctx.textBaseline = position === "above" ? "bottom" : "top";
       const xOff = goLeft ? -8 : 8;
@@ -81,9 +102,9 @@ export const minMaxLabelsPlugin: Plugin = {
       ctx.lineWidth = 3;
       ctx.lineJoin = "round";
       ctx.strokeStyle = STROKE_COLOR;
-      ctx.strokeText(text, el.x + xOff, el.y + yOff);
+      ctx.strokeText(text, px + xOff, py + yOff);
       ctx.fillStyle = TEXT_COLOR;
-      ctx.fillText(text, el.x + xOff, el.y + yOff);
+      ctx.fillText(text, px + xOff, py + yOff);
     };
 
     drawMarker(maxIdx, maxV, "above");
