@@ -13,6 +13,7 @@ import {
   Tooltip,
 } from "chart.js";
 import type { Plugin } from "chart.js";
+import { drawBubble } from "./bubble";
 import {
   CandlestickController,
   CandlestickElement,
@@ -81,14 +82,10 @@ function fmtN(n: number, d = 3): string {
   return n.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
 }
 
-const TRADE_MARKER_W = 17;
-const TRADE_MARKER_H = 15;
-const TRADE_MARKER_GAP = 2;
-const TRADE_MARKER_XOFFSET = 3;
-
 /** Draws B/S/T speech-bubble badges at aggregated trade scatter positions.
  *  Reads the three scatter datasets by label so it's order-independent.
- *  All badges render above-right of the data point. */
+ *  Tail tip lands exactly at the data point (candle top-center in candle
+ *  views; VWAP pixel in line views). Body sits up and slightly right. */
 const tradeMarkersPlugin: Plugin = {
   id: "tradeMarkers",
   afterDatasetsDraw(chart) {
@@ -96,47 +93,6 @@ const tradeMarkersPlugin: Plugin = {
     const B_COLOR = "#f59e0b";
     const S_COLOR = "#3b82f6";
     const T_COLOR = "#a855f7";
-
-    function drawBadge(x: number, y: number, letter: "B" | "S" | "T", color: string) {
-      const w = TRADE_MARKER_W;
-      const h = TRADE_MARKER_H;
-      const r = 2.5;
-      const tailDX = 4;
-      const tailDY = 5;
-      const cx = x + TRADE_MARKER_XOFFSET;
-      const top = y - TRADE_MARKER_GAP - h;
-      const left = cx - w / 2;
-
-      ctx.save();
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      // Start at top-left rounded corner.
-      ctx.moveTo(left + r, top);
-      // Top edge.
-      ctx.lineTo(left + w - r, top);
-      ctx.quadraticCurveTo(left + w, top, left + w, top + r);
-      // Right edge.
-      ctx.lineTo(left + w, top + h - r);
-      ctx.quadraticCurveTo(left + w, top + h, left + w - r, top + h);
-      // Bottom edge (going leftward).
-      ctx.lineTo(left + r, top + h);
-      // Slant down-left to tail tip.
-      ctx.lineTo(left - tailDX, top + h + tailDY);
-      // Back up to left edge above the cut.
-      ctx.lineTo(left, top + h - r);
-      // Left edge to top.
-      ctx.lineTo(left, top + r);
-      ctx.quadraticCurveTo(left, top, left + r, top);
-      ctx.closePath();
-      ctx.fill();
-
-      ctx.fillStyle = "#ffffff";
-      ctx.font = "700 11px -apple-system, system-ui, sans-serif";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(letter, cx, top + h / 2 + 0.5);
-      ctx.restore();
-    }
 
     chart.data.datasets.forEach((ds, dsIdx) => {
       const label = (ds as { label?: string }).label;
@@ -148,10 +104,11 @@ const tradeMarkersPlugin: Plugin = {
       if (!letter) return;
       const meta = chart.getDatasetMeta(dsIdx);
       meta.data.forEach((el) => {
-        const px = (el as { x?: number }).x;
-        const py = (el as { y?: number }).y;
-        if (px == null || py == null) return;
-        drawBadge(px, py, letter!, color);
+        const x = (el as { x?: number }).x;
+        const y = (el as { y?: number }).y;
+        if (x == null || y == null) return;
+        // Tail tip lands exactly at the data point. Body sits up + slightly right.
+        drawBubble(ctx, x, y, letter!, color);
       });
     });
   },
