@@ -227,15 +227,14 @@ def test_candlesticks_today_individual_sessions_fetch_all(
 @pytest.mark.parametrize(
     "period,expected_bars",
     [
-        # 5/7-day views use 5-min bars stitched across days (78/day).
+        # 5/7-day views remain: multi-day intraday stitched at 5-min granularity.
         ("5", 5 * 78),
         ("7", 7 * 78),
-        # 15D switches to 15-min bars (~26/day).
-        ("15", 15 * 26),
-        # 30+ stays daily.
-        ("30", 30),
-        ("60", 60),
-        ("90", 90),
+        # New K-line periods replace 15/30/60/90 with fixed batches.
+        ("day", 250),
+        ("week", 200),
+        ("month", 120),
+        ("year", 30),
     ],
 )
 def test_candlesticks_periods_bar_counts(
@@ -243,8 +242,8 @@ def test_candlesticks_periods_bar_counts(
     period: str,
     expected_bars: int,
 ) -> None:
-    """5/7/15D periods now return intraday-granularity bars so the chart
-    shows within-day shape (matches LongBridge mobile UX)."""
+    """5/7 stitch 5-min intraday across days; day/week/month/year are
+    candlestick batches the chart pans/zooms within."""
     client, _ = client_and_broker
     resp = client.get(
         "/api/candlesticks",
@@ -254,6 +253,21 @@ def test_candlesticks_periods_bar_counts(
     data = resp.json()
     assert data["period"] == period
     assert len(data["bars"]) == expected_bars
+
+
+@pytest.mark.parametrize("period", ["15", "30", "60", "90"])
+def test_candlesticks_removed_periods_return_400(
+    client_and_broker: tuple[TestClient, FakeBrokerClient],
+    period: str,
+) -> None:
+    """The old day-count periods are no longer accepted — UI uses
+    day/week/month/year instead."""
+    client, _ = client_and_broker
+    resp = client.get(
+        "/api/candlesticks",
+        params={"token": _TOKEN, "symbol": "TSLA.US", "period": period},
+    )
+    assert resp.status_code == 400
 
 
 def test_candlesticks_invalid_period(

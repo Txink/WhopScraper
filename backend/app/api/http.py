@@ -711,13 +711,21 @@ def build_http_router(
 
     # Longer-horizon (non-today) periods use a fixed granularity; granularity/
     # sessions query params are ignored for these.
+    #
+    #   5/7  → multi-day intraday line (5-min bars stitched across days).
+    #          Used by the "多日" view; the chart renders a folded line.
+    #   day  → 1-year batch of daily candles. The "日K" candlestick view
+    #          loads this once and lets the user pinch/pan within it.
+    #   week → 4-year batch of weekly candles.
+    #   month → 10-year batch of monthly candles.
+    #   year  → 30-year batch of yearly candles.
     _PERIOD_GRANULARITY_NON_TODAY: dict[str, tuple[str, int]] = {
-        "5":  ("min_5", 5 * 78),
-        "7":  ("min_5", 7 * 78),
-        "15": ("min_15", 15 * 26),
-        "30": ("day", 30),
-        "60": ("day", 60),
-        "90": ("day", 90),
+        "5":     ("min_5", 5 * 78),
+        "7":     ("min_5", 7 * 78),
+        "day":   ("day", 250),
+        "week":  ("week", 200),
+        "month": ("month", 120),
+        "year":  ("year", 30),
     }
 
     # User-facing granularity name → SDK period.
@@ -738,7 +746,7 @@ def build_http_router(
         symbol: str,
         period: Annotated[
             str,
-            Query(description="today | 5 | 7 | 15 | 30 | 60 | 90"),
+            Query(description="today | 5 | 7 | day | week | month | year"),
         ] = "today",
         granularity: Annotated[
             str,
@@ -756,7 +764,9 @@ def build_http_router(
         clean regular-hours curve and a wider view that includes pre-market
         and after-hours. For other periods these query params are ignored
         (fixed mapping):
-          5/7 → 5-min, 15 → 15-min, 30/60/90 → daily.
+          5/7 → 5-min stitched across days (多日 line view);
+          day/week/month/year → 1/4/10/30-year batch of candles for the
+                                日K/周K/月K/年K candlestick views.
         """
         if period == "today":
             sdk_period = _GRANULARITY_FOR_TODAY.get(granularity)
