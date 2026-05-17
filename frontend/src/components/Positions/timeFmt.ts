@@ -161,6 +161,57 @@ export function classifyETSession(iso: string): ETSession {
   return "overnight";
 }
 
+const _BJ_MONTH = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Shanghai",
+  year: "numeric",
+  month: "2-digit",
+});
+
+const _BJ_YEAR = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Shanghai",
+  year: "numeric",
+});
+
+/** "2026-03" — used on month-K x-axis ticks. */
+export function fmtBjMonth(iso: string): string {
+  const d = parseUtc(iso);
+  // en-CA → "YYYY-MM" (no day field) — strip any trailing day if present.
+  return _BJ_MONTH.format(d).slice(0, 7);
+}
+
+/** "2026" — used on year-K x-axis ticks. */
+export function fmtBjYear(iso: string): string {
+  return _BJ_YEAR.format(parseUtc(iso));
+}
+
+/** "2026-W19" — ISO-8601 week date in BJ tz. Used on week-K x-axis ticks.
+ *  ISO weeks start on Monday and week 1 is the week containing the first
+ *  Thursday of the calendar year. */
+export function fmtBjWeekISO(iso: string): string {
+  // Project the BJ-tz date by adding 8h then reading the UTC components.
+  const d = parseUtc(iso);
+  const bjMs = d.getTime() + 8 * 60 * 60 * 1000;
+  const bj = new Date(bjMs);
+  // Move to the Thursday in this week (Mon=1, Sun=7 — ISO).
+  const dayNum = bj.getUTCDay() || 7; // Sun(0) → 7
+  // Use UTC midnight for Thursday so time-of-day doesn't skew the week math.
+  const thursdayMs = Date.UTC(
+    bj.getUTCFullYear(),
+    bj.getUTCMonth(),
+    bj.getUTCDate() + (4 - dayNum),
+  );
+  const thursday = new Date(thursdayMs);
+  const year = thursday.getUTCFullYear();
+  // Week 1 = the week with Jan 4 (which is always in week 1 by ISO def).
+  const jan4 = new Date(Date.UTC(year, 0, 4));
+  const jan4Day = jan4.getUTCDay() || 7;
+  const week1Mon = new Date(jan4.getTime() - (jan4Day - 1) * 24 * 60 * 60 * 1000);
+  const weekNum = Math.round(
+    (thursdayMs - week1Mon.getTime()) / (7 * 24 * 60 * 60 * 1000),
+  ) + 1;
+  return `${year}-W${String(weekNum).padStart(2, "0")}`;
+}
+
 /** "今天 10:30" / "昨天 10:30" / "05/14 10:30" — used in TradeList and
  *  PairList rows so they read in BJ time regardless of browser locale. */
 export function fmtBjRel(iso: string): string {

@@ -6,6 +6,9 @@ import {
   classifyETSession,
   tradingDayOfET,
   currentOrLastTradingDay,
+  fmtBjWeekISO,
+  fmtBjMonth,
+  fmtBjYear,
 } from "./timeFmt";
 
 describe("timeFmt — Beijing-time projection", () => {
@@ -150,5 +153,27 @@ describe("currentOrLastTradingDay", () => {
     withClock("2026-05-18T06:00:00Z", () => {
       expect(currentOrLastTradingDay()).toBe("2026-05-15");
     });
+  });
+});
+
+describe("week/month/year BJ formatters", () => {
+  it("fmtBjMonth returns YYYY-MM in BJ tz", () => {
+    // 2026-03-15T08:00:00Z → 2026-03-15 16:00 BJ
+    expect(fmtBjMonth("2026-03-15T08:00:00Z")).toBe("2026-03");
+  });
+
+  it("fmtBjYear returns YYYY in BJ tz", () => {
+    expect(fmtBjYear("2025-12-31T20:00:00Z")).toBe("2026");
+    // 2025-12-31 20:00 UTC = 2026-01-01 04:00 BJ → year=2026
+  });
+
+  it("fmtBjWeekISO returns YYYY-Wnn ISO-week", () => {
+    // 2026-05-04 (Mon BJ) is ISO week 19 of 2026
+    expect(fmtBjWeekISO("2026-05-04T08:00:00Z")).toBe("2026-W19");
+  });
+
+  it("fmtBjWeekISO handles year boundary", () => {
+    // 2025-12-29 (Mon BJ) is ISO week 1 of 2026 (rolls forward)
+    expect(fmtBjWeekISO("2025-12-29T08:00:00Z")).toBe("2026-W01");
   });
 });
