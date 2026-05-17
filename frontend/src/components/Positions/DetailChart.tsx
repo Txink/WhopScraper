@@ -81,93 +81,80 @@ function fmtN(n: number, d = 3): string {
   return n.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
 }
 
-const TRADE_MARKER_W = 16;
-const TRADE_MARKER_H = 14;
-const TRADE_MARKER_GAP = 6;
+const TRADE_MARKER_W = 13;
+const TRADE_MARKER_H = 11;
+const TRADE_MARKER_GAP = 4;
+const TRADE_MARKER_XOFFSET = 5;
 
-/** Draws B/S speech-bubble badges at buy/sell scatter positions.
- *  Reads the two scatter datasets by label so it's order-independent. */
+/** Draws B/S/T speech-bubble badges at aggregated trade scatter positions.
+ *  Reads the three scatter datasets by label so it's order-independent.
+ *  All badges render above-right of the data point. */
 const tradeMarkersPlugin: Plugin = {
   id: "tradeMarkers",
   afterDatasetsDraw(chart) {
     const ctx = chart.ctx;
-    const upColor = cssVar("--up-color", "#3dd68c");
-    const downColor = cssVar("--down-color", "#ef5b5b");
+    const B_COLOR = "#f59e0b";
+    const S_COLOR = "#3b82f6";
+    const T_COLOR = "#a855f7";
 
-    function drawBadge(
-      x: number,
-      y: number,
-      side: "above" | "below",
-      letter: "B" | "S",
-      color: string,
-    ) {
+    function drawBadge(x: number, y: number, letter: "B" | "S" | "T", color: string) {
       const w = TRADE_MARKER_W;
       const h = TRADE_MARKER_H;
-      const r = 3;
-      const tailH = 4;
-      const cx = x;
-      const top =
-        side === "below"
-          ? y + TRADE_MARKER_GAP
-          : y - TRADE_MARKER_GAP - h - tailH;
+      const r = 2.5;
+      const tailH = 3;
+      const cx = x + TRADE_MARKER_XOFFSET;
+      // Always positioned ABOVE the point with the tail pointing down to (cx, y - GAP).
+      const top = y - TRADE_MARKER_GAP - h - tailH;
       const left = cx - w / 2;
 
       ctx.save();
       ctx.fillStyle = color;
-
-      // Tail triangle pointing at the data point
+      // Tail (downward triangle from bottom of body to (cx, y - GAP))
       ctx.beginPath();
-      if (side === "below") {
-        ctx.moveTo(cx - 4, top + tailH);
-        ctx.lineTo(cx, top);
-        ctx.lineTo(cx + 4, top + tailH);
-      } else {
-        const baseY = top + h;
-        ctx.moveTo(cx - 4, baseY);
-        ctx.lineTo(cx, baseY + tailH);
-        ctx.lineTo(cx + 4, baseY);
-      }
+      const tailTipY = y - TRADE_MARKER_GAP;
+      ctx.moveTo(cx - 3, top + h);
+      ctx.lineTo(cx, tailTipY);
+      ctx.lineTo(cx + 3, top + h);
       ctx.closePath();
       ctx.fill();
 
       // Rounded rect body
-      const bodyTop = side === "below" ? top + tailH : top;
       ctx.beginPath();
-      ctx.moveTo(left + r, bodyTop);
-      ctx.lineTo(left + w - r, bodyTop);
-      ctx.quadraticCurveTo(left + w, bodyTop, left + w, bodyTop + r);
-      ctx.lineTo(left + w, bodyTop + h - r);
-      ctx.quadraticCurveTo(left + w, bodyTop + h, left + w - r, bodyTop + h);
-      ctx.lineTo(left + r, bodyTop + h);
-      ctx.quadraticCurveTo(left, bodyTop + h, left, bodyTop + h - r);
-      ctx.lineTo(left, bodyTop + r);
-      ctx.quadraticCurveTo(left, bodyTop, left + r, bodyTop);
+      ctx.moveTo(left + r, top);
+      ctx.lineTo(left + w - r, top);
+      ctx.quadraticCurveTo(left + w, top, left + w, top + r);
+      ctx.lineTo(left + w, top + h - r);
+      ctx.quadraticCurveTo(left + w, top + h, left + w - r, top + h);
+      ctx.lineTo(left + r, top + h);
+      ctx.quadraticCurveTo(left, top + h, left, top + h - r);
+      ctx.lineTo(left, top + r);
+      ctx.quadraticCurveTo(left, top, left + r, top);
       ctx.closePath();
       ctx.fill();
 
-      // Letter
+      // Letter (white, slightly smaller font)
       ctx.fillStyle = "#ffffff";
-      ctx.font = "700 10px -apple-system, system-ui, sans-serif";
+      ctx.font = "700 9px -apple-system, system-ui, sans-serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(letter, cx, bodyTop + h / 2 + 0.5);
+      ctx.fillText(letter, cx, top + h / 2 + 0.5);
       ctx.restore();
     }
 
     chart.data.datasets.forEach((ds, dsIdx) => {
       const label = (ds as { label?: string }).label;
-      const isBuy = label === "买入";
-      const isSell = label === "卖出";
-      if (!isBuy && !isSell) return;
+      let letter: "B" | "S" | "T" | null = null;
+      let color = "";
+      if (label === "买入") { letter = "B"; color = B_COLOR; }
+      else if (label === "卖出") { letter = "S"; color = S_COLOR; }
+      else if (label === "做T") { letter = "T"; color = T_COLOR; }
+      if (!letter) return;
       const meta = chart.getDatasetMeta(dsIdx);
-      const color = isBuy ? upColor : downColor;
-      const letter: "B" | "S" = isBuy ? "B" : "S";
-      const side: "above" | "below" = isBuy ? "below" : "above";
       meta.data.forEach((el) => {
         const px = (el as { x?: number }).x;
         const py = (el as { y?: number }).y;
         if (px == null || py == null) return;
-        drawBadge(px, py, side, letter, color);
+        drawBadge(px, py, letter!, color);
       });
     });
   },
@@ -208,6 +195,15 @@ const dayMarkersPlugin: Plugin<"line" | "candlestick"> = {
   },
 };
 
+type AggMarker = {
+  x: number;
+  y: number;
+  type: "B" | "S" | "T";
+  qty: number;
+  price: number;
+  trades: Trade[];
+};
+
 interface Props {
   symbol: string;
   bars: Candlestick[];
@@ -239,12 +235,13 @@ export function DetailChart({
   const dataRef = useRef<{
     labels: string[];
     closes: number[];
-    buys: { x: number; y: number; raw: Trade }[];
-    sells: { x: number; y: number; raw: Trade }[];
+    buys: AggMarker[];
+    sells: AggMarker[];
+    ts: AggMarker[];
   } | null>(null);
 
   const visibleBarsRef = useRef<Candlestick[]>([]);
-  const markersRef = useRef<{ x: number; y: number; raw: Trade }[]>([]);
+  const markersRef = useRef<AggMarker[]>([]);
   const avgCostRef = useRef<number | null>(null);
   const showAvgCostRef = useRef<boolean>(false);
 
@@ -293,7 +290,7 @@ export function DetailChart({
     });
   }, [trades, view, viewCfg.sessions]);
 
-  const markers = useMemo(() => {
+  const markers: AggMarker[] = useMemo(() => {
     if (visibleBars.length === 0) return [];
     const barTs = visibleBars.map((b) => b.timestamp ? Date.parse(b.timestamp) : 0);
     // Snap tolerance reflects bar granularity: intraday/minute/multiday bars
@@ -302,19 +299,34 @@ export function DetailChart({
     const isIntradayPeriod =
       view === "intraday" || view === "minute" || view === "multiday";
     const tolerance = isIntradayPeriod ? 60 * 60 * 1000 : 12 * 3600 * 1000;
-    return visibleTrades
-      .map((t) => {
-        const tts = Date.parse(t.ts);
-        let best = -1;
-        let bestD = Infinity;
-        for (let i = 0; i < barTs.length; i++) {
-          const d = Math.abs(barTs[i]! - tts);
-          if (d < bestD) { bestD = d; best = i; }
-        }
-        if (bestD > tolerance) return null;
-        return { x: best, y: t.price, raw: t };
-      })
-      .filter((m): m is { x: number; y: number; raw: Trade } => m != null);
+    // Group trades by their nearest-bar index.
+    const grouped = new Map<number, Trade[]>();
+    for (const t of visibleTrades) {
+      const tts = Date.parse(t.ts);
+      let best = -1; let bestD = Infinity;
+      for (let i = 0; i < barTs.length; i++) {
+        const d = Math.abs(barTs[i]! - tts);
+        if (d < bestD) { bestD = d; best = i; }
+      }
+      if (bestD > tolerance || best < 0) continue;
+      if (!grouped.has(best)) grouped.set(best, []);
+      grouped.get(best)!.push(t);
+    }
+    // Reduce each bar's trades into a single aggregate marker.
+    const out: AggMarker[] = [];
+    grouped.forEach((trades, x) => {
+      const buys = trades.filter((t) => t.side === "BUY");
+      const sells = trades.filter((t) => t.side === "SELL");
+      const totalQty = trades.reduce((s, t) => s + t.qty, 0);
+      const totalValue = trades.reduce((s, t) => s + t.qty * t.price, 0);
+      const vwap = totalQty > 0 ? totalValue / totalQty : 0;
+      const type: AggMarker["type"] =
+        buys.length > 0 && sells.length > 0 ? "T"
+        : buys.length > 0 ? "B"
+        : "S";
+      out.push({ x, y: vwap, type, qty: totalQty, price: vwap, trades });
+    });
+    return out;
   }, [visibleBars, visibleTrades, view]);
 
   const chartData = useMemo(() => {
@@ -329,9 +341,10 @@ export function DetailChart({
       return fmtBjDate(b.timestamp);
     });
     const closes = visibleBars.map((b) => b.close);
-    const buys = markers.filter((m) => m.raw.side === "BUY");
-    const sells = markers.filter((m) => m.raw.side === "SELL");
-    return { labels, closes, buys, sells };
+    const buys = markers.filter((m) => m.type === "B");
+    const sells = markers.filter((m) => m.type === "S");
+    const ts = markers.filter((m) => m.type === "T");
+    return { labels, closes, buys, sells, ts };
   }, [visibleBars, view, markers]);
 
   // Mirror into a ref so Effect A (mount-once) can read latest at create-time
@@ -432,9 +445,11 @@ export function DetailChart({
             label: "买入",
             type: "scatter" as const,
             data: data.buys,
-            backgroundColor: cssVar("--up-color", "#3dd68c"),
+            backgroundColor: "#f59e0b",
+            borderColor: C.bg0,
+            borderWidth: 0,
             pointRadius: 0,
-            pointHoverRadius: 14,
+            pointHoverRadius: 0,
             pointHitRadius: 14,
             pointStyle: "circle" as const,
             order: 1,
@@ -444,9 +459,25 @@ export function DetailChart({
             label: "卖出",
             type: "scatter" as const,
             data: data.sells,
-            backgroundColor: cssVar("--down-color", "#ef5b5b"),
+            backgroundColor: "#3b82f6",
+            borderColor: C.bg0,
+            borderWidth: 0,
             pointRadius: 0,
-            pointHoverRadius: 14,
+            pointHoverRadius: 0,
+            pointHitRadius: 14,
+            pointStyle: "circle" as const,
+            order: 1,
+            parsing: false as const,
+          } as ChartConfiguration["data"]["datasets"][number],
+          {
+            label: "做T",
+            type: "scatter" as const,
+            data: data.ts,
+            backgroundColor: "#a855f7",
+            borderColor: C.bg0,
+            borderWidth: 0,
+            pointRadius: 0,
+            pointHoverRadius: 0,
             pointHitRadius: 14,
             pointStyle: "circle" as const,
             order: 1,
@@ -484,9 +515,11 @@ export function DetailChart({
                 if (!item) return "";
                 const ds = item.dataset as { type?: string };
                 if (ds.type === "scatter") {
-                  const raw = (item.raw as { raw?: Trade }).raw;
-                  if (!raw) return "";
-                  return `${raw.side === "BUY" ? "买入" : "卖出"} · ${fmtBjRel(raw.ts)}`;
+                  const agg = item.raw as { trades?: Trade[] };
+                  const first = agg.trades?.[0];
+                  if (!first) return "";
+                  const extra = (agg.trades?.length ?? 1) > 1 ? ` · 共 ${agg.trades!.length} 笔` : "";
+                  return `${fmtBjRel(first.ts)}${extra}`;
                 }
                 // Read live visibleBars via ref so tooltip stays accurate
                 // after Effect B mutates / live-tick appends bars.
@@ -497,9 +530,10 @@ export function DetailChart({
               label: (item) => {
                 const ds = item.dataset as { type?: string; label?: string };
                 if (ds.type === "scatter") {
-                  const raw = (item.raw as { raw?: Trade }).raw;
-                  if (!raw) return "";
-                  return ` ${fmtN(raw.qty, 0)} 股 @ $${fmtN(raw.price)}${raw.tag ? "  · " + raw.tag : ""}`;
+                  const agg = (item.raw as { type?: string; qty?: number; price?: number; trades?: Trade[] });
+                  if (!agg || agg.qty == null) return "";
+                  const action = agg.type === "B" ? "买入" : agg.type === "S" ? "卖出" : "做T";
+                  return ` ${action} ${fmtN(agg.qty, 0)} 股 @ $${fmtN(agg.price ?? 0)}`;
                 }
                 if (ds.type === "candlestick") {
                   const ohlc = item.raw as { o: number; h: number; l: number; c: number };
@@ -531,7 +565,7 @@ export function DetailChart({
               onPanComplete: ({ chart }) => { setIsZoomed(true); chart.update("none"); },
             },
             zoom: {
-              wheel: { enabled: true, modifierKey: "shift" },
+              wheel: { enabled: true },
               pinch: { enabled: true },
               mode: "x",
               onZoomComplete: ({ chart }) => { setIsZoomed(true); chart.update("none"); },
@@ -677,8 +711,10 @@ export function DetailChart({
     // Scatter datasets — find by label so order-independent.
     const buyDs = datasets.find((d) => d.label === "买入");
     const sellDs = datasets.find((d) => d.label === "卖出");
+    const tDs = datasets.find((d) => d.label === "做T");
     if (buyDs) (buyDs.data as unknown) = data.buys;
     if (sellDs) (sellDs.data as unknown) = data.sells;
+    if (tDs) (tDs.data as unknown) = data.ts;
 
     // Keep scales / sessionBg / dayMarkers in sync with the new bar count.
     const xMax = data.closes.length - 1;

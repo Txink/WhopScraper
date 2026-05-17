@@ -2,12 +2,12 @@ import type { Chart, Plugin } from "chart.js";
 
 /**
  * Min/Max labels plugin: marks the highest and lowest price points in
- * the current x-axis window with a small yellow dot and an adjacent
- * "高/低 NNN.NN" tag. Updates automatically when the user pans or
- * zooms (`afterDatasetsDraw` fires on every chart update).
+ * the current x-axis window with a small white dot and an adjacent
+ * price tag. Updates automatically when the user pans or zooms
+ * (`afterDatasetsDraw` fires on every chart update).
  *
- * The dot uses brand warn (yellow) — it's a single attention-getter
- * across both extremes, matching LongBridge's mobile chart pattern.
+ * The dot uses solid white — it's a single attention-getter across
+ * both extremes, matching LongBridge's mobile chart pattern.
  */
 
 const DOT_COLOR = "#ffffff"; // solid white
@@ -56,13 +56,13 @@ export const minMaxLabelsPlugin: Plugin = {
     ctx.lineJoin = "round";
 
     const drawMarker = (
-      idx: number, value: number, prefix: "高" | "低",
+      idx: number, value: number,
       position: "above" | "below",
     ) => {
       const el = meta.data[idx] as { x?: number; y?: number } | undefined;
       if (!el || el.x == null || el.y == null) return;
 
-      // Yellow dot at the exact point. Drawn first so the label sits
+      // White dot at the exact point. Drawn first so the label sits
       // over it visually.
       ctx.fillStyle = DOT_COLOR;
       ctx.beginPath();
@@ -71,7 +71,7 @@ export const minMaxLabelsPlugin: Plugin = {
 
       // Price text adjacent. Anchor inside the chart area — flip side
       // when too close to the right edge so the label doesn't clip.
-      const text = `${prefix} ${value.toFixed(3)}`;
+      const text = value.toFixed(3);
       const midX = (area.left + area.right) / 2;
       const goLeft = el.x > midX;
       ctx.textAlign = goLeft ? "right" : "left";
@@ -86,8 +86,8 @@ export const minMaxLabelsPlugin: Plugin = {
       ctx.fillText(text, el.x + xOff, el.y + yOff);
     };
 
-    drawMarker(maxIdx, maxV, "高", "above");
-    if (minIdx !== maxIdx) drawMarker(minIdx, minV, "低", "below");
+    drawMarker(maxIdx, maxV, "above");
+    if (minIdx !== maxIdx) drawMarker(minIdx, minV, "below");
 
     ctx.restore();
   },
