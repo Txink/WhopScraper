@@ -10,7 +10,7 @@ import type { Chart, Plugin } from "chart.js";
  * across both extremes, matching LongBridge's mobile chart pattern.
  */
 
-const DOT_COLOR = "#e7a73d"; // --warn (yellow)
+const DOT_COLOR = "#ffffff"; // solid white
 const TEXT_COLOR = "#e4e8ef"; // --fg-1
 const STROKE_COLOR = "rgba(0, 0, 0, 0.55)";
 
@@ -66,7 +66,7 @@ export const minMaxLabelsPlugin: Plugin = {
       // over it visually.
       ctx.fillStyle = DOT_COLOR;
       ctx.beginPath();
-      ctx.arc(el.x, el.y, 3.5, 0, Math.PI * 2);
+      ctx.arc(el.x, el.y, 2, 0, Math.PI * 2);
       ctx.fill();
 
       // Price text adjacent. Anchor inside the chart area — flip side

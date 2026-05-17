@@ -81,6 +81,98 @@ function fmtN(n: number, d = 3): string {
   return n.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
 }
 
+const TRADE_MARKER_W = 16;
+const TRADE_MARKER_H = 14;
+const TRADE_MARKER_GAP = 6;
+
+/** Draws B/S speech-bubble badges at buy/sell scatter positions.
+ *  Reads the two scatter datasets by label so it's order-independent. */
+const tradeMarkersPlugin: Plugin = {
+  id: "tradeMarkers",
+  afterDatasetsDraw(chart) {
+    const ctx = chart.ctx;
+    const upColor = cssVar("--up-color", "#3dd68c");
+    const downColor = cssVar("--down-color", "#ef5b5b");
+
+    function drawBadge(
+      x: number,
+      y: number,
+      side: "above" | "below",
+      letter: "B" | "S",
+      color: string,
+    ) {
+      const w = TRADE_MARKER_W;
+      const h = TRADE_MARKER_H;
+      const r = 3;
+      const tailH = 4;
+      const cx = x;
+      const top =
+        side === "below"
+          ? y + TRADE_MARKER_GAP
+          : y - TRADE_MARKER_GAP - h - tailH;
+      const left = cx - w / 2;
+
+      ctx.save();
+      ctx.fillStyle = color;
+
+      // Tail triangle pointing at the data point
+      ctx.beginPath();
+      if (side === "below") {
+        ctx.moveTo(cx - 4, top + tailH);
+        ctx.lineTo(cx, top);
+        ctx.lineTo(cx + 4, top + tailH);
+      } else {
+        const baseY = top + h;
+        ctx.moveTo(cx - 4, baseY);
+        ctx.lineTo(cx, baseY + tailH);
+        ctx.lineTo(cx + 4, baseY);
+      }
+      ctx.closePath();
+      ctx.fill();
+
+      // Rounded rect body
+      const bodyTop = side === "below" ? top + tailH : top;
+      ctx.beginPath();
+      ctx.moveTo(left + r, bodyTop);
+      ctx.lineTo(left + w - r, bodyTop);
+      ctx.quadraticCurveTo(left + w, bodyTop, left + w, bodyTop + r);
+      ctx.lineTo(left + w, bodyTop + h - r);
+      ctx.quadraticCurveTo(left + w, bodyTop + h, left + w - r, bodyTop + h);
+      ctx.lineTo(left + r, bodyTop + h);
+      ctx.quadraticCurveTo(left, bodyTop + h, left, bodyTop + h - r);
+      ctx.lineTo(left, bodyTop + r);
+      ctx.quadraticCurveTo(left, bodyTop, left + r, bodyTop);
+      ctx.closePath();
+      ctx.fill();
+
+      // Letter
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "700 10px -apple-system, system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(letter, cx, bodyTop + h / 2 + 0.5);
+      ctx.restore();
+    }
+
+    chart.data.datasets.forEach((ds, dsIdx) => {
+      const label = (ds as { label?: string }).label;
+      const isBuy = label === "买入";
+      const isSell = label === "卖出";
+      if (!isBuy && !isSell) return;
+      const meta = chart.getDatasetMeta(dsIdx);
+      const color = isBuy ? upColor : downColor;
+      const letter: "B" | "S" = isBuy ? "B" : "S";
+      const side: "above" | "below" = isBuy ? "below" : "above";
+      meta.data.forEach((el) => {
+        const px = (el as { x?: number }).x;
+        const py = (el as { y?: number }).y;
+        if (px == null || py == null) return;
+        drawBadge(px, py, side, letter, color);
+      });
+    });
+  },
+};
+
 /** Vertical guide lines at every trading-day boundary in `bars[]`. Only
  *  drawn when `viewCfg.dayMarkersEnabled` is true (multiday view). */
 const dayMarkersPlugin: Plugin<"line" | "candlestick"> = {
@@ -316,7 +408,7 @@ export function DetailChart({
             grad.addColorStop(1, "rgba(0,0,0,0)");
             return grad;
           },
-          borderWidth: 1.6, fill: true, tension: 0.26,
+          borderWidth: 1.1, fill: true, tension: 0.26,
           pointRadius: 0, pointHoverRadius: 0,
           order: 4,
         } as ChartConfiguration["data"]["datasets"][number]);
@@ -341,11 +433,10 @@ export function DetailChart({
             type: "scatter" as const,
             data: data.buys,
             backgroundColor: cssVar("--up-color", "#3dd68c"),
-            borderColor: C.bg0,
-            borderWidth: 2.5,
-            pointRadius: 8, pointHoverRadius: 10,
-            pointStyle: "triangle" as const,
-            rotation: 0,
+            pointRadius: 0,
+            pointHoverRadius: 14,
+            pointHitRadius: 14,
+            pointStyle: "circle" as const,
             order: 1,
             parsing: false as const,
           } as ChartConfiguration["data"]["datasets"][number],
@@ -354,17 +445,16 @@ export function DetailChart({
             type: "scatter" as const,
             data: data.sells,
             backgroundColor: cssVar("--down-color", "#ef5b5b"),
-            borderColor: C.bg0,
-            borderWidth: 2.5,
-            pointRadius: 8, pointHoverRadius: 10,
-            pointStyle: "triangle" as const,
-            rotation: 180,
+            pointRadius: 0,
+            pointHoverRadius: 14,
+            pointHitRadius: 14,
+            pointStyle: "circle" as const,
             order: 1,
             parsing: false as const,
           } as ChartConfiguration["data"]["datasets"][number],
         ],
       },
-      plugins: [sessionBgPlugin, crosshairPlugin, minMaxLabelsPlugin, dayMarkersPlugin],
+      plugins: [sessionBgPlugin, crosshairPlugin, minMaxLabelsPlugin, dayMarkersPlugin, tradeMarkersPlugin],
       options: {
         responsive: true,
         maintainAspectRatio: false,

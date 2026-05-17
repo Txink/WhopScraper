@@ -160,6 +160,7 @@
   padding: 8px 14px 10px;
 }
 .detail-chart-head {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -195,8 +196,18 @@
   display: inline-flex; align-items: center; justify-content: center;
   font-family: var(--font-mono); font-size: 11px;
 }
-.legend .glyph.buy { color: var(--up-color); }
-.legend .glyph.sell { color: var(--down-color); }
+.legend .glyph.buy,
+.legend .glyph.sell {
+  width: 14px;
+  height: 12px;
+  border-radius: 2px;
+  font-size: 9px;
+  font-weight: 700;
+  color: #fff;
+  margin-right: 3px;
+}
+.legend .glyph.buy { background: var(--up-color, #3dd68c); }
+.legend .glyph.sell { background: var(--down-color, #ef5b5b); }
 .legend .glyph.avg {
   border-top: 1px dashed var(--info);
   height: 2px;
