@@ -39,11 +39,15 @@ function applyToRoot(mode: ColorMode): void {
     root.style.setProperty("--up-soft",  "rgba(239, 91, 91, 0.14)");
     root.style.setProperty("--down-color", "#3dd68c");
     root.style.setProperty("--down-soft",  "rgba(61, 214, 140, 0.14)");
+    root.style.setProperty("--candle-up-color", "#952a2a");
+    root.style.setProperty("--candle-down-color", "#147a48");
   } else {
     root.style.setProperty("--up-color", "#3dd68c");
     root.style.setProperty("--up-soft",  "rgba(61, 214, 140, 0.14)");
     root.style.setProperty("--down-color", "#ef5b5b");
     root.style.setProperty("--down-soft",  "rgba(239, 91, 91, 0.14)");
+    root.style.setProperty("--candle-up-color", "#147a48");
+    root.style.setProperty("--candle-down-color", "#952a2a");
   }
 }
 

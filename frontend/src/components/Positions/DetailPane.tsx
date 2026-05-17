@@ -14,6 +14,7 @@ import { DetailChart } from "./DetailChart";
 import { PairDetailModal } from "./PairDetailModal";
 import { TradeList, type TradeListFilter } from "./TradeList";
 import { ConfirmModal } from "./ConfirmModal";
+import { findBarForTrade, buildDayBoundaries } from "./tradeToBar";
 
 interface PendingConfirm {
   title: string;
@@ -292,12 +293,15 @@ export function DetailPane({ position, onBack }: Props) {
   // run on this detail-pane open.
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
 
-  // Server-driven trade pagination: on open, request the first 2 view
-  // pages worth (16 = 8/page × 2). When the user navigates to a page
-  // whose first row isn't loaded yet, ``loadMoreTrades`` fetches the
-  // next batch. Keeping every loaded row in the store preserves cross-
-  // page做T binding (selectedBuys/Sells reference IDs that remain in
-  // the store even after page navigation).
+  // Server-driven trade pagination: initial fetch pulls a wide batch
+  // (TRADES_INITIAL_LIMIT, matching the backend's per-call max) so the
+  // chart can anchor B/S bubbles to every fill in the visible window,
+  // not just the most-recent 16. Subsequent navigation past that batch
+  // falls back to ``TRADES_PAGE_SIZE``-sized chunks via ``loadMoreTrades``.
+  // Keeping every loaded row in the store preserves cross-page做T binding
+  // (selectedBuys/Sells reference IDs that remain in the store even after
+  // page navigation).
+  const TRADES_INITIAL_LIMIT = 500;
   const TRADES_PAGE_SIZE = 16;
   const [tradesTotal, setTradesTotal] = useState(0);
   const [tradesLoading, setTradesLoading] = useState(false);
@@ -332,7 +336,7 @@ export function DetailPane({ position, onBack }: Props) {
     // ticker for a frame).
     setTradesInitialized(false);
     setPairsInitialized(false);
-    api.executions(ticker, { offset: 0, limit: TRADES_PAGE_SIZE })
+    api.executions(ticker, { offset: 0, limit: TRADES_INITIAL_LIMIT })
       .then((r) => {
         if (!alive) return;
         const trades = r.executions.map((e) => ({
@@ -570,7 +574,7 @@ export function DetailPane({ position, onBack }: Props) {
           await api.deleteBrokerExecutions(ticker);
           // history_synced is now false on the server, so this GET
           // triggers the full chunked 2-year backfill.
-          const r = await api.executions(ticker, { offset: 0, limit: TRADES_PAGE_SIZE });
+          const r = await api.executions(ticker, { offset: 0, limit: TRADES_INITIAL_LIMIT });
           const trades = r.executions.map((e) => ({
             id: e.order_id,
             ticker: e.ticker,
@@ -601,18 +605,21 @@ export function DetailPane({ position, onBack }: Props) {
     const bar = bars.bars[hoverBarIndex];
     if (!bar) return null;
 
-    const barTs = bar.timestamp ? Date.parse(bar.timestamp) : null;
-    const isIntradayPeriod =
-      viewCfg.period === "today";
-    const tol = isIntradayPeriod ? 30 * 60 * 1000 : 12 * 3600 * 1000;
+    // Mirror the marker-anchoring logic so the hover row only lights up
+    // on the same bar a trade's bubble was drawn (including pre-/post-
+    // market snaps to the same ET calendar day's open or close).
+    const isLineView =
+      view === "intraday" || view === "minute" || view === "multiday";
+    const periodMs = (viewCfg.liveCfg?.periodMinutes ?? 0) * 60 * 1000;
+    const barTsAll = bars.bars.map((b) => b.timestamp ? Date.parse(b.timestamp) : 0);
+    const dayBoundaries = isLineView ? buildDayBoundaries(barTsAll) : undefined;
     let buyQty = 0, buyValue = 0, sellQty = 0, sellValue = 0;
-    if (barTs != null) {
-      for (const t of trades) {
-        const dt = Math.abs(Date.parse(t.ts) - barTs);
-        if (dt > tol) continue;
-        if (t.side === "BUY") { buyQty += t.qty; buyValue += t.qty * t.price; }
-        else { sellQty += t.qty; sellValue += t.qty * t.price; }
-      }
+    for (const t of trades) {
+      const tts = Date.parse(t.ts);
+      const idx = findBarForTrade(barTsAll, tts, periodMs, isLineView, dayBoundaries);
+      if (idx !== hoverBarIndex) continue;
+      if (t.side === "BUY") { buyQty += t.qty; buyValue += t.qty * t.price; }
+      else { sellQty += t.qty; sellValue += t.qty * t.price; }
     }
     const totalQty = buyQty + sellQty;
     let agg: AggMarker | null = null;

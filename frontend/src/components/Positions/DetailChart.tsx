@@ -32,6 +32,7 @@ import { fmtBjHM, fmtBjDate, fmtBjWeekISO, fmtBjMonth, fmtBjYear, classifyETSess
 import { usePrefsStore } from "../../stores/prefs";
 import { useQuotesStore } from "../../stores/quotes";
 import { applyLiveTick, bucketKey } from "./liveTick";
+import { findBarForTrade, buildDayBoundaries } from "./tradeToBar";
 
 Chart.register(
   LineController, ScatterController,
@@ -78,8 +79,8 @@ const tradeMarkersPlugin: Plugin = {
   id: "tradeMarkers",
   afterDatasetsDraw(chart) {
     const ctx = chart.ctx;
-    const B_COLOR = "#f59e0b";
-    const S_COLOR = "#3b82f6";
+    const B_COLOR = "#f43f5e";
+    const S_COLOR = "#14b8a6";
     const T_COLOR = "#a855f7";
 
     chart.data.datasets.forEach((ds, dsIdx) => {
@@ -268,22 +269,15 @@ export function DetailChart({
   const markers: AggMarker[] = useMemo(() => {
     if (visibleBars.length === 0) return [];
     const barTs = visibleBars.map((b) => b.timestamp ? Date.parse(b.timestamp) : 0);
-    // Snap tolerance reflects bar granularity: intraday/minute/multiday bars
-    // tolerate up to 1h; daily bars tolerate up to 12h so weekend/after-hours
-    // fills still anchor to the right calendar day.
-    const isIntradayPeriod =
+    const isLineView =
       view === "intraday" || view === "minute" || view === "multiday";
-    const tolerance = isIntradayPeriod ? 60 * 60 * 1000 : 12 * 3600 * 1000;
-    // Group trades by their nearest-bar index.
+    const periodMs = (viewCfg.liveCfg?.periodMinutes ?? 0) * 60 * 1000;
+    const dayBoundaries = isLineView ? buildDayBoundaries(barTs) : undefined;
     const grouped = new Map<number, Trade[]>();
     for (const t of visibleTrades) {
       const tts = Date.parse(t.ts);
-      let best = -1; let bestD = Infinity;
-      for (let i = 0; i < barTs.length; i++) {
-        const d = Math.abs(barTs[i]! - tts);
-        if (d < bestD) { bestD = d; best = i; }
-      }
-      if (bestD > tolerance || best < 0) continue;
+      const best = findBarForTrade(barTs, tts, periodMs, isLineView, dayBoundaries);
+      if (best < 0) continue;
       if (!grouped.has(best)) grouped.set(best, []);
       grouped.get(best)!.push(t);
     }
@@ -366,17 +360,17 @@ export function DetailChart({
           // resolver; passing an object literal there causes a runtime crash
           // ("value.toString is not a function").
           borderColors: {
-            up: cssVar("--up-color", "#3dd68c"),
-            down: cssVar("--down-color", "#ef5b5b"),
+            up: cssVar("--candle-up-color", "#147a48"),
+            down: cssVar("--candle-down-color", "#952a2a"),
             unchanged: C.fg3,
           },
           backgroundColors: {
-            up: cssVar("--up-color", "#3dd68c"),
-            down: cssVar("--down-color", "#ef5b5b"),
+            up: cssVar("--candle-up-color", "#147a48"),
+            down: cssVar("--candle-down-color", "#952a2a"),
             unchanged: C.fg3,
           },
-          borderColor: cssVar("--up-color", "#3dd68c"),
-          backgroundColor: cssVar("--up-color", "#3dd68c"),
+          borderColor: cssVar("--candle-up-color", "#147a48"),
+          backgroundColor: cssVar("--candle-up-color", "#147a48"),
           borderWidth: 1,
           barPercentage: 0.9,
           categoryPercentage: 0.95,
@@ -410,7 +404,7 @@ export function DetailChart({
             label: "买入",
             type: "scatter" as const,
             data: data.buys,
-            backgroundColor: "#f59e0b",
+            backgroundColor: "#f43f5e",
             borderColor: C.bg0,
             borderWidth: 0,
             pointRadius: 0,
@@ -424,7 +418,7 @@ export function DetailChart({
             label: "卖出",
             type: "scatter" as const,
             data: data.sells,
-            backgroundColor: "#3b82f6",
+            backgroundColor: "#14b8a6",
             borderColor: C.bg0,
             borderWidth: 0,
             pointRadius: 0,

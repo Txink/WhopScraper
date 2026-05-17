@@ -1059,8 +1059,8 @@ input[type="checkbox"].sel-sell:checked {
   font-size: 10px;
   font-weight: 500;
 }
-.chart-hover-info .hover-row-2.agg-b { color: #f59e0b; }
-.chart-hover-info .hover-row-2.agg-s { color: #3b82f6; }
+.chart-hover-info .hover-row-2.agg-b { color: #f43f5e; }
+.chart-hover-info .hover-row-2.agg-s { color: #14b8a6; }
 .chart-hover-info .hover-row-2.agg-t { color: #a855f7; }
 
 /* ─── Chart tab bar ─── 7 flat tabs, 3 with anchored popovers.

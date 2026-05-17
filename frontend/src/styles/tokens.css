@@ -33,6 +33,12 @@
   --up-soft: rgba(61, 214, 140, 0.14);
   --down-color: #ef5b5b;
   --down-soft: rgba(239, 91, 91, 0.14);
+  /* Candle fills use deeper shades than the directional --up/--down tokens
+   * so the candle body reads as a denser block against the chart bg
+   * without dimming the P/L numbers / chips that share those tokens.
+   * Flipped alongside --up-color/--down-color in prefs.ts for CN red-up. */
+  --candle-up-color: #147a48;
+  --candle-down-color: #952a2a;
 
   /* Type badges */
   --type-stock-bg: rgba(63, 181, 197, 0.14);
