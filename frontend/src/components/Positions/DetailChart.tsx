@@ -107,21 +107,41 @@ const tradeMarkersPlugin: Plugin = {
 const dayMarkersPlugin: Plugin<"line" | "candlestick"> = {
   id: "dayMarkers",
   afterDraw(chart, _args, opts) {
-    const { enabled, bars: pluginBars } = opts as { enabled: boolean; bars: Candlestick[] };
+    const { enabled, bars: pluginBars, showLabels } = opts as {
+      enabled: boolean;
+      bars: Candlestick[];
+      showLabels?: boolean;
+    };
     if (!enabled || !pluginBars || pluginBars.length === 0) return;
     const ctx = chart.ctx;
     const xs = chart.scales.x;
     const ys = chart.scales.y;
-    if (!xs || !ys) return;
+    const area = chart.chartArea;
+    if (!xs || !ys || !area) return;
     let prevDay: string | null = null;
     ctx.save();
-    ctx.strokeStyle = "rgba(255,255,255,0.08)";
+    // Brighter line for multiday since these ARE the primary ticks.
+    ctx.strokeStyle = showLabels
+      ? "rgba(255, 255, 255, 0.18)"
+      : "rgba(255, 255, 255, 0.08)";
     ctx.lineWidth = 1;
     ctx.setLineDash([3, 3]);
+    ctx.font = "500 9px 'IBM Plex Mono', ui-monospace, monospace";
+    ctx.fillStyle = "#566071";  // C.fg3
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
     for (let i = 0; i < pluginBars.length; i++) {
       const b = pluginBars[i]!;
       if (!b.timestamp) continue;
       const day = tradingDayOfET(b.timestamp);
+      // First-day label: at the very first bar, drop a label only (no line).
+      if (prevDay === null && showLabels && i === 0) {
+        const x = xs.getPixelForValue(i);
+        if (Number.isFinite(x)) {
+          const label = fmtBjDate(b.timestamp);
+          ctx.fillText(label, x, area.bottom + 4);
+        }
+      }
       if (prevDay !== null && day !== prevDay) {
         const x = xs.getPixelForValue(i);
         if (Number.isFinite(x)) {
@@ -129,6 +149,11 @@ const dayMarkersPlugin: Plugin<"line" | "candlestick"> = {
           ctx.moveTo(x, ys.top);
           ctx.lineTo(x, ys.bottom);
           ctx.stroke();
+          if (showLabels) {
+            // Label below the chart area showing this day's date.
+            const label = fmtBjDate(b.timestamp);
+            ctx.fillText(label, x, area.bottom + 4);
+          }
         }
       }
       prevDay = day;
@@ -466,15 +491,16 @@ export function DetailChart({
           dayMarkers: {
             enabled: viewCfg.dayMarkersEnabled,
             bars: visibleBars,
+            showLabels: view === "multiday",
           },
           zoom: {
             pan: {
-              enabled: true, mode: "x", threshold: 4,
+              enabled: view !== "multiday", mode: "x", threshold: 4,
               onPanComplete: ({ chart }) => { setIsZoomed(true); chart.update("none"); },
             },
             zoom: {
-              wheel: { enabled: true, speed: 0.05 },
-              pinch: { enabled: true },
+              wheel: { enabled: view !== "multiday", speed: 0.05 },
+              pinch: { enabled: view !== "multiday" },
               mode: "x",
               onZoomComplete: ({ chart }) => { setIsZoomed(true); chart.update("none"); },
             },
@@ -484,21 +510,25 @@ export function DetailChart({
         scales: {
           x: {
             min: xMin, max: xMax,
-            grid: { color: C.line, drawTicks: false },
-            ticks: {
-              color: C.fg3,
-              font: { family: "IBM Plex Mono", size: 10 },
-              maxRotation: 0, autoSkip: true, maxTicksLimit: 8,
-              // For views that carry both date + time in the label
-              // (multiday window — "MM/DD HH:MM"), split into two lines:
-              // time on top, date below. Other views pass through.
-              // Chart.js renders array tick values as multi-line.
-              callback: function (this: { getLabelForValue: (v: number) => string }, value) {
-                const lbl = this.getLabelForValue(value as number);
-                const parts = lbl.split(/\s+/);
-                return parts.length === 2 ? [parts[1], parts[0]] : lbl;
-              },
-            },
+            grid: view === "multiday"
+              ? { display: false }
+              : { color: C.line, drawTicks: false },
+            ticks: view === "multiday"
+              ? { display: false }
+              : {
+                  color: C.fg3,
+                  font: { family: "IBM Plex Mono", size: 10 },
+                  maxRotation: 0, autoSkip: true, maxTicksLimit: 8,
+                  // For views that carry both date + time in the label
+                  // (multiday window — "MM/DD HH:MM"), split into two lines:
+                  // time on top, date below. Other views pass through.
+                  // Chart.js renders array tick values as multi-line.
+                  callback: function (this: { getLabelForValue: (v: number) => string }, value) {
+                    const lbl = this.getLabelForValue(value as number);
+                    const parts = lbl.split(/\s+/);
+                    return parts.length === 2 ? [parts[1], parts[0]] : lbl;
+                  },
+                },
             border: { color: C.line },
           },
           y: {

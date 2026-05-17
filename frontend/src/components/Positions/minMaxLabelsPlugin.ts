@@ -51,7 +51,7 @@ export const minMaxLabelsPlugin: Plugin = {
 
     const ctx = chart.ctx;
     ctx.save();
-    ctx.font = "500 11px 'IBM Plex Mono', ui-monospace, monospace";
+    ctx.font = "500 9px 'IBM Plex Mono', ui-monospace, monospace";
     ctx.lineWidth = 3;
     ctx.lineJoin = "round";
 
