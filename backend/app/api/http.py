@@ -722,6 +722,9 @@ def build_http_router(
     _PERIOD_GRANULARITY_NON_TODAY: dict[str, tuple[str, int]] = {
         "5":     ("min_5", 5 * 78),
         "7":     ("min_5", 7 * 78),
+        # "30" is retained as a legacy period for the OptionCard miniline
+        # which renders 30 daily candles. NOT exposed in the new chart tabs.
+        "30":    ("day", 30),
         "day":   ("day", 250),
         "week":  ("week", 200),
         "month": ("month", 120),
@@ -746,7 +749,7 @@ def build_http_router(
         symbol: str,
         period: Annotated[
             str,
-            Query(description="today | 5 | 7 | day | week | month | year"),
+            Query(description="today | 5 | 7 | 30 | day | week | month | year"),
         ] = "today",
         granularity: Annotated[
             str,

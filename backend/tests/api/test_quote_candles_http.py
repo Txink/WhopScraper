@@ -230,7 +230,9 @@ def test_candlesticks_today_individual_sessions_fetch_all(
         # 5/7-day views remain: multi-day intraday stitched at 5-min granularity.
         ("5", 5 * 78),
         ("7", 7 * 78),
-        # New K-line periods replace 15/30/60/90 with fixed batches.
+        # "30" is the legacy period for OptionCard miniline (30 daily candles).
+        ("30", 30),
+        # New K-line periods replace 15/60/90 with fixed batches.
         ("day", 250),
         ("week", 200),
         ("month", 120),
@@ -255,7 +257,7 @@ def test_candlesticks_periods_bar_counts(
     assert len(data["bars"]) == expected_bars
 
 
-@pytest.mark.parametrize("period", ["15", "30", "60", "90"])
+@pytest.mark.parametrize("period", ["15", "60", "90"])
 def test_candlesticks_removed_periods_return_400(
     client_and_broker: tuple[TestClient, FakeBrokerClient],
     period: str,

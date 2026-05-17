@@ -3,7 +3,7 @@ import type { Candlesticks } from "../api/domain-types";
 
 /** Backend-facing period enum. See viewConfig.ts for the higher-level
  *  ViewType discriminator that maps onto this. */
-export type Period = "today" | "5" | "7" | "day" | "week" | "month" | "year";
+export type Period = "today" | "5" | "7" | "30" | "day" | "week" | "month" | "year";
 
 /** Cache key shape — for `today` it includes the granularity + sessions
  * sub-options so toggling those triggers a fresh fetch instead of reusing
