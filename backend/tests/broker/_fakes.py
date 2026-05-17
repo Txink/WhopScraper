@@ -5,6 +5,7 @@ from __future__ import annotations
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from datetime import datetime  # noqa: F401  (used in get_candlesticks forward ref)
 from typing import Any
 
 from app.broker.broker_client import OrderSide, OrderType
@@ -138,6 +139,7 @@ class FakeBrokerClient:
         period: str,
         count: int,
         sessions: str = "regular",  # noqa: ARG002 — accepted for protocol compat
+        before: "datetime | None" = None,  # noqa: ARG002 — accepted for protocol compat
     ) -> list[dict[str, Any]]:
         """Deterministic stub: returns ``count`` bars seeded from symbol hash
         so tests can assert structure without a real broker connection.

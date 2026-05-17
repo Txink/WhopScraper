@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 import uuid
 from collections.abc import Callable
-from datetime import date, time
+from datetime import date, datetime, time  # noqa: F401  (datetime used in get_candlesticks forward ref)
 from decimal import Decimal
 from typing import Any
 
@@ -734,6 +734,7 @@ class LongPortClient:
         period: str,
         count: int,
         sessions: str = "regular",
+        before: "datetime | None" = None,
     ) -> list[dict[str, Any]]:
         """Fetch historical candlesticks at the requested granularity.
 
@@ -741,6 +742,11 @@ class LongPortClient:
         / ``min_15`` / ``min_30`` / ``min_60`` / ``day`` — the HTTP layer
         translates user-facing period strings (``today`` / ``5`` / … /
         ``90``) into a (granularity, count) pair before calling here.
+
+        When ``before`` is provided we use the SDK's
+        ``history_candlesticks_by_offset`` with ``forward=False`` so the
+        N bars strictly older than that instant come back; otherwise we
+        use the latest-N ``candlesticks`` call.
         """
         if self._quote_ctx is None:
             raise RuntimeError("LongPortClient has been closed")
@@ -757,13 +763,24 @@ class LongPortClient:
                 f"unknown sessions {sessions!r}; expected 'regular' or 'all'"
             )
 
-        bars = self._quote_ctx.candlesticks(
-            symbol,
-            sdk_period,
-            count,
-            AdjustType.NoAdjust,
-            trade_sessions=sdk_sessions,
-        )
+        if before is not None:
+            bars = self._quote_ctx.history_candlesticks_by_offset(
+                symbol,
+                sdk_period,
+                AdjustType.NoAdjust,
+                False,  # forward=False → bars older than `time`
+                count,
+                time=before,
+                trade_sessions=sdk_sessions,
+            )
+        else:
+            bars = self._quote_ctx.candlesticks(
+                symbol,
+                sdk_period,
+                count,
+                AdjustType.NoAdjust,
+                trade_sessions=sdk_sessions,
+            )
         result: list[dict[str, Any]] = []
         for c in bars:
             # SDK returns timestamp as datetime in exchange tz; ISO-format for

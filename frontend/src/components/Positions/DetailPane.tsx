@@ -326,6 +326,7 @@ export function DetailPane({ position, onBack }: Props) {
   const barsKey = candleCacheKey(symbol, viewCfg.period, viewCfg.granularity, viewCfg.sessions);
   const bars = useCandlesticksStore((s) => s.byKey[barsKey]);
   const setBars = useCandlesticksStore((s) => s.setBars);
+  const prependBars = useCandlesticksStore((s) => s.prependBars);
   // Last bars cache key the period-fetch effect has fully resolved for.
   // Used to gate DetailChart mount on period/granularity/session switches
   // so a cached-bars instant-mount + subsequent refetch overwrite doesn't
@@ -481,6 +482,39 @@ export function DetailPane({ position, onBack }: Props) {
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [symbol, view, intradaySessions, minuteGranularity, multidayWindow, setBars]);
+
+  // Pan-back history extension. Only meaningful for K-line views — the
+  // today period returns a single trading day so panning further back
+  // would need a different data contract; the backend rejects `before`
+  // for today. ``loadingRef`` dedupes concurrent fetches; ``exhaustedRef``
+  // freezes after the server returns zero new bars so we don't poll the
+  // same prefix forever.
+  const loadOlderRef = useRef<{ inFlight: boolean; exhaustedKey: string | null }>({
+    inFlight: false,
+    exhaustedKey: null,
+  });
+  const handleNeedOlder = useCallback(() => {
+    if (viewCfg.period === "today") return;
+    const state = loadOlderRef.current;
+    if (state.inFlight) return;
+    if (state.exhaustedKey === barsKey) return;
+    const current = useCandlesticksStore.getState().byKey[barsKey];
+    const oldestTs = current?.bars[0]?.timestamp;
+    if (!oldestTs) return;
+    state.inFlight = true;
+    api.candlesticks(symbol, viewCfg.period, { before: oldestTs })
+      .then((r) => {
+        if (r.bars.length === 0) {
+          state.exhaustedKey = barsKey;
+          return;
+        }
+        prependBars(barsKey, r);
+      })
+      .catch((e) => console.warn("candlesticks pan-back fetch failed", e))
+      .finally(() => {
+        state.inFlight = false;
+      });
+  }, [symbol, viewCfg.period, barsKey, prependBars]);
 
   const onConfirmBind = useCallback(async () => {
     if (selectedBuys.size === 0 && selectedSells.size === 0) return;
@@ -734,6 +768,7 @@ export function DetailPane({ position, onBack }: Props) {
               viewCfg={viewCfg}
               trades={trades}
               onHoverBar={setHoverBarIndex}
+              onNeedOlder={handleNeedOlder}
             />
           ) : (
             <div className="empty-pat" style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>

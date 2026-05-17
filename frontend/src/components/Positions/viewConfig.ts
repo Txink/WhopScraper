@@ -92,7 +92,7 @@ export function resolveViewConfig(view: ViewType, sub: ViewSubState): ViewConfig
         // to zoom into a single period.)
         sessions: "all",
         datasetType: "candlestick",
-        initialVisibleCount: Number.POSITIVE_INFINITY,
+        initialVisibleCount: 80,
         liveCfg: { periodMinutes: _MINUTE_LIVE[sub.minuteGranularity], allowAppend: true },
         sessionBgEnabled: false,
         dayMarkersEnabled: false,
@@ -109,7 +109,7 @@ export function resolveViewConfig(view: ViewType, sub: ViewSubState): ViewConfig
         livePulseEnabled: false,
       };
     case "day":
-      return _candleConfig("day", 60);
+      return _candleConfig("day", 80);
     case "week":
       return _candleConfig("week", 52);
     case "month":

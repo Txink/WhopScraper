@@ -189,20 +189,37 @@ interface Props {
   viewCfg: ViewConfig;
   trades: Trade[];
   onHoverBar?: (barIndex: number | null) => void;
+  /** Fires when the user's pan brings the visible window within
+   *  ~PAN_BACK_THRESHOLD bars of the loaded-data front. The parent
+   *  is expected to fetch older bars and prepend them via the
+   *  candlesticks store (dedupes in-flight requests itself). */
+  onNeedOlder?: () => void;
 }
+
+/** How close to index 0 (in bars) before we ask the parent to extend
+ *  the loaded history. Generous so the fetch starts before the user
+ *  hits the actual edge and sees a "stuck" feeling. */
+const PAN_BACK_THRESHOLD = 20;
 
 /**
  * Detail chart: price line + BUY/SELL scatter markers. Markers are snapped
  * to the nearest bar in time so they always land on the x-axis grid.
  */
 export function DetailChart({
-  symbol, bars, view, viewCfg, trades, onHoverBar,
+  symbol, bars, view, viewCfg, trades, onHoverBar, onNeedOlder,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const chartRef = useRef<Chart | null>(null);
   const [isZoomed, setIsZoomed] = useState(false);
   const onHoverBarRef = useRef<((idx: number | null) => void) | undefined>(onHoverBar);
   useEffect(() => { onHoverBarRef.current = onHoverBar; }, [onHoverBar]);
+  const onNeedOlderRef = useRef<(() => void) | undefined>(onNeedOlder);
+  useEffect(() => { onNeedOlderRef.current = onNeedOlder; }, [onNeedOlder]);
+  /** Timestamp of the leftmost bar at the previous render — used by
+   *  Effect B to detect "older bars were prepended" and shift the
+   *  visible x range by the prepend count so the user keeps looking
+   *  at the same bars after the data extends. */
+  const prevFirstTsRef = useRef<string | undefined>(undefined);
   // Subscribe to prefs so the chart rebuilds (with new BUY/SELL marker
   // colors etc.) when the user toggles US/CN color convention.
   const colorMode = usePrefsStore((s) => s.colorMode);
@@ -510,7 +527,17 @@ export function DetailChart({
           zoom: {
             pan: {
               enabled: view !== "multiday", mode: "x", threshold: 4,
-              onPanComplete: ({ chart }) => { setIsZoomed(true); chart.update("none"); },
+              onPanComplete: ({ chart }) => {
+                setIsZoomed(true);
+                chart.update("none");
+                // If the user has panned close to the left edge of the
+                // loaded data, ask the parent for older bars. Parent
+                // dedupes in-flight fetches.
+                const xMin = chart.scales.x.min as number;
+                if (Number.isFinite(xMin) && xMin <= PAN_BACK_THRESHOLD) {
+                  onNeedOlderRef.current?.();
+                }
+              },
             },
             zoom: {
               wheel: { enabled: view !== "multiday", speed: 0.05 },
@@ -518,7 +545,18 @@ export function DetailChart({
               mode: "x",
               onZoomComplete: ({ chart }) => { setIsZoomed(true); chart.update("none"); },
             },
-            limits: { x: { min: 0, max: xMax, minRange: 5 } },
+            // Candle views cap the visible window at 250 bars so the user
+            // can't zoom out into an unreadable thumbnail. minRange = 5
+            // applies to every view. Line views (intraday/multiday) skip
+            // the upper cap — they show all loaded bars by design.
+            limits: {
+              x: {
+                min: 0,
+                max: xMax,
+                minRange: 5,
+                ...(viewCfg.datasetType === "candlestick" ? { maxRange: 250 } : {}),
+              },
+            },
           },
         },
         scales: {
@@ -660,6 +698,22 @@ export function DetailChart({
         zoom: { limits: { x: { max: number } } };
       };
     };
+    // Detect a prepend (older bars added at the front by pan-back) by
+    // finding the previous first-bar timestamp in the new array. If it
+    // moved to index N, shift the visible range by N so the user keeps
+    // looking at the same bars they were on before the fetch.
+    const prevFirstTs = prevFirstTsRef.current;
+    const newFirstTs = visibleBars[0]?.timestamp;
+    if (prevFirstTs && newFirstTs && prevFirstTs !== newFirstTs) {
+      const shift = visibleBars.findIndex((b) => b.timestamp === prevFirstTs);
+      if (shift > 0) {
+        const curMin = chart.scales.x.min as number;
+        const curMax = chart.scales.x.max as number;
+        opts.scales.x.min = curMin + shift;
+        opts.scales.x.max = curMax + shift;
+      }
+    }
+    prevFirstTsRef.current = newFirstTs ?? undefined;
     // Only stretch x-max to the new last bar if the user hasn't panned away
     // from the tail — keeps manual pan/zoom from being yanked on every update.
     const prevMax = chart.scales.x.max as number;

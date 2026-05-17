@@ -304,11 +304,16 @@ export const api = {
       // Only used when period === "today"; ignored otherwise.
       granularity?: "分时" | "1min" | "2min" | "3min" | "5min";
       sessions?: "regular" | "pre" | "post" | "overnight" | "all";
+      /** ISO timestamp — when set, fetch bars older than this. Backend
+       *  rejects `before` for the today period; only day/week/month/
+       *  year support it. */
+      before?: string;
     } = {},
   ): Promise<Candlesticks> {
     const qs = new URLSearchParams({ symbol, period });
     if (opts.granularity) qs.set("granularity", opts.granularity);
     if (opts.sessions) qs.set("sessions", opts.sessions);
+    if (opts.before) qs.set("before", opts.before);
     return request<Candlesticks>(`/api/candlesticks?${qs.toString()}`);
   },
 

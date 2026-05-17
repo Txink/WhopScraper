@@ -759,6 +759,14 @@ def build_http_router(
             str,
             Query(description="(today only) regular | all (include pre/post-market)"),
         ] = "regular",
+        before: Annotated[
+            datetime | None,
+            Query(description=(
+                "Optional UTC instant — when set, return bars strictly older "
+                "than this (used by the detail-pane pan-back flow). Only "
+                "supported for day/week/month/year periods."
+            )),
+        ] = None,
     ) -> CandlesticksOut:
         """Return candlestick bars for a single symbol.
 
@@ -807,9 +815,23 @@ def build_http_router(
             # Non-today periods always use regular session.
             sessions = "regular"
 
+        # ``before`` is only meaningful for the longer-horizon periods —
+        # the "today" view shows a single trading day so panning back into
+        # yesterday would change the entire data contract. Reject early
+        # rather than silently fetching latest.
+        if before is not None and period == "today":
+            raise HTTPException(
+                400,
+                detail="`before` is not supported for the today period",
+            )
+
         try:
             bars = _get_broker().get_candlesticks(
-                symbol, period=sdk_period, count=count, sessions=sessions,
+                symbol,
+                period=sdk_period,
+                count=count,
+                sessions=sessions,
+                before=before,
             )
         except Exception as exc:  # pragma: no cover — broker SDK errors
             raise HTTPException(502, detail=f"broker candlesticks failed: {exc}") from exc

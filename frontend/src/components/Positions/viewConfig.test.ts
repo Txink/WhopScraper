@@ -38,7 +38,7 @@ describe("resolveViewConfig", () => {
   });
 
   it.each([
-    ["day",   "day",   60],
+    ["day",   "day",   80],
     ["week",  "week",  52],
     ["month", "month", 36],
     ["year",  "year",  20],

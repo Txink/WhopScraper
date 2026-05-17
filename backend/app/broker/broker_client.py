@@ -118,6 +118,7 @@ class BrokerClient(Protocol):
         period: str,
         count: int,
         sessions: str = "regular",
+        before: "datetime | None" = None,
     ) -> list[dict[str, Any]]:
         """Fetch historical candlesticks for a symbol.
 
@@ -128,6 +129,12 @@ class BrokerClient(Protocol):
           - ``"regular"`` (default): regular trading hours only
             (9:30-16:00 ET for US equities).
           - ``"all"``: include pre-market + after-hours bars.
+
+        ``before`` (optional): when provided, fetch ``count`` bars strictly
+        OLDER than this UTC instant — used by the detail-pane's pan-back
+        flow to extend the loaded history when the user scrolls past the
+        leftmost loaded bar. When ``None`` (default), behaves as before
+        and returns the latest ``count`` bars.
 
         ``count`` caps the number of bars returned; the SDK may return
         fewer if the symbol has less history. Bars are chronological
