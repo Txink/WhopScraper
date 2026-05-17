@@ -421,12 +421,33 @@ export function DetailChart({
         maintainAspectRatio: false,
         animation: { duration: 240 },
         interaction: { mode: "index", intersect: false, axis: "x" },
-        onHover: (_event, elements) => {
-          if (elements.length === 0) {
+        onHover: (event, _elements, chart) => {
+          const e = event as { x?: number | null };
+          const px = e?.x;
+          if (px == null) {
             onHoverBarRef.current?.(null);
             return;
           }
-          onHoverBarRef.current?.(elements[0]!.index);
+          const xScale = chart.scales.x;
+          if (!xScale) {
+            onHoverBarRef.current?.(null);
+            return;
+          }
+          const v = xScale.getValueForPixel?.(px);
+          if (v == null || !Number.isFinite(v)) {
+            onHoverBarRef.current?.(null);
+            return;
+          }
+          const n = visibleBarsRef.current.length;
+          if (n === 0) {
+            onHoverBarRef.current?.(null);
+            return;
+          }
+          const idx = Math.max(0, Math.min(n - 1, Math.round(v)));
+          onHoverBarRef.current?.(idx);
+          // Stash for crosshair to read.
+          (chart as unknown as { $hoverBarIndex?: number | null }).$hoverBarIndex = idx;
+          chart.draw();
         },
         // Y-axis labels live on the right; left side has nothing to
         // anchor, so flatten the left/right chartArea inset and let the
@@ -522,7 +543,14 @@ export function DetailChart({
       },
     };
 
-    const onLeave = () => onHoverBarRef.current?.(null);
+    const onLeave = () => {
+      onHoverBarRef.current?.(null);
+      const ch = chartRef.current;
+      if (ch) {
+        (ch as unknown as { $hoverBarIndex?: number | null }).$hoverBarIndex = null;
+        ch.draw();
+      }
+    };
     canvas.addEventListener("mouseleave", onLeave);
     try {
       chartRef.current = new Chart(canvas, cfg);
