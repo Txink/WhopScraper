@@ -714,6 +714,9 @@ class LongPortClient:
         "min_30": Period.Min_30,
         "min_60": Period.Min_60,
         "day": Period.Day,
+        "week": Period.Week,
+        "month": Period.Month,
+        "year": Period.Year,
         # Legacy alias retained so older callers that pass "intraday" keep
         # working without a code change.
         "intraday": Period.Min_5,
