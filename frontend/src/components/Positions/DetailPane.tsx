@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { api } from "../../api/http";
 import type { Position, TPair, Trade } from "../../api/domain-types";
+import { fmtBjHM, fmtBjDate } from "./timeFmt";
 import { useQuotesStore } from "../../stores/quotes";
 import { useCandlesticksStore, candleCacheKey } from "../../stores/candlesticks";
 import { useTradesStore } from "../../stores/trades";
@@ -47,6 +48,13 @@ function patchTradesWithPair(trades: Trade[], pair: TPair): Trade[] {
     });
 }
 
+type AggMarker = { type: "B" | "S" | "T"; qty: number; price: number };
+
+export type HoverInfo =
+  | { kind: "line"; time: string; close: number; agg: AggMarker | null }
+  | { kind: "candle"; time: string; open: number; close: number; high: number; low: number; agg: AggMarker | null }
+  | null;
+
 const TABS: Array<{ view: ViewType; label: string; hasPopover: boolean }> = [
   { view: "intraday", label: "日内",  hasPopover: true },
   { view: "minute",   label: "分钟",  hasPopover: true },
@@ -71,6 +79,7 @@ interface HeadProps {
   setMinuteGranularity(g: import("./viewConfig").MinuteGranularity): void;
   multidayWindow: import("./viewConfig").MultidayWindow;
   setMultidayWindow(w: import("./viewConfig").MultidayWindow): void;
+  hoverInfo: HoverInfo;
 }
 
 function DetailChartHead(props: HeadProps) {
@@ -79,6 +88,7 @@ function DetailChartHead(props: HeadProps) {
     intradaySessions, setIntradaySessions,
     minuteGranularity, setMinuteGranularity,
     multidayWindow, setMultidayWindow,
+    hoverInfo,
   } = props;
 
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -136,6 +146,33 @@ function DetailChartHead(props: HeadProps) {
             </button>
           );
         })}
+      </div>
+
+      <div className="chart-hover-info">
+        {hoverInfo && (
+          <>
+            <div className="hover-row-1">
+              <span className="time">{hoverInfo.time}</span>
+              {hoverInfo.kind === "candle" ? (
+                <>
+                  <span className="ohlc-item">开 <b>${hoverInfo.open.toFixed(3)}</b></span>
+                  <span className="ohlc-item">收 <b>${hoverInfo.close.toFixed(3)}</b></span>
+                  <span className="ohlc-item">高 <b>${hoverInfo.high.toFixed(3)}</b></span>
+                  <span className="ohlc-item">低 <b>${hoverInfo.low.toFixed(3)}</b></span>
+                </>
+              ) : (
+                <span className="price">${hoverInfo.close.toFixed(3)}</span>
+              )}
+            </div>
+            {hoverInfo.agg && (
+              <div className={`hover-row-2 agg-${hoverInfo.agg.type.toLowerCase()}`}>
+                {hoverInfo.agg.type === "B" ? "买入" : hoverInfo.agg.type === "S" ? "卖出" : "做T"}
+                {" "}
+                {hoverInfo.agg.qty.toLocaleString("en-US")} 股 @ ${hoverInfo.agg.price.toFixed(3)}
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       {/* 日内 popover — sessions */}
@@ -205,6 +242,8 @@ export function DetailPane({ position, onBack }: Props) {
   const ticker = position.ticker;
   const symbol = position.symbol;
   const isOption = position.type === "option";
+
+  const [hoverBarIndex, setHoverBarIndex] = useState<number | null>(null);
 
   const quote = useQuotesStore((s) => s.quotesBySymbol[symbol]);
   const view = useDetailViewStore((s) => s.view);
@@ -556,6 +595,53 @@ export function DetailPane({ position, onBack }: Props) {
     });
   }, [ticker, setTrades]);
 
+  const hoverInfo: HoverInfo = useMemo(() => {
+    if (hoverBarIndex == null) return null;
+    if (!bars || bars.bars.length === 0) return null;
+    const bar = bars.bars[hoverBarIndex];
+    if (!bar) return null;
+
+    const barTs = bar.timestamp ? Date.parse(bar.timestamp) : null;
+    const isIntradayPeriod =
+      viewCfg.period === "today";
+    const tol = isIntradayPeriod ? 30 * 60 * 1000 : 12 * 3600 * 1000;
+    let buyQty = 0, buyValue = 0, sellQty = 0, sellValue = 0;
+    if (barTs != null) {
+      for (const t of trades) {
+        const dt = Math.abs(Date.parse(t.ts) - barTs);
+        if (dt > tol) continue;
+        if (t.side === "BUY") { buyQty += t.qty; buyValue += t.qty * t.price; }
+        else { sellQty += t.qty; sellValue += t.qty * t.price; }
+      }
+    }
+    const totalQty = buyQty + sellQty;
+    let agg: AggMarker | null = null;
+    if (totalQty > 0) {
+      const type = buyQty > 0 && sellQty > 0 ? "T" : buyQty > 0 ? "B" : "S";
+      agg = {
+        type, qty: totalQty,
+        price: (buyValue + sellValue) / totalQty,
+      };
+    }
+    const timeFormatted = viewCfg.datasetType === "candlestick"
+      ? fmtBjDate(bar.timestamp ?? "")
+      : fmtBjHM(bar.timestamp ?? "");
+    if (viewCfg.datasetType === "candlestick") {
+      return {
+        kind: "candle",
+        time: timeFormatted,
+        open: bar.open, close: bar.close, high: bar.high, low: bar.low,
+        agg,
+      };
+    }
+    return {
+      kind: "line",
+      time: timeFormatted,
+      close: bar.close,
+      agg,
+    };
+  }, [hoverBarIndex, bars, trades, viewCfg.datasetType, viewCfg.period]);
+
   return (
     <div className="detail-pane">
       <DetailSummary
@@ -575,6 +661,7 @@ export function DetailPane({ position, onBack }: Props) {
           setMinuteGranularity={setMinuteGranularity}
           multidayWindow={multidayWindow}
           setMultidayWindow={setMultidayWindow}
+          hoverInfo={hoverInfo}
         />
         <div className="detail-chart-wrap">
           {bars && bars.bars.length > 0 && tradesInitialized && pairsInitialized && barsInitialized ? (
@@ -584,6 +671,7 @@ export function DetailPane({ position, onBack }: Props) {
               view={view}
               viewCfg={viewCfg}
               trades={trades}
+              onHoverBar={setHoverBarIndex}
             />
           ) : (
             <div className="empty-pat" style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>

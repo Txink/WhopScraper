@@ -21,18 +21,6 @@ import {
   OhlcElement,
 } from "chartjs-chart-financial";
 
-// Custom tooltip positioner: anchor the popup at the cursor instead of
-// the nearest data point. Registered once at module load (Chart.js stores
-// positioners on the Tooltip class globally).
-//
-// `eventPosition` is the {x, y} of the most recent pointer event on the
-// canvas; we offset slightly so the popup doesn't cover the crosshair.
-(Tooltip.positioners as unknown as Record<string, (
-  elements: unknown[], eventPosition: { x: number; y: number }
-) => { x: number; y: number }>).cursor = (_elements, eventPosition) => ({
-  x: eventPosition.x,
-  y: eventPosition.y,
-});
 import zoomPlugin from "chartjs-plugin-zoom";
 import type { Candlestick, Trade } from "../../api/domain-types";
 import { sessionBgPlugin } from "./sessionBgPlugin";
@@ -40,7 +28,7 @@ import { crosshairPlugin } from "./crosshairPlugin";
 import { minMaxLabelsPlugin } from "./minMaxLabelsPlugin";
 import { buildSessionSlots } from "./sessionSlots";
 import type { ViewType, ViewConfig } from "./viewConfig";
-import { fmtBjHM, fmtBjDate, fmtBjRel, fmtBjWeekISO, fmtBjMonth, fmtBjYear, classifyETSession, tradingDayOfET, currentTradingDay } from "./timeFmt";
+import { fmtBjHM, fmtBjDate, fmtBjWeekISO, fmtBjMonth, fmtBjYear, classifyETSession, tradingDayOfET, currentTradingDay } from "./timeFmt";
 import { usePrefsStore } from "../../stores/prefs";
 import { useQuotesStore } from "../../stores/quotes";
 import { applyLiveTick, bucketKey } from "./liveTick";
@@ -164,6 +152,7 @@ interface Props {
   view: ViewType;
   viewCfg: ViewConfig;
   trades: Trade[];
+  onHoverBar?: (barIndex: number | null) => void;
 }
 
 /**
@@ -171,11 +160,13 @@ interface Props {
  * to the nearest bar in time so they always land on the x-axis grid.
  */
 export function DetailChart({
-  symbol, bars, view, viewCfg, trades,
+  symbol, bars, view, viewCfg, trades, onHoverBar,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const chartRef = useRef<Chart | null>(null);
   const [isZoomed, setIsZoomed] = useState(false);
+  const onHoverBarRef = useRef<((idx: number | null) => void) | undefined>(onHoverBar);
+  useEffect(() => { onHoverBarRef.current = onHoverBar; }, [onHoverBar]);
   // Subscribe to prefs so the chart rebuilds (with new BUY/SELL marker
   // colors etc.) when the user toggles US/CN color convention.
   const colorMode = usePrefsStore((s) => s.colorMode);
@@ -429,64 +420,21 @@ export function DetailChart({
         responsive: true,
         maintainAspectRatio: false,
         animation: { duration: 240 },
-        interaction: { mode: "nearest", intersect: false, axis: "x" },
+        interaction: { mode: "index", intersect: false, axis: "x" },
+        onHover: (_event, elements) => {
+          if (elements.length === 0) {
+            onHoverBarRef.current?.(null);
+            return;
+          }
+          onHoverBarRef.current?.(elements[0]!.index);
+        },
         // Y-axis labels live on the right; left side has nothing to
         // anchor, so flatten the left/right chartArea inset and let the
         // canvas hug the card padding. Top/bottom default to 0 too.
         layout: { padding: { left: 0, right: 0, top: 0, bottom: 0 } },
         plugins: {
           legend: { display: false },
-          tooltip: {
-            backgroundColor: "#0b0f14",
-            borderColor: C.line,
-            borderWidth: 1,
-            padding: 10,
-            position: "cursor" as unknown as undefined,
-            caretSize: 0,
-            caretPadding: 8,
-            filter: (item) => {
-              const ds = item.dataset as { type?: string; label?: string };
-              return ds.label === "成交价" || ds.type === "scatter";
-            },
-            callbacks: {
-              title: (items) => {
-                const item = items[0];
-                if (!item) return "";
-                const ds = item.dataset as { type?: string };
-                if (ds.type === "scatter") {
-                  const agg = item.raw as { trades?: Trade[] };
-                  const first = agg.trades?.[0];
-                  if (!first) return "";
-                  const extra = (agg.trades?.length ?? 1) > 1 ? ` · 共 ${agg.trades!.length} 笔` : "";
-                  return `${fmtBjRel(first.ts)}${extra}`;
-                }
-                // Read live visibleBars via ref so tooltip stays accurate
-                // after Effect B mutates / live-tick appends bars.
-                const bar = visibleBarsRef.current[item.dataIndex];
-                if (bar?.timestamp) return fmtBjRel(bar.timestamp);
-                return item.label;
-              },
-              label: (item) => {
-                const ds = item.dataset as { type?: string; label?: string };
-                if (ds.type === "scatter") {
-                  const agg = (item.raw as { type?: string; qty?: number; price?: number; trades?: Trade[] });
-                  if (!agg || agg.qty == null) return "";
-                  const action = agg.type === "B" ? "买入" : agg.type === "S" ? "卖出" : "做T";
-                  return ` ${action} ${fmtN(agg.qty, 0)} 股 @ $${fmtN(agg.price ?? 0)}`;
-                }
-                if (ds.type === "candlestick") {
-                  const ohlc = item.raw as { o: number; h: number; l: number; c: number };
-                  return [
-                    ` 开 $${fmtN(ohlc.o)}`,
-                    ` 高 $${fmtN(ohlc.h)}`,
-                    ` 低 $${fmtN(ohlc.l)}`,
-                    ` 收 $${fmtN(ohlc.c)}`,
-                  ];
-                }
-                return ` 价格 $${fmtN(item.parsed.y as number)}`;
-              },
-            },
-          },
+          tooltip: { enabled: false },
           sessionBg: {
             enabled: viewCfg.sessionBgEnabled,
             granularity: "分时" as const,
@@ -574,12 +522,15 @@ export function DetailChart({
       },
     };
 
+    const onLeave = () => onHoverBarRef.current?.(null);
+    canvas.addEventListener("mouseleave", onLeave);
     try {
       chartRef.current = new Chart(canvas, cfg);
     } catch (err) {
       if (import.meta.env.DEV) console.warn("DetailChart: Chart init skipped", err);
     }
     return () => {
+      canvas.removeEventListener("mouseleave", onLeave);
       chartRef.current?.destroy();
       chartRef.current = null;
     };

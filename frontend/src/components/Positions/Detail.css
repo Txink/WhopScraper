@@ -1017,6 +1017,45 @@ input[type="checkbox"].sel-sell:checked {
   gap: 8px;
 }
 
+/* Hover info area: pinned right of the tab bar in the chart head. */
+.chart-hover-info {
+  margin-left: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--fg-2);
+  min-height: 28px;
+  min-width: 200px;
+  pointer-events: none;
+}
+.chart-hover-info .hover-row-1 {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+}
+.chart-hover-info .time {
+  color: var(--fg-3);
+  font-size: 10px;
+}
+.chart-hover-info .price,
+.chart-hover-info .ohlc-item b {
+  color: var(--fg-1);
+  font-weight: 500;
+}
+.chart-hover-info .ohlc-item {
+  color: var(--fg-3);
+}
+.chart-hover-info .hover-row-2 {
+  font-size: 10px;
+  font-weight: 500;
+}
+.chart-hover-info .hover-row-2.agg-b { color: #f59e0b; }
+.chart-hover-info .hover-row-2.agg-s { color: #3b82f6; }
+.chart-hover-info .hover-row-2.agg-t { color: #a855f7; }
+
 /* ─── Chart tab bar ─── 7 flat tabs, 3 with anchored popovers.
  * Replaces the old .period-tabs / .today-dropdown / .subopt-group blocks. */
 .chart-tabs {
