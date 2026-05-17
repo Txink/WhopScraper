@@ -1,34 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { applyLiveTick, bucketKey, liveConfig } from "./liveTick";
+import { applyLiveTick, bucketKey } from "./liveTick";
 import type { Candlestick } from "../../api/domain-types";
 
 const baseBar = (ts: string, c: number): Candlestick => ({
   timestamp: ts,
   open: c, high: c, low: c, close: c, volume: 0, turnover: 0,
-});
-
-describe("liveConfig", () => {
-  it("today + 分时 → 1min, append allowed", () => {
-    expect(liveConfig("today", "分时")).toEqual({ periodMinutes: 1, allowAppend: true });
-  });
-  it("today + Nmin → N, append allowed", () => {
-    expect(liveConfig("today", "1min")).toEqual({ periodMinutes: 1, allowAppend: true });
-    expect(liveConfig("today", "2min")).toEqual({ periodMinutes: 2, allowAppend: true });
-    expect(liveConfig("today", "3min")).toEqual({ periodMinutes: 3, allowAppend: true });
-    expect(liveConfig("today", "5min")).toEqual({ periodMinutes: 5, allowAppend: true });
-  });
-  it("5D/7D → 5min, no append", () => {
-    expect(liveConfig("5", "分时")).toEqual({ periodMinutes: 5, allowAppend: false });
-    expect(liveConfig("7", "分时")).toEqual({ periodMinutes: 5, allowAppend: false });
-  });
-  it("15D → 15min, no append", () => {
-    expect(liveConfig("15", "分时")).toEqual({ periodMinutes: 15, allowAppend: false });
-  });
-  it("30D/60D/90D → null (no live)", () => {
-    expect(liveConfig("30", "分时")).toBeNull();
-    expect(liveConfig("60", "分时")).toBeNull();
-    expect(liveConfig("90", "分时")).toBeNull();
-  });
 });
 
 describe("bucketKey", () => {

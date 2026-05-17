@@ -1,50 +1,45 @@
 import { create } from "zustand";
-import type { Period } from "./candlesticks";
+import type {
+  ViewType,
+  IntradaySession,
+  MinuteGranularity,
+  MultidayWindow,
+} from "../components/Positions/viewConfig";
 
-/** 分时 = 1-min line with session-padded x-axis (LongBridge "分时" UX).
- *  1min = same SDK data but rendered as a regular K-line slice (no padding). */
-export type TodayGranularity = "分时" | "1min" | "2min" | "3min" | "5min";
-
-/** Session filter:
- *  - regular: 9:30-16:00 ET
- *  - pre:     4:00-9:30 ET
- *  - post:    16:00-20:00 ET
- *  - overnight: 20:00-04:00 ET (typically empty for US equities)
- *  - all:     pre + regular + post stitched
- *
- *  Sub-session filters (pre/post/overnight) only apply when granularity = 分时
- *  — for K-line granularities (2/3/5min) the UI restricts choices to
- *  regular | all.
- */
-export type SessionMode = "regular" | "pre" | "post" | "overnight" | "all";
+/** Re-export for callers that previously imported from this module. */
+export type { ViewType, IntradaySession as SessionMode, MinuteGranularity, MultidayWindow };
 
 /** Ephemeral UI state for the position detail pane:
  *  - which symbol (if any) is open. Symbol — not ticker — because the
- *    same underlying ticker can have many distinct option contracts
- *    (e.g. HOOD stock + HOOD260618C100000 option). Symbol uniquely
- *    identifies the card the user clicked.
- *  - which做T pair is highlighted on the chart (stocks only)
+ *    same underlying ticker can have many distinct option contracts.
+ *  - which 做T pair is highlighted on the chart (stocks only)
  *  - which trades are currently selected for the bind builder
- *  - chart period switch + today's intraday sub-options */
+ *  - which chart `view` is showing + per-view sub-config persisted
+ *    independently so switching away and back restores the user's choice */
 interface DetailViewState {
   selectedSymbol: string | null;
   activePairId: number | null;
   showAllPairs: boolean;
-  period: Period;
-  /** Today-only: bar granularity. Persisted across period switches so it
-   *  sticks when the user toggles away and back. */
-  todayGranularity: TodayGranularity;
-  /** Today-only: regular session vs include pre-market & post-market. */
-  todaySessions: SessionMode;
+
+  /** Current chart tab. Maps via viewConfig.ts to (period, granularity, sessions). */
+  view: ViewType;
+  /** Sub-config for the `intraday` tab — persisted independently. */
+  intradaySessions: IntradaySession;
+  /** Sub-config for the `minute` tab — persisted independently. */
+  minuteGranularity: MinuteGranularity;
+  /** Sub-config for the `multiday` tab — persisted independently. */
+  multidayWindow: MultidayWindow;
+
   selectedBuys: Set<string>;
   selectedSells: Set<string>;
 
   selectSymbol(symbol: string | null): void;
   setActivePair(id: number | null): void;
   setShowAllPairs(v: boolean): void;
-  setPeriod(p: Period): void;
-  setTodayGranularity(g: TodayGranularity): void;
-  setTodaySessions(s: SessionMode): void;
+  setView(v: ViewType): void;
+  setIntradaySessions(s: IntradaySession): void;
+  setMinuteGranularity(g: MinuteGranularity): void;
+  setMultidayWindow(w: MultidayWindow): void;
   toggleTrade(tradeId: string, side: "BUY" | "SELL"): void;
   clearSelection(): void;
 }
@@ -53,33 +48,26 @@ export const useDetailViewStore = create<DetailViewState>((set) => ({
   selectedSymbol: null,
   activePairId: null,
   showAllPairs: false,
-  period: "today",
-  todayGranularity: "5min",
-  todaySessions: "regular",
+  view: "intraday",
+  intradaySessions: "regular",
+  minuteGranularity: "5min",
+  multidayWindow: 5,
   selectedBuys: new Set(),
   selectedSells: new Set(),
 
   selectSymbol: (symbol) =>
     set({
       selectedSymbol: symbol,
-      // Reset transient view state when switching positions.
       activePairId: null,
       selectedBuys: new Set(),
       selectedSells: new Set(),
     }),
   setActivePair: (id) => set({ activePairId: id }),
   setShowAllPairs: (v) => set({ showAllPairs: v }),
-  setPeriod: (p) => set({ period: p }),
-  setTodayGranularity: (g) =>
-    set((state) => {
-      // K-line granularities (2/3/5min) only support 盘中. Switching from
-      // 分时 → K-line therefore always snaps the session back to "regular".
-      if (g !== "分时" && state.todaySessions !== "regular") {
-        return { todayGranularity: g, todaySessions: "regular" };
-      }
-      return { todayGranularity: g };
-    }),
-  setTodaySessions: (s) => set({ todaySessions: s }),
+  setView: (v) => set({ view: v }),
+  setIntradaySessions: (s) => set({ intradaySessions: s }),
+  setMinuteGranularity: (g) => set({ minuteGranularity: g }),
+  setMultidayWindow: (w) => set({ multidayWindow: w }),
   toggleTrade: (tradeId, side) =>
     set((state) => {
       if (side === "BUY") {

@@ -299,7 +299,7 @@ export const api = {
 
   async candlesticks(
     symbol: string,
-    period: "today" | "5" | "7" | "15" | "30" | "60" | "90" = "today",
+    period: "today" | "5" | "7" | "day" | "week" | "month" | "year" = "today",
     opts: {
       // Only used when period === "today"; ignored otherwise.
       granularity?: "分时" | "1min" | "2min" | "3min" | "5min";

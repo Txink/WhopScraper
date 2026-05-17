@@ -1,6 +1,9 @@
 import type { Candlestick } from "../../api/domain-types";
 import { currentTradingDay } from "./timeFmt";
-import type { TodayGranularity, SessionMode } from "../../stores/detailView";
+import type { IntradaySession as SessionMode } from "./viewConfig";
+
+/** Granularity used for intraday and minute-bar views. */
+type TodayGranularity = "分时" | "1min" | "2min" | "3min" | "5min";
 
 /**
  * Build a "slot" array that reserves space on the x-axis for the full

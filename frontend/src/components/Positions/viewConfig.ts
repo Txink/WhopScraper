@@ -91,13 +91,13 @@ export function resolveViewConfig(view: ViewType, sub: ViewSubState): ViewConfig
         dayMarkersEnabled: true,
       };
     case "day":
-      return _candleConfig("day" as Period, 60); // Cast until B4 reshapes Period to include day/week/month/year.
+      return _candleConfig("day", 60);
     case "week":
-      return _candleConfig("week" as Period, 52); // Cast until B4 reshapes Period to include day/week/month/year.
+      return _candleConfig("week", 52);
     case "month":
-      return _candleConfig("month" as Period, 36); // Cast until B4 reshapes Period to include day/week/month/year.
+      return _candleConfig("month", 36);
     case "year":
-      return _candleConfig("year" as Period, 20); // Cast until B4 reshapes Period to include day/week/month/year.
+      return _candleConfig("year", 20);
   }
 }
 

@@ -7,7 +7,10 @@ describe("detailView store", () => {
       selectedSymbol: null,
       activePairId: null,
       showAllPairs: false,
-      period: "today",
+      view: "intraday",
+      intradaySessions: "regular",
+      minuteGranularity: "5min",
+      multidayWindow: 5,
       selectedBuys: new Set(),
       selectedSells: new Set(),
     });
@@ -29,6 +32,23 @@ describe("detailView store", () => {
     expect(s.activePairId).toBeNull();
     expect(s.selectedBuys.size).toBe(0);
     expect(s.selectedSells.size).toBe(0);
+  });
+
+  it("setView switches the discriminator", () => {
+    useDetailViewStore.getState().setView("day");
+    expect(useDetailViewStore.getState().view).toBe("day");
+  });
+
+  it("per-view sub-state persists across view switches", () => {
+    const s = useDetailViewStore.getState();
+    s.setIntradaySessions("post");
+    s.setMinuteGranularity("2min");
+    s.setMultidayWindow(7);
+    s.setView("week");
+    s.setView("intraday");
+    expect(useDetailViewStore.getState().intradaySessions).toBe("post");
+    expect(useDetailViewStore.getState().minuteGranularity).toBe("2min");
+    expect(useDetailViewStore.getState().multidayWindow).toBe(7);
   });
 
   it("toggleTrade adds and removes from the correct side", () => {

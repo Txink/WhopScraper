@@ -1,29 +1,5 @@
 import type { Candlestick } from "../../api/domain-types";
-import type { Period } from "../../stores/candlesticks";
 import { fmtBjHM, parseUtc } from "./timeFmt";
-
-export type Granularity = "分时" | "1min" | "2min" | "3min" | "5min";
-
-export interface LiveConfig {
-  periodMinutes: number;
-  /** today views can grow new bars at boundaries; 5D/7D/15D never do
-   *  (backend ships a fresh window when the user re-opens the view). */
-  allowAppend: boolean;
-}
-
-/** Resolve the (periodMinutes, allowAppend) for a chart view, or null
- *  when the view is non-live (daily K — 30D/60D/90D). */
-export function liveConfig(period: Period, todayGranularity: Granularity): LiveConfig | null {
-  if (period === "today") {
-    const mins: Record<Granularity, number> = {
-      "分时": 1, "1min": 1, "2min": 2, "3min": 3, "5min": 5,
-    };
-    return { periodMinutes: mins[todayGranularity], allowAppend: true };
-  }
-  if (period === "5" || period === "7") return { periodMinutes: 5, allowAppend: false };
-  if (period === "15") return { periodMinutes: 15, allowAppend: false };
-  return null;
-}
 
 /** Bucket a millisecond timestamp by periodMinutes. 1/2/3/5/15-minute
  *  bucket boundaries align with both UTC and BJ wall clock (BJ offset
@@ -89,7 +65,6 @@ export function applyLiveTick({
   if (nowKey <= lastKey) return inPlaceUpdate();
   if (!allowAppend) return inPlaceUpdate();
 
-  // Append a new bar anchored at the new bucket's start.
   const bucketStartMs = nowKey * periodMinutes * 60_000;
   const newIso = new Date(bucketStartMs).toISOString();
   const newBar: Candlestick = {
