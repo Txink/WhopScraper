@@ -363,6 +363,34 @@ def build_http_router(
         return PositionsOut(stocks=stocks, options=options)
 
     # ------------------------------------------------------------------ #
+    # GET /api/db/{table}  — generic table browser (whitelist)              #
+    # ------------------------------------------------------------------ #
+
+    # tasks is deliberately excluded — it has a dedicated /api/tasks endpoint
+    # with cursor pagination, business filters, and message join. Routing it
+    # through the generic browser would expose two divergent code paths.
+    _DB_BROWSER_TABLES: dict[str, str] = {
+        # table_name → default order column (DESC)
+        "messages": "posted_at",
+        "instructions": "task_id",
+        "push_events": "received_at",
+        "positions": "updated_at",
+        "t_pairs": "created_at",
+        "broker_executions": "ts",
+    }
+
+    @router.get("/api/db/{table}")
+    async def list_db_rows_endpoint(
+        table: str,
+        limit: int = Query(15, ge=1, le=100),
+        offset: int = Query(0, ge=0),
+    ) -> dict[str, Any]:
+        if table not in _DB_BROWSER_TABLES:
+            raise HTTPException(404, detail=f"table not browsable: {table!r}")
+        # Real query lands in next task.
+        return {"table": table, "columns": [], "rows": [], "total": 0}
+
+    # ------------------------------------------------------------------ #
     # /api/pairs — 做T 配对 CRUD                                           #
     # ------------------------------------------------------------------ #
 

@@ -1522,3 +1522,36 @@ def test_quotes_watch_endpoint_503_when_hub_unavailable(
         json={"symbols": ["TSLA.US"]},
     )
     assert r.status_code == 503
+
+
+# ---------------------------------------------------------------------------
+# /api/db/{table} — generic table browser (whitelist)
+# ---------------------------------------------------------------------------
+
+# 6 张白名单内的表（tasks 不在白名单 — 它走 /api/tasks）
+_DB_BROWSER_TABLES = [
+    "messages",
+    "instructions",
+    "push_events",
+    "positions",
+    "t_pairs",
+    "broker_executions",
+]
+
+
+def test_db_rows_unknown_table_returns_404(
+    client_and_broker: tuple[TestClient, FakeBrokerClient],
+) -> None:
+    client, _ = client_and_broker
+    resp = client.get("/api/db/no_such_table", params={"token": _TOKEN})
+    assert resp.status_code == 404
+
+
+def test_db_rows_tasks_table_not_in_whitelist(
+    client_and_broker: tuple[TestClient, FakeBrokerClient],
+) -> None:
+    """tasks 走专用 /api/tasks，generic endpoint 不开放 — 防止两条路径
+    返回不一致的数据。"""
+    client, _ = client_and_broker
+    resp = client.get("/api/db/tasks", params={"token": _TOKEN})
+    assert resp.status_code == 404
