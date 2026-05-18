@@ -40,6 +40,41 @@ export function weekKeyOf(ts: string): string {
   return `${yyyy}-${mm}-${day}`;
 }
 
+/**
+ * Today's ISO week label (``YYYY-Www``) anchored to Asia/Shanghai.
+ *
+ * Used as the ``week`` query param for the chat-messages endpoint, which
+ * parses the value with ``_iso_week_bounds`` (backend/app/api/http.py).
+ *
+ * Pure: derives the Beijing calendar date via Intl, then computes ISO
+ * week number with standard date arithmetic on a UTC anchor (no host-tz
+ * drift). Returns e.g. ``"2026-W21"``.
+ *
+ * TODO(future): week navigation for chat pages — currently App.tsx always
+ * passes the current ISO week to ``<ChatBoardPanel>``.
+ */
+export function currentIsoWeek(): string {
+  const parts = _BJ_PARTS.formatToParts(new Date());
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+  const y = Number(get("year"));
+  const mo = Number(get("month"));
+  const dd = Number(get("day"));
+  if (!y || !mo || !dd) {
+    throw new Error("currentIsoWeek: bad Beijing date parts");
+  }
+
+  // ISO 8601 week-number algorithm (Mon=1..Sun=7). Operate on a date-only
+  // UTC anchor so day arithmetic is tz-independent.
+  const anchor = new Date(Date.UTC(y, mo - 1, dd));
+  const dayNum = anchor.getUTCDay() || 7;            // Sun=0 → 7
+  anchor.setUTCDate(anchor.getUTCDate() + 4 - dayNum); // shift to Thursday of this ISO week
+  const yearStart = new Date(Date.UTC(anchor.getUTCFullYear(), 0, 1));
+  const weekNum = Math.ceil(
+    ((anchor.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7,
+  );
+  return `${anchor.getUTCFullYear()}-W${String(weekNum).padStart(2, "0")}`;
+}
+
 export interface WeekRange {
   startLabel: string;
   endLabel: string;

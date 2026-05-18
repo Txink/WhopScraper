@@ -21,7 +21,9 @@ import { PageActionBar } from "./components/Dashboard/PageActionBar";
 import { PageSettingsModal } from "./components/Dashboard/PageSettingsModal";
 import { TaskStream } from "./components/Dashboard/TaskStream";
 import { WeekPaginator } from "./components/Dashboard/WeekPaginator";
-import { computeWeeks, weekKeyOf } from "./components/Dashboard/weekUtils";
+import { computeWeeks, weekKeyOf, currentIsoWeek } from "./components/Dashboard/weekUtils";
+import { ChatBoardPanel } from "./components/Chat/ChatBoardPanel";
+import { useChatStore } from "./stores/chatStore";
 import { OrphanCleanupBar } from "./components/Dashboard/OrphanCleanupBar";
 import { DatabaseRecordsPanel } from "./components/Dashboard/DatabaseRecordsPanel";
 import { EmptyState } from "./components/Dashboard/EmptyState";
@@ -175,6 +177,24 @@ function Dashboard({ token }: { token: string }) {
           if (p?.order_id) {
             useExecutionsStore.getState().upsertExecution(p);
           }
+        } else if (evt.type === "chat.message_stored") {
+          // WS payload is just ``{page_id, message_id}`` (see
+          // backend/app/api/ws.py:_payload_to_dict). Re-fetch every cached
+          // ``(page_id, week)`` slice for that page so the new message is
+          // pulled in via the chat-messages endpoint — applyStoredMessage
+          // would need the full row we don't have here. Fire-and-forget;
+          // errors are not user-facing (mirrors other WS branches).
+          const p = evt.payload as { page_id?: string; message_id?: number };
+          if (p?.page_id) {
+            const caches = useChatStore.getState().caches;
+            const prefix = `${p.page_id}|`;
+            for (const key of Object.keys(caches)) {
+              if (key.startsWith(prefix)) {
+                const week = key.slice(prefix.length);
+                void useChatStore.getState().fetch(p.page_id, week, []);
+              }
+            }
+          }
         } else {
           applyWs(evt);
         }
@@ -291,24 +311,33 @@ function Dashboard({ token }: { token: string }) {
         />
       </div>
       {isOrphanTab && <OrphanCleanupBar orphanTasks={filteredTasks} />}
-      {/* Scrollable wrapper for the message list — tabs and meta-row
-          above stay pinned (they're outside this div), only the day-
-          grouped Card stream scrolls. Without an explicit wrapper the
-          <TaskStream> fragment would render directly into .stream and
-          inherit its overflow:hidden, hiding overflow rows entirely. */}
-      <div className="stream-scroll">
-        {filteredTasks.length === 0 ? (
-          <div className="empty-state"><p>该监听页暂无任务。</p></div>
-        ) : (
-          <TaskStream
-            pushEventsByTask={pushEventsByTask}
-            autoTrade={autoTrade}
-            groups={groups}
-            currentWeekKey={currentWeekKey}
-            tabKey={isOrphanTab ? "orphan" : (activeTabId ?? "orphan")}
-          />
-        )}
-      </div>
+      {/* Chat-source pages render ChatBoardPanel (owns its own scroll
+          container) instead of the TaskStream message list. Week-
+          navigation for chat pages is not yet implemented — we always
+          pass the current ISO week. TODO(future): wire WeekPaginator to
+          ChatBoardPanel using the ISO-week format. */}
+      {activePage && activePage.source === "chat" ? (
+        <ChatBoardPanel page={activePage} week={currentIsoWeek()} />
+      ) : (
+        /* Scrollable wrapper for the message list — tabs and meta-row
+            above stay pinned (they're outside this div), only the day-
+            grouped Card stream scrolls. Without an explicit wrapper the
+            <TaskStream> fragment would render directly into .stream and
+            inherit its overflow:hidden, hiding overflow rows entirely. */
+        <div className="stream-scroll">
+          {filteredTasks.length === 0 ? (
+            <div className="empty-state"><p>该监听页暂无任务。</p></div>
+          ) : (
+            <TaskStream
+              pushEventsByTask={pushEventsByTask}
+              autoTrade={autoTrade}
+              groups={groups}
+              currentWeekKey={currentWeekKey}
+              tabKey={isOrphanTab ? "orphan" : (activeTabId ?? "orphan")}
+            />
+          )}
+        </div>
+      )}
       {/* PageSettingsModal is viewport-level (position:fixed); rendering
           it inside .stream is purely structural — it visually anchors to
           the viewport regardless. */}
