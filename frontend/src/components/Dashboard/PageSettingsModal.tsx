@@ -27,6 +27,13 @@ export function PageSettingsModal({ page, onClose }: Props) {
   const [optionTotalLimit, setOptionTotalLimit] = useState(
     page.settings.option_total_price_limit != null ? String(page.settings.option_total_price_limit) : ""
   );
+  const [watchedSenders, setWatchedSenders] = useState<string[]>(
+    page.settings.watched_senders ?? []
+  );
+  const [chatCardMaxMsgs, setChatCardMaxMsgs] = useState<string>(
+    String(page.settings.chat_card_max_msgs ?? 5)
+  );
+  const [senderDraft, setSenderDraft] = useState<string>("");
 
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -80,6 +87,13 @@ export function PageSettingsModal({ page, onClose }: Props) {
         }
       }
     }
+    if (page.source === "chat") {
+      const n = Number(chatCardMaxMsgs);
+      if (!Number.isInteger(n) || n < 1 || n > 50) {
+        setError("每张卡片最多展示消息数必须是 1–50 的整数");
+        return;
+      }
+    }
     setSaving(true);
     try {
       const patch: Partial<WhopPageSettings> = {
@@ -98,6 +112,10 @@ export function PageSettingsModal({ page, onClose }: Props) {
         patch.option_buy_quantity = optionBuyQtyEnabled ? Number(optionBuyQty) : null;
         patch.option_total_price_limit_enabled = optionTotalLimitEnabled;
         patch.option_total_price_limit = optionTotalLimitEnabled ? Number(optionTotalLimit) : null;
+      }
+      if (page.source === "chat") {
+        patch.watched_senders = watchedSenders;
+        patch.chat_card_max_msgs = Number(chatCardMaxMsgs);
       }
       await api.updateWhopPageSettings(page.id, patch as WhopPageSettings);
       onClose();
@@ -239,6 +257,63 @@ export function PageSettingsModal({ page, onClose }: Props) {
               <p className="hint small">
                 两项都不启用时，trader 会跳过下单并标记 SKIPPED；启用一项按该规则计算，启用两项按同时满足（取更小张数）计算。
               </p>
+            </section>
+          )}
+
+          {page.source === "chat" && (
+            <section>
+              <h4>聊天监控配置</h4>
+
+              <div>
+                <label>关注的发送者（白名单）</label>
+                <div className="chat-chip-row">
+                  {watchedSenders.map((name) => (
+                    <span key={name} className="chat-chip">
+                      {name}
+                      <button
+                        type="button"
+                        aria-label={`移除 ${name}`}
+                        onClick={() =>
+                          setWatchedSenders(watchedSenders.filter((x) => x !== name))
+                        }
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                  <input
+                    type="text"
+                    placeholder="新增发送者名…"
+                    value={senderDraft}
+                    onChange={(e) => setSenderDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        const v = senderDraft.trim();
+                        if (v && !watchedSenders.includes(v)) {
+                          setWatchedSenders([...watchedSenders, v]);
+                        }
+                        setSenderDraft("");
+                      }
+                    }}
+                  />
+                </div>
+                <p className="hint small">
+                  只展示这些发送者的消息卡片；不勾选任何人则展示全部。
+                </p>
+              </div>
+
+              <div style={{ marginTop: 12 }}>
+                <label htmlFor="chat-max-msgs">每张卡片最多展示消息数（1–50）</label>
+                <input
+                  id="chat-max-msgs"
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={chatCardMaxMsgs}
+                  onChange={(e) => setChatCardMaxMsgs(e.target.value)}
+                />
+              </div>
             </section>
           )}
 

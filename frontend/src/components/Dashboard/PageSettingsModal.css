@@ -325,3 +325,39 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* ========== Chat watched-senders chip editor ========== */
+.modal-body .chat-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.modal-body .chat-chip-row input[type="text"] {
+  width: auto;
+  flex: 1 1 160px;
+  min-width: 160px;
+}
+.modal-body .chat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: rgba(var(--brand-rgb), 0.15);
+  color: var(--fg-1);
+  font-size: 12px;
+  font-family: var(--font-mono);
+}
+.modal-body .chat-chip button {
+  background: none;
+  border: none;
+  color: var(--fg-2);
+  cursor: pointer;
+  padding: 0;
+  font-size: 14px;
+  line-height: 1;
+}
+.modal-body .chat-chip button:hover {
+  color: var(--fg-1);
+}
