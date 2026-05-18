@@ -71,6 +71,14 @@ async function request<T>(
 }
 
 
+export interface DbRowsResponse {
+  table: string;
+  columns: string[];
+  rows: unknown[][];
+  total: number;
+}
+
+
 export const api = {
   async listTasks(params: {
     limit?: number;
@@ -100,6 +108,17 @@ export const api = {
     if (params.symbol) qs.set("symbol", params.symbol);
     const suffix = qs.toString() ? `?${qs.toString()}` : "";
     return request<{ total_count: number }>(`/api/tasks/count${suffix}`);
+  },
+
+  async listDbRows(
+    table: string,
+    params: { limit?: number; offset?: number } = {},
+  ): Promise<DbRowsResponse> {
+    const qs = new URLSearchParams();
+    if (params.limit !== undefined) qs.set("limit", String(params.limit));
+    if (params.offset !== undefined) qs.set("offset", String(params.offset));
+    const suffix = qs.toString() ? `?${qs.toString()}` : "";
+    return request<DbRowsResponse>(`/api/db/${encodeURIComponent(table)}${suffix}`);
   },
 
   async getTask(id: string): Promise<Task> {
