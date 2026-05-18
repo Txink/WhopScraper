@@ -1555,3 +1555,49 @@ def test_db_rows_tasks_table_not_in_whitelist(
     client, _ = client_and_broker
     resp = client.get("/api/db/tasks", params={"token": _TOKEN})
     assert resp.status_code == 404
+
+
+def test_db_rows_messages_empty(
+    client_and_broker: tuple[TestClient, FakeBrokerClient],
+) -> None:
+    """空表也要返回结构良好的响应——columns 必须从 schema 派生而不是
+    从行里推断，否则空表前端就没列名可渲染。"""
+    client, _ = client_and_broker
+    resp = client.get("/api/db/messages", params={"token": _TOKEN})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["table"] == "messages"
+    assert data["rows"] == []
+    assert data["total"] == 0
+    # 列名必须从 schema 派生（MessageRow 的 mapped_column）
+    assert "id" in data["columns"]
+    assert "content" in data["columns"]
+    assert "posted_at" in data["columns"]
+
+
+def test_db_rows_messages_pagination(
+    client_and_broker: tuple[TestClient, FakeBrokerClient],
+    three_tasks: list[Task],
+) -> None:
+    """three_tasks 创建 3 个 task 同时通过 cascade 写入 3 行 messages。
+    我们用 messages 表验证分页行为。"""
+    client, _ = client_and_broker
+
+    # 第 1 页: limit=2, offset=0 → 拿到 2 行（按 posted_at DESC，是 m3, m2）
+    resp = client.get("/api/db/messages", params={"token": _TOKEN, "limit": 2, "offset": 0})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total"] == 3
+    assert len(data["rows"]) == 2
+    id_idx = data["columns"].index("id")
+    ids_page1 = [row[id_idx] for row in data["rows"]]
+    assert ids_page1 == ["t3", "t2"]
+
+    # 第 2 页: limit=2, offset=2 → 拿到剩下 1 行（m1）
+    resp = client.get("/api/db/messages", params={"token": _TOKEN, "limit": 2, "offset": 2})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total"] == 3
+    assert len(data["rows"]) == 1
+    ids_page2 = [row[id_idx] for row in data["rows"]]
+    assert ids_page2 == ["t1"]

@@ -41,6 +41,7 @@ from typing import TYPE_CHECKING, Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from sqlalchemy import desc, func, select
 
 logger = logging.getLogger(__name__)
 
@@ -101,7 +102,7 @@ from app.domain.status import Status
 from app.core.event_bus import Event
 from app.core.events import TaskPayload, Topics
 from app.storage import repo
-from app.storage.db import session_scope
+from app.storage.db import Base, session_scope
 from app.storage.schema import TPairRow
 
 if TYPE_CHECKING:
@@ -387,8 +388,26 @@ def build_http_router(
     ) -> dict[str, Any]:
         if table not in _DB_BROWSER_TABLES:
             raise HTTPException(404, detail=f"table not browsable: {table!r}")
-        # Real query lands in next task.
-        return {"table": table, "columns": [], "rows": [], "total": 0}
+
+        sa_table = Base.metadata.tables[table]
+        order_col = sa_table.c[_DB_BROWSER_TABLES[table]]
+        columns = [c.name for c in sa_table.columns]
+
+        async with session_scope(session_factory) as session:
+            total_result = await session.execute(
+                select(func.count()).select_from(sa_table)
+            )
+            total = total_result.scalar_one()
+
+            rows_result = await session.execute(
+                select(sa_table)
+                .order_by(desc(order_col))
+                .limit(limit)
+                .offset(offset)
+            )
+            rows = [list(r) for r in rows_result.all()]
+
+        return {"table": table, "columns": columns, "rows": rows, "total": total}
 
     # ------------------------------------------------------------------ #
     # /api/pairs — 做T 配对 CRUD                                           #
