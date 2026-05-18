@@ -11,6 +11,7 @@
 .tab-source-dot { width: 8px; height: 8px; border-radius: 50%; }
 .tab-source-dot.stock { background: #5fbf8b; }
 .tab-source-dot.option { background: #8b6fcf; }
+.tab-source-dot.chat { background: #c688ff; }
 .tab-count { font-size: 11px; opacity: 0.6; padding-left: 4px; }
 
 .page-meta-row {
