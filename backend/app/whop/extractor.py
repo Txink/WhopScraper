@@ -461,7 +461,7 @@ def _extract_content(msg_el: Tag, author: str | None, ts_raw: str) -> tuple[str,
 def extract_messages(
     html: str,
     *,
-    source: Literal["stock", "option"],
+    source: Literal["stock", "option", "chat"],
     received_at: datetime | None = None,
 ) -> list[Message]:
     """Parse Whop-page HTML into Message objects.

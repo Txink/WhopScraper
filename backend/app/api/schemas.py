@@ -556,6 +556,8 @@ class WhopPageSettingsOut(BaseModel):
     option_buy_quantity: int | None = None
     option_total_price_limit_enabled: bool | None = None
     option_total_price_limit: float | None = None
+    watched_senders: list[str] = Field(default_factory=list)
+    chat_card_max_msgs: int = 5
 
 
 class WhopPageSettingsPatch(BaseModel):
@@ -571,6 +573,8 @@ class WhopPageSettingsPatch(BaseModel):
     option_buy_quantity: int | None = Field(default=None, ge=1)
     option_total_price_limit_enabled: bool | None = None
     option_total_price_limit: float | None = Field(default=None, gt=0)
+    watched_senders: list[str] | None = None
+    chat_card_max_msgs: int | None = Field(default=None, ge=1, le=50)
 
 
 # ---------------------------------------------------------------------------
@@ -599,7 +603,7 @@ class WhopPagesOut(BaseModel):
 
 class WhopPageCreate(BaseModel):
     url: str
-    source: Literal["stock", "option"]
+    source: Literal["stock", "option", "chat"]
     name: str | None = None
 
 
@@ -617,6 +621,52 @@ class OrphanCleanupRequest(BaseModel):
 
 class OrphanCleanupResponse(BaseModel):
     deleted_count: int
+
+
+# ---------------------------------------------------------------------------
+# Chat monitor panel — GET /api/whop/pages/{page_id}/chat-messages
+# ---------------------------------------------------------------------------
+
+
+class QuotedRefOut(BaseModel):
+    """Nested representation of a quoted parent message.
+
+    All four fields are denormalized into ``chat_messages`` columns at write
+    time, so the row renders correctly even if the parent message is missing
+    (different week, never scraped, non-watched sender). ``message_id`` and
+    ``posted_at`` may be ``None`` when the scrape only captured the visible
+    quote bubble without a stable id / timestamp.
+    """
+
+    message_id: str | None = None
+    author: str
+    content: str
+    posted_at: datetime | None = None
+
+
+class ChatMessageOut(BaseModel):
+    id: str
+    page_id: str
+    author: str
+    content: str
+    posted_at: datetime
+    quoted: QuotedRefOut | None = None
+
+
+class ChatAuthorOut(BaseModel):
+    name: str
+    count: int
+
+
+class ChatWeekWindowOut(BaseModel):
+    start: datetime
+    end: datetime
+
+
+class ChatMessagesOut(BaseModel):
+    messages: list[ChatMessageOut]
+    authors: list[ChatAuthorOut]
+    week: ChatWeekWindowOut
 
 
 # ---------------------------------------------------------------------------
@@ -811,6 +861,8 @@ def whop_page_to_out(
         option_buy_quantity=entry.settings.option_buy_quantity,
         option_total_price_limit_enabled=entry.settings.option_total_price_limit_enabled,
         option_total_price_limit=entry.settings.option_total_price_limit,
+        watched_senders=list(entry.settings.watched_senders),
+        chat_card_max_msgs=entry.settings.chat_card_max_msgs,
         tickers=(
             {
                 k: TickerConfigOut(trade_quantity=v.trade_quantity)

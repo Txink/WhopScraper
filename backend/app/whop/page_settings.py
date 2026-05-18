@@ -32,6 +32,8 @@ class PageSettings:
     option_total_price_limit_enabled: bool = False
     option_total_price_limit: float | None = None
     parser_version: Literal["v1", "v2"] = "v1"
+    watched_senders: list[str] = field(default_factory=list)
+    chat_card_max_msgs: int = 5
 
 
 DEFAULT_STOCK_SETTINGS = PageSettings(
@@ -57,7 +59,7 @@ DEFAULT_OPTION_SETTINGS = PageSettings(
 )
 
 
-def default_settings_for(source: Literal["stock", "option"]) -> PageSettings:
+def default_settings_for(source: Literal["stock", "option", "chat"]) -> PageSettings:
     if source == "stock":
         return PageSettings(
             dedupe_processed_messages=DEFAULT_STOCK_SETTINGS.dedupe_processed_messages,
@@ -80,6 +82,11 @@ def default_settings_for(source: Literal["stock", "option"]) -> PageSettings:
             option_total_price_limit=DEFAULT_OPTION_SETTINGS.option_total_price_limit,
             parser_version=DEFAULT_OPTION_SETTINGS.parser_version,
         )
+    if source == "chat":
+        # Chat pages monitor without trading semantics — no tickers, no option
+        # risk controls. Chat-specific settings (watched_senders,
+        # chat_card_max_msgs) come from PageSettings defaults.
+        return PageSettings(tickers=None)
     raise ValueError(f"unknown source: {source!r}")
 
 
@@ -94,6 +101,8 @@ def page_settings_to_dict(s: PageSettings) -> dict[str, Any]:
         "option_total_price_limit_enabled": s.option_total_price_limit_enabled,
         "option_total_price_limit": s.option_total_price_limit,
         "parser_version": s.parser_version,
+        "watched_senders": list(s.watched_senders),
+        "chat_card_max_msgs": s.chat_card_max_msgs,
     }
     if s.tickers is not None:
         out["tickers"] = {k: {"trade_quantity": v.trade_quantity} for k, v in s.tickers.items()}
@@ -103,7 +112,7 @@ def page_settings_to_dict(s: PageSettings) -> dict[str, Any]:
 def page_settings_from_dict(
     d: dict[str, Any],
     *,
-    source: Literal["stock", "option"],
+    source: Literal["stock", "option", "chat"],
 ) -> PageSettings:
     """Tolerant parser: missing keys → use defaults; ticker keys → uppercased."""
     base = default_settings_for(source)
@@ -122,7 +131,7 @@ def page_settings_from_dict(
     option_total_raw = d.get("option_total_price_limit", base.option_total_price_limit)
     option_total = float(option_total_raw) if option_total_raw is not None else None
     tickers: dict[str, TickerConfig] | None
-    if source == "option":
+    if source in ("option", "chat"):
         tickers = None
     else:
         raw_tickers = d.get("tickers", {}) or {}
@@ -134,6 +143,8 @@ def page_settings_from_dict(
     # Whitelist: any saved value that is not exactly "v2" degrades to "v1"
     # (handles missing key, legacy data, and future-unknown values uniformly).
     parser_version: Literal["v1", "v2"] = "v2" if pv_raw == "v2" else "v1"
+    watched_senders = list(d.get("watched_senders", base.watched_senders) or [])
+    chat_card_max_msgs = int(d.get("chat_card_max_msgs", base.chat_card_max_msgs))
     return PageSettings(
         dedupe_processed_messages=dedupe,
         price_deviation_tolerance=tol,
@@ -145,6 +156,8 @@ def page_settings_from_dict(
         option_total_price_limit_enabled=option_total_enabled,
         option_total_price_limit=option_total,
         parser_version=parser_version,
+        watched_senders=watched_senders,
+        chat_card_max_msgs=chat_card_max_msgs,
     )
 
 

@@ -36,7 +36,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Awaitable, Callable
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -51,9 +51,14 @@ from app.api.schemas import (
     CancelOk,
     CandlestickOut,
     CandlesticksOut,
+    ChatAuthorOut,
+    ChatMessageOut,
+    ChatMessagesOut,
+    ChatWeekWindowOut,
     ExecutionOut,
     ExecutionsOut,
     ExecutionsSyncOut,
+    QuotedRefOut,
     QuoteWatchIn,
     QuoteWatchOut,
     TradeOut,
@@ -104,11 +109,62 @@ from app.core.event_bus import Event
 from app.core.events import TaskPayload, Topics
 from app.storage import repo
 from app.storage.db import Base, session_scope
-from app.storage.schema import TPairRow
+from app.storage.schema import ChatMessageRow, TPairRow
 
 if TYPE_CHECKING:
     from app.core.event_bus import EventBus
     from app.whop.registry import WhopRegistry
+
+
+# ---------------------------------------------------------------------------
+# Chat monitor helpers (T14)
+# ---------------------------------------------------------------------------
+
+
+def _iso_week_bounds(week: str | None) -> tuple[datetime, datetime]:
+    """Return ``[start, end)`` for an ISO week label like ``"2026-W21"``.
+
+    ``week=None`` resolves to the current ISO week in UTC. Bounds are
+    Monday 00:00 UTC inclusive → next Monday 00:00 UTC exclusive, so a
+    7-day half-open window suitable for ``posted_at >= start AND < end``.
+    """
+    if week is None:
+        now = datetime.now(UTC)
+        iso_year, iso_week, _ = now.isocalendar()
+    else:
+        try:
+            year_s, week_s = week.split("-W", 1)
+            iso_year, iso_week = int(year_s), int(week_s)
+        except (ValueError, IndexError) as e:
+            raise HTTPException(400, detail=f"invalid week: {week}") from e
+    monday = datetime.fromisocalendar(iso_year, iso_week, 1).replace(tzinfo=UTC)
+    return monday, monday + timedelta(days=7)
+
+
+def _row_to_chat_out(row: ChatMessageRow) -> ChatMessageOut:
+    """Convert a ChatMessageRow into ChatMessageOut.
+
+    The denormalized ``quoted_*`` columns collapse into a nested
+    ``QuotedRefOut`` when ``quoted_author`` is non-null, or ``None`` when
+    the row has no quote. ``quoted_content`` may be empty string when the
+    parent message had no body (image-only / sticker-only quote).
+    """
+    quoted: QuotedRefOut | None = None
+    if row.quoted_author is not None:
+        quoted = QuotedRefOut(
+            message_id=row.quoted_message_id,
+            author=row.quoted_author,
+            content=row.quoted_content or "",
+            posted_at=row.quoted_posted_at,
+        )
+    return ChatMessageOut(
+        id=row.id,
+        page_id=row.page_id,
+        author=row.author,
+        content=row.content,
+        posted_at=row.posted_at,
+        quoted=quoted,
+    )
 
 
 def build_http_router(
@@ -1423,9 +1479,73 @@ def build_http_router(
 
         @router.delete("/api/whop/pages/{page_id}", status_code=204)
         async def delete_whop_page(page_id: str) -> None:
+            # Capture the source BEFORE removing the entry so we know whether
+            # this is a chat page (chat pages need their chat_messages rows
+            # cleaned up — there's no FK cascade since WhopPageEntry lives in
+            # data/whop_pages.json, not the DB). The registry exposes entries
+            # via list_pages(); the page may not exist (concurrent delete,
+            # bad id) in which case remove_page below 404s.
+            source: str | None = None
+            for entry, _ll in whop_registry.list_pages():
+                if entry.id == page_id:
+                    source = entry.source
+                    break
+
             ok = await whop_registry.remove_page(page_id)
             if not ok:
                 raise HTTPException(404, detail="page not found")
+
+            # Spec: 仅对 source == "chat" 的页面执行清理 (no-op for stock/option;
+            # explicit guard avoids an unnecessary DELETE statement).
+            if source == "chat":
+                async with session_scope(session_factory) as session:
+                    await repo.delete_chat_messages_by_page(session, page_id)
+
+        @router.get(
+            "/api/whop/pages/{page_id}/chat-messages",
+            response_model=ChatMessagesOut,
+        )
+        async def get_chat_messages(
+            page_id: str,
+            week: str | None = None,
+            senders: str | None = None,
+        ) -> ChatMessagesOut:
+            """Return one ISO-week's worth of chat messages for *page_id*.
+
+            ``week`` defaults to the current ISO week (UTC). ``senders`` is a
+            comma-separated allow-list of authors; empty / absent → no filter.
+            ``authors`` is the (author, count) breakdown for the *unfiltered*
+            week — the chip bar should show every author seen in the window
+            regardless of the active filter selection.
+            """
+            page = None
+            for entry, _ll in whop_registry.list_pages():
+                if entry.id == page_id:
+                    page = entry
+                    break
+            if page is None:
+                raise HTTPException(404, detail="page not found")
+
+            week_start, week_end = _iso_week_bounds(week)
+            sender_list = (
+                [s.strip() for s in senders.split(",") if s.strip()]
+                if senders
+                else None
+            )
+
+            async with session_scope(session_factory) as session:
+                rows = await repo.list_chat_messages(
+                    session, page_id, week_start, week_end, sender_list
+                )
+                authors = await repo.list_chat_authors(
+                    session, page_id, week_start, week_end
+                )
+
+            return ChatMessagesOut(
+                messages=[_row_to_chat_out(r) for r in rows],
+                authors=[ChatAuthorOut(name=a, count=c) for a, c in authors],
+                week=ChatWeekWindowOut(start=week_start, end=week_end),
+            )
 
         @router.post("/api/whop/pages/{page_id}/restart", response_model=WhopPageOut)
         async def restart_whop_page(page_id: str) -> WhopPageOut:
@@ -1523,6 +1643,10 @@ def build_http_router(
                 patch_dict["option_total_price_limit_enabled"] = body.option_total_price_limit_enabled
             if body.option_total_price_limit is not None:
                 patch_dict["option_total_price_limit"] = body.option_total_price_limit
+            if body.watched_senders is not None:
+                patch_dict["watched_senders"] = body.watched_senders
+            if body.chat_card_max_msgs is not None:
+                patch_dict["chat_card_max_msgs"] = body.chat_card_max_msgs
             if not patch_dict:
                 raise HTTPException(
                     400,

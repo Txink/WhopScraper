@@ -25,6 +25,7 @@ from app.core.event_bus import EventBus
 from app.parser.service import register_parser_service
 from app.storage.db import Base, create_engine, make_session_factory
 from app.storage.listeners import register_storage_listeners
+from app.whop.chat_writer import register_chat_writer
 from app.whop.registry import WhopRegistry
 
 logger = logging.getLogger(__name__)
@@ -185,6 +186,9 @@ def create_app(
 
         # Storage listeners (broker-independent) — register once.
         state.unsubs.extend(register_storage_listeners(bus, session_factory))
+
+        # Chat writer: CHAT_MESSAGE_RECEIVED → persist + publish CHAT_MESSAGE_STORED.
+        state.unsubs.extend(register_chat_writer(bus, session_factory))
 
         # Trader + push_listener are broker-dependent. Wrap in a closure so
         # _broker_reload() below can tear them down and rebuild against the

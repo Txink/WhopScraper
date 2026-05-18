@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 # Source literal alias used by the cast() calls below; matches the type signature
 # of default_settings_for / page_settings_from_dict in app.whop.page_settings.
-_SourceLiteral = Literal["stock", "option"]
+_SourceLiteral = Literal["stock", "option", "chat"]
 
 # Project root (backend/app/whop/registry.py → parents[3] = project root)
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -66,7 +66,7 @@ def _canonicalize_url(url: str | None) -> str | None:
 class WhopPageEntry:
     id: str
     url: str
-    source: str  # "stock" | "option"
+    source: str  # "stock" | "option" | "chat"
     name: str
     added_at: datetime
     # Per-page listener/parser settings. Default factory yields a "stock" preset
@@ -196,8 +196,8 @@ class WhopRegistry:
 
         Raises ValueError on validation issues.
         """
-        if source not in ("stock", "option"):
-            raise ValueError(f"source must be stock|option, got {source!r}")
+        if source not in ("stock", "option", "chat"):
+            raise ValueError(f"source must be stock|option|chat, got {source!r}")
         if not url or _is_placeholder_url(url):
             raise ValueError(f"invalid or placeholder URL: {url!r}")
 
@@ -215,7 +215,7 @@ class WhopRegistry:
                 source=source,
                 name=(name or url),
                 added_at=datetime.now(UTC),
-                # source was validated against ("stock", "option") above; cast for mypy.
+                # source was validated against ("stock", "option", "chat") above; cast for mypy.
                 settings=default_settings_for(cast(_SourceLiteral, source)),
             )
             self._entries[entry.id] = entry
@@ -349,7 +349,7 @@ class WhopRegistry:
                 raise ValueError("option page does not accept 'tickers'")
             current_dict = page_settings_to_dict(entry.settings)
             current_dict.update(patch)
-            # entry.source was validated as "stock"|"option" at construction
+            # entry.source was validated as "stock"|"option"|"chat" at construction
             # (add_page guards + WhopPageEntry.from_dict cast) but the dataclass
             # field is typed `str`, so cast back to Literal for the call site.
             new_settings = page_settings_from_dict(
@@ -469,6 +469,7 @@ class WhopRegistry:
             bus=self._bus,
             url=entry.url,
             source=entry.source,
+            page_id=entry.id,
             poll_interval=self._settings.whop_poll_interval,
             headless=entry.settings.launch_headless,
             skip_initial=skip_initial,

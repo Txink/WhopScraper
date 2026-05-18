@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Literal
 
-Source = Literal["stock", "option"]
+Source = Literal["stock", "option", "chat"]
 
 
 @dataclass(frozen=True)
@@ -23,7 +23,7 @@ class Message:
     history_hint: list[Message] = field(default_factory=list)
 
     def __post_init__(self) -> None:
-        if self.source not in ("stock", "option"):
+        if self.source not in ("stock", "option", "chat"):
             raise ValueError(f"invalid source: {self.source}")
 
     def __eq__(self, other: object) -> bool:

@@ -42,6 +42,7 @@ from app.domain.status import TERMINAL, Status
 from app.domain.task import Task
 from app.storage.schema import (
     BrokerExecutionRow,
+    ChatMessageRow,
     InstructionRow,
     MessageRow,
     PositionRow,
@@ -1770,3 +1771,84 @@ class SqlTaskQueryRepo:
                 before=before,
                 window_hours=window_hours,
             )
+
+
+# ---------------------------------------------------------------------------
+# chat_messages
+# ---------------------------------------------------------------------------
+
+
+async def upsert_chat_message(session: AsyncSession, row: ChatMessageRow) -> None:
+    """Insert a chat message; ignore duplicates by ``id`` (idempotent on replay)."""
+    stmt = sqlite_insert(ChatMessageRow).values(
+        id=row.id,
+        page_id=row.page_id,
+        author=row.author,
+        content=row.content,
+        raw_content=row.raw_content,
+        posted_at=row.posted_at,
+        received_at=row.received_at,
+        url=row.url,
+        quoted_message_id=row.quoted_message_id,
+        quoted_author=row.quoted_author,
+        quoted_content=row.quoted_content,
+        quoted_posted_at=row.quoted_posted_at,
+    ).on_conflict_do_nothing(index_elements=["id"])
+    await session.execute(stmt)
+
+
+async def list_chat_messages(
+    session: AsyncSession,
+    page_id: str,
+    week_start: datetime,
+    week_end: datetime,
+    senders: list[str] | None,
+) -> list[ChatMessageRow]:
+    """Return chat messages for *page_id* in ``[week_start, week_end)``,
+    ordered by ``posted_at`` ASC.
+
+    ``senders=None`` and ``senders=[]`` both mean "no filter".
+    """
+    stmt = (
+        select(ChatMessageRow)
+        .where(ChatMessageRow.page_id == page_id)
+        .where(ChatMessageRow.posted_at >= week_start)
+        .where(ChatMessageRow.posted_at < week_end)
+        .order_by(ChatMessageRow.posted_at.asc())
+    )
+    if senders:
+        stmt = stmt.where(ChatMessageRow.author.in_(senders))
+    result = await session.execute(stmt)
+    return list(result.scalars().all())
+
+
+async def list_chat_authors(
+    session: AsyncSession,
+    page_id: str,
+    week_start: datetime,
+    week_end: datetime,
+) -> list[tuple[str, int]]:
+    """Return ``(author, count)`` pairs for chat messages in the week window,
+    sorted by count DESC."""
+    stmt = (
+        select(ChatMessageRow.author, func.count(ChatMessageRow.id))
+        .where(ChatMessageRow.page_id == page_id)
+        .where(ChatMessageRow.posted_at >= week_start)
+        .where(ChatMessageRow.posted_at < week_end)
+        .group_by(ChatMessageRow.author)
+        .order_by(func.count(ChatMessageRow.id).desc())
+    )
+    result = await session.execute(stmt)
+    return [(author, count) for author, count in result.all()]
+
+
+async def delete_chat_messages_by_page(session: AsyncSession, page_id: str) -> int:
+    """Delete all chat messages for *page_id*; returns the count removed.
+
+    Called by the page-delete API route after removing the page from the
+    whop registry (which lives in ``data/whop_pages.json``, not the DB — so
+    no FK cascade is possible).
+    """
+    stmt = sa_delete(ChatMessageRow).where(ChatMessageRow.page_id == page_id)
+    result = await session.execute(stmt)
+    return result.rowcount or 0

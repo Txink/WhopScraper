@@ -32,6 +32,7 @@ from app.api.schemas import push_event_to_out, task_to_out
 from app.core.config import Settings
 from app.core.event_bus import Event, EventBus
 from app.core.events import (
+    ChatMessageStoredPayload,
     ExecutionPayload,
     QuoteSnapshotPayload,
     TaskPayload,
@@ -81,6 +82,7 @@ class WebSocketHub:
             Topics.TASK_STATUS_CHANGED,
             Topics.SYSTEM_CONNECTION_CHANGED,
             Topics.WHOP_PAGE_CHANGED,
+            Topics.CHAT_MESSAGE_STORED,
             Topics.QUOTE_SNAPSHOT,
             Topics.EXECUTION_UPDATE,
         ]
@@ -138,6 +140,8 @@ class WebSocketHub:
             }
         if isinstance(p, WhopPagePayload):
             return {"action": p.action, "page": p.page_dict}
+        if isinstance(p, ChatMessageStoredPayload):
+            return {"page_id": p.page_id, "message_id": p.message_id}
         # Pass-through for dict payloads (e.g. system.connection_changed)
         if isinstance(p, dict):
             return p
