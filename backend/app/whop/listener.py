@@ -19,7 +19,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config import Settings
 from app.core.event_bus import Event, EventBus
-from app.core.events import MessagePayload, Topics
+from app.core.events import ChatMessagePayload, MessagePayload, Topics
+from app.domain.message import Message
 from app.storage.db import session_scope
 from app.storage.repo import load_seen_ids_for_url
 from app.whop.browser import WhopBrowser
@@ -37,6 +38,54 @@ def _is_placeholder_url(url: str | None) -> bool:
     return any(t in low for t in bad_tokens)
 
 
+async def _publish_message(
+    bus: EventBus,
+    *,
+    page_id: str | None,
+    source: str,
+    message: Message,
+    is_historical: bool,
+) -> None:
+    """Branch on ``source`` and publish to the correct topic.
+
+    - ``source == "chat"``: publish ``Topics.CHAT_MESSAGE_RECEIVED`` with a
+      :class:`ChatMessagePayload` so :mod:`app.whop.chat_writer` can
+      persist the row and broadcast ``CHAT_MESSAGE_STORED``.
+    - everything else (``"stock"`` / ``"option"``): publish the legacy
+      ``Topics.MESSAGE_RECEIVED`` with a :class:`MessagePayload` —
+      preserves the existing task pipeline byte-for-byte.
+
+    ``page_id`` is required for chat-source publishes (the writer needs
+    it to denormalize the row). For non-chat sources the legacy payload
+    has no place to thread it, so it is intentionally dropped. If
+    ``source == "chat"`` and ``page_id is None`` we raise loudly rather
+    than silently emit a payload with a null FK.
+
+    Extracted as a module-level helper (not a method) so unit tests can
+    drive it without a live ``WhopListener`` / browser / DB.
+    """
+    if source == "chat":
+        if page_id is None:
+            raise ValueError("page_id is required for chat-source messages")
+        await bus.publish(
+            Event(
+                Topics.CHAT_MESSAGE_RECEIVED,
+                ChatMessagePayload(
+                    page_id=page_id,
+                    message=message,
+                    is_historical=is_historical,
+                ),
+            )
+        )
+    else:
+        await bus.publish(
+            Event(
+                Topics.MESSAGE_RECEIVED,
+                MessagePayload(message=message, is_historical=is_historical),
+            )
+        )
+
+
 class WhopListener:
     """Polls a single Whop page URL, publishes new messages to bus."""
 
@@ -45,7 +94,8 @@ class WhopListener:
         *,
         bus: EventBus,
         url: str,
-        source: str,  # "stock" | "option"
+        source: str,  # "stock" | "option" | "chat"
+        page_id: str | None = None,
         poll_interval: float = 2.0,
         headless: bool = False,
         cookie_path: str | None = None,
@@ -57,6 +107,7 @@ class WhopListener:
         self._bus = bus
         self._url = url
         self._source = source
+        self._page_id = page_id
         self._poll_interval = poll_interval
         self._headless = headless
         self._cookie_path = cookie_path
@@ -276,11 +327,12 @@ class WhopListener:
                 and self._started_at is not None
                 and tagged.posted_at.astimezone(UTC) < self._started_at
             )
-            await self._bus.publish(
-                Event(
-                    Topics.MESSAGE_RECEIVED,
-                    MessagePayload(message=tagged, is_historical=is_historical),
-                )
+            await _publish_message(
+                self._bus,
+                page_id=self._page_id,
+                source=self._source,
+                message=tagged,
+                is_historical=is_historical,
             )
             new_count += 1
 

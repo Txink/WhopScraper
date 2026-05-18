@@ -469,6 +469,7 @@ class WhopRegistry:
             bus=self._bus,
             url=entry.url,
             source=entry.source,
+            page_id=entry.id,
             poll_interval=self._settings.whop_poll_interval,
             headless=entry.settings.launch_headless,
             skip_initial=skip_initial,
