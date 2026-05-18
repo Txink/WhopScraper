@@ -53,6 +53,7 @@ from app.api.schemas import (
     CandlesticksOut,
     ExecutionOut,
     ExecutionsOut,
+    ExecutionsSyncOut,
     QuoteWatchIn,
     QuoteWatchOut,
     TradeOut,
@@ -1003,6 +1004,33 @@ def build_http_router(
             await repo.delete_broker_executions_for_ticker(
                 session, account_id=account_id, ticker=ticker
             )
+
+    @router.post(
+        "/api/broker/executions/sync", response_model=ExecutionsSyncOut
+    )
+    async def sync_executions_endpoint(
+        ticker: Annotated[str, Query(min_length=1)],
+        days: Annotated[int, Query(ge=1, le=90)] = 7,
+    ) -> ExecutionsSyncOut:
+        """Force-pull the last ``days`` of broker fills for ``ticker`` and
+        upsert into ``broker_executions``. Distinct from the GET path's
+        incremental sync (which anchors on ``MAX(ts)``) — this
+        unconditionally walks back ``days`` so mid-window gaps in the
+        local cache are filled. Idempotent: PK is order_id.
+
+        ``days`` capped at 90 because LongBridge's history_executions
+        rejects wider single calls (see knowledge/longbridge-api-limits.md).
+        """
+        from app.broker.executions_sync import sync_broker_executions
+
+        broker = _get_broker()
+        if not getattr(broker, "account_id", ""):
+            return ExecutionsSyncOut(persisted=0)
+        async with session_scope(session_factory) as session:
+            persisted = await sync_broker_executions(
+                session, broker, ticker=ticker, days=days
+            )
+        return ExecutionsSyncOut(persisted=persisted)
 
     @router.get("/api/broker/today_executions", response_model=ExecutionsOut)
     async def today_executions_endpoint() -> ExecutionsOut:

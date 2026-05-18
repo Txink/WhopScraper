@@ -257,6 +257,17 @@ class PendingExecutionsOut(BaseModel):
     trades: list[PendingTradeOut]
 
 
+class ExecutionsSyncOut(BaseModel):
+    """Response payload for ``POST /api/broker/executions/sync``.
+
+    ``persisted`` is the upsert count returned by
+    ``sync_broker_executions`` (new rows + updated rows). The frontend
+    doesn't display it; the field exists for logging and test assertions.
+    """
+
+    persisted: int
+
+
 class TPairsOut(BaseModel):
     pairs: list[TPairOut]
     # Total做T pair count matching the request's filters (account/ticker),

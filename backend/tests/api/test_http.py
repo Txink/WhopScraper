@@ -1336,6 +1336,97 @@ def test_history_executions_endpoint_full_backfill_even_with_narrow_sync_residue
     assert flagged is True
 
 
+def test_sync_executions_endpoint_force_pulls_recent_window(
+    client_and_broker: tuple[TestClient, FakeBrokerClient],
+) -> None:
+    """``POST /api/broker/executions/sync?ticker=X&days=7`` calls
+    ``sync_broker_executions`` (NOT the incremental variant), which
+    walks back ``days`` unconditionally from now and upserts on
+    ``order_id``. Re-issuing the same request is a no-op (idempotent)."""
+    from datetime import datetime, timedelta, timezone
+
+    client, broker = client_and_broker
+    now = datetime.now(timezone.utc)
+    broker.history_executions_list = [  # type: ignore[attr-defined]
+        {
+            "order_id": "fill-1",
+            "symbol": "TSLA.US",
+            "ticker": "TSLA",
+            "side": "BUY",
+            "qty": 10,
+            "price": 200.0,
+            "ts": now - timedelta(days=2),
+        },
+        # Older than the 7-day window — must NOT be persisted by the
+        # sync POST. Also older than the GET endpoint's default 730-day
+        # backfill horizon, so the follow-up GET below can't pull it
+        # via its own incremental sync either.
+        {
+            "order_id": "old",
+            "symbol": "TSLA.US",
+            "ticker": "TSLA",
+            "side": "SELL",
+            "qty": 5,
+            "price": 220.0,
+            "ts": now - timedelta(days=800),
+        },
+    ]
+
+    r = client.post(
+        "/api/broker/executions/sync",
+        params={"token": _TOKEN, "ticker": "TSLA", "days": 7},
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body == {"persisted": 1}
+
+    # Idempotency: re-posting upserts the same row → still counts it,
+    # but a follow-up GET returns the same single row.
+    r2 = client.post(
+        "/api/broker/executions/sync",
+        params={"token": _TOKEN, "ticker": "TSLA", "days": 7},
+    )
+    assert r2.status_code == 200, r2.text
+
+    g = client.get(
+        "/api/broker/executions",
+        params={"token": _TOKEN, "ticker": "TSLA", "offset": 0, "limit": 50},
+    )
+    assert g.status_code == 200
+    rows = g.json()["executions"]
+    assert [e["order_id"] for e in rows] == ["fill-1"]
+
+
+def test_sync_executions_endpoint_rejects_missing_ticker(
+    client_and_broker: tuple[TestClient, FakeBrokerClient],
+) -> None:
+    """``ticker`` is required — the endpoint is per-ticker by design."""
+    client, _ = client_and_broker
+    r = client.post(
+        "/api/broker/executions/sync",
+        params={"token": _TOKEN, "days": 7},
+    )
+    assert r.status_code == 422
+
+
+def test_sync_executions_endpoint_rejects_out_of_range_days(
+    client_and_broker: tuple[TestClient, FakeBrokerClient],
+) -> None:
+    """``days`` is clamped to [1, 90]; LongBridge rejects wider single
+    calls and the menu item only needs 7."""
+    client, _ = client_and_broker
+    r0 = client.post(
+        "/api/broker/executions/sync",
+        params={"token": _TOKEN, "ticker": "TSLA", "days": 0},
+    )
+    assert r0.status_code == 422
+    r91 = client.post(
+        "/api/broker/executions/sync",
+        params={"token": _TOKEN, "ticker": "TSLA", "days": 91},
+    )
+    assert r91.status_code == 422
+
+
 def test_delete_broker_executions_clears_rows_and_history_synced(
     client_and_broker: tuple[TestClient, FakeBrokerClient],
     session_factory: async_sessionmaker[AsyncSession],
