@@ -57,7 +57,7 @@ DEFAULT_OPTION_SETTINGS = PageSettings(
 )
 
 
-def default_settings_for(source: Literal["stock", "option"]) -> PageSettings:
+def default_settings_for(source: Literal["stock", "option", "chat"]) -> PageSettings:
     if source == "stock":
         return PageSettings(
             dedupe_processed_messages=DEFAULT_STOCK_SETTINGS.dedupe_processed_messages,
@@ -80,6 +80,11 @@ def default_settings_for(source: Literal["stock", "option"]) -> PageSettings:
             option_total_price_limit=DEFAULT_OPTION_SETTINGS.option_total_price_limit,
             parser_version=DEFAULT_OPTION_SETTINGS.parser_version,
         )
+    if source == "chat":
+        # Chat pages monitor without trading semantics — no tickers, no option
+        # risk controls. Inherit defaults from PageSettings; T6 will extend with
+        # chat-specific fields (watched_senders, chat_card_max_msgs).
+        return PageSettings(tickers=None)
     raise ValueError(f"unknown source: {source!r}")
 
 
@@ -103,7 +108,7 @@ def page_settings_to_dict(s: PageSettings) -> dict[str, Any]:
 def page_settings_from_dict(
     d: dict[str, Any],
     *,
-    source: Literal["stock", "option"],
+    source: Literal["stock", "option", "chat"],
 ) -> PageSettings:
     """Tolerant parser: missing keys → use defaults; ticker keys → uppercased."""
     base = default_settings_for(source)
@@ -122,7 +127,7 @@ def page_settings_from_dict(
     option_total_raw = d.get("option_total_price_limit", base.option_total_price_limit)
     option_total = float(option_total_raw) if option_total_raw is not None else None
     tickers: dict[str, TickerConfig] | None
-    if source == "option":
+    if source in ("option", "chat"):
         tickers = None
     else:
         raw_tickers = d.get("tickers", {}) or {}

@@ -588,7 +588,7 @@ class WhopPagesOut(BaseModel):
 
 class WhopPageCreate(BaseModel):
     url: str
-    source: Literal["stock", "option"]
+    source: Literal["stock", "option", "chat"]
     name: str | None = None
 
 
