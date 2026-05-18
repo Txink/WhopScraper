@@ -62,3 +62,42 @@
 
 .chat-overflow { font-family: var(--font-mono); font-size: 11px;
                  color: var(--fg-3); padding-left: 4px; }
+
+.chat-sender-bar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+                   padding: 8px 14px; border-bottom: 1px solid var(--line);
+                   background: var(--bg-1); }
+.chat-sender-bar-label { font-size: 10.5px; letter-spacing: 0.06em;
+                         text-transform: uppercase; color: var(--fg-3); }
+.chat-sender-chip { display: inline-flex; align-items: center; gap: 6px;
+                    padding: 3px 10px; border-radius: 999px;
+                    border: 1px solid var(--line-strong); background: transparent;
+                    color: var(--fg-2); font-family: var(--font-mono);
+                    font-size: 11px; cursor: pointer;
+                    transition: all 150ms cubic-bezier(0.2,0.6,0.2,1); }
+.chat-sender-chip:hover { border-color: var(--fg-3); color: var(--fg-1); }
+.chat-sender-chip.on { border-color: rgba(var(--brand-rgb), 0.50);
+                       background: rgba(var(--brand-rgb), 0.10);
+                       color: var(--brand); }
+.chat-sender-chip-avatar { width: 14px; height: 14px; border-radius: 50%;
+                           background: var(--bg-3); display: grid; place-items: center;
+                           font-size: 9px; color: var(--fg-2);
+                           font-family: var(--font-sans); }
+.chat-sender-chip.on .chat-sender-chip-avatar { background: var(--brand);
+                                                color: var(--bg-0); }
+.chat-sender-chip-count { font-size: 10px; color: var(--fg-3); }
+.chat-sender-chip.on .chat-sender-chip-count { color: var(--brand); opacity: 0.7; }
+
+.chat-meta-bar { display: flex; align-items: center; gap: 12px;
+                 padding: 8px 14px; border-bottom: 1px solid var(--line);
+                 background: var(--bg-1); }
+.chat-meta-text { font-size: 12px; color: var(--fg-2); }
+.chat-meta-text strong { color: var(--fg-1); font-weight: 500;
+                         font-family: var(--font-mono); }
+.chat-meta-export { margin-left: auto; background: rgba(var(--brand-rgb), 0.10);
+                    border: 1px solid rgba(var(--brand-rgb), 0.42);
+                    color: var(--brand); padding: 4px 10px;
+                    cursor: pointer; border-radius: var(--radius-chip);
+                    font-size: 12px; font: inherit;
+                    transition: background 150ms, border-color 150ms; }
+.chat-meta-export:hover { background: rgba(var(--brand-rgb), 0.18);
+                          border-color: var(--brand); }
