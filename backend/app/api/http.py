@@ -1615,6 +1615,10 @@ def build_http_router(
                 patch_dict["option_total_price_limit_enabled"] = body.option_total_price_limit_enabled
             if body.option_total_price_limit is not None:
                 patch_dict["option_total_price_limit"] = body.option_total_price_limit
+            if body.watched_senders is not None:
+                patch_dict["watched_senders"] = body.watched_senders
+            if body.chat_card_max_msgs is not None:
+                patch_dict["chat_card_max_msgs"] = body.chat_card_max_msgs
             if not patch_dict:
                 raise HTTPException(
                     400,

@@ -484,3 +484,42 @@ def test_get_chat_messages_defaults_to_current_week(app_with_db) -> None:  # noq
     body = resp.json()
     assert "start" in body["week"]
     assert "end" in body["week"]
+
+
+# ---------------------------------------------------------------------------
+# PATCH settings round-trip for watched_senders / chat_card_max_msgs
+# ---------------------------------------------------------------------------
+
+
+def test_patch_settings_persists_watched_senders(app_with_db) -> None:  # noqa: ANN001
+    """PATCH watched_senders survives GET /api/whop/pages."""
+    client, _factory, _registry, _loop = app_with_db
+    page_id = _make_chat_page(client, url="https://whop.example/chat-watched-senders")
+
+    resp = client.patch(
+        f"/api/whop/pages/{page_id}/settings",
+        json={"watched_senders": ["alice", "bob"]},
+        params={"token": _TOKEN},
+    )
+    assert resp.status_code == 200, resp.text
+
+    pages = client.get("/api/whop/pages", params={"token": _TOKEN}).json()["pages"]
+    page = next(p for p in pages if p["id"] == page_id)
+    assert page["settings"]["watched_senders"] == ["alice", "bob"]
+
+
+def test_patch_settings_persists_chat_card_max_msgs(app_with_db) -> None:  # noqa: ANN001
+    """PATCH chat_card_max_msgs survives GET /api/whop/pages."""
+    client, _factory, _registry, _loop = app_with_db
+    page_id = _make_chat_page(client, url="https://whop.example/chat-card-max-msgs")
+
+    resp = client.patch(
+        f"/api/whop/pages/{page_id}/settings",
+        json={"chat_card_max_msgs": 8},
+        params={"token": _TOKEN},
+    )
+    assert resp.status_code == 200, resp.text
+
+    pages = client.get("/api/whop/pages", params={"token": _TOKEN}).json()["pages"]
+    page = next(p for p in pages if p["id"] == page_id)
+    assert page["settings"]["chat_card_max_msgs"] == 8
