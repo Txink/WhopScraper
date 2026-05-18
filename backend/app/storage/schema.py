@@ -196,6 +196,11 @@ class PositionRow(Base):
     history_synced: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default=text("0")
     )
+    # Set when broker_executions for this ticker are wiped but t_pairs
+    # remain — the next full chunked backfill rebuilds t_pair_tags from pairs.
+    restore_pair_tags: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("0")
+    )
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 

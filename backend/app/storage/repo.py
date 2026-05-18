@@ -803,9 +803,9 @@ async def upsert_positions(
                 "option_expiry": stmt.excluded.option_expiry,
                 "option_type": stmt.excluded.option_type,
                 "updated_at": stmt.excluded.updated_at,
-                # NOTE: history_synced intentionally NOT in set_ — it is
-                # owned by the executions-sync path; refreshing the
-                # holdings snapshot must not reset it.
+                # NOTE: history_synced / restore_pair_tags intentionally NOT
+                # in set_ — owned by the executions-sync / wipe paths;
+                # refreshing the holdings snapshot must not reset them.
             },
         )
         await session.execute(stmt)
@@ -847,6 +847,69 @@ async def is_position_history_synced(
     )
     result = await session.execute(stmt)
     return (result.scalar() or 0) > 0
+
+
+async def position_needs_restore_pair_tags(
+    session: AsyncSession,
+    *,
+    account_id: str,
+    ticker: str,
+) -> bool:
+    """True iff any positions row for ``(account_id, ticker)`` requests
+    a one-shot ``t_pair_tags`` rebuild after the next full backfill."""
+    stmt = (
+        select(func.count())
+        .select_from(PositionRow)
+        .where(PositionRow.account_id == account_id)
+        .where(PositionRow.ticker == ticker)
+        .where(PositionRow.restore_pair_tags.is_(True))
+    )
+    result = await session.execute(stmt)
+    return (result.scalar() or 0) > 0
+
+
+async def clear_restore_pair_tags(
+    session: AsyncSession,
+    *,
+    account_id: str,
+    ticker: str,
+) -> int:
+    """Clear ``restore_pair_tags`` on every row for ``(account_id, ticker)``."""
+    stmt = (
+        PositionRow.__table__.update()
+        .where(PositionRow.account_id == account_id)
+        .where(PositionRow.ticker == ticker)
+        .values(restore_pair_tags=False)
+    )
+    result = await session.execute(stmt)
+    return result.rowcount or 0
+
+
+async def restore_pair_tags_from_pairs(
+    session: AsyncSession,
+    *,
+    account_id: str,
+    ticker: str,
+) -> int:
+    """Rebuild ``broker_executions.t_pair_tags`` from ``t_pairs`` allocations.
+
+    Called after a full chunked backfill when ``restore_pair_tags`` was set
+    by ``delete_broker_executions_for_ticker``. Returns the number of pairs
+    reconciled. Clears the flag on success.
+    """
+    pairs = await list_pairs(session, ticker=ticker, account_id=account_id)
+    for pair in pairs:
+        await _sync_pair_tags(
+            session,
+            pair_id=pair.id,
+            old_buys=[],
+            old_sells=[],
+            new_buys=list(pair.buys_json or []),
+            new_sells=list(pair.sells_json or []),
+        )
+    await clear_restore_pair_tags(session, account_id=account_id, ticker=ticker)
+    await session.commit()
+    return len(pairs)
 
 
 async def mark_position_history_synced(
@@ -1580,13 +1643,11 @@ async def delete_broker_executions_for_ticker(
     """Wipe ``broker_executions`` rows scoped to ``(account_id, ticker)``
     AND reset ``positions.history_synced`` back to False so the next
     detail-pane open re-triggers the full chunked backfill from scratch.
+    Also sets ``restore_pair_tags = True`` so the full backfill replays
+    ``t_pairs`` into ``broker_executions.t_pair_tags`` when it finishes.
 
-    Returns the number of execution rows removed. Pair allocations
-    aren't cascade-cleaned here — bulk pair removal lives in
-    ``delete_pairs_for_ticker`` and the UI exposes it as a separate
-    action. (Wiping executions while pairs still point at them would
-    leave the pair rows with dangling trade_ids, but list_pairs already
-    handles the missing-fill case by counting allocations against zero.)
+    Returns the number of execution rows removed. ``t_pairs`` rows are
+    not deleted — only the denormalized tags on executions are lost.
     """
     del_stmt = (
         BrokerExecutionRow.__table__.delete()
@@ -1600,7 +1661,7 @@ async def delete_broker_executions_for_ticker(
         PositionRow.__table__.update()
         .where(PositionRow.account_id == account_id)
         .where(PositionRow.ticker == ticker)
-        .values(history_synced=False)
+        .values(history_synced=False, restore_pair_tags=True)
     )
     await session.execute(flag_stmt)
     await session.commit()

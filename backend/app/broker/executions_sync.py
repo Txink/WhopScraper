@@ -169,8 +169,10 @@ async def sync_broker_executions_incremental(
        iterate 90-day chunks back across the full ``fallback_days``
        horizon (no early stop — a sparse trader can have empty quarters
        mid-horizon, and stopping on the first quiet chunk would miss
-       older fills). Sets ``positions.history_synced = True`` for all
-       rows matching (account, ticker) after the walk completes so
+       older fills). When ``positions.restore_pair_tags`` is set (after
+       a broker_executions wipe), rebuilds ``t_pair_tags`` from ``t_pairs``
+       before clearing that flag. Sets ``positions.history_synced = True``
+       for all rows matching (account, ticker) after the walk completes so
        subsequent opens take the cheap path.
 
     Why not use ``MAX(ts)`` as the "fully synced" anchor? Because the
@@ -227,6 +229,12 @@ async def sync_broker_executions_incremental(
         total_days=fallback_days,
     )
     if ticker is not None:
+        if await repo.position_needs_restore_pair_tags(
+            session, account_id=account_id, ticker=ticker
+        ):
+            await repo.restore_pair_tags_from_pairs(
+                session, account_id=account_id, ticker=ticker
+            )
         await repo.mark_position_history_synced(
             session, account_id=account_id, ticker=ticker
         )

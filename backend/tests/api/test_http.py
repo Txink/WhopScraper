@@ -1507,6 +1507,16 @@ def test_delete_broker_executions_clears_rows_and_history_synced(
     assert tsla_synced is False, "TSLA history_synced must reset so next GET re-backfills"
     assert nvda_synced is True, "NVDA flag must survive — other tickers untouched"
 
+    async def _tsla_restore_flag() -> bool:
+        async with session_factory() as session:
+            from app.storage.repo import position_needs_restore_pair_tags
+
+            return await position_needs_restore_pair_tags(
+                session, account_id="test-acct", ticker="TSLA"
+            )
+
+    assert asyncio.get_event_loop().run_until_complete(_tsla_restore_flag())
+
 
 def test_delete_broker_executions_requires_ticker(
     client_and_broker: tuple[TestClient, FakeBrokerClient],

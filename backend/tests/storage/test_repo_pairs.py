@@ -404,3 +404,66 @@ async def test_extend_pair_missing_returns_none(
             trade_qty={"x": 10},
         )
     assert result is None
+
+
+async def test_restore_pair_tags_from_pairs_rebuilds_denormalized_tags(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """After broker_executions wipe, restore_pair_tags_from_pairs replays
+    t_pairs allocations into t_pair_tags."""
+    from app.storage.schema import PositionRow
+
+    async with session_factory() as session:
+        await _seed_executions(
+            session,
+            {"b1": ("BUY", 100, 10.0), "s1": ("SELL", 100, 11.0)},
+        )
+        pair = await repo.create_pair(
+            session,
+            ticker="TSLA",
+            symbol="TSLA.US",
+            buy_trade_ids=["b1"],
+            sell_trade_ids=["s1"],
+            trade_qty={"b1": 100, "s1": 100},
+            account_id=_ACCOUNT,
+        )
+        assert pair is not None
+        session.add(
+            PositionRow(
+                account_id=_ACCOUNT,
+                symbol="TSLA.US",
+                type="stock",
+                ticker="TSLA",
+                quantity=100,
+                avg_cost=10.0,
+                option_strike=None,
+                option_expiry=None,
+                option_type=None,
+                history_synced=False,
+                restore_pair_tags=True,
+                updated_at=datetime.now(UTC),
+            )
+        )
+        await session.commit()
+
+        b_row = await session.get(BrokerExecutionRow, "b1")
+        s_row = await session.get(BrokerExecutionRow, "s1")
+        assert b_row is not None and s_row is not None
+        b_row.t_pair_tags = []
+        s_row.t_pair_tags = []
+        await session.commit()
+
+        restored = await repo.restore_pair_tags_from_pairs(
+            session, account_id=_ACCOUNT, ticker="TSLA"
+        )
+        assert restored == 1
+
+        b_row = await session.get(BrokerExecutionRow, "b1")
+        s_row = await session.get(BrokerExecutionRow, "s1")
+        assert b_row is not None and s_row is not None
+        assert b_row.t_pair_tags == [[pair.id, 100]]
+        assert s_row.t_pair_tags == [[pair.id, 100]]
+
+        pos = await session.get(PositionRow, (_ACCOUNT, "TSLA.US"))
+        assert pos is not None
+        assert pos.restore_pair_tags is False

@@ -15,6 +15,7 @@
 - `CardCompact` 行内 STOCK 徽章移除，类型差异由顶部 chip 体现；OPTION 行保留 inline `OPT` 标识；row grid 由 8 列收成 7 列腾给原文
 
 ### Fixed
+- **做T tags 恢复**：`positions.restore_pair_tags` — 清空交易记录后下次近两年全量回填完成时，从 `t_pairs` 重建 `broker_executions.t_pair_tags`
 - **LongPort 成交拉取**：`_fetch_executions_window` 合并 SDK `today_executions`/`today_orders` 与 `history_*`（按 `trade_id` 去重），修复盘中未结算成交只走 history 导致 `today_executions` sync、详情页交易记录缺当日 fill 的问题
 - 补全领域模型与 ORM：`Task`、`TaskRow`、`repo.save_task` / `_rows_to_task` 对 `submit_quote_last_done` 的字段与读写（此前仅 trader/API 引用，导致 `GET /api/tasks` 序列化时报 `AttributeError`）
 - **PushListener 改为 buffer + replay 模型**，彻底替换原来的 "DB 多次重试 + 进程内 pending 表 + finally clear" 方案。新流程：(1) 每条推送先按 `order_id` 查库；(2) 命中 → 直接发 `TASK_PUSH_EVENT`；(3) 未命中 → 进 `_buffer[order_id]`（按到达时间排序，附 monotonic 时间戳）。Trader 在 broker submit 成功并 `await save_task` 落库后，调用 `push_listener.replay_for_order(order_id)` 将 buffer 里属于这条 order 的推送一次性按到达顺序排干。外来 order（手机/网页另起的单）的推送在 `BUFFER_TTL_S=60s` 后被 GC 并 WARN，避免 buffer 无限增长。删除 `pending_order_registry.py`、`_LOOKUP_RETRY_ATTEMPTS` 重试循环、trader 中 `register_pending_order/clear_pending_order/finally` 串接
