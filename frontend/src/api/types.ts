@@ -122,11 +122,16 @@ export interface paths {
          * List Positions Endpoint
          * @description Return current positions split into stocks and options.
          *
-         *     Pulls live from the broker on every call (no DB cache yet) so the
-         *     dashboard cards reflect the latest holdings without a periodic sync
-         *     job. If the broker is down we fall back to ``[]`` rather than 502 —
-         *     the dashboard treats absence as "no positions" and skips quote/
-         *     candlestick fetches.
+         *     Pulls live from the broker on every call so the dashboard cards
+         *     reflect the latest holdings without a periodic sync job, and
+         *     upserts the result into the ``positions`` table (account-scoped)
+         *     as a side-effect. The DB row is the anchor for
+         *     ``history_synced`` — the per-(account, ticker) "broker_executions
+         *     is fully backfilled" flag the detail-pane sync path consults.
+         *
+         *     Symbols no longer reported by the broker are zeroed out
+         *     (``quantity = 0``) rather than deleted so ``history_synced``
+         *     survives close/re-open cycles. The dashboard read filters qty>0.
          *
          *     Longbridge's ``stock_positions`` endpoint actually returns BOTH
          *     stocks and option contracts the user holds (the option contracts
@@ -134,6 +139,23 @@ export interface paths {
          *     ``parse_option_symbol`` and route to the appropriate bucket.
          */
         get: operations["list_positions_endpoint_api_positions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/db/{table}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Db Rows Endpoint */
+        get: operations["list_db_rows_endpoint_api_db__table__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -166,10 +188,19 @@ export interface paths {
          * Create Pair Endpoint
          * @description Create a做T pair binding broker fills (one row per order_id).
          *     Server auto-balances qty using FIFO; leftover qty stays on the
-         *     originating fills for future bindings.
+         *     originating fills for future bindings. The pair id is assigned by
+         *     SQLite (autoincrement integer).
          */
         post: operations["create_pair_endpoint_api_pairs_post"];
-        delete?: never;
+        /**
+         * Delete Pairs By Ticker Endpoint
+         * @description Bulk-delete every做T pair on the active account for ``ticker``.
+         *     Each affected trade's ``broker_executions.t_pair_tags`` is
+         *     rewritten so the做T chip column reflects the change immediately.
+         *     ``ticker`` is REQUIRED — there's no "wipe across all tickers"
+         *     shortcut, because that would be too easy to fat-finger.
+         */
+        delete: operations["delete_pairs_by_ticker_endpoint_api_pairs_delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -210,6 +241,56 @@ export interface paths {
          * @description Unbind a做T pair. The underlying trades become available again.
          */
         delete: operations["delete_pair_endpoint_api_pairs__pair_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pairs/aggregate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Pair Aggregate Endpoint
+         * @description Account+ticker scoped做T aggregates via SQL SUM/COUNT.
+         *
+         *     Used by PairKPIs so the frontend never has to fetch every pair
+         *     just to display totals. ``ticker`` is optional; omit for an
+         *     account-wide aggregate.
+         */
+        get: operations["pair_aggregate_endpoint_api_pairs_aggregate_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/broker/executions/pending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Pending Executions Endpoint
+         * @description List broker fills whose qty exceeds the qty already allocated
+         *     to any做T pair, plus aggregate pending qty by side.
+         *
+         *     ``allocated_qty`` is derived from ``t_pair_tags`` via
+         *     ``json_each``; the WHERE filter drops fully-allocated fills so the
+         *     UI can scan the result for what's still open. ``limit`` caps the
+         *     listing but the aggregate row totals everything regardless.
+         */
+        get: operations["pending_executions_endpoint_api_broker_executions_pending_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -285,7 +366,9 @@ export interface paths {
          *     clean regular-hours curve and a wider view that includes pre-market
          *     and after-hours. For other periods these query params are ignored
          *     (fixed mapping):
-         *       5/7 → 5-min, 15 → 15-min, 30/60/90 → daily.
+         *       5/7 → 5-min stitched across days (多日 line view);
+         *       day/week/month/year → 1/4/10/30-year batch of candles for the
+         *                             日K/周K/月K/年K candlestick views.
          */
         get: operations["candlesticks_endpoint_api_candlesticks_get"];
         put?: never;
@@ -307,22 +390,39 @@ export interface paths {
          * History Executions Endpoint
          * @description Broker-side fill history for the detail pane's trade list.
          *
-         *     Incremental sync: starts from MAX(ts) already in DB for this
-         *     account (+ optional ticker), pulls only the gap from the broker,
-         *     upserts. First-ever open falls back to a 90-day window. Read
-         *     comes from DB filtered by account_id so cross-account bleed is
-         *     impossible and broker outages still serve cached data.
+         *     Sync semantics (both modes iterate 90-day chunks — LongBridge
+         *     rejects wider single calls; see knowledge/longbridge-api-limits.md):
+         *       - Incremental: starts from ``MAX(ts)`` already in DB for this
+         *         account (+ optional ticker), walks 90-day chunks back to
+         *         cover the gap.
+         *       - First-ever sync: walks 90-day chunks backwards up to
+         *         ``days`` total (default 730 = 2 years) so the user's complete
+         *         history materializes on initial detail-pane open. Stops
+         *         early on any empty window — saves wasted calls when the
+         *         account opened mid-horizon.
+         *
+         *     Read comes from DB filtered by account_id (cross-account bleed
+         *     is impossible) and is NOT truncated by ``days``: once history is
+         *     synced, every page returns it. ``days`` only governs the
+         *     first-time backfill horizon.
          *
          *     Paginated: ``offset`` / ``limit`` slice the result newest-first.
-         *     Sync runs on every call (idempotent upsert) so a "加载更多" click
-         *     also picks up new fills that arrived since the previous page.
-         *     Response carries ``total_count`` / ``has_more`` so the UI can
-         *     accumulate pages into a single store for cross-page做T binding.
+         *     Sync runs on every call (idempotent upsert) so a page-flip also
+         *     picks up new fills that arrived since the previous open.
          */
         get: operations["history_executions_endpoint_api_broker_executions_get"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Delete Broker Executions Endpoint
+         * @description Wipe ``broker_executions`` rows for the active account scoped
+         *     to ``ticker`` AND reset ``positions.history_synced`` to False.
+         *     After this, a follow-up GET ``/api/broker/executions?ticker=X``
+         *     re-triggers the full chunked 2-year backfill from scratch.
+         *
+         *     ``ticker`` is REQUIRED — keeps the bulk wipe scope explicit.
+         */
+        delete: operations["delete_broker_executions_endpoint_api_broker_executions_delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -635,6 +735,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/whop/pages/{page_id}/chat-messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Chat Messages
+         * @description Return one ISO-week's worth of chat messages for *page_id*.
+         *
+         *     ``week`` defaults to the current ISO week (UTC). ``senders`` is a
+         *     comma-separated allow-list of authors; empty / absent → no filter.
+         *     ``authors`` is the (author, count) breakdown for the *unfiltered*
+         *     week — the chip bar should show every author seen in the window
+         *     regardless of the active filter selection.
+         */
+        get: operations["get_chat_messages_api_whop_pages__page_id__chat_messages_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/whop/pages/{page_id}/restart": {
         parameters: {
             query?: never;
@@ -865,6 +991,51 @@ export interface components {
             /** Bars */
             bars: components["schemas"]["CandlestickOut"][];
         };
+        /** ChatAuthorOut */
+        ChatAuthorOut: {
+            /** Name */
+            name: string;
+            /** Count */
+            count: number;
+        };
+        /** ChatMessageOut */
+        ChatMessageOut: {
+            /** Id */
+            id: string;
+            /** Page Id */
+            page_id: string;
+            /** Author */
+            author: string;
+            /** Content */
+            content: string;
+            /**
+             * Posted At
+             * Format: date-time
+             */
+            posted_at: string;
+            quoted?: components["schemas"]["QuotedRefOut"] | null;
+        };
+        /** ChatMessagesOut */
+        ChatMessagesOut: {
+            /** Messages */
+            messages: components["schemas"]["ChatMessageOut"][];
+            /** Authors */
+            authors: components["schemas"]["ChatAuthorOut"][];
+            week: components["schemas"]["ChatWeekWindowOut"];
+        };
+        /** ChatWeekWindowOut */
+        ChatWeekWindowOut: {
+            /**
+             * Start
+             * Format: date-time
+             */
+            start: string;
+            /**
+             * End
+             * Format: date-time
+             */
+            end: string;
+        };
         /**
          * ExecutionOut
          * @description One broker-side ORDER (with partial fills aggregated). The unit
@@ -874,6 +1045,13 @@ export interface components {
          *     the signal-station ``tasks`` row that submitted this order — present
          *     only for orders that went through the trader pipeline; manual fills
          *     placed via the LongBridge app / web have ``task_id = null``.
+         *
+         *     ``t_pair_tags`` is the server-denormalised做T allocation list:
+         *     ``[[pair_id, allocated_qty], ...]``. Lets the trade-list frontend
+         *     paint做T chips without a separate /api/pairs round-trip, AND
+         *     survives across page reloads — without it on the wire, a re-fetch
+         *     after detail-pane re-open silently dropped the chips. Defaults to
+         *     ``[]`` for fills that aren't bound to any pair.
          */
         ExecutionOut: {
             /** Order Id */
@@ -898,6 +1076,14 @@ export interface components {
              * Format: date-time
              */
             ts: string;
+            /**
+             * T Pair Tags
+             * @default []
+             */
+            t_pair_tags: [
+                number,
+                number
+            ][];
         };
         /** ExecutionsOut */
         ExecutionsOut: {
@@ -1109,6 +1295,60 @@ export interface components {
             /** Deleted Count */
             deleted_count: number;
         };
+        /**
+         * PairAggregateOut
+         * @description Account+ticker scoped做T aggregates — driven by SQL SUM/COUNT
+         *     over t_pairs so PairKPIs can render without pulling every pair into
+         *     memory.
+         */
+        PairAggregateOut: {
+            /** Profit Total */
+            profit_total: number;
+            /** Count */
+            count: number;
+            /** Win Count */
+            win_count: number;
+        };
+        /**
+         * PendingExecutionsOut
+         * @description Aggregate + per-trade breakdown of unallocated qty.
+         */
+        PendingExecutionsOut: {
+            /** Pending Buy Qty */
+            pending_buy_qty: number;
+            /** Pending Sell Qty */
+            pending_sell_qty: number;
+            /** Trades */
+            trades: components["schemas"]["PendingTradeOut"][];
+        };
+        /**
+         * PendingTradeOut
+         * @description One row of "pending做T" trade — broker fill with remaining qty
+         *     not yet allocated to any pair.
+         */
+        PendingTradeOut: {
+            /** Order Id */
+            order_id: string;
+            /** Ticker */
+            ticker: string;
+            /** Symbol */
+            symbol: string;
+            /** Side */
+            side: string;
+            /** Qty */
+            qty: number;
+            /** Allocated Qty */
+            allocated_qty: number;
+            /** Pending Qty */
+            pending_qty: number;
+            /** Price */
+            price: number;
+            /**
+             * Ts
+             * Format: date-time
+             */
+            ts: string;
+        };
         /** PositionOut */
         PositionOut: {
             /** Symbol */
@@ -1223,6 +1463,26 @@ export interface components {
             /** Total */
             total: number;
         };
+        /**
+         * QuotedRefOut
+         * @description Nested representation of a quoted parent message.
+         *
+         *     All four fields are denormalized into ``chat_messages`` columns at write
+         *     time, so the row renders correctly even if the parent message is missing
+         *     (different week, never scraped, non-watched sender). ``message_id`` and
+         *     ``posted_at`` may be ``None`` when the scrape only captured the visible
+         *     quote bubble without a stable id / timestamp.
+         */
+        QuotedRefOut: {
+            /** Message Id */
+            message_id?: string | null;
+            /** Author */
+            author: string;
+            /** Content */
+            content: string;
+            /** Posted At */
+            posted_at?: string | null;
+        };
         /** QuotesOut */
         QuotesOut: {
             /** Quotes */
@@ -1330,7 +1590,7 @@ export interface components {
         /** TPairOut */
         TPairOut: {
             /** Id */
-            id: string;
+            id: number;
             /** Ticker */
             ticker: string;
             /** Symbol */
@@ -1339,6 +1599,11 @@ export interface components {
             buys: components["schemas"]["TPairAllocation"][];
             /** Sells */
             sells: components["schemas"]["TPairAllocation"][];
+            /**
+             * Profit
+             * @default 0
+             */
+            profit: number;
             /**
              * Created At
              * Format: date-time
@@ -1541,7 +1806,7 @@ export interface components {
              * Source
              * @enum {string}
              */
-            source: "stock" | "option";
+            source: "stock" | "option" | "chat";
             /** Name */
             name?: string | null;
         };
@@ -1600,6 +1865,13 @@ export interface components {
             option_total_price_limit_enabled?: boolean | null;
             /** Option Total Price Limit */
             option_total_price_limit?: number | null;
+            /** Watched Senders */
+            watched_senders?: string[];
+            /**
+             * Chat Card Max Msgs
+             * @default 5
+             */
+            chat_card_max_msgs: number;
         };
         /**
          * WhopPageSettingsPatch
@@ -1628,6 +1900,10 @@ export interface components {
             option_total_price_limit_enabled?: boolean | null;
             /** Option Total Price Limit */
             option_total_price_limit?: number | null;
+            /** Watched Senders */
+            watched_senders?: string[] | null;
+            /** Chat Card Max Msgs */
+            chat_card_max_msgs?: number | null;
         };
         /** WhopPagesOut */
         WhopPagesOut: {
@@ -1841,6 +2117,43 @@ export interface operations {
             };
         };
     };
+    list_db_rows_endpoint_api_db__table__get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+                token?: string | null;
+            };
+            header?: never;
+            path: {
+                table: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_pairs_endpoint_api_pairs_get: {
         parameters: {
             query?: {
@@ -1910,6 +2223,36 @@ export interface operations {
             };
         };
     };
+    delete_pairs_by_ticker_endpoint_api_pairs_delete: {
+        parameters: {
+            query: {
+                ticker: string;
+                token?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     extend_pair_endpoint_api_pairs__pair_id__extend_post: {
         parameters: {
             query?: {
@@ -1917,7 +2260,7 @@ export interface operations {
             };
             header?: never;
             path: {
-                pair_id: string;
+                pair_id: number;
             };
             cookie?: never;
         };
@@ -1954,7 +2297,7 @@ export interface operations {
             };
             header?: never;
             path: {
-                pair_id: string;
+                pair_id: number;
             };
             cookie?: never;
         };
@@ -1966,6 +2309,71 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pair_aggregate_endpoint_api_pairs_aggregate_get: {
+        parameters: {
+            query?: {
+                ticker?: string | null;
+                token?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PairAggregateOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pending_executions_endpoint_api_broker_executions_pending_get: {
+        parameters: {
+            query?: {
+                ticker?: string | null;
+                limit?: number;
+                token?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PendingExecutionsOut"];
+                };
             };
             /** @description Validation Error */
             422: {
@@ -2050,12 +2458,14 @@ export interface operations {
         parameters: {
             query: {
                 symbol: string;
-                /** @description today | 5 | 7 | 15 | 30 | 60 | 90 */
+                /** @description today | 5 | 7 | 30 | day | week | month | year */
                 period?: string;
                 /** @description (today only) 2min | 3min | 5min */
                 granularity?: string;
                 /** @description (today only) regular | all (include pre/post-market) */
                 sessions?: string;
+                /** @description Optional UTC instant — when set, return bars strictly older than this (used by the detail-pane pan-back flow). Only supported for day/week/month/year periods. */
+                before?: string | null;
                 token?: string | null;
             };
             header?: never;
@@ -2107,6 +2517,36 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ExecutionsOut"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_broker_executions_endpoint_api_broker_executions_delete: {
+        parameters: {
+            query: {
+                ticker: string;
+                token?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -2662,6 +3102,41 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_chat_messages_api_whop_pages__page_id__chat_messages_get: {
+        parameters: {
+            query?: {
+                week?: string | null;
+                senders?: string | null;
+                token?: string | null;
+            };
+            header?: never;
+            path: {
+                page_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatMessagesOut"];
+                };
             };
             /** @description Validation Error */
             422: {
