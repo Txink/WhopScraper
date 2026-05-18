@@ -413,6 +413,39 @@
   color: var(--fg-3);
   font-size: 12px;
 }
+.db-tab-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 6px 12px 8px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-2);
+}
+.db-tab {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--fg-3);
+  padding: 4px 10px;
+  border-radius: var(--radius-chip);
+  font: inherit;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  cursor: pointer;
+}
+.db-tab:hover {
+  color: var(--fg-1);
+  border-color: var(--fg-3);
+}
+.db-tab.active {
+  color: var(--fg-1);
+  border-color: var(--fg-1);
+  background: rgba(255, 255, 255, 0.04);
+}
+.db-tasks-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 12px 0;
+}
 .db-refresh-btn {
   background: transparent;
   border: 1px solid var(--line-strong);
