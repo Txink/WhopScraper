@@ -103,4 +103,34 @@ describe("<GenericDbTable>", () => {
     // fmtBeijingFull 应当包含年份数字（具体格式可能因实现而异，只断言不是空也不是原始 ISO）
     expect(cells[1].textContent).toMatch(/\d{4}/);
   });
+
+  it("rounds decimal numbers to 3 places and keeps full value in title", async () => {
+    vi.spyOn(httpModule.api, "listDbRows").mockResolvedValue({
+      table: "broker_executions",
+      columns: ["order_id", "price", "qty"],
+      rows: [
+        ["o1", 26.123456789, 100],
+        ["o2", 26.5, 200],
+        ["o3", 26, 300],
+      ],
+      total: 3,
+    });
+
+    render(<GenericDbTable table="broker_executions" />);
+    await waitFor(() => expect(screen.getByText("o1")).toBeInTheDocument());
+
+    const rowO1 = screen.getByText("o1").closest("tr")!;
+    expect(rowO1.querySelectorAll("td")[1].textContent).toBe("26.123");
+    expect(rowO1.querySelectorAll("td")[1].getAttribute("title")).toBe("26.123456789");
+    // qty (整数) 不动
+    expect(rowO1.querySelectorAll("td")[2].textContent).toBe("100");
+
+    // 已经 ≤3 位小数的不加尾零
+    const rowO2 = screen.getByText("o2").closest("tr")!;
+    expect(rowO2.querySelectorAll("td")[1].textContent).toBe("26.5");
+
+    // 纯整数走原 String() 分支
+    const rowO3 = screen.getByText("o3").closest("tr")!;
+    expect(rowO3.querySelectorAll("td")[1].textContent).toBe("26");
+  });
 });

@@ -22,6 +22,10 @@ function renderCell(value: unknown): { text: string; title?: string } {
   if (typeof value === "string" && ISO_DATETIME_RE.test(value)) {
     return { text: fmtBeijingFull(value), title: value };
   }
+  if (typeof value === "number" && !Number.isInteger(value)) {
+    const rounded = Number(value.toFixed(3));
+    return { text: String(rounded), title: String(value) };
+  }
   return { text: String(value) };
 }
 
