@@ -2,8 +2,21 @@ import { useEffect, useMemo, useState } from "react";
 import type { TaskSummary } from "../../api/domain-types";
 import { api, HttpError } from "../../api/http";
 import { fmtBeijingFull } from "../Card/cardHelpers";
+import { GenericDbTable } from "./GenericDbTable";
 
 const PAGE_SIZE = 15;
+
+const TABLE_TABS = [
+  "tasks",
+  "messages",
+  "instructions",
+  "push_events",
+  "positions",
+  "t_pairs",
+  "broker_executions",
+] as const;
+
+type TableTab = (typeof TABLE_TABS)[number];
 
 function fmtTime(ts: string): string {
   const d = new Date(ts);
@@ -20,6 +33,44 @@ interface Props {
 }
 
 export function DatabaseRecordsPanel({ pageNameByUrl }: Props) {
+  const [activeTab, setActiveTab] = useState<TableTab>("tasks");
+
+  return (
+    <section className="db-panel" aria-label="数据库记录">
+      <header className="db-panel-head">
+        <div className="db-panel-title-wrap">
+          <h3>数据库记录</h3>
+          <p>按表分页查看持久化记录</p>
+        </div>
+      </header>
+
+      <nav className="db-tab-bar" role="tablist">
+        {TABLE_TABS.map((t) => (
+          <button
+            key={t}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === t}
+            className={`db-tab${activeTab === t ? " active" : ""}`}
+            onClick={() => setActiveTab(t)}
+          >
+            {t}
+          </button>
+        ))}
+      </nav>
+
+      {activeTab === "tasks" ? (
+        <TasksTabContent pageNameByUrl={pageNameByUrl} />
+      ) : (
+        <GenericDbTable table={activeTab} />
+      )}
+    </section>
+  );
+}
+
+// ---- tasks tab (preserved curated view) ----
+
+function TasksTabContent({ pageNameByUrl }: Props) {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageRows, setPageRows] = useState<Record<number, TaskSummary[]>>({});
   const [pageCursor, setPageCursor] = useState<Record<number, string | null>>({ 1: null });
@@ -89,16 +140,12 @@ export function DatabaseRecordsPanel({ pageNameByUrl }: Props) {
   );
 
   return (
-    <section className="db-panel" aria-label="数据库记录">
-      <header className="db-panel-head">
-        <div className="db-panel-title-wrap">
-          <h3>数据库记录</h3>
-          <p>按页查看持久化 task 记录（每页 15 条）</p>
-        </div>
+    <>
+      <div className="db-tasks-toolbar">
         <button className="db-refresh-btn" onClick={refresh} disabled={loading}>
           {loading ? "刷新中…" : "刷新"}
         </button>
-      </header>
+      </div>
 
       {error && <div className="db-error">{error}</div>}
 
@@ -123,9 +170,7 @@ export function DatabaseRecordsPanel({ pageNameByUrl }: Props) {
                 <tr key={task.id}>
                   <td>{fmtTime(getMessageTime(task))}</td>
                   <td>
-                    <span className={`db-source ${sourceState}`}>
-                      {sourceLabel}
-                    </span>
+                    <span className={`db-source ${sourceState}`}>{sourceLabel}</span>
                   </td>
                   <td className={`db-status ${task.status.toLowerCase()}`}>{task.status}</td>
                   <td>{task.message.author ?? "—"}</td>
@@ -145,7 +190,9 @@ export function DatabaseRecordsPanel({ pageNameByUrl }: Props) {
         >
           上一页
         </button>
-        <span className="db-page-indicator">第 {currentPage} 页 / 共 {totalPages} 页</span>
+        <span className="db-page-indicator">
+          第 {currentPage} 页 / 共 {totalPages} 页
+        </span>
         <button
           className="db-page-btn"
           onClick={() => setCurrentPage((p) => p + 1)}
@@ -154,6 +201,6 @@ export function DatabaseRecordsPanel({ pageNameByUrl }: Props) {
           下一页
         </button>
       </footer>
-    </section>
+    </>
   );
 }

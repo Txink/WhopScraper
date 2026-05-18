@@ -127,4 +127,26 @@ describe("<DatabaseRecordsPanel>", () => {
     expect(listSpy).toHaveBeenNthCalledWith(2, { limit: 15, cursor: "cursor-2" });
     expect(countSpy).toHaveBeenCalledTimes(2);
   });
+
+  it("switches to a non-tasks tab and calls listDbRows", async () => {
+    vi.spyOn(httpModule.api, "listTasks").mockResolvedValue({
+      tasks: [],
+      next_cursor: null,
+    });
+    vi.spyOn(httpModule.api, "countTasks").mockResolvedValue({ total_count: 0 });
+    const dbSpy = vi.spyOn(httpModule.api, "listDbRows").mockResolvedValue({
+      table: "messages",
+      columns: ["id", "content"],
+      rows: [["m1", "hello"]],
+      total: 1,
+    });
+
+    render(<DatabaseRecordsPanel pageNameByUrl={new Map()} />);
+    await waitFor(() => expect(httpModule.api.listTasks).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByRole("tab", { name: "messages" }));
+    await waitFor(() => expect(screen.getByText("hello")).toBeInTheDocument());
+
+    expect(dbSpy).toHaveBeenCalledWith("messages", { limit: 15, offset: 0 });
+  });
 });
