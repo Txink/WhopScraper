@@ -384,3 +384,103 @@ def test_delete_stock_page_leaves_chat_messages_untouched(app_with_db) -> None: 
 
     # Chat rows for the OTHER page are still there.
     assert loop.run_until_complete(_count()) == 1
+
+
+# ---------------------------------------------------------------------------
+# T14: GET /api/whop/pages/{page_id}/chat-messages
+# ---------------------------------------------------------------------------
+
+
+def _make_chat_page(client: TestClient, url: str = "https://whop.example/chat-t14") -> str:
+    """Create a chat-source page via the API and return its id."""
+    resp = client.post(
+        "/api/whop/pages",
+        json={"url": url, "source": "chat"},
+        params={"token": _TOKEN},
+    )
+    assert resp.status_code == 201, resp.text
+    return resp.json()["id"]
+
+
+def test_get_chat_messages_returns_shape(app_with_db) -> None:  # noqa: ANN001
+    """Endpoint returns messages, authors, week — all top-level keys present."""
+    client, _factory, _registry, _loop = app_with_db
+    page_id = _make_chat_page(client)
+
+    resp = client.get(
+        f"/api/whop/pages/{page_id}/chat-messages",
+        params={"week": "2026-W21", "token": _TOKEN},
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert "messages" in body
+    assert "authors" in body
+    assert "week" in body
+    assert isinstance(body["messages"], list)
+    assert isinstance(body["authors"], list)
+    assert "start" in body["week"]
+    assert "end" in body["week"]
+
+
+def test_get_chat_messages_filters_by_sender(app_with_db) -> None:  # noqa: ANN001
+    """senders=alice returns only alice's messages."""
+    client, factory, _registry, loop = app_with_db
+    page_id = _make_chat_page(client, url="https://whop.example/chat-t14-filter")
+
+    async def _seed() -> None:
+        async with factory() as s:
+            for i, author in enumerate(["alice", "bob", "alice"]):
+                await repo.upsert_chat_message(
+                    s,
+                    ChatMessageRow(
+                        id=f"m{i}",
+                        page_id=page_id,
+                        author=author,
+                        content="x",
+                        raw_content="x",
+                        posted_at=datetime(2026, 5, 20, 9, i, tzinfo=UTC),
+                        received_at=datetime(2026, 5, 20, 9, i, tzinfo=UTC),
+                        url="https://whop.example/chat-t14-filter",
+                        quoted_message_id=None,
+                        quoted_author=None,
+                        quoted_content=None,
+                        quoted_posted_at=None,
+                    ),
+                )
+            await s.commit()
+
+    loop.run_until_complete(_seed())
+
+    resp = client.get(
+        f"/api/whop/pages/{page_id}/chat-messages",
+        params={"week": "2026-W21", "senders": "alice", "token": _TOKEN},
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert all(m["author"] == "alice" for m in body["messages"])
+    assert len(body["messages"]) == 2
+
+
+def test_get_chat_messages_unknown_page_404(app_with_db) -> None:  # noqa: ANN001
+    """Unknown page_id returns 404."""
+    client, _factory, _registry, _loop = app_with_db
+    resp = client.get(
+        "/api/whop/pages/no-such-page/chat-messages",
+        params={"week": "2026-W21", "token": _TOKEN},
+    )
+    assert resp.status_code == 404, resp.text
+
+
+def test_get_chat_messages_defaults_to_current_week(app_with_db) -> None:  # noqa: ANN001
+    """Omitting ?week falls back to the current ISO week."""
+    client, _factory, _registry, _loop = app_with_db
+    page_id = _make_chat_page(client, url="https://whop.example/chat-t14-default")
+
+    resp = client.get(
+        f"/api/whop/pages/{page_id}/chat-messages",
+        params={"token": _TOKEN},
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert "start" in body["week"]
+    assert "end" in body["week"]

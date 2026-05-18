@@ -613,6 +613,52 @@ class OrphanCleanupResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Chat monitor panel — GET /api/whop/pages/{page_id}/chat-messages
+# ---------------------------------------------------------------------------
+
+
+class QuotedRefOut(BaseModel):
+    """Nested representation of a quoted parent message.
+
+    All four fields are denormalized into ``chat_messages`` columns at write
+    time, so the row renders correctly even if the parent message is missing
+    (different week, never scraped, non-watched sender). ``message_id`` and
+    ``posted_at`` may be ``None`` when the scrape only captured the visible
+    quote bubble without a stable id / timestamp.
+    """
+
+    message_id: str | None = None
+    author: str
+    content: str
+    posted_at: datetime | None = None
+
+
+class ChatMessageOut(BaseModel):
+    id: str
+    page_id: str
+    author: str
+    content: str
+    posted_at: datetime
+    quoted: QuotedRefOut | None = None
+
+
+class ChatAuthorOut(BaseModel):
+    name: str
+    count: int
+
+
+class ChatWeekWindowOut(BaseModel):
+    start: datetime
+    end: datetime
+
+
+class ChatMessagesOut(BaseModel):
+    messages: list[ChatMessageOut]
+    authors: list[ChatAuthorOut]
+    week: ChatWeekWindowOut
+
+
+# ---------------------------------------------------------------------------
 # Converters: domain dataclasses → Pydantic Out models
 # ---------------------------------------------------------------------------
 
