@@ -89,6 +89,10 @@ interface Props {
   /** Settings-menu actions. Each is fired with no args; the caller
    *  knows the active ticker. */
   onClearAllPairs?(): Promise<void> | void;
+  /** Force-pull the last 7 days of broker fills for the current ticker
+   *  and upsert into ``broker_executions`` (no delete; idempotent on
+   *  order_id). Non-destructive — fires without a confirm modal. */
+  onSyncRecentTrades?(): Promise<void> | void;
   onRefetchTrades?(): Promise<void> | void;
   onClearAllTrades?(): Promise<void> | void;
 }
@@ -111,6 +115,7 @@ export function TradeList({
   filter = "all",
   onFilterChange,
   onClearAllPairs,
+  onSyncRecentTrades,
   onRefetchTrades,
   onClearAllTrades,
 }: Props) {
@@ -401,6 +406,15 @@ export function TradeList({
                     {filter === "tagged" ? "✓ " : ""}只看已做T （含部分）
                   </button>
                   <div className="trade-menu-sep" />
+                  <button
+                    className="trade-menu-item"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      void onSyncRecentTrades?.();
+                    }}
+                  >
+                    拉取最新（近 1 周）
+                  </button>
                   <button
                     className="trade-menu-item"
                     onClick={() => {

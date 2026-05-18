@@ -390,6 +390,20 @@ export const api = {
     return request<Executions>(`/api/broker/executions?${qs.toString()}`);
   },
 
+  /** Force-pull the last ``days`` of broker fills for ``ticker`` and
+   *  upsert into ``broker_executions``. Distinct from a re-GET of
+   *  ``executions()``, which uses incremental-from-MAX(ts) semantics
+   *  and misses mid-window gaps in the local cache. */
+  async syncExecutions(
+    ticker: string,
+    days = 7,
+  ): Promise<{ persisted: number }> {
+    const qs = new URLSearchParams({ ticker, days: String(days) });
+    return request(`/api/broker/executions/sync?${qs.toString()}`, {
+      method: "POST",
+    });
+  },
+
   // -------------------------------------------------------------------------
   // 做T pair CRUD — server allocates qty FIFO when creating/extending.
   // -------------------------------------------------------------------------

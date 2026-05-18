@@ -643,6 +643,37 @@ export function DetailPane({ position, onBack }: Props) {
     });
   }, [ticker, setPairs, appendTrades, setActivePair]);
 
+  const onSyncRecentTrades = useCallback(async () => {
+    try {
+      setTradesInitialized(false);
+      await api.syncExecutions(ticker, 7);
+      const r = await api.executions(ticker, {
+        offset: 0,
+        limit: TRADES_INITIAL_LIMIT,
+      });
+      const trades = r.executions.map((e) => ({
+        id: e.order_id,
+        ticker: e.ticker,
+        symbol: e.symbol,
+        side: e.side,
+        qty: e.qty,
+        price: e.price,
+        ts: e.ts,
+        source: null,
+        tag: null,
+        t_pair_tags:
+          (e as { t_pair_tags?: [number, number][] }).t_pair_tags ?? [],
+      }));
+      setTrades(ticker, trades);
+      setTradesTotal(r.total_count);
+      setLastSyncedAt(r.last_synced_at ?? null);
+    } catch (e) {
+      console.error("syncRecentTrades failed", e);
+    } finally {
+      setTradesInitialized(true);
+    }
+  }, [ticker, setTrades]);
+
   const onRefetchTrades = useCallback(() => {
     setPendingConfirm({
       title: `重新拉取 ${ticker} 近 2 年交易记录`,
@@ -792,6 +823,7 @@ export function DetailPane({ position, onBack }: Props) {
         filter={tradeFilter}
         onFilterChange={setTradeFilter}
         onClearAllPairs={onClearAllPairs}
+        onSyncRecentTrades={onSyncRecentTrades}
         onRefetchTrades={onRefetchTrades}
         onClearAllTrades={onClearAllTrades}
       />
