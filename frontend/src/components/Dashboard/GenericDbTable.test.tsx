@@ -81,4 +81,26 @@ describe("<GenericDbTable>", () => {
     await waitFor(() => expect(screen.getByText("b")).toBeInTheDocument());
     expect(spy).toHaveBeenNthCalledWith(2, "messages", { limit: 15, offset: 15 });
   });
+
+  it("formats ISO datetime cells via fmtBeijingFull with raw timestamp in title", async () => {
+    const iso = "2026-04-25T03:00:00Z";
+    vi.spyOn(httpModule.api, "listDbRows").mockResolvedValue({
+      table: "messages",
+      columns: ["id", "posted_at"],
+      rows: [["m1", iso]],
+      total: 1,
+    });
+
+    render(<GenericDbTable table="messages" />);
+    await waitFor(() => expect(screen.getByText("m1")).toBeInTheDocument());
+
+    // 原始 ISO 仍在 title 里，方便复制
+    expect(screen.getByTitle(iso)).toBeInTheDocument();
+    // 显示文本不应是原始 ISO
+    const row = screen.getByText("m1").closest("tr")!;
+    const cells = row.querySelectorAll("td");
+    expect(cells[1].textContent).not.toBe(iso);
+    // fmtBeijingFull 应当包含年份数字（具体格式可能因实现而异，只断言不是空也不是原始 ISO）
+    expect(cells[1].textContent).toMatch(/\d{4}/);
+  });
 });

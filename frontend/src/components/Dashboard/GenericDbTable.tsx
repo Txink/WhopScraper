@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { api, HttpError, type DbRowsResponse } from "../../api/http";
+import { fmtBeijingFull } from "../Card/cardHelpers";
 
 const PAGE_SIZE = 15;
 const JSON_TRUNCATE = 80;
+const ISO_DATETIME_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
 
 interface Props {
   table: string;
@@ -16,6 +18,9 @@ function renderCell(value: unknown): { text: string; title?: string } {
     const full = JSON.stringify(value);
     const text = full.length > JSON_TRUNCATE ? full.slice(0, JSON_TRUNCATE) + "…" : full;
     return { text, title: full };
+  }
+  if (typeof value === "string" && ISO_DATETIME_RE.test(value)) {
+    return { text: fmtBeijingFull(value), title: value };
   }
   return { text: String(value) };
 }
