@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { WhopPage } from "../../api/domain-types";
 import { useChatStore } from "../../stores/chatStore";
 import { groupIntoCards } from "./chatCards";
@@ -17,15 +17,22 @@ export function ChatBoardPanel({ page, week }: Props) {
   const cache = useChatStore((s) => s.caches[`${page.id}|${week}`]);
   const fetch = useChatStore((s) => s.fetch);
 
-  const watchedSenders = page.settings.watched_senders ?? [];
+  // Local state seeded from page settings; stays responsive to chip toggles
+  // without waiting for parent re-fetch. Re-syncs if upstream settings change
+  // (e.g., PageSettingsModal save).
+  const [watchedSenders, setWatchedSenders] = useState<string[]>(
+    page.settings.watched_senders ?? [],
+  );
+  useEffect(() => {
+    setWatchedSenders(page.settings.watched_senders ?? []);
+  }, [page.settings.watched_senders]);
+
   const maxN = page.settings.chat_card_max_msgs ?? 5;
 
   useEffect(() => {
-    fetch(page.id, week, watchedSenders);
-    // Intentionally NOT depending on watchedSenders — backend returns all
-    // authors for the week regardless; filtering is client-side via
-    // groupIntoCards. Refetching on watch changes would just reload identical data.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Fetch full week's messages once per (page, week). Senders filter is
+    // applied client-side via groupIntoCards — no need to re-fetch on toggle.
+    fetch(page.id, week, []);
   }, [page.id, week, fetch]);
 
   const messages = cache?.messages ?? [];
@@ -49,12 +56,7 @@ export function ChatBoardPanel({ page, week }: Props) {
   }
 
   function handleSenderChange(next: string[]) {
-    // After PATCH succeeds in ChatSenderBar, refetch is unnecessary —
-    // the server already returned all authors for the week. Card grouping
-    // is purely client-side, so just trust the optimistic update.
-    // (No-op here intentionally; the store update will happen via the
-    // PageSettingsModal / PATCH flow if persistence matters for refresh.)
-    void next;
+    setWatchedSenders(next);
   }
 
   return (
