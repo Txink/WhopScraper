@@ -1395,9 +1395,27 @@ def build_http_router(
 
         @router.delete("/api/whop/pages/{page_id}", status_code=204)
         async def delete_whop_page(page_id: str) -> None:
+            # Capture the source BEFORE removing the entry so we know whether
+            # this is a chat page (chat pages need their chat_messages rows
+            # cleaned up — there's no FK cascade since WhopPageEntry lives in
+            # data/whop_pages.json, not the DB). The registry exposes entries
+            # via list_pages(); the page may not exist (concurrent delete,
+            # bad id) in which case remove_page below 404s.
+            source: str | None = None
+            for entry, _ll in whop_registry.list_pages():
+                if entry.id == page_id:
+                    source = entry.source
+                    break
+
             ok = await whop_registry.remove_page(page_id)
             if not ok:
                 raise HTTPException(404, detail="page not found")
+
+            # Spec: 仅对 source == "chat" 的页面执行清理 (no-op for stock/option;
+            # explicit guard avoids an unnecessary DELETE statement).
+            if source == "chat":
+                async with session_scope(session_factory) as session:
+                    await repo.delete_chat_messages_by_page(session, page_id)
 
         @router.post("/api/whop/pages/{page_id}/restart", response_model=WhopPageOut)
         async def restart_whop_page(page_id: str) -> WhopPageOut:
