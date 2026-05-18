@@ -101,3 +101,8 @@
                     transition: background 150ms, border-color 150ms; }
 .chat-meta-export:hover { background: rgba(var(--brand-rgb), 0.18);
                           border-color: var(--brand); }
+
+.chat-panel { display: flex; flex-direction: column; height: 100%;
+              min-height: 0; }
+.chat-panel .chat-board { flex: 1; min-height: 0; overflow-y: auto; }
+.chat-empty { padding: 60px 20px; text-align: center; color: var(--fg-2); }
