@@ -535,6 +535,46 @@ class LongPortClient:
         row["change"] = last - prev
         row["change_pct"] = (row["change"] / prev) * 100.0 if prev > 0 else 0.0
 
+    @staticmethod
+    def _sdk_order_side(order: Any) -> str:
+        side_attr = getattr(order, "side", None)
+        if side_attr is None:
+            return ""
+        return str(side_attr).split(".")[-1].upper()
+
+    @staticmethod
+    def _ingest_orders(side_by_order: dict[str, str], orders: Any) -> None:
+        for o in orders or []:
+            order_id = str(getattr(o, "order_id", ""))
+            if order_id:
+                side_by_order[order_id] = LongPortClient._sdk_order_side(o)
+
+    @staticmethod
+    def _execution_dedupe_key(execution: Any) -> tuple[str, ...]:
+        trade_id = str(getattr(execution, "trade_id", "") or "")
+        if trade_id:
+            return ("trade_id", trade_id)
+        return (
+            "fallback",
+            str(getattr(execution, "order_id", "")),
+            str(getattr(execution, "trade_done_at", "")),
+            str(getattr(execution, "quantity", "")),
+        )
+
+    @staticmethod
+    def _window_includes_today_slice(end: "datetime") -> bool:
+        """Only merge SDK ``today_*`` when the window ends near now.
+
+        Historical 90-day backfill chunks end in the past; calling
+        ``today_executions()`` there would inject current-day fills into
+        the wrong chunk.
+        """
+        from datetime import datetime, timedelta, timezone
+
+        now = datetime.now(timezone.utc)
+        end_utc = end if end.tzinfo is not None else end.replace(tzinfo=timezone.utc)
+        return (now - end_utc) <= timedelta(days=1)
+
     def _fetch_executions_window(
         self,
         *,
@@ -544,11 +584,16 @@ class LongPortClient:
     ) -> list[dict[str, Any]]:
         """Common path for ``today_executions`` / ``history_executions``.
 
-        Pulls a time-windowed slice of broker fills + orders, joins to
-        recover side, and shapes each row into the dict our wire schema
-        expects. The optional ``ticker`` filter is applied AFTER fetching
-        because the SDK's ``symbol`` filter accepts only one symbol at a
-        time — for option positions on a ticker we want all contracts.
+        LongBridge splits **today** vs **history** into separate SDK
+        endpoints. Unsettled intraday fills live under ``today_executions``
+        / ``today_orders``; settled fills appear in ``history_*``. We union
+        both (dedupe fills by ``trade_id``) and merge order sides from both
+        order endpoints so executions are not dropped when a fill's
+        ``order_id`` only exists in ``today_orders``.
+
+        The optional ``ticker`` filter is applied AFTER fetching because
+        the SDK's ``symbol`` filter accepts only one symbol at a time — for
+        option positions on a ticker we want all contracts.
 
         Caller contract: ``end - start`` MUST be ≤ 90 days. LongBridge
         rejects wider single calls to both ``history_orders`` and
@@ -562,34 +607,64 @@ class LongPortClient:
         if self._trade_ctx is None:
             raise RuntimeError("LongPortClient has been closed")
 
-        # start / end are arguments now — kept as locals below so the
-        # downstream broker SDK call signatures don't need to change.
         now = end
+        include_today = self._window_includes_today_slice(now)
 
         side_by_order: dict[str, str] = {}
         try:
-            orders_resp = self._trade_ctx.history_orders(start_at=start, end_at=now)
+            history_orders = self._trade_ctx.history_orders(
+                start_at=start, end_at=now,
+            )
         except Exception as exc:  # noqa: BLE001
             logger.warning("history_orders fetch failed: %s", exc)
-            orders_resp = []
-        for o in orders_resp or []:
-            side_attr = getattr(o, "side", None)
-            side_str = str(side_attr).split(".")[-1].upper() if side_attr is not None else ""
-            order_id = str(getattr(o, "order_id", ""))
-            if order_id:
-                side_by_order[order_id] = side_str
+            history_orders = []
+        self._ingest_orders(side_by_order, history_orders)
+
+        if include_today:
+            try:
+                today_orders = self._trade_ctx.today_orders()
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("today_orders fetch failed: %s", exc)
+                today_orders = []
+            self._ingest_orders(side_by_order, today_orders)
+
+        execs_merged: list[Any] = []
+        seen_keys: set[tuple[str, ...]] = set()
+        n_today_execs = 0
+        n_hist_execs = 0
+
+        def _append_execs(batch: Any) -> None:
+            for e in batch or []:
+                key = self._execution_dedupe_key(e)
+                if key in seen_keys:
+                    continue
+                seen_keys.add(key)
+                execs_merged.append(e)
+
+        if include_today:
+            try:
+                today_execs = self._trade_ctx.today_executions()
+                n_today_execs = len(today_execs or [])
+                _append_execs(today_execs)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("today_executions fetch failed: %s", exc)
 
         try:
-            execs_resp = self._trade_ctx.history_executions(start_at=start, end_at=now)
+            history_execs = self._trade_ctx.history_executions(
+                start_at=start, end_at=now,
+            )
+            n_hist_execs = len(history_execs or [])
+            _append_execs(history_execs)
         except Exception as exc:  # noqa: BLE001
             logger.warning("history_executions fetch failed: %s", exc)
-            return []
 
         out: list[dict[str, Any]] = []
-        for e in execs_resp or []:
+        dropped_side = 0
+        for e in execs_merged:
             order_id = str(getattr(e, "order_id", ""))
             side = side_by_order.get(order_id, "")
             if side not in ("BUY", "SELL"):
+                dropped_side += 1
                 continue
             symbol = str(getattr(e, "symbol", ""))
             leg = parse_option_symbol(symbol)
@@ -626,17 +701,29 @@ class LongPortClient:
                 "price": price,
                 "ts": ts,
             })
+
+        logger.debug(
+            "executions_window [%s..%s] include_today=%s: "
+            "orders=%d execs_merged=%d (today=%d history=%d) out=%d dropped_side=%d",
+            start,
+            now,
+            include_today,
+            len(side_by_order),
+            len(execs_merged),
+            n_today_execs,
+            n_hist_execs,
+            len(out),
+            dropped_side,
+        )
         return out
 
     def today_executions(self) -> list[dict[str, Any]]:
-        """Fetch the current US trading day's broker-side fills.
+        """Fetch broker-side fills for the current trading window.
 
-        LongBridge's own ``today_executions`` SDK call uses HK/BJ calendar
-        day boundaries (UTC+8 midnight), so it MISSES fills during the US
-        regular session — those land in early-morning BJ which the broker
-        calls "yesterday". We pull a 30-hour window via
-        ``history_executions`` (covers the full ET session window with
-        margin); frontend filters to the current ET trading day.
+        Unions SDK ``today_executions`` with a 30-hour
+        ``history_executions`` slice (HK/BJ vs ET calendar quirks — see
+        ``knowledge/longbridge-api-limits.md`` §2). Frontend filters to the
+        current ET session where needed.
         """
         from datetime import datetime, timedelta, timezone
 

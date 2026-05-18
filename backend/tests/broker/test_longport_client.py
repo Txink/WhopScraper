@@ -6,6 +6,8 @@ connections are ever made.
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import patch
 
@@ -342,3 +344,137 @@ class TestClosedStateBaseline:
         client._market_state_for = lambda _s: "regular"  # type: ignore[method-assign]
         client._update_ref_cache("TSLA.US", _Q())
         assert "TSLA.US" not in client._prev_session_close_cache
+
+
+class TestFetchExecutionsWindow:
+    """``_fetch_executions_window`` unions today_* with history_* endpoints."""
+
+    def _make_client(self) -> LongPortClient:
+        cfg = _dry_config(dry_run=False)
+        with _SDK_PATCHES[0], _SDK_PATCHES[1], _SDK_PATCHES[2], _SDK_PATCHES[3], _SDK_PATCHES[4]:
+            return LongPortClient(cfg)
+
+    def _fill(
+        self,
+        *,
+        trade_id: str,
+        order_id: str,
+        symbol: str = "TSLL.US",
+        qty: int = 10,
+        price: float = 12.5,
+        ts: datetime | None = None,
+    ) -> SimpleNamespace:
+        return SimpleNamespace(
+            trade_id=trade_id,
+            order_id=order_id,
+            symbol=symbol,
+            quantity=qty,
+            price=price,
+            trade_done_at=ts or datetime(2026, 5, 19, 12, 0, 0),
+        )
+
+    def _order(self, *, order_id: str, side: str = "OrderSide.Buy") -> SimpleNamespace:
+        return SimpleNamespace(order_id=order_id, side=side)
+
+    def test_today_only_fill_with_today_order_side(self) -> None:
+        """Unsettled intraday fill: history empty, today has fill + order."""
+        client = self._make_client()
+        now = datetime.now(timezone.utc)
+        client._trade_ctx.history_orders.return_value = []
+        client._trade_ctx.history_executions.return_value = []
+        client._trade_ctx.today_orders.return_value = [
+            self._order(order_id="ord-today", side="OrderSide.Buy"),
+        ]
+        client._trade_ctx.today_executions.return_value = [
+            self._fill(trade_id="t1", order_id="ord-today"),
+        ]
+
+        rows = client._fetch_executions_window(
+            ticker="TSLL", start=now - timedelta(hours=30), end=now,
+        )
+
+        assert len(rows) == 1
+        assert rows[0]["trade_id"] == "t1"
+        assert rows[0]["side"] == "BUY"
+        client._trade_ctx.today_executions.assert_called_once()
+        client._trade_ctx.today_orders.assert_called_once()
+
+    def test_history_fill_side_from_today_orders_when_history_orders_missing(self) -> None:
+        """Regression: fill only in history_executions but order in today_orders."""
+        client = self._make_client()
+        now = datetime.now(timezone.utc)
+        client._trade_ctx.history_orders.return_value = []
+        client._trade_ctx.history_executions.return_value = [
+            self._fill(trade_id="t-hist", order_id="ord-mix"),
+        ]
+        client._trade_ctx.today_orders.return_value = [
+            self._order(order_id="ord-mix", side="OrderSide.Sell"),
+        ]
+        client._trade_ctx.today_executions.return_value = []
+
+        rows = client._fetch_executions_window(
+            ticker="TSLL", start=now - timedelta(hours=30), end=now,
+        )
+
+        assert len(rows) == 1
+        assert rows[0]["side"] == "SELL"
+
+    def test_dedupes_same_trade_id_across_today_and_history(self) -> None:
+        client = self._make_client()
+        now = datetime.now(timezone.utc)
+        fill = self._fill(trade_id="dup", order_id="ord-dup")
+        client._trade_ctx.history_orders.return_value = [
+            self._order(order_id="ord-dup"),
+        ]
+        client._trade_ctx.today_orders.return_value = []
+        client._trade_ctx.today_executions.return_value = [fill]
+        client._trade_ctx.history_executions.return_value = [fill]
+
+        rows = client._fetch_executions_window(
+            ticker=None, start=now - timedelta(hours=30), end=now,
+        )
+
+        assert len(rows) == 1
+
+    def test_skips_today_endpoints_for_old_backfill_chunk(self) -> None:
+        """90-day chunks ending in the past must not call today_*."""
+        client = self._make_client()
+        end = datetime(2024, 1, 1, tzinfo=timezone.utc)
+        start = end - timedelta(days=90)
+        client._trade_ctx.history_orders.return_value = [
+            self._order(order_id="old-ord"),
+        ]
+        client._trade_ctx.history_executions.return_value = [
+            self._fill(
+                trade_id="old-t",
+                order_id="old-ord",
+                ts=datetime(2023, 12, 15, 10, 0, 0),
+            ),
+        ]
+
+        rows = client._fetch_executions_window(
+            ticker=None, start=start, end=end,
+        )
+
+        assert len(rows) == 1
+        client._trade_ctx.today_executions.assert_not_called()
+        client._trade_ctx.today_orders.assert_not_called()
+
+    def test_history_executions_failure_still_returns_today_fills(self) -> None:
+        client = self._make_client()
+        now = datetime.now(timezone.utc)
+        client._trade_ctx.history_orders.return_value = []
+        client._trade_ctx.history_executions.side_effect = RuntimeError("broker down")
+        client._trade_ctx.today_orders.return_value = [
+            self._order(order_id="ord-only-today"),
+        ]
+        client._trade_ctx.today_executions.return_value = [
+            self._fill(trade_id="t-only", order_id="ord-only-today"),
+        ]
+
+        rows = client._fetch_executions_window(
+            ticker="TSLL", start=now - timedelta(hours=30), end=now,
+        )
+
+        assert len(rows) == 1
+        assert rows[0]["trade_id"] == "t-only"

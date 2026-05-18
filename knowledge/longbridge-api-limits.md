@@ -2,7 +2,7 @@
 
 > 调用 LongBridge OpenAPI（`longbridge` Python SDK 包，4.1.0 实测）时容易踩到的、文档里没写或写得不显眼的硬限制。每一条都附排查路径和我们在代码里的应对策略。
 
-最后更新：2026-05-17
+最后更新：2026-05-19
 
 ---
 
@@ -41,19 +41,22 @@
 
 代表性测试：`test_history_executions_endpoint_full_backfill_even_with_narrow_sync_residue`
 
-**注意**：`_fetch_executions_window`（`longport_client.py`）的调用方必须保证传入的 `start`/`end` 已经 ≤ 90 天 —— 这个函数同时调用 `history_orders` 和 `history_executions`，两者用同一窗口，违反限制时两边都会失败，导致 `side_by_order` 为空进而过滤掉所有 execution。
+**注意**：`_fetch_executions_window`（`longport_client.py`）的调用方必须保证传入的 `start`/`end` 已经 ≤ 90 天 —— `history_orders` / `history_executions` 违反限制时会失败；当日未结算成交还需 `today_*` 端点（见 §2）。
 
 ---
 
-## 2. `trade_ctx.today_executions` — 用 HK/BJ 自然日，不是 ET 交易日
+## 2. `today_*` 与 `history_*` 是两套独立接口 — 必须 union
 
-**限制内容**：SDK 的 `today_executions()` 用 **UTC+8（HK/BJ）零点** 切分"今天"。
+**限制内容**：LongBridge SDK 把**当日**与**历史**拆成四个方法：`today_orders` / `history_orders`、`today_executions` / `history_executions`。盘中未结算成交通常只出现在 `today_executions`；`history_executions` 即使拉很宽的 `start_at..end_at` 也可能返回 0 条当日 fill。`order_id → side` 的 join 也必须合并 `today_orders`，否则当日 fill 会因 `side` 缺失被静默丢弃。
 
-**症状**：美股 RTH 阶段（BJ 23:30+）的成交，SDK 视角下属于"明天"；BJ 凌晨拿到的"今天"反而是空。
+**HK/BJ 自然日**：`today_executions()` 用 **UTC+8 零点**切「今天」，与 ET 交易日不完全一致（美股 RTH 在 BJ 次日清晨等边界情况见旧笔记）。
 
-**应对策略**：不直接用 `today_executions()`。改成 `history_executions(start_at=now-30h, end_at=now)`，覆盖一个完整 ET 交易日的窗口，前端再按 ET 交易日过滤。
+**应对策略**（`_fetch_executions_window`）：
+- 窗口末端距 **now ≤ 1 天** 时：`today_executions` ∪ `history_executions`（按 `trade_id` dedupe，today 优先），`today_orders` ∪ `history_orders` 填 `side_by_order`
+- 更早的 90 天 backfill 块**不**调 `today_*`（避免把当前日成交写进历史 chunk）
+- `LongPortClient.today_executions()` 仍用 **30 小时** `history_executions` 窗 + 上述 union；前端按 ET 交易日过滤
 
-代码入口：`backend/app/broker/longport_client.LongPortClient.today_executions`（注释里有详细说明）。
+代码入口：`backend/app/broker/longport_client.LongPortClient._fetch_executions_window`。
 
 ---
 
