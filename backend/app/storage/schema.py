@@ -16,7 +16,18 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Any
 
-from sqlalchemy import JSON, Boolean, Date, DateTime, ForeignKey, Index, Integer, String, text
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    Date,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    func,
+    text,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.storage.db import Base
@@ -97,6 +108,50 @@ class MessageRow(Base):
     received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     url: Mapped[str | None] = mapped_column(String, nullable=True)
     quoted_message_id: Mapped[str | None] = mapped_column(String, nullable=True)
+
+
+# ---------------------------------------------------------------------------
+# chat_messages  (free-standing — no FK to tasks; page_id is a SOFT link
+# because WhopPageEntry lives in data/whop_pages.json, not in DB)
+# ---------------------------------------------------------------------------
+
+
+class ChatMessageRow(Base):
+    """ORM mapping for the ``chat_messages`` table.
+
+    Rows are written directly by ``app.whop.chat_writer`` for pages whose
+    ``WhopPageEntry.source == "chat"``; they never go through the task /
+    instruction pipeline. The ``quoted_*`` columns are always denormalized
+    so a row renders correctly even if the referenced message is missing
+    (e.g., before scraping started, from a non-watched sender, or in a
+    different week than the active view).
+    """
+
+    __tablename__ = "chat_messages"
+    __table_args__ = (
+        Index("idx_chat_messages_page_posted", "page_id", "posted_at"),
+        Index("idx_chat_messages_page_author_posted", "page_id", "author", "posted_at"),
+    )
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    page_id: Mapped[str] = mapped_column(String, nullable=False)
+    author: Mapped[str] = mapped_column(String, nullable=False)
+    content: Mapped[str] = mapped_column(String, nullable=False)
+    raw_content: Mapped[str] = mapped_column(String, nullable=False)
+    posted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    url: Mapped[str | None] = mapped_column(String, nullable=True)
+    quoted_message_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    quoted_author: Mapped[str | None] = mapped_column(String, nullable=True)
+    quoted_content: Mapped[str | None] = mapped_column(String, nullable=True)
+    quoted_posted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
 
 
 # ---------------------------------------------------------------------------
