@@ -32,6 +32,8 @@ class PageSettings:
     option_total_price_limit_enabled: bool = False
     option_total_price_limit: float | None = None
     parser_version: Literal["v1", "v2"] = "v1"
+    watched_senders: list[str] = field(default_factory=list)
+    chat_card_max_msgs: int = 5
 
 
 DEFAULT_STOCK_SETTINGS = PageSettings(
@@ -82,8 +84,8 @@ def default_settings_for(source: Literal["stock", "option", "chat"]) -> PageSett
         )
     if source == "chat":
         # Chat pages monitor without trading semantics — no tickers, no option
-        # risk controls. Inherit defaults from PageSettings; T6 will extend with
-        # chat-specific fields (watched_senders, chat_card_max_msgs).
+        # risk controls. Chat-specific settings (watched_senders,
+        # chat_card_max_msgs) come from PageSettings defaults.
         return PageSettings(tickers=None)
     raise ValueError(f"unknown source: {source!r}")
 
@@ -99,6 +101,8 @@ def page_settings_to_dict(s: PageSettings) -> dict[str, Any]:
         "option_total_price_limit_enabled": s.option_total_price_limit_enabled,
         "option_total_price_limit": s.option_total_price_limit,
         "parser_version": s.parser_version,
+        "watched_senders": list(s.watched_senders),
+        "chat_card_max_msgs": s.chat_card_max_msgs,
     }
     if s.tickers is not None:
         out["tickers"] = {k: {"trade_quantity": v.trade_quantity} for k, v in s.tickers.items()}
@@ -139,6 +143,8 @@ def page_settings_from_dict(
     # Whitelist: any saved value that is not exactly "v2" degrades to "v1"
     # (handles missing key, legacy data, and future-unknown values uniformly).
     parser_version: Literal["v1", "v2"] = "v2" if pv_raw == "v2" else "v1"
+    watched_senders = list(d.get("watched_senders", base.watched_senders) or [])
+    chat_card_max_msgs = int(d.get("chat_card_max_msgs", base.chat_card_max_msgs))
     return PageSettings(
         dedupe_processed_messages=dedupe,
         price_deviation_tolerance=tol,
@@ -150,6 +156,8 @@ def page_settings_from_dict(
         option_total_price_limit_enabled=option_total_enabled,
         option_total_price_limit=option_total,
         parser_version=parser_version,
+        watched_senders=watched_senders,
+        chat_card_max_msgs=chat_card_max_msgs,
     )
 
 

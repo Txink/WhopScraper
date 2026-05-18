@@ -545,6 +545,8 @@ class WhopPageSettingsOut(BaseModel):
     option_buy_quantity: int | None = None
     option_total_price_limit_enabled: bool | None = None
     option_total_price_limit: float | None = None
+    watched_senders: list[str] = Field(default_factory=list)
+    chat_card_max_msgs: int = 5
 
 
 class WhopPageSettingsPatch(BaseModel):
@@ -560,6 +562,8 @@ class WhopPageSettingsPatch(BaseModel):
     option_buy_quantity: int | None = Field(default=None, ge=1)
     option_total_price_limit_enabled: bool | None = None
     option_total_price_limit: float | None = Field(default=None, gt=0)
+    watched_senders: list[str] | None = None
+    chat_card_max_msgs: int | None = Field(default=None, ge=1, le=50)
 
 
 # ---------------------------------------------------------------------------
@@ -800,6 +804,8 @@ def whop_page_to_out(
         option_buy_quantity=entry.settings.option_buy_quantity,
         option_total_price_limit_enabled=entry.settings.option_total_price_limit_enabled,
         option_total_price_limit=entry.settings.option_total_price_limit,
+        watched_senders=list(entry.settings.watched_senders),
+        chat_card_max_msgs=entry.settings.chat_card_max_msgs,
         tickers=(
             {
                 k: TickerConfigOut(trade_quantity=v.trade_quantity)
