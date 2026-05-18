@@ -22,8 +22,8 @@ UI 形态：单列卡片流（在 brainstorming 阶段已通过 `/.design/chat-m
 
 ```
 id                  TEXT PRIMARY KEY              -- whop 消息原生 ID
-page_id             TEXT NOT NULL                 -- WhopPageEntry.id
-                     REFERENCES whop_pages(id) ON DELETE CASCADE
+page_id             TEXT NOT NULL                 -- 软关联 WhopPageEntry.id；page 元数据在
+                                                  -- data/whop_pages.json，非 DB 表，无法走 FK
 author              TEXT NOT NULL                 -- 原始发送者名（scraper extract 一致）
 content             TEXT NOT NULL
 raw_content         TEXT NOT NULL
@@ -109,6 +109,7 @@ def list_chat_messages(
 def list_chat_authors(
     page_id: str, week_start: datetime, week_end: datetime,
 ) -> list[tuple[str, int]]   # (author, count)，供前端 sender chips
+def delete_chat_messages_by_page(page_id: str) -> int   # 返回删除条数，供 page 删除路径调用
 ```
 
 `list_chat_messages` 返回按 `posted_at ASC` 排序的整周消息流；`senders=None` 或 `[]` 表示不按发送者过滤。
@@ -116,6 +117,10 @@ def list_chat_authors(
 ### WebSocket 桥接
 
 `backend/app/api/ws.py` 现有桥接列表里加 `Topics.CHAT_MESSAGE_STORED`。前端 store 拿到广播后 append 到当前页缓存并重跑分组。
+
+### 页面删除时清理
+
+`WhopPageEntry` 元数据存在 `data/whop_pages.json`、不是 DB 表，无法走 FK 级联。所以现有 page 删除路径（`POST /api/whop/pages/{id}/delete` 或等价 endpoint）在删 registry 条目后，需要显式调用 `repo.delete_chat_messages_by_page(page_id)`。仅对 `source == "chat"` 的页面执行（对 stock/option 页面是 no-op，因为它们的 `chat_messages` 计数永远是 0）。
 
 ### Alembic 迁移
 
@@ -177,6 +182,8 @@ GET /api/whop/pages/{page_id}/chat-messages
 frontend/src/components/Chat/
   ChatBoardPanel.tsx        # 主容器，单列卡片流，挂 WeekPaginator
   ChatBoardPanel.css
+  ChatMetaBar.tsx           # chat 专属元信息条（"已抓取 N 条 · 关注 K 位发送者"）
+                            #   独立组件，不修改现有 PageInfoBar
   ChatSenderBar.tsx         # 顶部发送者 chips（仿 PageWhitelistBar 交互模式）
   ChatCard.tsx              # 单卡组件，按 kind 渲染 quote / batch
   chatCards.ts              # 纯函数 groupIntoCards(msgs, targetSenders, maxN)
@@ -198,7 +205,7 @@ frontend/src/stores/chatStore.ts     # (page_id, week) 维度缓存 + WS 增量
   : <DatabaseRecordsPanel ... />}        /* 现有路径 */
 ```
 
-`PageInfoBar` 内增加 `if (source === "chat")` 显示 chat 专属元信息（"已抓取 N 条 · 关注 K 位发送者"）。
+`PageInfoBar` **不改动**。chat 专属元信息（"已抓取 N 条 · 关注 K 位发送者"）由新组件 `ChatMetaBar` 渲染，仅在 `ChatBoardPanel` 内挂载。这样现有 stock/option 页面 0 风险。
 
 ### `groupIntoCards` 规则
 
@@ -306,7 +313,7 @@ JSON 结构：
 | target 在 maxN 之后又连续发了 K 条 | 当前 batch 卡显示 maxN 条 + `+K 更多`，不展开为第二张 batch 卡；直到出现 quote / 别人插话切断该段后，下一条 target 消息才开第二张 batch 卡 |
 | author 字符串带 emoji / 不可见字符 | 原样存原样展示；`watched_senders` 全字符串等值匹配（不规范化）以避免假阴性 |
 | 误改现有 stock/option 页的 source 为 chat | 后端拒绝 `PATCH` 修改 `source`；前端 PageSettingsModal 对已存在页面 disable `source` 字段 |
-| 删除 chat 页面 | `ON DELETE CASCADE` 自动清 `chat_messages` |
+| 删除 chat 页面 | 页面元数据在 `data/whop_pages.json`、非 DB 表，无 FK 级联。page 删除路径里在删 registry 条目后**显式**调用 `repo.delete_chat_messages_by_page(page_id)` 清表（详见"页面删除时清理"小节） |
 | WS 断线重连 | 重连后前端拉一次 `GET /chat-messages?week=...` 重建当前周缓存 |
 
 ## 测试
