@@ -1459,19 +1459,33 @@ def build_http_router(
     if whop_registry is not None:
 
         @router.get("/api/whop/pages", response_model=WhopPagesOut)
-        async def list_whop_pages() -> WhopPagesOut:
-            pages = whop_registry.list_pages()
+        async def list_whop_pages(
+            parent_chat_id: str | None = None,
+        ) -> WhopPagesOut:
+            """List monitored pages.
+
+            Default (no query param): only top-level pages (parent_chat_id IS NULL).
+            With ``?parent_chat_id=<id>``: only that parent's sub-monitors.
+            """
+            if parent_chat_id is None:
+                pages = whop_registry.list_pages()
+            else:
+                pages = whop_registry.list_pages(parent_chat_id=parent_chat_id)
             return WhopPagesOut(pages=[whop_page_to_out(e, ll) for e, ll in pages])
 
         @router.post("/api/whop/pages", response_model=WhopPageOut, status_code=201)
         async def create_whop_page(body: WhopPageCreate) -> WhopPageOut:
             try:
                 entry = await whop_registry.add_page(
-                    url=body.url, source=body.source, name=body.name
+                    url=body.url,
+                    source=body.source,
+                    name=body.name,
+                    parent_chat_id=body.parent_chat_id,
                 )
             except ValueError as exc:
                 raise HTTPException(400, detail=str(exc)) from exc
-            # Re-read to include listener status (include subs so new sub-monitors are found)
+            # Re-read to include listener status. Use parent_chat_id=None so we can
+            # find subs (they aren't in the default top-level listing).
             for e, ll in whop_registry.list_pages(parent_chat_id=None):
                 if e.id == entry.id:
                     return whop_page_to_out(e, ll)
