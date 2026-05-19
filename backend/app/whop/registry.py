@@ -33,6 +33,14 @@ from app.whop.page_settings import (
 
 logger = logging.getLogger(__name__)
 
+
+class _Sentinel:
+    """Marker for keyword args that need to distinguish 'caller passed None'
+    from 'caller didn't pass anything'. Don't export."""
+
+
+_DEFAULT = _Sentinel()
+
 # Source literal alias used by the cast() calls below; matches the type signature
 # of default_settings_for / page_settings_from_dict in app.whop.page_settings.
 _SourceLiteral = Literal["stock", "option", "chat"]
@@ -418,9 +426,31 @@ class WhopRegistry:
 
     # ---- read ops ----
 
-    def list_pages(self) -> list[tuple[WhopPageEntry, WhopListener | None]]:
-        """Return entries + their (optional) live listener. No lock — caller is read-only."""
-        return [(e, self._listeners.get(e.id)) for e in self._entries.values()]
+    def list_pages(
+        self,
+        *,
+        parent_chat_id: str | None | _Sentinel = _DEFAULT,
+    ) -> list[tuple[WhopPageEntry, WhopListener | None]]:
+        """Return entries + their (optional) live listener.
+
+        Default behaviour: only top-level entries (``parent_chat_id IS NULL``).
+        Pass ``parent_chat_id=<id>`` to get that parent's sub-monitors only.
+        Pass ``parent_chat_id=None`` explicitly to opt in to all entries
+        regardless of parent (internal use, e.g. URL routing, shutdown).
+        """
+        if isinstance(parent_chat_id, _Sentinel):
+            return [
+                (e, self._listeners.get(e.id))
+                for e in self._entries.values()
+                if e.parent_chat_id is None
+            ]
+        if parent_chat_id is None:
+            return [(e, self._listeners.get(e.id)) for e in self._entries.values()]
+        return [
+            (e, self._listeners.get(e.id))
+            for e in self._entries.values()
+            if e.parent_chat_id == parent_chat_id
+        ]
 
     def get_settings_for_url(self, url: str | None) -> PageSettings | None:
         """O(1) reverse lookup: url → PageSettings. Returns None for unknown/None url.

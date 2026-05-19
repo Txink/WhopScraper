@@ -1471,8 +1471,8 @@ def build_http_router(
                 )
             except ValueError as exc:
                 raise HTTPException(400, detail=str(exc)) from exc
-            # Re-read to include listener status
-            for e, ll in whop_registry.list_pages():
+            # Re-read to include listener status (include subs so new sub-monitors are found)
+            for e, ll in whop_registry.list_pages(parent_chat_id=None):
                 if e.id == entry.id:
                     return whop_page_to_out(e, ll)
             raise HTTPException(500, detail="added but lost track")
@@ -1486,7 +1486,7 @@ def build_http_router(
             # via list_pages(); the page may not exist (concurrent delete,
             # bad id) in which case remove_page below 404s.
             source: str | None = None
-            for entry, _ll in whop_registry.list_pages():
+            for entry, _ll in whop_registry.list_pages(parent_chat_id=None):
                 if entry.id == page_id:
                     source = entry.source
                     break
@@ -1519,7 +1519,7 @@ def build_http_router(
             regardless of the active filter selection.
             """
             page = None
-            for entry, _ll in whop_registry.list_pages():
+            for entry, _ll in whop_registry.list_pages(parent_chat_id=None):
                 if entry.id == page_id:
                     page = entry
                     break
@@ -1552,7 +1552,7 @@ def build_http_router(
             ok = await whop_registry.restart_page(page_id)
             if not ok:
                 raise HTTPException(404, detail="page not found or restart failed")
-            for e, ll in whop_registry.list_pages():
+            for e, ll in whop_registry.list_pages(parent_chat_id=None):
                 if e.id == page_id:
                     return whop_page_to_out(e, ll)
             raise HTTPException(500, detail="restart succeeded but lost track")
@@ -1568,7 +1568,7 @@ def build_http_router(
             ok = await whop_registry.start_page(page_id)
             if not ok:
                 raise HTTPException(404, detail="page not found or start failed")
-            for e, ll in whop_registry.list_pages():
+            for e, ll in whop_registry.list_pages(parent_chat_id=None):
                 if e.id == page_id:
                     return whop_page_to_out(e, ll)
             raise HTTPException(500, detail="started but lost track")
@@ -1583,7 +1583,7 @@ def build_http_router(
             ok = await whop_registry.stop_page(page_id)
             if not ok:
                 raise HTTPException(404, detail="page not found")
-            for e, ll in whop_registry.list_pages():
+            for e, ll in whop_registry.list_pages(parent_chat_id=None):
                 if e.id == page_id:
                     return whop_page_to_out(e, ll)
             raise HTTPException(500, detail="stopped but lost track")
@@ -1658,7 +1658,7 @@ def build_http_router(
                 raise HTTPException(404, detail=str(exc)) from exc
             except ValueError as exc:
                 raise HTTPException(400, detail=str(exc)) from exc
-            for e, ll in whop_registry.list_pages():
+            for e, ll in whop_registry.list_pages(parent_chat_id=None):
                 if e.id == entry.id:
                     return whop_page_to_out(e, ll)
             raise HTTPException(500, detail="updated but lost track")
@@ -1673,7 +1673,7 @@ def build_http_router(
             force=true since it's an explicit user choice.
             """
             if not body.force:
-                active_urls = {entry.url for entry, _ in whop_registry.list_pages()}
+                active_urls = {entry.url for entry, _ in whop_registry.list_pages(parent_chat_id=None)}
                 if body.url is not None and body.url in active_urls:
                     raise HTTPException(
                         400,

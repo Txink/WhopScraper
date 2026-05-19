@@ -202,3 +202,45 @@ async def test_remove_chat_parent_persists_orphaning(registry):
     assert len(pages) == 1
     survivor = pages[0][0]
     assert survivor.parent_chat_id is None
+
+
+@pytest.mark.asyncio
+async def test_list_pages_default_excludes_subs(registry):
+    chat = await registry.add_page(url="https://whop.com/c/chat-1", source="chat", name="c")
+    await registry.add_page(
+        url="https://whop.com/c/stock-a", source="stock", name="A", parent_chat_id=chat.id
+    )
+    standalone = await registry.add_page(url="https://whop.com/c/stock-x", source="stock", name="X")
+
+    top = registry.list_pages()
+    ids = {e.id for e, _ in top}
+    assert chat.id in ids
+    assert standalone.id in ids
+    # All returned entries are top-level (parent_chat_id is None)
+    assert all(e.parent_chat_id is None for e, _ in top)
+
+
+@pytest.mark.asyncio
+async def test_list_pages_filter_by_parent(registry):
+    chat = await registry.add_page(url="https://whop.com/c/chat-1", source="chat", name="c")
+    sub = await registry.add_page(
+        url="https://whop.com/c/stock-a", source="stock", name="A", parent_chat_id=chat.id
+    )
+    await registry.add_page(url="https://whop.com/c/stock-x", source="stock", name="X")
+
+    children = registry.list_pages(parent_chat_id=chat.id)
+    assert len(children) == 1
+    assert children[0][0].id == sub.id
+
+
+@pytest.mark.asyncio
+async def test_list_pages_explicit_none_includes_everything(registry):
+    """Passing parent_chat_id=None (explicit) opts in to all entries."""
+    chat = await registry.add_page(url="https://whop.com/c/chat-1", source="chat", name="c")
+    await registry.add_page(
+        url="https://whop.com/c/stock-a", source="stock", name="A", parent_chat_id=chat.id
+    )
+    await registry.add_page(url="https://whop.com/c/stock-x", source="stock", name="X")
+
+    everything = registry.list_pages(parent_chat_id=None)
+    assert len(everything) == 3
