@@ -26,13 +26,16 @@ export type ChatCard =
       id: string;           // = `batch:${msgs[0].id}`
       target_author: string;
       msgs: ChatMessageOut[];
-      overflow: number;
     };
+
+/** Max messages per batch card. When a watched sender posts a 9th
+ *  consecutive non-quote message, we close the current batch and open
+ *  a new one (same author) — no truncation, no "+N more". */
+export const MAX_MSGS_PER_BATCH = 8;
 
 export function groupIntoCards(
   messages: ChatMessageOut[],
   watchedSenders: Set<string>,
-  maxN: number,
 ): ChatCard[] {
   const out: ChatCard[] = [];
   let currentBatch: Extract<ChatCard, { kind: "batch" }> | null = null;
@@ -57,24 +60,20 @@ export function groupIntoCards(
       continue;
     }
 
-    // unquoted watched message
-    const opensNewBatch =
-      currentBatch === null || currentBatch.target_author !== m.author;
-    if (opensNewBatch) {
+    const sameAuthorAndRoom =
+      currentBatch !== null &&
+      currentBatch.target_author === m.author &&
+      currentBatch.msgs.length < MAX_MSGS_PER_BATCH;
+    if (sameAuthorAndRoom) {
+      currentBatch!.msgs.push(m);
+    } else {
       if (currentBatch) out.push(currentBatch);
       currentBatch = {
         kind: "batch",
         id: `batch:${m.id}`,
         target_author: m.author,
         msgs: [m],
-        overflow: 0,
       };
-    } else {
-      if (currentBatch.msgs.length < maxN) {
-        currentBatch.msgs.push(m);
-      } else {
-        currentBatch.overflow += 1;
-      }
     }
   }
 

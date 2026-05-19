@@ -1,9 +1,20 @@
 .chat-board {
   display: flex; flex-direction: column;
   gap: 14px;
-  max-width: 880px;
-  margin: 0 auto;
   padding: 14px;
+  /* Transparent scrollbar track — default UA white track clashes with the
+   * dark panel bg. Thumb stays visible (subtle white tint) so users know
+   * the area is scrollable. */
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+.chat-board::-webkit-scrollbar { width: 8px; background: transparent; }
+.chat-board::-webkit-scrollbar-track { background: transparent; }
+.chat-board::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 4px;
+}
+.chat-board::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.24);
 }
 
 .chat-card {
@@ -11,6 +22,11 @@
   border: 1px solid var(--line);
   border-radius: var(--radius-card);
   overflow: hidden;
+  /* chat-board is a flex column; without flex-shrink:0 the cards get
+   * compressed to fit available height and overflow:hidden clips their
+   * content, killing the scrollbar (overflow-y:auto on chat-board never
+   * engages because the children "fit"). */
+  flex-shrink: 0;
 }
 
 .chat-card-head {
@@ -29,6 +45,9 @@
 .chat-avatar-sm { width: 18px; height: 18px; font-size: 9px;
                   background: var(--bg-3); color: var(--fg-2); }
 .chat-avatar-target { background: var(--brand); }
+/* Neutral avatar — used in highlight mode for non-watched senders so the
+ * watched ones visually pop without changing message styling. */
+.chat-avatar-neutral { background: var(--bg-3); color: var(--fg-2); }
 
 .chat-card-sender { font-size: 12px; color: var(--fg-1); font-weight: 500; }
 .chat-card-time   { margin-left: auto; font-family: var(--font-mono);
@@ -60,49 +79,207 @@
                     display: flex; gap: 6px; justify-content: flex-end; }
 .chat-sender-tag { color: var(--fg-2); }
 
-.chat-overflow { font-family: var(--font-mono); font-size: 11px;
-                 color: var(--fg-3); padding-left: 4px; }
+/* Group-chat view (no sender selected): flat Slack/Discord-style stream.
+ * One header per consecutive same-author run; subsequent msgs indent under it.
+ * No card chrome — visually distinct from the watched-sender highlight cards. */
+.chat-group { padding: 4px 4px 10px; flex-shrink: 0; }
 
-.chat-sender-bar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+/* Right-aligned block — applied only in 关注模式 to watched senders.
+ * Mirrors iMessage/WeChat-style "own messages on the right". Header
+ * uses row-reverse so the avatar sits at the right edge; body switches
+ * padding side + aligns bubbles to flex-end. */
+.chat-group--right .chat-group-head { flex-direction: row-reverse; }
+.chat-group--right .chat-group-body { padding-left: 0; padding-right: 30px;
+                                      align-items: flex-end; }
+.chat-group--right .chat-group-bubble { align-self: flex-end; }
+.chat-group-head { display: flex; align-items: center; gap: 8px; }
+.chat-group-author { font-size: 12px; font-weight: 600; color: var(--fg-1); }
+.chat-group-time { font-family: var(--font-mono); font-size: 10.5px;
+                   color: var(--fg-3); }
+.chat-group-body { display: flex; flex-direction: column; gap: 3px;
+                   padding-left: 30px; margin-top: 4px; }
+.chat-group-bubble { background: var(--bg-2); border: 1px solid var(--line);
+                     border-radius: 6px; padding: 6px 10px; font-size: 13px;
+                     color: var(--fg-1); line-height: 1.5;
+                     word-break: break-word; white-space: pre-wrap;
+                     /* Width hugs content up to a 600px cap (matches the
+                      * design reference). Without align-self:flex-start the
+                      * bubble stretches to the .chat-group-body column width
+                      * even for one-word messages like "卖空?". */
+                     width: fit-content; max-width: 600px;
+                     align-self: flex-start; }
+
+/* Quoted-message preview — nested INSIDE the reply bubble (matches the
+ * .design/chat-monitor-variants.html reference). Bleeds slightly past
+ * the bubble's content padding via negative margins so it reads as a
+ * panel sitting inside the bubble's top edge. Darker bg-0 background +
+ * 2px brand left border + 2-line clamped body. */
+.chat-group-bubble .chat-group-quoted {
+  display: flex; flex-direction: column; gap: 2px;
+  margin: -2px -4px 6px -4px;
+  padding: 5px 8px 5px 10px;
+  background: var(--bg-0);
+  border-left: 2px solid var(--brand);
+  border-radius: 0 4px 4px 0;
+  font-size: 11px; line-height: 1.45; color: var(--fg-2);
+}
+.chat-group-quoted-sender {
+  display: block;
+  font-size: 10px; color: var(--brand); font-weight: 500;
+  letter-spacing: 0.02em;
+}
+.chat-group-quoted-body {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+  white-space: normal;
+}
+
+.chat-sender-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
                    padding: 8px 14px; border-bottom: 1px solid var(--line);
                    background: var(--bg-1); }
-.chat-sender-bar-label { font-size: 10.5px; letter-spacing: 0.06em;
-                         text-transform: uppercase; color: var(--fg-3); }
-.chat-sender-chip { display: inline-flex; align-items: center; gap: 6px;
-                    padding: 3px 10px; border-radius: 999px;
-                    border: 1px solid var(--line-strong); background: transparent;
-                    color: var(--fg-2); font-family: var(--font-mono);
-                    font-size: 11px; cursor: pointer;
-                    transition: all 150ms cubic-bezier(0.2,0.6,0.2,1); }
-.chat-sender-chip:hover { border-color: var(--fg-3); color: var(--fg-1); }
-.chat-sender-chip.on { border-color: rgba(var(--brand-rgb), 0.50);
-                       background: rgba(var(--brand-rgb), 0.10);
-                       color: var(--brand); }
-.chat-sender-chip-avatar { width: 14px; height: 14px; border-radius: 50%;
-                           background: var(--bg-3); display: grid; place-items: center;
-                           font-size: 9px; color: var(--fg-2);
-                           font-family: var(--font-sans); }
-.chat-sender-chip.on .chat-sender-chip-avatar { background: var(--brand);
-                                                color: var(--bg-0); }
-.chat-sender-chip-count { font-size: 10px; color: var(--fg-3); }
-.chat-sender-chip.on .chat-sender-chip-count { color: var(--brand); opacity: 0.7; }
+.chat-sender-empty { font-size: 10px; color: var(--fg-3); font-style: italic;
+                     opacity: 0.6; }
 
-.chat-meta-bar { display: flex; align-items: center; gap: 12px;
-                 padding: 8px 14px; border-bottom: 1px solid var(--line);
-                 background: var(--bg-1); }
-.chat-meta-text { font-size: 12px; color: var(--fg-2); }
-.chat-meta-text strong { color: var(--fg-1); font-weight: 500;
-                         font-family: var(--font-mono); }
-.chat-meta-export { margin-left: auto; background: rgba(var(--brand-rgb), 0.10);
-                    border: 1px solid rgba(var(--brand-rgb), 0.42);
-                    color: var(--brand); padding: 4px 10px;
-                    cursor: pointer; border-radius: var(--radius-chip);
-                    font-size: 12px; font: inherit;
-                    transition: background 150ms, border-color 150ms; }
-.chat-meta-export:hover { background: rgba(var(--brand-rgb), 0.18);
-                          border-color: var(--brand); }
+/* "发送者" label doubles as the popover trigger — hover/open paints a
+ * subtle border so users see it's interactive without changing layout.
+ * The mode glyph (funnel / eye) sits before the text purely as a visual
+ * indicator; the mode toggle itself lives in the popover header. */
+.chat-sender-label-wrap { position: relative; display: inline-block; }
+.chat-sender-label {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase;
+  font-weight: 600;
+  color: var(--fg-3);
+  background: transparent;
+  border: 1px solid transparent; border-radius: var(--radius-chip);
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: border-color 140ms ease, color 140ms ease, background 140ms ease;
+}
+.chat-sender-mode-glyph { display: inline-flex; align-items: center; }
+.chat-sender-label:hover,
+.chat-sender-label[aria-expanded="true"] {
+  border-color: rgba(var(--brand-rgb), 0.50);
+  color: var(--brand);
+  background: rgba(var(--brand-rgb), 0.08);
+}
 
-.chat-panel { display: flex; flex-direction: column; height: 100%;
-              min-height: 0; }
+/* Watched-sender chip — hover flips it to a delete affordance.
+ * Mirrors the .ticker-chip pattern in PageWhitelistBar so the two
+ * "watched-items" bars feel consistent (chat senders / stock tickers). */
+.chat-watched-chip {
+  position: relative;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 10px; border-radius: 999px;
+  border: 1px solid rgba(var(--brand-rgb), 0.42);
+  background: rgba(var(--brand-rgb), 0.10);
+  color: var(--brand);
+  font-family: var(--font-mono); font-size: 11px;
+  cursor: pointer;
+  transition: border-color 140ms ease, background 140ms ease, color 140ms ease;
+}
+.chat-watched-chip-avatar { width: 14px; height: 14px; border-radius: 50%;
+                            background: var(--brand); color: var(--bg-0);
+                            display: grid; place-items: center;
+                            font-size: 9px; font-family: var(--font-sans); }
+.chat-watched-chip-name { font-weight: 500; }
+.chat-watched-chip-del { display: inline-flex; align-items: center;
+                         justify-content: center;
+                         width: 0; height: 12px; margin-left: -6px;
+                         overflow: hidden; opacity: 0;
+                         transition: width 160ms ease, margin-left 160ms ease,
+                                     opacity 160ms ease, color 140ms ease; }
+.chat-watched-chip-del svg { width: 12px; height: 12px; flex-shrink: 0; }
+.chat-watched-chip:hover {
+  border-color: rgba(239, 91, 91, 0.55);
+  background: rgba(239, 91, 91, 0.14);
+  color: var(--err);
+}
+.chat-watched-chip:hover .chat-watched-chip-avatar {
+  background: var(--err); color: var(--bg-0);
+}
+.chat-watched-chip:hover .chat-watched-chip-del {
+  width: 12px; margin-left: 0; opacity: 1; color: var(--err);
+}
+.chat-watched-chip:active { transform: scale(0.96); }
+
+/* Popover — wide rectangular panel that wraps author chips onto multiple
+ * rows (instead of a vertical 1-per-row list). Anchored under the
+ * "发送者" trigger; click a chip to add + auto-close. */
+.chat-sender-popover {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 20;
+  width: max-content; min-width: 320px; max-width: 720px;
+  max-height: 320px; overflow-y: auto;
+  background: var(--bg-2); border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.40);
+  padding: 10px;
+  display: flex; flex-direction: column; gap: 8px;
+  /* Hide scrollbar while keeping the area scrollable (Firefox + WebKit). */
+  scrollbar-width: none;
+}
+.chat-sender-popover::-webkit-scrollbar { display: none; }
+
+/* Segmented mode switch at the popover top — 过滤 | 关注 */
+.chat-sender-mode-switch {
+  display: inline-flex; align-self: center; gap: 2px;
+  padding: 2px;
+  background: var(--bg-3); border-radius: 999px;
+}
+.chat-sender-mode-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 12px; border-radius: 999px;
+  background: transparent; border: 0; color: var(--fg-2);
+  font-size: 11px; cursor: pointer;
+  transition: background 140ms ease, color 140ms ease;
+}
+.chat-sender-mode-btn:hover { color: var(--fg-1); }
+.chat-sender-mode-btn.active {
+  background: rgba(var(--brand-rgb), 0.18);
+  color: var(--brand);
+}
+
+.chat-sender-popover-grid {
+  display: flex; flex-wrap: wrap; gap: 6px; justify-content: center;
+}
+.chat-sender-popover-empty { width: 100%; padding: 12px 14px;
+                             color: var(--fg-3); font-size: 11px;
+                             text-align: center; }
+.chat-sender-popover-item {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 10px; border-radius: 999px;
+  background: transparent; border: 1px solid var(--line-strong);
+  color: var(--fg-1); font-family: var(--font-mono); font-size: 11px;
+  cursor: pointer;
+  transition: border-color 140ms ease, color 140ms ease, background 140ms ease;
+}
+.chat-sender-popover-item:hover {
+  border-color: rgba(var(--brand-rgb), 0.50);
+  background: rgba(var(--brand-rgb), 0.10);
+  color: var(--brand);
+}
+.chat-sender-popover-avatar { width: 14px; height: 14px; border-radius: 50%;
+                              background: var(--bg-3); color: var(--fg-2);
+                              display: grid; place-items: center;
+                              font-size: 9px; font-family: var(--font-sans);
+                              flex-shrink: 0; }
+.chat-sender-popover-item:hover .chat-sender-popover-avatar {
+  background: var(--brand); color: var(--bg-0);
+}
+.chat-sender-popover-name { white-space: nowrap; }
+.chat-sender-popover-count { font-size: 10px; color: var(--fg-3); }
+.chat-sender-popover-item:hover .chat-sender-popover-count {
+  color: var(--brand); opacity: 0.7;
+}
+
+/* Sits as the last child of .stream (flex-column). flex:1 + min-height:0
+ * makes the panel take only the leftover height after PageTabs +
+ * .page-meta-row — earlier height:100% double-counted those siblings and
+ * the bottom of chat-board got clipped by .stream { overflow: hidden }. */
+.chat-panel { display: flex; flex-direction: column;
+              flex: 1; min-height: 0; }
 .chat-panel .chat-board { flex: 1; min-height: 0; overflow-y: auto; }
 .chat-empty { padding: 60px 20px; text-align: center; color: var(--fg-2); }

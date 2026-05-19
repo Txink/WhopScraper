@@ -14,14 +14,13 @@ function msg(
 
 describe("groupIntoCards", () => {
   it("returns [] for empty input", () => {
-    expect(groupIntoCards([], new Set(["alice"]), 5)).toEqual([]);
+    expect(groupIntoCards([], new Set(["alice"]))).toEqual([]);
   });
 
   it("skips non-watched senders entirely", () => {
     const out = groupIntoCards(
       [msg("m1", "bob", "2026-05-18T09:00:00Z")],
       new Set(["alice"]),
-      5,
     );
     expect(out).toEqual([]);
   });
@@ -30,25 +29,30 @@ describe("groupIntoCards", () => {
     const msgs = ["09:00", "09:01", "09:02"].map((t, i) =>
       msg(`m${i}`, "alice", `2026-05-18T${t}:00Z`),
     );
-    const out = groupIntoCards(msgs, new Set(["alice"]), 5);
+    const out = groupIntoCards(msgs, new Set(["alice"]));
     expect(out).toHaveLength(1);
     expect(out[0].kind).toBe("batch");
     if (out[0].kind === "batch") {
       expect(out[0].msgs.map(m => m.id)).toEqual(["m0", "m1", "m2"]);
-      expect(out[0].overflow).toBe(0);
       expect(out[0].id).toBe("batch:m0");
     }
   });
 
-  it("caps batch at maxN and counts overflow", () => {
-    const msgs = Array.from({ length: 7 }, (_, i) =>
+  it("opens a new batch card every 8 same-author msgs (no truncation, no overflow tag)", () => {
+    const msgs = Array.from({ length: 13 }, (_, i) =>
       msg(`m${i}`, "alice", `2026-05-18T09:${String(i).padStart(2, "0")}:00Z`),
     );
-    const out = groupIntoCards(msgs, new Set(["alice"]), 5);
-    expect(out).toHaveLength(1);
+    const out = groupIntoCards(msgs, new Set(["alice"]));
+    expect(out).toHaveLength(2);
     if (out[0].kind === "batch") {
-      expect(out[0].msgs).toHaveLength(5);
-      expect(out[0].overflow).toBe(2);
+      expect(out[0].msgs.map((m) => m.id)).toEqual(
+        ["m0", "m1", "m2", "m3", "m4", "m5", "m6", "m7"],
+      );
+    }
+    if (out[1].kind === "batch") {
+      expect(out[1].msgs.map((m) => m.id)).toEqual(["m8", "m9", "m10", "m11", "m12"]);
+      expect(out[1].target_author).toBe("alice");
+      expect(out[1].id).toBe("batch:m8");
     }
   });
 
@@ -56,7 +60,7 @@ describe("groupIntoCards", () => {
     const m = msg("m1", "alice", "2026-05-18T09:00:00Z", {
       quoted: { author: "bob", content: "earlier" },
     });
-    const out = groupIntoCards([m], new Set(["alice"]), 5);
+    const out = groupIntoCards([m], new Set(["alice"]));
     expect(out).toHaveLength(1);
     expect(out[0].kind).toBe("quote");
     if (out[0].kind === "quote") {
@@ -75,7 +79,7 @@ describe("groupIntoCards", () => {
       ...["09:06", "09:07", "09:08"].map((t, i) =>
         msg(`b${i}`, "alice", `2026-05-18T${t}:00Z`)),
     ];
-    const out = groupIntoCards(msgs, new Set(["alice"]), 5);
+    const out = groupIntoCards(msgs, new Set(["alice"]));
     expect(out.map(c => c.kind)).toEqual(["batch", "quote", "batch"]);
     if (out[0].kind === "batch") expect(out[0].msgs).toHaveLength(4);
     if (out[2].kind === "batch") expect(out[2].msgs).toHaveLength(3);
@@ -89,7 +93,7 @@ describe("groupIntoCards", () => {
       msg("a2", "alice", "2026-05-18T09:03:00Z"),
       msg("a3", "alice", "2026-05-18T09:04:00Z"),
     ];
-    const out = groupIntoCards(msgs, new Set(["alice"]), 5);
+    const out = groupIntoCards(msgs, new Set(["alice"]));
     expect(out).toHaveLength(1);
     if (out[0].kind === "batch") {
       expect(out[0].msgs.map(m => m.id)).toEqual(["a0", "a1", "a2", "a3"]);
@@ -103,7 +107,7 @@ describe("groupIntoCards", () => {
       msg("a1", "alice", "2026-05-18T09:02:00Z"),
       msg("b1", "bob", "2026-05-18T09:03:00Z"),
     ];
-    const out = groupIntoCards(msgs, new Set(["alice", "bob"]), 5);
+    const out = groupIntoCards(msgs, new Set(["alice", "bob"]));
     expect(out).toHaveLength(4);
     expect(out.every(c => c.kind === "batch")).toBe(true);
   });
@@ -113,7 +117,7 @@ describe("groupIntoCards", () => {
       msg("a0", "alice", "2026-05-18T09:00:00Z"),
       msg("b0", "bob", "2026-05-18T09:01:00Z"),
     ];
-    const out = groupIntoCards(msgs, new Set<string>(), 5);
+    const out = groupIntoCards(msgs, new Set<string>());
     expect(out.length).toBeGreaterThan(0);
     // alice and bob both yield batches (different authors → 2 cards)
     expect(out).toHaveLength(2);

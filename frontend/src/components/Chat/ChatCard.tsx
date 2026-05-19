@@ -69,16 +69,16 @@ export function ChatCard({ card }: Props): JSX.Element {
             </div>
           </div>
         ))}
-        {card.overflow > 0 && (
-          <div className="chat-overflow">+{card.overflow} 更多</div>
-        )}
       </div>
     </div>
   );
 }
 
 function fmtTime(iso: string): string {
-  const d = new Date(iso);
+  // See GroupChatView.fmtTime — backend serializes UTC posted_at as naive
+  // ISO; force UTC parse before letting the browser apply its local offset.
+  const normalized = /[Zz]|[+-]\d\d:?\d\d$/.test(iso) ? iso : `${iso}Z`;
+  const d = new Date(normalized);
   return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 

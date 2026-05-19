@@ -29,7 +29,7 @@ describe("buildExportPayload", () => {
         quoted: { author: "bob", content: "earlier" },
       }),
     ];
-    const cards = groupIntoCards(messages, new Set(["alice"]), 5);
+    const cards = groupIntoCards(messages, new Set(["alice"]));
     const payload = buildExportPayload({
       page_id: "p1",
       page_name: "Test Page",
@@ -48,7 +48,7 @@ describe("buildExportPayload", () => {
         quoted: { author: "bob", content: "earlier" },
       }),
     ];
-    const cards = groupIntoCards(messages, new Set(["alice"]), 5);
+    const cards = groupIntoCards(messages, new Set(["alice"]));
     const payload = buildExportPayload({
       page_id: "p1",
       page_name: "Test",
@@ -62,12 +62,11 @@ describe("buildExportPayload", () => {
     expect(payload.messages[1].card_index).toBe(1);
   });
 
-  it("excludes overflow msgs from the messages array", () => {
-    // 7 unquoted msgs, maxN=5 → 5 visible + 2 overflow; export drops the 2.
-    const messages = Array.from({ length: 7 }, (_, i) =>
-      msg(`m${i}`, "alice", `2026-05-18T09:0${i}:00Z`),
+  it("splits 13 same-author msgs into 8 + 5 across two batch cards (export-side)", () => {
+    const messages = Array.from({ length: 13 }, (_, i) =>
+      msg(`m${i}`, "alice", `2026-05-18T09:${String(i).padStart(2, "0")}:00Z`),
     );
-    const cards = groupIntoCards(messages, new Set(["alice"]), 5);
+    const cards = groupIntoCards(messages, new Set(["alice"]));
     const payload = buildExportPayload({
       page_id: "p1",
       page_name: "Test",
@@ -76,6 +75,9 @@ describe("buildExportPayload", () => {
       messages,
       cards,
     });
-    expect(payload.messages).toHaveLength(5);
+    expect(payload.cards).toHaveLength(2);
+    expect(payload.messages).toHaveLength(13);
+    expect(payload.messages.slice(0, 8).every((m) => m.card_index === 0)).toBe(true);
+    expect(payload.messages.slice(8).every((m) => m.card_index === 1)).toBe(true);
   });
 });

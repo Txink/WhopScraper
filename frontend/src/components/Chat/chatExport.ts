@@ -20,7 +20,6 @@ export type ExportCard =
       kind: "batch";
       target_author: string;
       msg_ids: string[];
-      overflow: number;
     }
   | {
       card_index: number;
@@ -30,10 +29,7 @@ export type ExportCard =
     };
 
 export interface ExportMessage extends ChatMessageOut {
-  /** Index into ``cards`` — the card this message belongs to. Messages
-   *  that fall off a batch's ``maxN`` cap (counted as ``overflow``) are
-   *  dropped entirely from the export, since the operator only sees the
-   *  visible slice. */
+  /** Index into ``cards`` — the card this message belongs to. */
   card_index: number;
 }
 
@@ -61,7 +57,6 @@ export function buildExportPayload(input: ExportPayloadInput): ExportPayload {
         kind: "batch",
         target_author: card.target_author,
         msg_ids: card.msgs.map((m) => m.id),
-        overflow: card.overflow,
       });
       for (const m of card.msgs) messageIndex.set(m.id, idx);
     } else {
