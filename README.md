@@ -148,13 +148,29 @@ LongPortClient    ←──── PushListener
 
 ## 快速开始
 
+> **重构后的新流程**：LongPort 凭据已从 `.env` 全面迁移到 UI 的 OAuth 授权（多账户模型）。`.env` 里只剩 `APP_TOKEN` 一个**必填项**。
+
+### TL;DR（已装过依赖的话）
+
+```bash
+cp .env.example .env                     # 改一下 APP_TOKEN
+make install                              # 首次必跑
+make backend-dev      # 终端 1
+make frontend-dev     # 终端 2
+open http://localhost:5173                # 浏览器进入 → 输 APP_TOKEN
+# 进入后：① Dashboard 顶栏「LongPort」→ OAuth 授权账户（可选）
+#         ② 顶栏「Whop 管理」→ 跑 whop_login.py 抓 cookie → 添加监听页
+```
+
+下面是逐步详细版。
+
 ### 前置依赖
 
-- Python 3.11+
-- Node 18+
+- **Python 3.11+**
+- **Node 18+**
 - [`uv`](https://github.com/astral-sh/uv) Python 包管理器：`curl -LsSf https://astral.sh/uv/install.sh | sh`
-- 长桥（LongPort）账号 + API key（可选 — 没填会进监控-only 模式）
-- 你订阅的 Whop 频道 URL（可选 — 启动后从 UI 添加）
+- **长桥（LongPort）账号**（可选 — 不授权会进监控-only 模式，仍能跑解析、Whop 监听、UI）
+- **你订阅的 Whop 频道 URL**（可选 — 启动后从 UI 添加）
 
 ### 1. 克隆 + 安装
 
@@ -174,64 +190,99 @@ make install
 cp .env.example .env
 ```
 
-最小可跑配置（其他都用默认值）：
+> ⚠️ **`.env.example` 还残留旧的 `LONGPORT_PAPER_*` / `LONGPORT_REAL_*` 字段** —— OAuth 重构后这些字段已被 `config.py` 忽略，可以直接删，不会影响启动。
+
+**最小可跑配置**（其他全用默认值）：
 
 ```env
-# 必填：前端登录用的访问令牌（随便 32 字符随机串）
+# 必填：前端登录 + REST/WS token（随便 32 字符随机串）
 APP_TOKEN=put-your-32-char-secret-here
 ```
 
-LongPort + Whop URL **都可以暂时不填** —— 系统会以监控-only 模式启动，登录后从 UI 加 Whop 监听。
+LongPort 凭据、Whop URL **都不在 `.env` 里**了：
 
-填上 LongPort 凭据后才会真正下单：
+- **LongPort**：登录后在 UI 走 OAuth 授权流程（见下面第 5 步），授权产物保存在：
+  - `data/longport_settings.json`（账户列表 + 当前 active 账户）
+  - `~/.longbridge/openapi/tokens/<client_id>`（SDK 自管的 token 缓存）
+- **Whop 频道 URL**：登录后从 UI **「Whop 管理」** tab 添加，列表持久化在 `data/whop_pages.json`
+
+可选调整：
 
 ```env
-LONGPORT_MODE=paper
-LONGPORT_PAPER_APP_KEY=...
-LONGPORT_PAPER_APP_SECRET=...
-LONGPORT_PAPER_ACCESS_TOKEN=...
-LONGPORT_AUTO_TRADE=true
-LONGPORT_DRY_RUN=true     # 安全起见先开，确认行为正确再关
+LONGPORT_MODE=paper          # 仅作展示标签，OpenAPI 协议层不区分 paper/real
+LONGPORT_AUTO_TRADE=true     # false = 仅解析不下单
+LONGPORT_DRY_RUN=true        # true = 计算订单但不真正提交（强烈建议先开着）
 ```
 
 ### 3. 启动
 
-**生产模式**（前端打包后挂载到 FastAPI 静态目录，单端口）：
-
-```bash
-make run
-# 后端 + 前端 dist 都从 :8000 提供
-# 浏览器: http://localhost:8000
-```
-
-**开发模式**（热重载，前后端分离）：
+**开发模式**（热重载，前后端分离，**推荐**）：
 
 ```bash
 # 终端 1
-make backend-dev   # uvicorn --reload :8000
+make backend-dev      # uvicorn --reload :8000
 
 # 终端 2
-make frontend-dev  # vite dev :5173（代理 /api 和 /ws 到 :8000）
+make frontend-dev     # vite dev :5173（自动代理 /api 和 /ws 到 :8000）
 
-# 浏览器
 open http://localhost:5173
+```
+
+也可以一条命令同时拉起两个（Ctrl+C 同时停）：
+
+```bash
+make dev
+```
+
+**生产模式**（前端打包后挂载到 FastAPI 静态目录，单端口）：
+
+```bash
+make run             # 内部先跑 make build 再起 uvicorn
+open http://localhost:8000
 ```
 
 ### 4. 浏览器登录
 
-第一次访问会跳到登录页（dark 主题卡片，要求输入 APP TOKEN）：
+第一次访问会跳到登录页（dark 主题卡片）：
 
 1. 输入 `.env` 里设的 `APP_TOKEN`
 2. 点"进入"
-3. Token 自动保存到浏览器 localStorage，之后无需重输
+3. Token 自动保存到浏览器 localStorage
 
-也可以一次性带 token 进入：`http://localhost:8000?token=<APP_TOKEN>`，之后清掉 query 也保留 localStorage 里的。
+或一次性带 token 进入：`http://localhost:5173?token=<APP_TOKEN>` —— 之后清掉 query string 也保留登录。
 
-退出：顶栏角落 ⎋ 按钮。
+退出：顶栏角落 ⎋ 按钮（清 localStorage）。
 
-### 5. 添加 Whop 监听
+### 5. （可选）LongPort OAuth 授权
 
-进入后默认是空看板。顶栏点 **"Whop 管理"** 切到 Whop tab。详见下面 [Whop 监听 UI 工作流](#whop-监听-ui-工作流)。
+只想跑监控、不下单 → 跳过这一步，系统会以 `NoopBrokerClient` 兜底。
+
+要真正下单：
+
+1. 顶栏点 **「LongPort」** 打开账户设置弹窗
+2. **「添加账户」** → 后端调 `/api/longport/oauth/start`：
+   - 自动向 LongBridge OAuth 端点注册一个 client_id
+   - 在本地起回调服务（默认端口 `60355`，被占用会回退到 `60356/60357`）
+   - 弹出长桥授权页让你在浏览器里点同意
+3. 授权回来后 SDK 把 token 写到 `~/.longbridge/openapi/tokens/<client_id>`，UI 状态变 ✅
+4. 给账户起个标签（例如 "Paper" / "Real"），按 **「激活」** 把它设成当前 active 账户
+5. （首次或换号后）点 **「Reload broker」** 让后端用新账户重建 LongPort client
+
+> 💡 多账户：可以授权任意多个长桥账户，UI 一键切换 active。"paper" 和 "real" 仅是用户自取的 label，协议层不区分。
+
+### 6. 添加 Whop 监听
+
+顶栏 **「Whop 管理」** tab：
+
+1. **Cookie 状态卡** —— 第一次必定是 ❌ 缺失
+2. 点 **「复制登录命令」** → 终端粘贴 `uv run --project backend python scripts/whop_login.py`
+3. 弹出 chromium → 在浏览器里**手动**完成邮箱/密码/2FA → 跳到主页确认登录
+4. **回终端按回车**保存 cookie 到 `.auth/whop_cookie.json`
+5. 回 UI 点「刷新」→ 状态变 ✅
+6. **「添加监听」**卡：填 URL + 选择**来源类型**（`stock` / `option` / `chat`，决定走哪个解析器 / 入库表）+ 显示名 → 提交
+7. 后端立即起 Playwright listener，可在「监控看板」tab 看到事件流
+
+完整说明见下面 [Whop 监听 UI 工作流](#whop-监听-ui-工作流)。
 
 ---
 
@@ -265,6 +316,12 @@ make db-reset
 
 所有配置都从项目**根目录**的 `.env` 读取（不在 `backend/.env`）。
 
+> 📌 **OAuth 重构后**，LongPort 凭据（`LONGPORT_PAPER_*` / `LONGPORT_REAL_*`）**不再读取**。账户授权信息走：
+> - `data/longport_settings.json`（多账户 + active 选择）
+> - `~/.longbridge/openapi/tokens/<client_id>`（SDK token 缓存）
+>
+> `.env.example` 里如果还有这些字段，可以直接删。
+
 | Key | 默认 | 说明 |
 |-----|------|------|
 | `APP_TOKEN` | `change-me-...` | 前端登录 + REST/WS 的访问令牌。强烈建议改成强随机串 |
@@ -272,17 +329,13 @@ make db-reset
 | `WHOP_OPTION_URL` | `""` | （可选）启动时 seed 一个期权监听 |
 | `WHOP_POLL_INTERVAL` | `2.0` | DOM 轮询间隔（秒） |
 | `WHOP_HEADLESS` | `false` | `true` = 无头模式；调试时设 `false` 能看到浏览器 |
-| `LONGPORT_MODE` | `paper` | `paper` 或 `real` —— 选用哪一组凭据 |
-| `LONGPORT_PAPER_APP_KEY` | `""` | 模拟账户 |
-| `LONGPORT_PAPER_APP_SECRET` | `""` | |
-| `LONGPORT_PAPER_ACCESS_TOKEN` | `""` | |
-| `LONGPORT_REAL_*` | `""` | 真实账户（仅 `MODE=real` 时使用） |
+| `LONGPORT_MODE` | `paper` | 仅作展示标签；OpenAPI 协议层不区分 paper/real |
 | `LONGPORT_REGION` | `cn` | `cn` / `us` |
 | `LONGPORT_AUTO_TRADE` | `true` | `false` = 仅解析不下单 |
 | `LONGPORT_DRY_RUN` | `true` | `true` = 计算订单但不真正提交，仅日志 |
 | `MAX_OPTION_TOTAL_PRICE` | `500.0` | 单笔期权总名义额上限（USD） |
 | `MAX_OPTION_QUANTITY` | `3` | 单笔期权合约数上限 |
-| `PRICE_DEVIATION_TOLERANCE` | `5.0` | 期权偏差容忍度 — **同上**，per-page 优先 |
+| `PRICE_DEVIATION_TOLERANCE` | `5.0` | 期权偏差容忍度 — per-page 优先 |
 | `STOCK_PRICE_DEVIATION_TOLERANCE` | `1.0` | 正股偏差容忍度 — **仅作孤儿 task（无 page）的 fallback**，per-page 优先 |
 | `DATABASE_URL` | `sqlite+aiosqlite:///./data/signals.db` | 相对路径会**自动锚定到项目根**，不会因 CWD 变化失效 |
 | `HTTP_HOST` | `127.0.0.1` | 后端绑定 host |
@@ -326,7 +379,10 @@ make db-reset
 
 填三项 → 点"添加监听"：
 - **URL**：完整频道 URL，例如 `https://whop.com/joined/stock-and-option/<channel-id>/app/`
-- **来源类型**：正股 / 期权（决定走哪个 parser）
+- **来源类型**：
+  - `stock` —— 正股信号，走 `parser/stock_parser.py` 解析为 Task
+  - `option` —— 期权信号，走 `parser/option_parser.py`
+  - `chat` —— 普通聊天频道，**不解析为 Task**，原始消息直接落 `chat_messages` 表 + 推 WS（`chat.message_stored`），用于看板内的 Chat 面板
 - **显示名**（可选）：UI 列表里看到的标签，留空就用 URL
 
 后端立即起 Playwright 监听该页面，列表出现新行。**重复 URL** / **占位符 URL（含 xxx/yyy）** 会被前端报错拒绝。
@@ -544,16 +600,11 @@ uv run --project backend python scripts/whop_login.py --test    # 测试 cookie 
 
 **已修**。如果还遇到，是因为 SQLite URL 指向了不存在的目录。`db.py::_resolve_sqlite_url` 会把相对路径锚到项目根并 `mkdir -p` 父目录。检查 `.env` 的 `DATABASE_URL` 是不是指向了什么诡异的路径。
 
-### 后端启动报 `LONGPORT_PAPER_APP_KEY is empty but mode='paper'`
+### 后端启动日志：`No authorized LongPort account; falling back to NoopBrokerClient`
 
-**这不是错误，是降级**。日志里会接着说：
+**这不是错误，是降级**。OAuth 重构后没有授权账户时，broker 自动用 `NoopBrokerClient` 兜底：消息能被解析、Task 状态能持续推到前端，但**不会真下单**。
 
-```
-Falling back to monitoring-only mode (NoopBrokerClient).
-No orders will be submitted. Set LONGPORT_* env vars in .env to enable real trading.
-```
-
-系统进监控-only 模式：消息能被解析、Task 状态能被持续推到前端，但**不会真下单**。要启用下单，把 `LONGPORT_PAPER_*` 凭据填上。
+要启用下单：登录 UI → 顶栏 **「LongPort」** → 「添加账户」走 OAuth 授权 → 激活账户 → Reload broker（详见 [快速开始 第 5 步](#5-可选longport-oauth-授权)）。
 
 ### 后端启动卡 30 秒无响应
 
@@ -726,5 +777,3 @@ signal-station/
 
 内部工具，不公开发行。LongPort SDK + Whop 凭据由用户自备。
 
-完整设计文档：`docs/superpowers/specs/2026-04-25-signal-station-design.md`
-完整实施计划：`docs/superpowers/plans/2026-04-25-signal-station-implementation.md`
