@@ -388,3 +388,25 @@
   opacity: 0.72;
 }
 .board[data-mode="highlight"] .stream-group:not(.watched):hover { opacity: 1; }
+
+/* ── Monitor sender chips — source-dot prefix ──────────────────────────
+   A tiny colored dot before the avatar distinguishes monitor (signal-
+   source) chips from plain human-sender chips at a glance. The chip
+   itself gets a small extra left-padding to accommodate the dot without
+   changing its overall height or border-radius.
+   ────────────────────────────────────────────────────────────────────── */
+.chat-watched-chip.monitor {
+  padding-left: 7px;
+}
+.chat-sender-popover-item.monitor {
+  padding-left: 7px;
+}
+.chat-watched-chip .src-dot,
+.chat-sender-popover-item .src-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-block;
+}
+.src-dot.stock  { background: var(--source-stock,  #5fbf8b); }
+.src-dot.option { background: var(--source-option, #8b6fcf); }

@@ -131,6 +131,35 @@ export function ChatBoardPanel({ page, week }: Props) {
   const messages = cache?.messages ?? [];
   const authors = cache?.authors ?? [];
 
+  /** name → "stock" | "option" for children whose source is known. */
+  const monitorSources = useMemo<Record<string, "stock" | "option">>(
+    () =>
+      Object.fromEntries(
+        children
+          .filter((c) => c.source === "stock" || c.source === "option")
+          .map((c) => [c.name, c.source as "stock" | "option"]),
+      ),
+    [children],
+  );
+
+  /** authors from chat messages merged with child monitor pages.
+   *  Monitor names are included even when count=0 so users can toggle
+   *  them on before any signal arrives this week. */
+  const authorsWithMonitors = useMemo(() => {
+    const seen = new Set<string>();
+    const out: { name: string; count: number }[] = [];
+    for (const a of authors) {
+      out.push(a);
+      seen.add(a.name);
+    }
+    for (const c of children) {
+      if (seen.has(c.name)) continue;
+      const count = childTasks.filter((t) => t.message.url === c.url).length;
+      out.push({ name: c.name, count });
+    }
+    return out;
+  }, [authors, children, childTasks]);
+
   const watchedSet = useMemo(() => new Set(watchedSenders), [watchedSenders]);
 
   // Merged chronological timeline of chat messages + child tasks.
@@ -254,11 +283,12 @@ export function ChatBoardPanel({ page, week }: Props) {
     <div className="chat-panel">
       <ChatSenderBar
         pageId={page.id}
-        authors={authors}
+        authors={authorsWithMonitors}
         watchedSenders={watchedSenders}
         onChange={handleSenderChange}
         mode={mode}
         onModeChange={handleModeChange}
+        monitorSources={monitorSources}
       />
       <div className="chat-board" ref={boardRef} onScroll={handleBoardScroll}>
         {body}

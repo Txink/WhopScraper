@@ -11,6 +11,11 @@ interface Props {
   onChange: (next: string[]) => void;
   mode: SenderMode;
   onModeChange: (next: SenderMode) => void;
+  /** Optional map from sender name → signal-source type. When present, the
+   *  chip renders a small colored dot prefix so monitor senders are
+   *  visually distinct from human chat senders. Defaults to `{}` so
+   *  existing callers that don't pass it continue to work without changes. */
+  monitorSources?: Record<string, "stock" | "option">;
 }
 
 function FilterGlyph() {
@@ -48,6 +53,7 @@ function HighlightGlyph() {
  */
 export function ChatSenderBar({
   pageId, authors, watchedSenders, onChange, mode, onModeChange,
+  monitorSources = {},
 }: Props) {
   const [popoverOpen, setPopoverOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement | null>(null);
@@ -146,21 +152,27 @@ export function ChatSenderBar({
               </div>
             ) : (
               <div className="chat-sender-popover-grid">
-                {addable.map((a) => (
-                  <button
-                    key={a.name}
-                    type="button"
-                    className="chat-sender-popover-item"
-                    onClick={() => handleAdd(a.name)}
-                    role="option"
-                    aria-selected={false}
-                    title={`${a.name} · ${a.count} 条`}
-                  >
-                    <span className="chat-sender-popover-avatar">{a.name.slice(-1)}</span>
-                    <span className="chat-sender-popover-name">{a.name}</span>
-                    <span className="chat-sender-popover-count">{a.count}</span>
-                  </button>
-                ))}
+                {addable.map((a) => {
+                  const popoverSource = monitorSources[a.name];
+                  return (
+                    <button
+                      key={a.name}
+                      type="button"
+                      className={`chat-sender-popover-item${popoverSource ? " monitor" : ""}`}
+                      onClick={() => handleAdd(a.name)}
+                      role="option"
+                      aria-selected={false}
+                      title={`${a.name} · ${a.count} 条`}
+                    >
+                      {popoverSource && (
+                        <span className={`src-dot ${popoverSource}`} aria-hidden="true" />
+                      )}
+                      <span className="chat-sender-popover-avatar">{a.name.slice(-1)}</span>
+                      <span className="chat-sender-popover-name">{a.name}</span>
+                      <span className="chat-sender-popover-count">{a.count}</span>
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -171,25 +183,31 @@ export function ChatSenderBar({
         <span className="chat-sender-empty">未配置 — 点"发送者"添加</span>
       )}
 
-      {watchedSenders.map((name) => (
-        <button
-          key={name}
-          type="button"
-          className="chat-watched-chip"
-          onClick={() => handleRemove(name)}
-          aria-label={`删除 ${name}`}
-          title={`点击删除 ${name}`}
-        >
-          <span className="chat-watched-chip-avatar">{name.slice(-1)}</span>
-          <span className="chat-watched-chip-name">{name}</span>
-          <span className="chat-watched-chip-del" aria-hidden="true">
-            <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-              <line x1="3" y1="3" x2="9" y2="9" />
-              <line x1="9" y1="3" x2="3" y2="9" />
-            </svg>
-          </span>
-        </button>
-      ))}
+      {watchedSenders.map((name) => {
+        const chipSource = monitorSources[name];
+        return (
+          <button
+            key={name}
+            type="button"
+            className={`chat-watched-chip${chipSource ? " monitor" : ""}`}
+            onClick={() => handleRemove(name)}
+            aria-label={`删除 ${name}`}
+            title={`点击删除 ${name}`}
+          >
+            {chipSource && (
+              <span className={`src-dot ${chipSource}`} aria-hidden="true" />
+            )}
+            <span className="chat-watched-chip-avatar">{name.slice(-1)}</span>
+            <span className="chat-watched-chip-name">{name}</span>
+            <span className="chat-watched-chip-del" aria-hidden="true">
+              <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                <line x1="3" y1="3" x2="9" y2="9" />
+                <line x1="9" y1="3" x2="3" y2="9" />
+              </svg>
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 }
