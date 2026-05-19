@@ -3,6 +3,7 @@ import type { Position, Quote, Candlesticks, Execution } from "../../api/domain-
 import { MiniLine } from "./MiniLine";
 import { toUsd } from "../../utils/currency";
 import { tradingDayOfET, currentOrLastTradingDay } from "./timeFmt";
+import { usePrivacyModeStore } from "../../stores/privacyMode";
 
 /** US equity options: 1 contract = 100 shares of underlying. Premium is
  *  quoted per-share, so dollar economics multiply by this factor. */
@@ -74,6 +75,7 @@ function dteTier(
 }
 
 export function OptionCard({ position, quote, history, executions, onClick }: Props) {
+  const privacy = usePrivacyModeStore((s) => s.enabled);
   const cp = position.option_type;
   const cpShort = cp === "CALL" ? "C" : cp === "PUT" ? "P" : "";
   const cpClass = cp === "CALL" ? "call" : cp === "PUT" ? "put" : "";
@@ -180,8 +182,10 @@ export function OptionCard({ position, quote, history, executions, onClick }: Pr
           </span>
         )}
         {dayPl != null && (
-          <span className={`ocard-day-pl ${dayPos ? "pos" : "neg"}`}>
-            {dayPos ? "+" : ""}${fmt(Math.abs(dayPl), 0)}
+          <span className={`ocard-day-pl ${privacy ? "" : dayPos ? "pos" : "neg"}`}>
+            {privacy ? "***" : (
+              <>{dayPos ? "+" : ""}${fmt(Math.abs(dayPl), 0)}</>
+            )}
           </span>
         )}
       </div>
@@ -197,16 +201,16 @@ export function OptionCard({ position, quote, history, executions, onClick }: Pr
       <div className="ocard-meta">
         <div>
           <div className="k">持仓</div>
-          <div className="v">{fmt(qty, 0)} 张</div>
+          <div className="v">{privacy ? "***" : `${fmt(qty, 0)} 张`}</div>
         </div>
         <div>
           <div className="k">均价</div>
-          <div className="v">{fmt(avg)}</div>
+          <div className="v">{privacy ? "***" : fmt(avg)}</div>
         </div>
         <div>
           <div className="k">浮盈</div>
-          <div className={`v ${pl == null ? "" : isPos ? "pos" : "neg"}`}>
-            {pl == null ? "—" : `$${fmtSigned(pl, 0)}`}
+          <div className={`v ${privacy ? "" : pl == null ? "" : isPos ? "pos" : "neg"}`}>
+            {privacy ? "***" : pl == null ? "—" : `$${fmtSigned(pl, 0)}`}
           </div>
         </div>
       </div>

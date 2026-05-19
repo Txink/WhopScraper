@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import type { Position } from "../../api/domain-types";
 import { useQuotesStore } from "../../stores/quotes";
+import { usePrivacyModeStore } from "../../stores/privacyMode";
 import { toUsd } from "../../utils/currency";
 
 function fmt(n: number, d = 0): string {
@@ -30,6 +31,7 @@ interface Props {
  */
 export function PortfolioSummary({ stocks, options = [] }: Props) {
   const quotesBySymbol = useQuotesStore((s) => s.quotesBySymbol);
+  const privacy = usePrivacyModeStore((s) => s.enabled);
 
   const isOptionsView = options.length > 0 && stocks.length === 0;
 
@@ -79,13 +81,19 @@ export function PortfolioSummary({ stocks, options = [] }: Props) {
     <div className="portfolio-summary two-col">
       <div className="ps-cell">
         <span className="lbl">总市值</span>
-        <span className="val">${fmt(s.value)}</span>
+        <span className="val">{privacy ? "***" : `$${fmt(s.value)}`}</span>
       </div>
       <div className="ps-cell">
         <span className="lbl">浮盈</span>
-        <span className={`val ${s.pl >= 0 ? "pos" : "neg"}`}>
-          {s.pl >= 0 ? "+" : ""}${fmt(s.pl)}
-          <small className="sub">{pct(s.plPct)}</small>
+        <span className={`val ${privacy ? "" : s.pl >= 0 ? "pos" : "neg"}`}>
+          {privacy ? (
+            "***"
+          ) : (
+            <>
+              {s.pl >= 0 ? "+" : ""}${fmt(s.pl)}
+              <small className="sub">{pct(s.plPct)}</small>
+            </>
+          )}
         </span>
       </div>
     </div>

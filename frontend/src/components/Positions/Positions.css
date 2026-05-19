@@ -141,6 +141,39 @@
 }
 .positions-tabs button.active .count { color: var(--fg-2); }
 
+/* ─── Privacy-mode toggle (sits at the right of the tabs row) ───
+ * Eye / eye-off icon button. When OFF: neutral chip-style outline,
+ * matching the muted look of the inactive tabs so it doesn't compete
+ * for attention. When ON: brand-tinted to remind the user that
+ * sensitive values are currently masked. */
+.privacy-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-chip);
+  border: 1px solid var(--line);
+  background: var(--bg-2);
+  color: var(--fg-3);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: border-color var(--dur) var(--ease),
+              color var(--dur) var(--ease),
+              background var(--dur) var(--ease);
+}
+.privacy-toggle:hover {
+  color: var(--fg-1);
+  border-color: var(--line-strong, var(--line));
+}
+.privacy-toggle.on {
+  color: var(--brand);
+  border-color: rgba(var(--brand-rgb), 0.50);
+  background: rgba(var(--brand-rgb), 0.10);
+}
+.privacy-toggle svg { flex-shrink: 0; }
+.privacy-toggle-label { font-weight: 500; }
+
 /* Color-convention preference now lives in the LongPort settings modal. */
 
 .positions-empty {

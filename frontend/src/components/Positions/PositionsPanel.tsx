@@ -7,6 +7,7 @@ import { useQuotesStore } from "../../stores/quotes";
 import { useCandlesticksStore, candleCacheKey } from "../../stores/candlesticks";
 import { useExecutionsStore } from "../../stores/executions";
 import { useDetailViewStore } from "../../stores/detailView";
+import { usePrivacyModeStore } from "../../stores/privacyMode";
 import { PositionCard } from "./PositionCard";
 import { OptionCard } from "./OptionCard";
 import { DetailPane } from "./DetailPane";
@@ -203,6 +204,8 @@ export function PositionsPanel() {
   }, [options, quotesBySymbol]);
 
   const [view, setView] = useState<PanelView>("stocks");
+  const privacyEnabled = usePrivacyModeStore((s) => s.enabled);
+  const togglePrivacy = usePrivacyModeStore((s) => s.toggle);
 
   // Drill-down detail view: when a symbol is selected (stock OR option
   // contract), replace the grid with the DetailPane. Symbol — not ticker
@@ -244,9 +247,24 @@ export function PositionsPanel() {
     </div>
   );
 
+  const privacyButton = (
+    <button
+      type="button"
+      className={`privacy-toggle${privacyEnabled ? " on" : ""}`}
+      onClick={togglePrivacy}
+      aria-pressed={privacyEnabled}
+      aria-label={privacyEnabled ? "退出私密模式" : "进入私密模式"}
+      title={privacyEnabled ? "私密模式已开启 · 点击关闭" : "私密模式：隐藏持仓/盈亏/总市值"}
+    >
+      {privacyEnabled ? <EyeOffIcon /> : <EyeIcon />}
+      <span className="privacy-toggle-label">私密</span>
+    </button>
+  );
+
   // Pull the per-view summary out so the header + summary form one
   // sticky block that stays pinned at the top of the panel while only
-  // the card grid scrolls underneath.
+  // the card grid scrolls underneath. PortfolioSummary masks its own
+  // values via the privacy store — no need to gate it here.
   const summary =
     view === "stocks"
       ? stocks.length > 0 && <PortfolioSummary stocks={stocks} />
@@ -256,7 +274,10 @@ export function PositionsPanel() {
     <aside className="positions-panel">
       <SparkDefs />
       <div className="positions-panel-top">
-        <header className="positions-panel-head">{tabs}</header>
+        <header className="positions-panel-head">
+          {tabs}
+          {privacyButton}
+        </header>
         {summary}
       </div>
       {/* .positions-body is the right zone's sole scroll container —
@@ -301,5 +322,27 @@ export function PositionsPanel() {
       )}
       </div>
     </aside>
+  );
+}
+
+function EyeIcon(): JSX.Element {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"
+            stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.6" />
+    </svg>
+  );
+}
+
+function EyeOffIcon(): JSX.Element {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M3 3l18 18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M10.5 6.2A10.6 10.6 0 0 1 12 6c6.5 0 10 6 10 6a17.4 17.4 0 0 1-3.2 4.1M6.6 6.6A17.7 17.7 0 0 0 2 12s3.5 6 10 6c1.7 0 3.2-.4 4.5-1"
+            stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"
+            stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }

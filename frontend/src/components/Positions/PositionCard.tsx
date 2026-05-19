@@ -5,6 +5,7 @@ import { marketOf } from "../Card/cardHelpers";
 import { effectiveSession } from "./sessionWindow";
 import { toUsd } from "../../utils/currency";
 import { tradingDayOfET, currentOrLastTradingDay } from "./timeFmt";
+import { usePrivacyModeStore } from "../../stores/privacyMode";
 
 interface Props {
   position: Position;
@@ -60,6 +61,7 @@ const SESSION_LABEL: Record<string, string> = {
  *  the detail pane (see PairList) — the card stays focused on price /
  *  P&L so a crowded portfolio still scans at a glance. */
 export function PositionCard({ position, quote, intraday, executions, onClick }: Props) {
+  const privacy = usePrivacyModeStore((s) => s.enabled);
   // All numeric values that come from the broker carry the position's
   // local currency (HKD for *.HK, USD for *.US). Normalize at the
   // boundary so every downstream computation and display is in USD.
@@ -184,8 +186,10 @@ export function PositionCard({ position, quote, intraday, executions, onClick }:
           </span>
         )}
         {dayPl != null && (
-          <span className={`pcard-day-pl ${dayPl >= 0 ? "pos" : "neg"}`}>
-            {dayPl >= 0 ? "+" : ""}${fmt(dayPl, 0)}
+          <span className={`pcard-day-pl ${privacy ? "" : dayPl >= 0 ? "pos" : "neg"}`}>
+            {privacy ? "***" : (
+              <>{dayPl >= 0 ? "+" : ""}${fmt(dayPl, 0)}</>
+            )}
           </span>
         )}
       </div>
@@ -204,23 +208,35 @@ export function PositionCard({ position, quote, intraday, executions, onClick }:
       <div className="pcard-meta four">
         <div>
           <div className="k">持仓</div>
-          <div className="v">{fmt(qty, 0)}</div>
+          <div className="v">{privacy ? "***" : fmt(qty, 0)}</div>
         </div>
         <div>
           <div className="k">均价</div>
-          <div className="v">{fmt(avg)}</div>
+          <div className="v">{privacy ? "***" : fmt(avg)}</div>
         </div>
         <div>
           <div className="k">总市值</div>
-          <div className="v">{marketValue != null ? `$${fmt(marketValue, 0)}` : "—"}</div>
+          <div className="v">
+            {privacy
+              ? "***"
+              : marketValue != null
+              ? `$${fmt(marketValue, 0)}`
+              : "—"}
+          </div>
         </div>
         <div>
           <div className="k">浮盈</div>
-          <div className={`v ${pl != null && pl >= 0 ? "pos" : "neg"}`}>
-            {pl != null
-              ? `${pl >= 0 ? "+" : "-"}$${fmt(Math.abs(pl), 0)}`
-              : "—"}
-            {plPct != null && <small> {pct(plPct)}</small>}
+          <div className={`v ${privacy ? "" : pl != null && pl >= 0 ? "pos" : "neg"}`}>
+            {privacy ? (
+              "***"
+            ) : (
+              <>
+                {pl != null
+                  ? `${pl >= 0 ? "+" : "-"}$${fmt(Math.abs(pl), 0)}`
+                  : "—"}
+                {plPct != null && <small> {pct(plPct)}</small>}
+              </>
+            )}
           </div>
         </div>
       </div>
