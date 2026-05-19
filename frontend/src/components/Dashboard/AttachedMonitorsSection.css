@@ -1,0 +1,419 @@
+/* ── Source color tokens (mirrors SignalCard.css :root) ───────────────── */
+/* These are re-declared here as fallbacks; SignalCard.css defines them on
+   :root when the chat board is mounted, but the settings modal may render
+   independently. Using fallback values keeps the component self-contained. */
+
+/* ── Section shell ────────────────────────────────────────────────────── */
+.attached-monitors {
+  padding: 14px 0;
+}
+
+.attached-monitors h4 {
+  margin: 0 0 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg-1);
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+
+.attached-monitors .count {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--fg-3);
+  background: var(--bg-3);
+  padding: 1px 7px;
+  border-radius: 3px;
+  font-weight: 400;
+}
+
+/* ── Monitor list ─────────────────────────────────────────────────────── */
+.mon-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+/* ── Individual row ───────────────────────────────────────────────────── */
+.mon-row {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  transition: border-color var(--dur) var(--ease);
+}
+
+.mon-row:hover {
+  border-color: var(--line-strong);
+}
+
+.mon-row.expanded {
+  border-color: var(--line-strong);
+}
+
+.mon-row.error {
+  border-color: rgba(239, 91, 91, 0.30);
+}
+
+/* ── Row head ─────────────────────────────────────────────────────────── */
+.mon-head {
+  display: grid;
+  grid-template-columns: 16px auto auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Source dot */
+.src-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.src-dot.stock  { background: var(--source-stock,  #5fbf8b); }
+.src-dot.option { background: var(--source-option, #8b6fcf); }
+
+/* Type chip */
+.mon-head .type-chip {
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  padding: 1px 7px;
+  border-radius: var(--radius-chip);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.mon-head .type-chip.stock {
+  background: rgba(95, 191, 139, 0.16);
+  color: var(--source-stock, #5fbf8b);
+}
+
+.mon-head .type-chip.option {
+  background: rgba(139, 111, 207, 0.16);
+  color: var(--source-option, #8b6fcf);
+}
+
+/* Name */
+.mon-head .mon-name {
+  font-size: 12px;
+  color: var(--fg-1);
+  font-weight: 500;
+  white-space: nowrap;
+  border-bottom: 1px dashed transparent;
+  transition: border-color var(--dur) var(--ease);
+}
+
+.mon-head:hover .mon-name {
+  border-bottom-color: var(--fg-3);
+}
+
+/* URL */
+.mon-head .mon-url {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--fg-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* ── Actions bar ──────────────────────────────────────────────────────── */
+.mon-actions {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+
+/* Status pill */
+.mon-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  margin-right: 4px;
+}
+
+.mon-status .state-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.mon-status.running         { color: var(--ok); }
+.mon-status.running .state-dot { background: var(--ok); }
+
+.mon-status.stopped         { color: var(--fg-3); }
+.mon-status.stopped .state-dot { background: var(--fg-3); }
+
+.mon-status.error           { color: var(--err); }
+.mon-status.error .state-dot {
+  background: var(--err);
+  box-shadow: 0 0 0 3px rgba(239, 91, 91, 0.15);
+}
+
+/* Icon buttons */
+.mon-btn {
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  color: var(--fg-2);
+  cursor: pointer;
+  border-radius: var(--radius-chip);
+  font: inherit;
+  font-size: 11px;
+  padding: 3px 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  line-height: 1;
+  transition: color var(--dur) var(--ease),
+              border-color var(--dur) var(--ease),
+              background var(--dur) var(--ease);
+}
+
+.mon-btn:hover:not(:disabled) {
+  color: var(--fg-1);
+  border-color: var(--fg-3);
+}
+
+.mon-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.mon-btn.icon-only {
+  padding: 3px 6px;
+}
+
+.mon-btn.danger:hover:not(:disabled) {
+  color: var(--err);
+  border-color: rgba(239, 91, 91, 0.42);
+  background: rgba(239, 91, 91, 0.06);
+}
+
+/* Expand chevron */
+.mon-expand {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  color: var(--fg-3);
+  cursor: pointer;
+  border-radius: var(--radius-chip);
+  transition: transform var(--dur) var(--ease);
+  user-select: none;
+}
+
+.mon-row.expanded .mon-expand {
+  transform: rotate(180deg);
+}
+
+.mon-row.error .mon-expand {
+  color: var(--err);
+}
+
+/* ── Expanded body ────────────────────────────────────────────────────── */
+.mon-body {
+  border-top: 1px dashed var(--line);
+  padding: 12px 14px;
+  background: var(--bg-1);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Error banner */
+.error-banner {
+  padding: 6px 10px;
+  border-radius: var(--radius-chip);
+  background: rgba(239, 91, 91, 0.10);
+  border: 1px solid rgba(239, 91, 91, 0.32);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--err);
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  line-height: 1.5;
+}
+
+.error-banner .glyph {
+  color: var(--err);
+  flex-shrink: 0;
+  font-weight: 700;
+}
+
+.error-banner b {
+  color: var(--err);
+}
+
+/* Editor block */
+.editor-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.editor-block .editor-label {
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+
+/* ── Add-monitor sub-form ─────────────────────────────────────────────── */
+.mon-add-form {
+  margin-top: 12px;
+  padding: 12px 14px;
+  background: var(--bg-2);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-card);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mon-add-form .add-title {
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+
+.mon-add-form input[type="url"],
+.mon-add-form input[type="text"] {
+  background: var(--bg-1);
+  border: 1px solid var(--line-strong);
+  color: var(--fg-1);
+  padding: 5px 8px;
+  border-radius: var(--radius-chip);
+  font: inherit;
+  font-size: 12px;
+  outline: none;
+  width: 100%;
+  transition: border-color var(--dur) var(--ease);
+}
+
+.mon-add-form input[type="url"]::placeholder,
+.mon-add-form input[type="text"]::placeholder {
+  color: var(--fg-3);
+}
+
+.mon-add-form input[type="url"]:focus,
+.mon-add-form input[type="text"]:focus {
+  border-color: var(--brand);
+}
+
+.mon-add-form input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.add-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.mon-add-form select {
+  background: var(--bg-1);
+  border: 1px solid var(--line-strong);
+  color: var(--fg-1);
+  padding: 5px 8px;
+  border-radius: var(--radius-chip);
+  font: inherit;
+  font-size: 12px;
+  outline: none;
+  width: 100%;
+  transition: border-color var(--dur) var(--ease);
+}
+
+.mon-add-form select:focus {
+  border-color: var(--brand);
+}
+
+.mon-add-form select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.mon-add-form select option:disabled {
+  color: var(--fg-3);
+}
+
+.add-error {
+  color: var(--err);
+  background: rgba(239, 91, 91, 0.10);
+  border: 1px solid rgba(239, 91, 91, 0.25);
+  border-radius: var(--radius-chip);
+  padding: 5px 8px;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+/* Submit button — inherits .btn .primary from modal footer; ensure it
+   also works when rendered outside the modal footer context. */
+.mon-add-form .btn {
+  align-self: flex-end;
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  color: var(--fg-2);
+  padding: 6px 14px;
+  cursor: pointer;
+  border-radius: var(--radius-chip);
+  font: inherit;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: color var(--dur) var(--ease),
+              border-color var(--dur) var(--ease),
+              background var(--dur) var(--ease);
+}
+
+.mon-add-form .btn:hover:not(:disabled) {
+  color: var(--fg-1);
+  border-color: var(--fg-3);
+}
+
+.mon-add-form .btn.primary {
+  background: rgba(var(--brand-rgb), 0.14);
+  border-color: rgba(var(--brand-rgb), 0.50);
+  color: var(--brand);
+}
+
+.mon-add-form .btn.primary:hover:not(:disabled) {
+  background: rgba(var(--brand-rgb), 0.22);
+  border-color: var(--brand);
+}
+
+.mon-add-form .btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Responsive ───────────────────────────────────────────────────────── */
+@media (max-width: 560px) {
+  .mon-head {
+    grid-template-columns: 16px auto auto 1fr;
+    flex-wrap: wrap;
+  }
+
+  .mon-head .mon-url {
+    display: none;
+  }
+
+  .add-row {
+    grid-template-columns: 1fr;
+  }
+}
