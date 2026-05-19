@@ -226,17 +226,24 @@ def build_http_router(
 
     @router.get("/api/tasks", response_model=TaskListOut)
     async def list_tasks_endpoint(
-        limit: int = Query(50, ge=1, le=200),
+        limit: int = Query(50, ge=1, le=500),
         cursor: datetime | None = None,
         status: str | None = None,
         type: Annotated[str | None, Query(alias="type")] = None,
         symbol: str | None = None,
+        urls: Annotated[list[str] | None, Query()] = None,
+        week_start: datetime | None = None,
+        week_end: datetime | None = None,
     ) -> TaskListOut:
         """Return a paginated, optionally-filtered list of tasks.
 
         Pagination is cursor-based: pass ``cursor=<ISO-datetime>`` from
         ``next_cursor`` in the previous page to advance.  ``next_cursor`` is
         ``null`` when no further pages exist.
+
+        Multi-value URL filter: pass ``?urls=u1&urls=u2``. Time window:
+        ``week_start`` / ``week_end`` apply a half-open [start, end) filter on
+        ``message.posted_at``.
         """
         status_enum: Status | None = None
         if status is not None:
@@ -253,6 +260,9 @@ def build_http_router(
                 status=status_enum,
                 type_=type,
                 symbol=symbol,
+                urls=urls,
+                posted_at_start=week_start,
+                posted_at_end=week_end,
             )
         summaries = [task_to_summary(t) for t in tasks]
         next_cur: datetime | None = tasks[-1].created_at if len(tasks) == limit else None
