@@ -63,19 +63,3 @@ export async function patchWatchedSenders(
   }
 }
 
-export async function patchChatCardMaxMsgs(
-  pageId: string,
-  chatCardMaxMsgs: number,
-): Promise<void> {
-  const url = authedUrl(
-    `/api/whop/pages/${encodeURIComponent(pageId)}/settings`,
-  );
-  const resp = await fetch(url, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chat_card_max_msgs: chatCardMaxMsgs }),
-  });
-  if (!resp.ok) {
-    throw new Error(`patchChatCardMaxMsgs ${pageId}: ${resp.status}`);
-  }
-}
