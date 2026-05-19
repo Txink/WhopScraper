@@ -1,0 +1,1503 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Signal Cards · embedded in Chat board</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-0: #0b0f14;
+  --bg-1: #121821;
+  --bg-2: #171f2a;
+  --bg-3: #1c2635;
+  --bg-hover: #202b3d;
+  --line: rgba(255, 255, 255, 0.06);
+  --line-strong: rgba(255, 255, 255, 0.10);
+  --fg-1: #e4e8ef;
+  --fg-2: #8a93a1;
+  --fg-3: #566071;
+  --brand: #3fb5c5;
+  --brand-rgb: 63, 181, 197;
+  --ok: #3dd68c;
+  --err: #ef5b5b;
+  --warn: #e7a73d;
+  --info: #5aa0ff;
+  --source-stock: #5fbf8b;
+  --source-stock-rgb: 95, 191, 139;
+  --source-option: #8b6fcf;
+  --source-option-rgb: 139, 111, 207;
+  --source-chat: #c688ff;
+  --font-sans: "IBM Plex Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --radius-chip: 3px;
+  --radius-card: 6px;
+  --ease: cubic-bezier(0.2, 0.6, 0.2, 1);
+  --dur: 150ms;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg-0); color: var(--fg-1);
+  font-family: var(--font-sans); font-size: 13px; line-height: 1.5;
+  font-feature-settings: "tnum" on, "lnum" on;
+  height: 100vh; overflow: hidden;
+}
+
+.app { display: flex; flex-direction: column; height: 100vh; }
+
+/* ── Tabs ─────────────────────────────────────────────────────────── */
+.tabs {
+  display: flex; gap: 4px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-1);
+  flex-shrink: 0;
+}
+.tab {
+  background: transparent; border: 0;
+  color: var(--fg-2);
+  padding: 10px 14px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  display: flex; align-items: center; gap: 6px;
+  font: inherit; font-size: 12px;
+}
+.tab .tab-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--fg-3); }
+.tab .tab-dot.chat { background: var(--source-chat); }
+.tab .tab-dot.stock { background: var(--source-stock); }
+.tab .tab-dot.option { background: var(--source-option); }
+.tab.active { color: var(--fg-1); border-bottom-color: var(--brand); }
+
+/* Page meta */
+.page-meta {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-1);
+  flex-shrink: 0;
+}
+.page-meta-title {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 13px; color: var(--fg-1);
+}
+.page-meta-title .badge {
+  padding: 2px 8px; border-radius: 4px;
+  font-size: 10.5px; font-weight: 500;
+  background: rgba(198, 136, 255, 0.14);
+  color: var(--source-chat);
+  border: 1px solid rgba(198, 136, 255, 0.32);
+}
+.page-meta-stack { flex: 1; min-width: 0; }
+.page-meta-sub {
+  margin-top: 3px;
+  font-size: 11px; color: var(--fg-3);
+  font-family: var(--font-mono);
+}
+.page-meta-actions { display: flex; gap: 6px; }
+.btn-action {
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  color: var(--fg-2);
+  padding: 4px 10px;
+  cursor: pointer;
+  border-radius: var(--radius-chip);
+  font: inherit; font-size: 12px;
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.btn-action:hover { color: var(--fg-1); border-color: var(--fg-3); }
+
+/* ── Filter bar ────────────────────────────────────────────────────── */
+.filter-bar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-1);
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+.filter-label {
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  color: var(--fg-3);
+  text-transform: uppercase;
+}
+.mode-toggle {
+  display: inline-flex;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-chip);
+  overflow: hidden;
+  margin-right: 4px;
+}
+.mode-toggle button {
+  background: transparent; border: 0;
+  color: var(--fg-3);
+  padding: 4px 10px;
+  cursor: pointer;
+  font: inherit; font-size: 11px;
+}
+.mode-toggle button.on {
+  background: rgba(var(--brand-rgb), 0.14);
+  color: var(--brand);
+}
+.sender-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--fg-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all var(--dur) var(--ease);
+}
+.sender-chip:hover { border-color: var(--fg-3); color: var(--fg-1); }
+.sender-chip.on {
+  border-color: rgba(var(--brand-rgb), 0.50);
+  background: rgba(var(--brand-rgb), 0.10);
+  color: var(--brand);
+}
+.sender-chip .avatar {
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--bg-3);
+  display: grid; place-items: center;
+  font-size: 9px; font-weight: 600;
+  color: var(--fg-2);
+}
+.sender-chip.on .avatar { background: var(--brand); color: var(--bg-0); }
+.sender-chip.monitor { padding-left: 7px; }
+.sender-chip .src-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.sender-chip .src-dot.stock { background: var(--source-stock); }
+.sender-chip .src-dot.option { background: var(--source-option); }
+.sender-chip .cnt { font-size: 10px; color: var(--fg-3); }
+
+/* ── Board scroll ──────────────────────────────────────────────────── */
+.board-scroll {
+  flex: 1; min-height: 0;
+  overflow: auto;
+  padding: 18px 14px 80px;
+}
+.board-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+.board-scroll::-webkit-scrollbar-thumb { background: var(--bg-3); border-radius: 4px; }
+.board-scroll::-webkit-scrollbar-track { background: transparent; }
+
+.board {
+  max-width: 880px;
+  margin: 0 auto;
+}
+.board[data-mode="filter"] .stream-view { display: none; }
+.board[data-mode="highlight"] .filter-view { display: none; }
+
+.filter-view {
+  display: flex; flex-direction: column;
+  gap: 14px;
+}
+.filter-view .chat-card:not(.watched) { display: none; }
+
+/* ── Filter mode · chat-card outer shell ──────────────────────────── */
+.chat-card {
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  display: flex; flex-direction: column;
+  transition: border-color var(--dur) var(--ease);
+}
+.chat-card:hover { border-color: var(--line-strong); }
+.chat-card-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--line);
+}
+.avatar-lg {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: 10px; font-weight: 600;
+  color: var(--bg-0);
+  flex-shrink: 0;
+}
+.chat-card-head .sender-name {
+  font-size: 12px; color: var(--fg-1); font-weight: 500;
+}
+.chat-card.aggregate.stock .chat-card-head .sender-name { color: var(--source-stock); }
+.chat-card.aggregate.option .chat-card-head .sender-name { color: var(--source-option); }
+.chat-card-head .meta {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 10.5px; color: var(--fg-3);
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.chat-card-head .msg-count {
+  background: var(--bg-3);
+  color: var(--fg-2);
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+}
+.type-chip {
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 1px 7px;
+  border-radius: 3px;
+  font-family: var(--font-sans);
+}
+.type-chip.stock {
+  background: rgba(var(--source-stock-rgb), 0.16);
+  color: var(--source-stock);
+}
+.type-chip.option {
+  background: rgba(var(--source-option-rgb), 0.16);
+  color: var(--source-option);
+}
+.type-chip.muted {
+  background: var(--bg-3);
+  color: var(--fg-3);
+}
+.chat-card-head .monitor-source {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--fg-3);
+}
+.chat-card-head .monitor-source b {
+  color: var(--fg-2);
+  font-weight: 500;
+}
+
+.chat-thread {
+  padding: 10px 12px;
+  display: flex; flex-direction: column;
+  gap: 8px;
+}
+.chat-row { display: flex; gap: 8px; align-items: flex-end; }
+.chat-row.right { justify-content: flex-end; }
+.avatar-sm {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: 9px; font-weight: 600;
+  color: var(--bg-0);
+  flex-shrink: 0;
+  margin-bottom: 2px;
+}
+
+/* normal text bubble */
+.bubble {
+  position: relative;
+  max-width: 78%;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  word-break: break-word;
+}
+.bubble.left {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  color: var(--fg-1);
+  border-bottom-left-radius: 2px;
+}
+.bubble.right {
+  background: rgba(var(--brand-rgb), 0.10);
+  border: 1px solid rgba(var(--brand-rgb), 0.32);
+  color: var(--fg-1);
+  border-bottom-right-radius: 2px;
+}
+.bubble .bubble-meta {
+  margin-top: 4px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--fg-3);
+  display: flex; gap: 6px;
+  justify-content: flex-end;
+}
+.bubble .quote {
+  margin: -2px -2px 6px -2px;
+  padding: 6px 8px 6px 10px;
+  background: var(--bg-0);
+  border-left: 2px solid var(--brand);
+  border-radius: 0 4px 4px 0;
+  font-size: 11px;
+  color: var(--fg-2);
+  line-height: 1.45;
+}
+.bubble .quote .q-sender {
+  display: block;
+  font-family: var(--font-sans);
+  font-size: 10.5px;
+  color: var(--fg-3);
+  margin-bottom: 1px;
+}
+
+/* ──────────────────────────────────────────────────────────────────
+   Signal bubble — works both inside a filter-view chat-card thread
+   and inside a stream-view group's body.
+   ────────────────────────────────────────────────────────────────── */
+.signal-bubble {
+  position: relative;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  border-bottom-left-radius: 2px;
+  padding: 0;
+  overflow: hidden;
+  cursor: pointer;
+  width: fit-content;
+  min-width: 280px;
+  max-width: 560px;
+  transition: border-color var(--dur) var(--ease),
+              max-width var(--dur) var(--ease);
+}
+.signal-bubble:hover { border-color: var(--line-strong); }
+.signal-bubble[data-state="expanded"] { max-width: 640px; }
+.signal-bubble::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 2px;
+}
+.signal-bubble.stock::before { background: var(--source-stock); }
+.signal-bubble.option::before { background: var(--source-option); }
+.signal-bubble.neutral::before { background: var(--fg-3); }
+.signal-summary {
+  padding: 8px 12px 8px 14px;
+  display: flex; flex-direction: column;
+  gap: 6px;
+}
+/* inline source-tag inside signal bubble — needed when multiple
+   monitors are aggregated into one card */
+.signal-source-tag {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
+  color: var(--fg-3);
+  display: inline-flex; align-items: center; gap: 4px;
+  align-self: flex-start;
+}
+.signal-source-tag::before {
+  content: ""; width: 5px; height: 5px;
+  border-radius: 50%;
+}
+.signal-source-tag.stock::before { background: var(--source-stock); }
+.signal-source-tag.option::before { background: var(--source-option); }
+
+.layer-msg {
+  font-size: 11.5px;
+  color: var(--fg-3);
+  font-style: italic;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.signal-bubble[data-state="expanded"] .layer-msg {
+  -webkit-line-clamp: unset;
+  display: block;
+  white-space: normal;
+  color: var(--fg-2);
+}
+.layer-sig {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+.side-chip {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 3px;
+}
+.side-chip.buy { background: rgba(61, 214, 140, 0.18); color: var(--ok); }
+.side-chip.sell { background: rgba(239, 91, 91, 0.18); color: var(--err); }
+.ticker {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--fg-1);
+}
+.contract {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-2);
+}
+.price { color: var(--fg-1); font-variant-numeric: tabular-nums; }
+.qty { color: var(--fg-3); font-family: var(--font-mono); font-size: 11px; }
+.parse-extra {
+  font-size: 10.5px;
+  color: var(--fg-3);
+  font-family: var(--font-mono);
+}
+
+.confirm-pair { margin-left: auto; display: inline-flex; gap: 4px; }
+.confirm-pair button {
+  font: inherit; cursor: pointer;
+  font-size: 10.5px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--fg-2);
+}
+.confirm-pair button.ok { color: var(--ok); border-color: rgba(61, 214, 140, 0.42); }
+.confirm-pair button.skip { color: var(--fg-3); }
+.confirm-pair button:hover { background: var(--bg-3); }
+
+.layer-ord {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11.5px;
+}
+.state-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.state-dot.ok { background: var(--ok); }
+.state-dot.warn { background: var(--warn); box-shadow: 0 0 0 3px rgba(231,167,61,0.10); }
+.state-dot.err { background: var(--err); }
+.state-dot.muted { background: var(--fg-3); }
+.state-text { color: var(--fg-2); }
+.cum {
+  color: var(--fg-3);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+.layer-ord .expander {
+  margin-left: auto;
+  color: var(--fg-3);
+  font-size: 10px;
+  user-select: none;
+  transition: transform var(--dur) var(--ease);
+}
+.signal-bubble[data-state="expanded"] .layer-ord .expander { transform: rotate(180deg); }
+.layer-error {
+  color: var(--err);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+}
+
+.signal-detail {
+  display: none;
+  border-top: 1px dashed var(--line);
+  padding: 10px 12px 10px 14px;
+  flex-direction: column;
+  gap: 10px;
+}
+.signal-bubble[data-state="expanded"] .signal-detail { display: flex; }
+.detail-block { display: flex; flex-direction: column; gap: 4px; }
+.detail-label {
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+.detail-meta {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--fg-3);
+}
+.detail-meta b { color: var(--fg-2); font-weight: 500; }
+.detail-meta a {
+  color: var(--fg-3);
+  text-decoration: none;
+  border-bottom: 1px dashed var(--fg-3);
+}
+.ord-submit {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-2);
+}
+.ord-submit b { color: var(--fg-1); font-weight: 500; }
+.push-chain {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  padding: 4px 0 0;
+}
+.push-evt {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 4px 10px;
+  font-size: 11px;
+  position: relative;
+}
+.push-evt .lbl {
+  font-family: var(--font-sans);
+  color: var(--fg-1);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.push-evt .lbl::before {
+  content: "";
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--fg-3);
+}
+.push-evt.ok .lbl::before { background: var(--ok); }
+.push-evt.warn .lbl::before { background: var(--warn); }
+.push-evt .ts {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--fg-3);
+}
+.push-evt + .push-evt::before {
+  content: "→";
+  position: absolute;
+  left: -7px; top: 5px;
+  color: var(--fg-3);
+  font-size: 10px;
+}
+.push-tail {
+  margin-left: auto;
+  align-self: center;
+  font-size: 10px;
+  color: var(--fg-3);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-chip);
+  padding: 2px 8px;
+  cursor: pointer;
+}
+.ord-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-3);
+  border-top: 1px dashed var(--line);
+  padding-top: 8px;
+}
+.ord-summary b { color: var(--fg-1); font-weight: 500; }
+.status-pill {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  padding: 2px 8px;
+  border-radius: 3px;
+  margin-left: 4px;
+}
+.status-pill.filled { background: rgba(61, 214, 140, 0.20); color: var(--ok); }
+.status-pill.partial { background: rgba(231, 167, 61, 0.18); color: var(--warn); }
+.status-pill.failed { background: rgba(239, 91, 91, 0.20); color: var(--err); }
+.status-pill.cancelled { background: rgba(140, 140, 140, 0.18); color: var(--fg-2); }
+.status-pill.parse-err { background: rgba(239, 91, 91, 0.18); color: var(--err); }
+.status-pill.waiting { background: rgba(231, 167, 61, 0.18); color: var(--warn); }
+
+/* ──────────────────────────────────────────────────────────────────
+   Stream view (highlight mode) — single long flat list, no card
+   outer per sender. Consecutive same-sender items share an avatar +
+   name head. Watched senders get brand tint; unwatched stay neutral.
+   ────────────────────────────────────────────────────────────────── */
+.stream-view {
+  display: flex; flex-direction: column;
+  gap: 14px;
+}
+.stream-group {
+  display: flex; flex-direction: column;
+  gap: 4px;
+}
+.stream-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 0 0 30px;
+  margin-bottom: 2px;
+}
+.stream-group.watched .stream-head { padding-left: 0; padding-right: 30px; justify-content: flex-end; }
+.stream-head .avatar-sm { margin: 0; }
+.stream-head .stream-author {
+  font-size: 11.5px;
+  color: var(--fg-2);
+  font-weight: 500;
+}
+.stream-group.watched .stream-head .stream-author { color: var(--brand); }
+.stream-group.monitor.stock .stream-head .stream-author { color: var(--source-stock); }
+.stream-group.monitor.option .stream-head .stream-author { color: var(--source-option); }
+.stream-head .stream-time {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--fg-3);
+}
+.stream-body {
+  display: flex; flex-direction: column;
+  gap: 4px;
+  padding-left: 30px;
+}
+.stream-group.watched .stream-body { padding-left: 0; padding-right: 30px; align-items: flex-end; }
+.stream-bubble {
+  max-width: 78%;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  color: var(--fg-1);
+  word-break: break-word;
+}
+.stream-group.watched .stream-bubble {
+  background: rgba(var(--brand-rgb), 0.10);
+  border-color: rgba(var(--brand-rgb), 0.32);
+}
+/* Signal bubble inside the stream-body — already styled; just align */
+.stream-body .signal-bubble { align-self: flex-start; }
+.stream-group.watched .stream-body .signal-bubble { align-self: flex-end; }
+
+/* highlight mode mute non-watched */
+.board[data-mode="highlight"] .stream-group:not(.watched) {
+  opacity: 0.72;
+}
+.board[data-mode="highlight"] .stream-group:not(.watched):hover { opacity: 1; }
+
+/* ── Legend ────────────────────────────────────────────────────────── */
+.legend {
+  position: fixed;
+  right: 18px;
+  bottom: 14px;
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  padding: 10px 12px;
+  font-size: 10.5px;
+  color: var(--fg-3);
+  line-height: 1.65;
+  max-width: 290px;
+  font-family: var(--font-mono);
+}
+.legend h4 {
+  margin: 0 0 4px 0;
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-2);
+  font-family: var(--font-sans);
+}
+.legend .stripe-demo {
+  display: inline-block;
+  width: 2px; height: 10px;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+.legend .stripe-demo.stock { background: var(--source-stock); }
+.legend .stripe-demo.option { background: var(--source-option); }
+.legend .dot-demo {
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+.legend .dot-demo.stock { background: var(--source-stock); }
+.legend .dot-demo.option { background: var(--source-option); }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <div class="tabs">
+    <button class="tab active">
+      <span class="tab-dot chat"></span>
+      alpha-room
+    </button>
+    <button class="tab">
+      <span class="tab-dot chat"></span>
+      options-flow
+    </button>
+    <button class="tab">
+      <span class="tab-dot stock"></span>
+      legacy TSLL（独立）
+    </button>
+  </div>
+
+  <div class="page-meta">
+    <div class="page-meta-stack">
+      <div class="page-meta-title">
+        <span class="badge">聊天</span>
+        <span>alpha-room</span>
+        <span style="color:var(--fg-3)">·</span>
+        <span style="color:var(--fg-2);font-size:12px">最后轮询 4s 前 · 已发消息 312</span>
+      </div>
+      <div class="page-meta-sub">https://whop.com/joined/alpha-room/app/</div>
+    </div>
+    <div class="page-meta-actions">
+      <button class="btn-action">2026-W21 ▾</button>
+      <button class="btn-action">⏸ 暂停</button>
+      <button class="btn-action">⚙ 设置</button>
+    </div>
+  </div>
+
+  <div class="filter-bar">
+    <span class="filter-label">显示</span>
+    <div class="mode-toggle">
+      <button class="on" data-mode="filter">filter</button>
+      <button data-mode="highlight">highlight</button>
+    </div>
+    <span class="filter-label">SENDERS</span>
+
+    <button class="sender-chip on" data-sender="alpha_trader">
+      <span class="avatar">a</span> alpha_trader
+      <span class="cnt">10</span>
+    </button>
+    <button class="sender-chip" data-sender="matt_b">
+      <span class="avatar">m</span> matt_b
+      <span class="cnt">5</span>
+    </button>
+    <button class="sender-chip" data-sender="lia_options">
+      <span class="avatar">l</span> lia_options
+      <span class="cnt">3</span>
+    </button>
+    <button class="sender-chip" data-sender="options_god">
+      <span class="avatar">o</span> options_god
+      <span class="cnt">4</span>
+    </button>
+    <button class="sender-chip monitor on" data-sender="TSLL 监听">
+      <span class="src-dot stock"></span>
+      <span class="avatar">T</span> TSLL 监听
+      <span class="cnt">4</span>
+    </button>
+    <button class="sender-chip monitor" data-sender="NVDA 期权监听">
+      <span class="src-dot option"></span>
+      <span class="avatar">N</span> NVDA 期权监听
+      <span class="cnt">2</span>
+    </button>
+  </div>
+
+  <div class="board-scroll">
+    <div class="board" data-mode="filter">
+
+      <!-- ═══════════════════════════════════════════════════════════════
+           FILTER VIEW (default)
+           - one chat-card per human sender (consolidated across the week)
+           - one aggregate stock-signals card holding all stock-source signals
+           - one aggregate option-signals card holding all option-source signals
+           ═══════════════════════════════════════════════════════════════ -->
+      <div class="filter-view">
+
+        <!-- alpha_trader (10 msgs aggregated) -->
+        <div class="chat-card" data-sender="alpha_trader">
+          <div class="chat-card-head">
+            <span class="avatar-lg" style="background:#7fa9d8">a</span>
+            <span class="sender-name">alpha_trader</span>
+            <span class="meta">
+              <span class="msg-count">10 msgs</span>
+              <span>09:30–09:44</span>
+            </span>
+          </div>
+          <div class="chat-thread">
+            <div class="chat-row right"><div class="bubble right">gm — eye on TSLL today, watching the 200 zone<div class="bubble-meta"><span>09:30:55</span></div></div></div>
+            <div class="chat-row right"><div class="bubble right">SPY ripping again, watching for the 470 break<div class="bubble-meta"><span>09:31:04</span></div></div></div>
+            <div class="chat-row right"><div class="bubble right">watching the SPY ramp<div class="bubble-meta"><span>09:31:38</span></div></div></div>
+            <div class="chat-row right"><div class="bubble right">if we break 470 i'm taking calls<div class="bubble-meta"><span>09:31:51</span></div></div></div>
+            <div class="chat-row right"><div class="bubble right">buying tsla calls dip 200 — full position<div class="bubble-meta"><span>09:32:14</span></div></div></div>
+            <div class="chat-row right"><div class="bubble right">TSLL holding 200 — adding scaler<div class="bubble-meta"><span>09:38:42</span></div></div></div>
+            <div class="chat-row right"><div class="bubble right">adding tsll here, scaling in 100 shares<div class="bubble-meta"><span>09:40:53</span></div></div></div>
+            <div class="chat-row right"><div class="bubble right">actually trim half on a ramp<div class="bubble-meta"><span>09:41:17</span></div></div></div>
+            <div class="chat-row right"><div class="bubble right">thoughts on tsla here? feels overextended imo<div class="bubble-meta"><span>09:42:47</span></div></div></div>
+            <div class="chat-row right"><div class="bubble right">ok rolling to TSLA 210C 12/22 instead — heads up<div class="bubble-meta"><span>09:44:01</span></div></div></div>
+          </div>
+        </div>
+
+        <!-- matt_b -->
+        <div class="chat-card" data-sender="matt_b">
+          <div class="chat-card-head">
+            <span class="avatar-lg" style="background:#a8aab2">m</span>
+            <span class="sender-name">matt_b</span>
+            <span class="meta">
+              <span class="msg-count">5 msgs</span>
+              <span>09:28–09:42</span>
+            </span>
+          </div>
+          <div class="chat-thread">
+            <div class="chat-row"><span class="avatar-sm" style="background:#a8aab2">m</span><div class="bubble left">futures lookin green, ES up 38 pre-mkt<div class="bubble-meta"><span>09:28:11</span></div></div></div>
+            <div class="chat-row"><span class="avatar-sm" style="background:#a8aab2">m</span><div class="bubble left">powell speaks at 10 — could whipsaw<div class="bubble-meta"><span>09:28:47</span></div></div></div>
+            <div class="chat-row"><span class="avatar-sm" style="background:#a8aab2">m</span><div class="bubble left">nice fill 👀 i'll wait for confirmation here<div class="bubble-meta"><span>09:32:24</span></div></div></div>
+            <div class="chat-row"><span class="avatar-sm" style="background:#a8aab2">m</span><div class="bubble left">60% fill — order book thinned out at 201.40<div class="bubble-meta"><span>09:42:11</span></div></div></div>
+            <div class="chat-row"><span class="avatar-sm" style="background:#a8aab2">m</span><div class="bubble left">the trim caught the wick perfectly btw 🎯<div class="bubble-meta"><span>09:42:35</span></div></div></div>
+          </div>
+        </div>
+
+        <!-- lia_options -->
+        <div class="chat-card" data-sender="lia_options">
+          <div class="chat-card-head">
+            <span class="avatar-lg" style="background:#d3a574">l</span>
+            <span class="sender-name">lia_options</span>
+            <span class="meta">
+              <span class="msg-count">3 msgs</span>
+              <span>09:33–09:43</span>
+            </span>
+          </div>
+          <div class="chat-thread">
+            <div class="chat-row"><span class="avatar-sm" style="background:#d3a574">l</span><div class="bubble left">SPY 470 holding, IV crush on QQQ 0DTE rn<div class="bubble-meta"><span>09:33:02</span></div></div></div>
+            <div class="chat-row"><span class="avatar-sm" style="background:#d3a574">l</span><div class="bubble left">looking at NVDA, vol still juicy though<div class="bubble-meta"><span>09:33:38</span></div></div></div>
+            <div class="chat-row"><span class="avatar-sm" style="background:#d3a574">l</span><div class="bubble left">haha parser ghosted that one — no action verb<div class="bubble-meta"><span>09:43:02</span></div></div></div>
+          </div>
+        </div>
+
+        <!-- options_god -->
+        <div class="chat-card" data-sender="options_god">
+          <div class="chat-card-head">
+            <span class="avatar-lg" style="background:#c688a8">o</span>
+            <span class="sender-name">options_god</span>
+            <span class="meta">
+              <span class="msg-count">4 msgs</span>
+              <span>09:34–09:43</span>
+            </span>
+          </div>
+          <div class="chat-thread">
+            <div class="chat-row right"><div class="bubble right"><div class="quote"><span class="q-sender">alpha_trader · 09:31:51</span>if we break 470 i'm taking calls</div>same — also stalking NVDA 880C for tomorrow open<div class="bubble-meta"><span>09:34:12</span></div></div></div>
+            <div class="chat-row right"><div class="bubble right">NVDA 880C 12/15 limit 5.20<div class="bubble-meta"><span>09:35:01</span></div></div></div>
+            <div class="chat-row right"><div class="bubble right">NVDA 890C 12/22 around 6.10 if cheap<div class="bubble-meta"><span>09:43:10</span></div></div></div>
+            <div class="chat-row right"><div class="bubble right">checking IV first — give me 30s before confirming<div class="bubble-meta"><span>09:43:35</span></div></div></div>
+          </div>
+        </div>
+
+        <!-- aggregate STOCK signals card -->
+        <div class="chat-card aggregate stock" data-source-type="stock">
+          <div class="chat-card-head">
+            <span class="avatar-lg" style="background:var(--source-stock)">∑</span>
+            <span class="sender-name">正股信号</span>
+            <span class="type-chip stock">stock</span>
+            <span class="monitor-source">·&nbsp;<b>TSLL 监听</b></span>
+            <span class="meta">
+              <span class="msg-count">4 signals</span>
+              <span>09:32–09:42</span>
+            </span>
+          </div>
+          <div class="chat-thread">
+            <!-- TSLL FILLED folded -->
+            <div class="chat-row">
+              <span class="avatar-sm" style="background:var(--source-stock)">T</span>
+              <div class="signal-bubble stock" data-state="folded">
+                <div class="signal-summary">
+                  <span class="signal-source-tag stock">TSLL 监听 · 09:32:15</span>
+                  <div class="layer-msg" title="buying tsla calls dip 200 — full position">"buying tsla calls dip 200 — full position"</div>
+                  <div class="layer-sig">
+                    <span class="side-chip buy">BUY</span>
+                    <span class="ticker">TSLL.US</span>
+                    <span class="price">$200.00</span>
+                    <span class="qty">× 100</span>
+                  </div>
+                  <div class="layer-ord">
+                    <span class="state-dot ok"></span>
+                    <span class="state-text">已成交</span>
+                    <span class="cum">100/100 @ $199.87</span>
+                    <span class="expander">▾</span>
+                  </div>
+                </div>
+                <div class="signal-detail">
+                  <div class="detail-block">
+                    <div class="detail-label">MSG · 原始消息</div>
+                    <div class="detail-meta">domID&nbsp;<b>msg_tsll_001</b>&nbsp;·&nbsp; posted&nbsp;<b>2026-05-20 09:32:15.034 +08:00</b>&nbsp;·&nbsp; <a href="#">url ↗</a></div>
+                  </div>
+                  <div class="detail-block">
+                    <div class="detail-label">ORD · 提交 + 推送</div>
+                    <div class="ord-submit">提交&nbsp;<b>09:32:15.341</b> · LO <b>$200.00</b> × <b>100</b> · order_id <b>ord_a1b2</b> · submit <b>+120ms</b></div>
+                    <div class="push-chain">
+                      <span class="push-evt ok"><span class="lbl">Submitted</span><span class="ts">09:32:15.4</span></span>
+                      <span class="push-evt ok"><span class="lbl">Accepted</span><span class="ts">09:32:15.5</span></span>
+                      <span class="push-evt ok"><span class="lbl">Filled · 100/100 @ $199.87</span><span class="ts">09:32:16.3</span></span>
+                      <span class="push-tail">展开详情 ▾</span>
+                    </div>
+                    <div class="ord-summary">cum&nbsp;<b>100/100</b> · avg&nbsp;<b>$199.87</b> · 总耗时&nbsp;<b>1.3s</b> · 状态<span class="status-pill filled">FILLED</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- TSLL PARTIAL folded -->
+            <div class="chat-row">
+              <span class="avatar-sm" style="background:var(--source-stock);opacity:0">T</span>
+              <div class="signal-bubble stock" data-state="folded">
+                <div class="signal-summary">
+                  <span class="signal-source-tag stock">TSLL 监听 · 09:40:55</span>
+                  <div class="layer-msg" title="adding tsll here, scaling in 100 shares">"adding tsll here, scaling in 100 shares"</div>
+                  <div class="layer-sig">
+                    <span class="side-chip buy">BUY</span>
+                    <span class="ticker">TSLL.US</span>
+                    <span class="price">$201.40</span>
+                    <span class="qty">× 100</span>
+                  </div>
+                  <div class="layer-ord">
+                    <span class="state-dot warn"></span>
+                    <span class="state-text">部分成交</span>
+                    <span class="cum">60/100 @ $201.36</span>
+                    <span class="expander">▾</span>
+                  </div>
+                </div>
+                <div class="signal-detail">
+                  <div class="detail-block">
+                    <div class="detail-label">ORD · 推送链</div>
+                    <div class="push-chain">
+                      <span class="push-evt ok"><span class="lbl">Submitted</span><span class="ts">09:40:55.3</span></span>
+                      <span class="push-evt ok"><span class="lbl">Accepted</span><span class="ts">09:40:55.4</span></span>
+                      <span class="push-evt warn"><span class="lbl">PartialFilled · 60/100 @ $201.36</span><span class="ts">09:40:55.9</span></span>
+                    </div>
+                    <div class="ord-summary">cum&nbsp;<b>60/100</b> · avg&nbsp;<b>$201.36</b> · 状态<span class="status-pill partial">PARTIAL</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- TSLL SELL FILLED folded -->
+            <div class="chat-row">
+              <span class="avatar-sm" style="background:var(--source-stock);opacity:0">T</span>
+              <div class="signal-bubble stock" data-state="folded">
+                <div class="signal-summary">
+                  <span class="signal-source-tag stock">TSLL 监听 · 09:41:18</span>
+                  <div class="layer-msg" title="actually trim half on a ramp">"actually trim half on a ramp"</div>
+                  <div class="layer-sig">
+                    <span class="side-chip sell">SELL</span>
+                    <span class="ticker">TSLL.US</span>
+                    <span class="price">$202.50</span>
+                    <span class="qty">× 30</span>
+                  </div>
+                  <div class="layer-ord">
+                    <span class="state-dot ok"></span>
+                    <span class="state-text">已成交</span>
+                    <span class="cum">30/30 @ $202.58</span>
+                    <span class="expander">▾</span>
+                  </div>
+                </div>
+                <div class="signal-detail">
+                  <div class="detail-block">
+                    <div class="detail-label">ORD · 推送链</div>
+                    <div class="push-chain">
+                      <span class="push-evt ok"><span class="lbl">Submitted</span><span class="ts">09:41:18.0</span></span>
+                      <span class="push-evt ok"><span class="lbl">Filled · 30/30 @ $202.58</span><span class="ts">09:41:18.7</span></span>
+                    </div>
+                    <div class="ord-summary">cum&nbsp;<b>30/30</b> · avg&nbsp;<b>$202.58</b> · 状态<span class="status-pill filled">FILLED</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- TSLL PARSE_ERROR folded -->
+            <div class="chat-row">
+              <span class="avatar-sm" style="background:var(--source-stock);opacity:0">T</span>
+              <div class="signal-bubble neutral" data-state="folded">
+                <div class="signal-summary">
+                  <span class="signal-source-tag stock">TSLL 监听 · 09:42:48</span>
+                  <div class="layer-msg" title="thoughts on tsla here? feels overextended imo">"thoughts on tsla here? feels overextended imo"</div>
+                  <div class="layer-sig"><span class="layer-error">未解析 · 正则未匹配（无 ticker / action 命中）</span></div>
+                  <div class="layer-ord" style="justify-content:flex-end">
+                    <span class="status-pill parse-err">PARSE_ERROR</span>
+                    <span class="expander">▾</span>
+                  </div>
+                </div>
+                <div class="signal-detail">
+                  <div class="detail-block">
+                    <div class="detail-label">MSG · 原始消息</div>
+                    <div class="detail-meta">domID&nbsp;<b>msg_tsll_err</b>&nbsp;·&nbsp; posted&nbsp;<b>2026-05-20 09:42:48.111 +08:00</b></div>
+                  </div>
+                  <div class="detail-block">
+                    <div class="detail-label">SIG · 解析失败</div>
+                    <div class="detail-meta" style="color:var(--err)">RegexNoMatch: stock_parser v1 没找到 (ticker, action, price) 任一字段</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- aggregate OPTION signals card -->
+        <div class="chat-card aggregate option" data-source-type="option">
+          <div class="chat-card-head">
+            <span class="avatar-lg" style="background:var(--source-option)">∑</span>
+            <span class="sender-name">期权信号</span>
+            <span class="type-chip option">option</span>
+            <span class="monitor-source">·&nbsp;<b>NVDA 期权监听</b></span>
+            <span class="meta">
+              <span class="msg-count">2 signals</span>
+              <span>09:35–09:43</span>
+            </span>
+          </div>
+          <div class="chat-thread">
+
+            <!-- NVDA option FILLED (expanded default) -->
+            <div class="chat-row">
+              <span class="avatar-sm" style="background:var(--source-option)">N</span>
+              <div class="signal-bubble option" data-state="expanded">
+                <div class="signal-summary">
+                  <span class="signal-source-tag option">NVDA 期权监听 · 09:35:02</span>
+                  <div class="layer-msg" title="NVDA 880C 12/15 limit 5.20">"NVDA 880C 12/15 limit 5.20"</div>
+                  <div class="layer-sig">
+                    <span class="side-chip buy">BUY</span>
+                    <span class="ticker">NVDA.US</span>
+                    <span class="contract">880C 12/15</span>
+                    <span class="price">$5.20</span>
+                    <span class="qty">× 5 张</span>
+                  </div>
+                  <div class="layer-ord">
+                    <span class="state-dot ok"></span>
+                    <span class="state-text">已成交</span>
+                    <span class="cum">5/5 @ $5.19</span>
+                    <span class="expander">▾</span>
+                  </div>
+                </div>
+                <div class="signal-detail">
+                  <div class="detail-block">
+                    <div class="detail-label">MSG · 原始消息</div>
+                    <div class="detail-meta">domID&nbsp;<b>msg_abc123</b>&nbsp;·&nbsp; posted&nbsp;<b>2026-05-20 09:35:02.412 +08:00</b>&nbsp;·&nbsp; <a href="#">url ↗</a></div>
+                  </div>
+                  <div class="detail-block">
+                    <div class="detail-label">SIG · 解析指令</div>
+                    <div class="detail-meta">ctx&nbsp;=&nbsp;<b>watchlist</b> · parse&nbsp;<b>+0.214ms</b> · strike&nbsp;<b>880</b> · expiry&nbsp;<b>2026-12-15</b></div>
+                  </div>
+                  <div class="detail-block">
+                    <div class="detail-label">ORD · 提交 + 推送</div>
+                    <div class="ord-submit">提交&nbsp;<b>09:35:02.654</b> · LO <b>$5.20</b> × <b>5</b> · order_id <b>ord_xyz789</b> · submit <b>+120ms</b></div>
+                    <div class="push-chain">
+                      <span class="push-evt ok"><span class="lbl">Submitted</span><span class="ts">09:35:02.6</span></span>
+                      <span class="push-evt ok"><span class="lbl">Accepted</span><span class="ts">09:35:02.7</span></span>
+                      <span class="push-evt warn"><span class="lbl">PartialFilled · 2/5 @ $5.18</span><span class="ts">09:35:03.1</span></span>
+                      <span class="push-evt ok"><span class="lbl">Filled · 5/5 @ $5.19</span><span class="ts">09:35:04.0</span></span>
+                      <span class="push-tail">展开详情 ▾</span>
+                    </div>
+                    <div class="ord-summary">cum&nbsp;<b>5/5</b> · avg&nbsp;<b>$5.19</b> · 总耗时&nbsp;<b>1.7s</b> · 状态<span class="status-pill filled">FILLED</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- NVDA option INSTRUCTION_READY waiting -->
+            <div class="chat-row">
+              <span class="avatar-sm" style="background:var(--source-option);opacity:0">N</span>
+              <div class="signal-bubble option" data-state="folded">
+                <div class="signal-summary">
+                  <span class="signal-source-tag option">NVDA 期权监听 · 09:43:11</span>
+                  <div class="layer-msg" title="NVDA 890C 12/22 around 6.10 if cheap">"NVDA 890C 12/22 around 6.10 if cheap"</div>
+                  <div class="layer-sig">
+                    <span class="side-chip buy">BUY</span>
+                    <span class="ticker">NVDA.US</span>
+                    <span class="contract">890C 12/22</span>
+                    <span class="price">$6.10</span>
+                    <span class="qty">× 5 张</span>
+                    <span class="confirm-pair"><button class="ok">✓ 确认</button><button class="skip">✗ 跳过</button></span>
+                  </div>
+                  <div class="layer-ord">
+                    <span class="state-dot warn"></span>
+                    <span class="state-text">等待人工确认</span>
+                    <span class="cum">auto_trade 已关闭</span>
+                    <span class="expander">▾</span>
+                  </div>
+                </div>
+                <div class="signal-detail">
+                  <div class="detail-block">
+                    <div class="detail-label">SIG · 已解析，等待人工确认</div>
+                    <div class="detail-meta">ctx&nbsp;=&nbsp;<b>watchlist</b> · strike&nbsp;<b>890</b> · expiry&nbsp;<b>2026-12-22</b></div>
+                  </div>
+                  <div class="detail-block">
+                    <div class="detail-label">ORD · 等待</div>
+                    <div class="ord-summary" style="border-top:none;padding-top:0">状态 <span class="status-pill waiting">INSTRUCTION_READY</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════
+           STREAM VIEW (highlight mode)
+           - one flat list of groups, in chronological order
+           - consecutive same-sender items share one head; each msg is one row
+           - signal "messages" are rendered using .signal-bubble inside .stream-body
+           ═══════════════════════════════════════════════════════════════ -->
+      <div class="stream-view">
+
+        <div class="stream-group" data-sender="matt_b">
+          <div class="stream-head">
+            <span class="avatar-sm" style="background:#a8aab2">m</span>
+            <span class="stream-author">matt_b</span>
+            <span class="stream-time">09:28:11</span>
+          </div>
+          <div class="stream-body">
+            <div class="stream-bubble">futures lookin green, ES up 38 pre-mkt</div>
+            <div class="stream-bubble">powell speaks at 10 — could whipsaw</div>
+          </div>
+        </div>
+
+        <div class="stream-group" data-sender="alpha_trader">
+          <div class="stream-head">
+            <span class="avatar-sm" style="background:#7fa9d8">a</span>
+            <span class="stream-author">alpha_trader</span>
+            <span class="stream-time">09:30:55</span>
+          </div>
+          <div class="stream-body">
+            <div class="stream-bubble">gm — eye on TSLL today, watching the 200 zone</div>
+            <div class="stream-bubble">SPY ripping again, watching for the 470 break</div>
+            <div class="stream-bubble">watching the SPY ramp</div>
+            <div class="stream-bubble">if we break 470 i'm taking calls</div>
+            <div class="stream-bubble">buying tsla calls dip 200 — full position</div>
+          </div>
+        </div>
+
+        <div class="stream-group monitor stock" data-sender="TSLL 监听">
+          <div class="stream-head">
+            <span class="avatar-sm" style="background:var(--source-stock)">T</span>
+            <span class="stream-author">TSLL 监听</span>
+            <span class="type-chip stock">正股</span>
+            <span class="stream-time">09:32:15</span>
+          </div>
+          <div class="stream-body">
+            <div class="signal-bubble stock" data-state="folded">
+              <div class="signal-summary">
+                <div class="layer-msg" title="buying tsla calls dip 200 — full position">"buying tsla calls dip 200 — full position"</div>
+                <div class="layer-sig"><span class="side-chip buy">BUY</span><span class="ticker">TSLL.US</span><span class="price">$200.00</span><span class="qty">× 100</span></div>
+                <div class="layer-ord"><span class="state-dot ok"></span><span class="state-text">已成交</span><span class="cum">100/100 @ $199.87</span><span class="expander">▾</span></div>
+              </div>
+              <div class="signal-detail">
+                <div class="detail-block"><div class="detail-label">ORD · 推送链</div><div class="push-chain"><span class="push-evt ok"><span class="lbl">Submitted</span><span class="ts">09:32:15.4</span></span><span class="push-evt ok"><span class="lbl">Filled · 100/100 @ $199.87</span><span class="ts">09:32:16.3</span></span></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="stream-group" data-sender="matt_b">
+          <div class="stream-head">
+            <span class="avatar-sm" style="background:#a8aab2">m</span>
+            <span class="stream-author">matt_b</span>
+            <span class="stream-time">09:32:24</span>
+          </div>
+          <div class="stream-body">
+            <div class="stream-bubble">nice fill 👀 i'll wait for confirmation here</div>
+          </div>
+        </div>
+
+        <div class="stream-group" data-sender="lia_options">
+          <div class="stream-head">
+            <span class="avatar-sm" style="background:#d3a574">l</span>
+            <span class="stream-author">lia_options</span>
+            <span class="stream-time">09:33:02</span>
+          </div>
+          <div class="stream-body">
+            <div class="stream-bubble">SPY 470 holding, IV crush on QQQ 0DTE rn</div>
+            <div class="stream-bubble">looking at NVDA, vol still juicy though</div>
+          </div>
+        </div>
+
+        <div class="stream-group" data-sender="options_god">
+          <div class="stream-head">
+            <span class="avatar-sm" style="background:#c688a8">o</span>
+            <span class="stream-author">options_god</span>
+            <span class="stream-time">09:34:12</span>
+          </div>
+          <div class="stream-body">
+            <div class="stream-bubble"><div class="quote"><span class="q-sender">alpha_trader · 09:31:51</span>if we break 470 i'm taking calls</div>same — also stalking NVDA 880C for tomorrow open</div>
+            <div class="stream-bubble">NVDA 880C 12/15 limit 5.20</div>
+          </div>
+        </div>
+
+        <div class="stream-group monitor option" data-sender="NVDA 期权监听">
+          <div class="stream-head">
+            <span class="avatar-sm" style="background:var(--source-option)">N</span>
+            <span class="stream-author">NVDA 期权监听</span>
+            <span class="type-chip option">期权</span>
+            <span class="stream-time">09:35:02</span>
+          </div>
+          <div class="stream-body">
+            <div class="signal-bubble option" data-state="folded">
+              <div class="signal-summary">
+                <div class="layer-msg" title="NVDA 880C 12/15 limit 5.20">"NVDA 880C 12/15 limit 5.20"</div>
+                <div class="layer-sig"><span class="side-chip buy">BUY</span><span class="ticker">NVDA.US</span><span class="contract">880C 12/15</span><span class="price">$5.20</span><span class="qty">× 5 张</span></div>
+                <div class="layer-ord"><span class="state-dot ok"></span><span class="state-text">已成交</span><span class="cum">5/5 @ $5.19</span><span class="expander">▾</span></div>
+              </div>
+              <div class="signal-detail">
+                <div class="detail-block"><div class="detail-label">ORD · 推送链</div><div class="push-chain"><span class="push-evt ok"><span class="lbl">Submitted</span><span class="ts">09:35:02.6</span></span><span class="push-evt warn"><span class="lbl">PartialFilled · 2/5 @ $5.18</span><span class="ts">09:35:03.1</span></span><span class="push-evt ok"><span class="lbl">Filled · 5/5 @ $5.19</span><span class="ts">09:35:04.0</span></span></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="stream-group" data-sender="lia_options">
+          <div class="stream-head">
+            <span class="avatar-sm" style="background:#d3a574">l</span>
+            <span class="stream-author">lia_options</span>
+            <span class="stream-time">09:35:18</span>
+          </div>
+          <div class="stream-body">
+            <div class="stream-bubble">clean fill on the partial → full, nice</div>
+          </div>
+        </div>
+
+        <div class="stream-group" data-sender="alpha_trader">
+          <div class="stream-head">
+            <span class="avatar-sm" style="background:#7fa9d8">a</span>
+            <span class="stream-author">alpha_trader</span>
+            <span class="stream-time">09:38:42</span>
+          </div>
+          <div class="stream-body">
+            <div class="stream-bubble">TSLL holding 200 — adding scaler</div>
+            <div class="stream-bubble">adding tsll here, scaling in 100 shares</div>
+          </div>
+        </div>
+
+        <div class="stream-group monitor stock" data-sender="TSLL 监听">
+          <div class="stream-head">
+            <span class="avatar-sm" style="background:var(--source-stock)">T</span>
+            <span class="stream-author">TSLL 监听</span>
+            <span class="type-chip stock">正股</span>
+            <span class="stream-time">09:40:55</span>
+          </div>
+          <div class="stream-body">
+            <div class="signal-bubble stock" data-state="folded">
+              <div class="signal-summary">
+                <div class="layer-msg" title="adding tsll here, scaling in 100 shares">"adding tsll here, scaling in 100 shares"</div>
+                <div class="layer-sig"><span class="side-chip buy">BUY</span><span class="ticker">TSLL.US</span><span class="price">$201.40</span><span class="qty">× 100</span></div>
+                <div class="layer-ord"><span class="state-dot warn"></span><span class="state-text">部分成交</span><span class="cum">60/100 @ $201.36</span><span class="expander">▾</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="stream-group" data-sender="alpha_trader">
+          <div class="stream-head">
+            <span class="avatar-sm" style="background:#7fa9d8">a</span>
+            <span class="stream-author">alpha_trader</span>
+            <span class="stream-time">09:41:17</span>
+          </div>
+          <div class="stream-body">
+            <div class="stream-bubble">actually trim half on a ramp</div>
+          </div>
+        </div>
+
+        <div class="stream-group monitor stock" data-sender="TSLL 监听">
+          <div class="stream-head">
+            <span class="avatar-sm" style="background:var(--source-stock)">T</span>
+            <span class="stream-author">TSLL 监听</span>
+            <span class="type-chip stock">正股</span>
+            <span class="stream-time">09:41:18</span>
+          </div>
+          <div class="stream-body">
+            <div class="signal-bubble stock" data-state="folded">
+              <div class="signal-summary">
+                <div class="layer-msg" title="actually trim half on a ramp">"actually trim half on a ramp"</div>
+                <div class="layer-sig"><span class="side-chip sell">SELL</span><span class="ticker">TSLL.US</span><span class="price">$202.50</span><span class="qty">× 30</span></div>
+                <div class="layer-ord"><span class="state-dot ok"></span><span class="state-text">已成交</span><span class="cum">30/30 @ $202.58</span><span class="expander">▾</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="stream-group" data-sender="matt_b">
+          <div class="stream-head">
+            <span class="avatar-sm" style="background:#a8aab2">m</span>
+            <span class="stream-author">matt_b</span>
+            <span class="stream-time">09:42:11</span>
+          </div>
+          <div class="stream-body">
+            <div class="stream-bubble">60% fill — order book thinned out at 201.40</div>
+            <div class="stream-bubble">the trim caught the wick perfectly btw 🎯</div>
+          </div>
+        </div>
+
+        <div class="stream-group" data-sender="alpha_trader">
+          <div class="stream-head">
+            <span class="avatar-sm" style="background:#7fa9d8">a</span>
+            <span class="stream-author">alpha_trader</span>
+            <span class="stream-time">09:42:47</span>
+          </div>
+          <div class="stream-body">
+            <div class="stream-bubble">thoughts on tsla here? feels overextended imo</div>
+          </div>
+        </div>
+
+        <div class="stream-group monitor stock" data-sender="TSLL 监听">
+          <div class="stream-head">
+            <span class="avatar-sm" style="background:var(--source-stock);opacity:0.55">T</span>
+            <span class="stream-author">TSLL 监听</span>
+            <span class="type-chip muted">未解析</span>
+            <span class="stream-time">09:42:48</span>
+          </div>
+          <div class="stream-body">
+            <div class="signal-bubble neutral" data-state="folded">
+              <div class="signal-summary">
+                <div class="layer-msg" title="thoughts on tsla here? feels overextended imo">"thoughts on tsla here? feels overextended imo"</div>
+                <div class="layer-sig"><span class="layer-error">未解析 · 正则未匹配</span></div>
+                <div class="layer-ord" style="justify-content:flex-end"><span class="status-pill parse-err">PARSE_ERROR</span><span class="expander">▾</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="stream-group" data-sender="lia_options">
+          <div class="stream-head">
+            <span class="avatar-sm" style="background:#d3a574">l</span>
+            <span class="stream-author">lia_options</span>
+            <span class="stream-time">09:43:02</span>
+          </div>
+          <div class="stream-body">
+            <div class="stream-bubble">haha parser ghosted that one — no action verb</div>
+          </div>
+        </div>
+
+        <div class="stream-group" data-sender="options_god">
+          <div class="stream-head">
+            <span class="avatar-sm" style="background:#c688a8">o</span>
+            <span class="stream-author">options_god</span>
+            <span class="stream-time">09:43:10</span>
+          </div>
+          <div class="stream-body">
+            <div class="stream-bubble">NVDA 890C 12/22 around 6.10 if cheap</div>
+          </div>
+        </div>
+
+        <div class="stream-group monitor option" data-sender="NVDA 期权监听">
+          <div class="stream-head">
+            <span class="avatar-sm" style="background:var(--source-option)">N</span>
+            <span class="stream-author">NVDA 期权监听</span>
+            <span class="type-chip option">期权</span>
+            <span class="stream-time">09:43:11</span>
+          </div>
+          <div class="stream-body">
+            <div class="signal-bubble option" data-state="folded">
+              <div class="signal-summary">
+                <div class="layer-msg" title="NVDA 890C 12/22 around 6.10 if cheap">"NVDA 890C 12/22 around 6.10 if cheap"</div>
+                <div class="layer-sig"><span class="side-chip buy">BUY</span><span class="ticker">NVDA.US</span><span class="contract">890C 12/22</span><span class="price">$6.10</span><span class="qty">× 5 张</span><span class="confirm-pair"><button class="ok">✓ 确认</button><button class="skip">✗ 跳过</button></span></div>
+                <div class="layer-ord"><span class="state-dot warn"></span><span class="state-text">等待人工确认</span><span class="cum">auto_trade 已关闭</span><span class="expander">▾</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="stream-group" data-sender="options_god">
+          <div class="stream-head">
+            <span class="avatar-sm" style="background:#c688a8">o</span>
+            <span class="stream-author">options_god</span>
+            <span class="stream-time">09:43:35</span>
+          </div>
+          <div class="stream-body">
+            <div class="stream-bubble">checking IV first — give me 30s before confirming</div>
+          </div>
+        </div>
+
+        <div class="stream-group" data-sender="alpha_trader">
+          <div class="stream-head">
+            <span class="avatar-sm" style="background:#7fa9d8">a</span>
+            <span class="stream-author">alpha_trader</span>
+            <span class="stream-time">09:44:01</span>
+          </div>
+          <div class="stream-body">
+            <div class="stream-bubble">ok rolling to TSLA 210C 12/22 instead — heads up</div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<aside class="legend">
+  <h4>图例</h4>
+  <div><b style="color:var(--fg-2);font-family:var(--font-sans)">filter</b>　按 sender 聚合；正股 / 期权各一个大卡片</div>
+  <div><b style="color:var(--fg-2);font-family:var(--font-sans)">highlight</b>　单一长流，watched 高亮右贴边</div>
+  <div style="margin-top:6px">
+    <span class="stripe-demo stock"></span>stock 信号 ·
+    <span class="stripe-demo option"></span>option 信号
+  </div>
+  <div><span class="dot-demo stock"></span>/ <span class="dot-demo option"></span> 监听 sender chip</div>
+</aside>
+
+<script>
+  // ──────────────────────────────────────────────────────────────────
+  // Bootstrap: tag each filter-view chat-card with data-sender from
+  // its inner sender-name (so chip filter logic can match by name).
+  // Aggregate cards already carry data-source-type for type matching.
+  // ──────────────────────────────────────────────────────────────────
+  document.querySelectorAll('.filter-view .chat-card').forEach(function (card) {
+    if (card.dataset.sender) return; // already set
+    var nameEl = card.querySelector('.chat-card-head .sender-name');
+    if (nameEl) card.dataset.sender = nameEl.textContent.trim();
+  });
+
+  var board = document.querySelector('.board');
+
+  function refreshFilter() {
+    var watchedNames = new Set();
+    var watchedTypes = new Set();
+    document.querySelectorAll('.sender-chip.on').forEach(function (c) {
+      watchedNames.add(c.dataset.sender);
+      if (c.classList.contains('monitor')) {
+        // monitor chip → source type
+        if (c.querySelector('.src-dot.stock')) watchedTypes.add('stock');
+        else if (c.querySelector('.src-dot.option')) watchedTypes.add('option');
+      }
+    });
+
+    // Filter-view: per-sender human cards hide unless their data-sender
+    // is watched; aggregate cards hide unless their data-source-type is
+    // present among watched monitor types.
+    document.querySelectorAll('.filter-view .chat-card').forEach(function (card) {
+      var hit = false;
+      if (card.dataset.sourceType) {
+        hit = watchedTypes.has(card.dataset.sourceType);
+      } else if (card.dataset.sender) {
+        hit = watchedNames.has(card.dataset.sender);
+      }
+      card.classList.toggle('watched', hit);
+    });
+
+    // Stream-view (highlight): same logic — watched class drives the
+    // tint + alignment. Unwatched groups are not hidden, just dimmed.
+    document.querySelectorAll('.stream-view .stream-group').forEach(function (g) {
+      var hit = watchedNames.has(g.dataset.sender);
+      g.classList.toggle('watched', hit);
+    });
+  }
+  refreshFilter();
+
+  // single-accordion: only one signal-bubble expanded at a time
+  document.querySelectorAll('.signal-bubble').forEach(function (b) {
+    b.addEventListener('click', function (e) {
+      if (e.target.closest('.confirm-pair') || e.target.closest('.push-tail')) return;
+      var isExpanded = b.dataset.state === 'expanded';
+      if (isExpanded) {
+        b.dataset.state = 'folded';
+      } else {
+        document.querySelectorAll('.signal-bubble[data-state="expanded"]').forEach(function (other) {
+          if (other !== b) other.dataset.state = 'folded';
+        });
+        b.dataset.state = 'expanded';
+      }
+    });
+  });
+
+  // sender chips: toggle + recompute filter
+  document.querySelectorAll('.sender-chip').forEach(function (c) {
+    c.addEventListener('click', function () {
+      c.classList.toggle('on');
+      refreshFilter();
+    });
+  });
+
+  // mode toggle (filter / highlight)
+  document.querySelectorAll('.mode-toggle button').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.mode-toggle button').forEach(function (b) { b.classList.remove('on'); });
+      btn.classList.add('on');
+      board.dataset.mode = btn.dataset.mode;
+    });
+  });
+
+  // confirm / push-tail buttons: stop propagation
+  document.querySelectorAll('.push-tail, .confirm-pair button').forEach(function (el) {
+    el.addEventListener('click', function (e) { e.stopPropagation(); });
+  });
+</script>
+
+</body>
+</html>

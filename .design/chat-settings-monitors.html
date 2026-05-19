@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chat 页设置 · 挂载监听</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-0: #0b0f14;
+  --bg-1: #121821;
+  --bg-2: #171f2a;
+  --bg-3: #1c2635;
+  --line: rgba(255, 255, 255, 0.06);
+  --line-strong: rgba(255, 255, 255, 0.10);
+  --fg-1: #e4e8ef;
+  --fg-2: #8a93a1;
+  --fg-3: #566071;
+  --brand: #3fb5c5;
+  --brand-rgb: 63, 181, 197;
+  --ok: #3dd68c;
+  --err: #ef5b5b;
+  --warn: #e7a73d;
+  --source-stock: #5fbf8b;
+  --source-stock-rgb: 95, 191, 139;
+  --source-option: #8b6fcf;
+  --source-option-rgb: 139, 111, 207;
+  --source-chat: #c688ff;
+  --font-sans: "IBM Plex Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --radius-chip: 3px;
+  --radius-card: 6px;
+  --ease: cubic-bezier(0.2, 0.6, 0.2, 1);
+  --dur: 150ms;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg-0); color: var(--fg-1);
+  font-family: var(--font-sans);
+  font-size: 13px; line-height: 1.5;
+  font-feature-settings: "tnum" on, "lnum" on;
+  height: 100vh;
+}
+
+/* ── Backdrop (faint preview of chat board behind) ────────────────── */
+.backdrop {
+  position: fixed; inset: 0;
+  background: var(--bg-0);
+  overflow: hidden;
+}
+.backdrop::after {
+  content: "";
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(2px);
+}
+.bg-preview {
+  position: absolute; inset: 0;
+  opacity: 0.35;
+  padding: 40px;
+  pointer-events: none;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-2);
+  line-height: 1.7;
+  filter: blur(0.5px);
+}
+.bg-preview .line { height: 32px; background: var(--bg-1); border: 1px solid var(--line); border-radius: 6px; margin-bottom: 12px; }
+.bg-preview .line.tall { height: 80px; }
+
+/* ── Modal ────────────────────────────────────────────────────────── */
+.modal {
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(720px, 96vw);
+  max-height: 92vh;
+  background: var(--bg-1);
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.55);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.modal header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-2);
+}
+.modal header h3 {
+  margin: 0; font-size: 14px; font-weight: 600;
+  color: var(--fg-1);
+}
+.modal header .page-badge {
+  padding: 2px 8px; border-radius: 4px;
+  font-size: 10.5px; font-weight: 500;
+  background: rgba(198, 136, 255, 0.14);
+  color: var(--source-chat);
+  border: 1px solid rgba(198, 136, 255, 0.32);
+}
+.modal header .close {
+  margin-left: auto;
+  background: transparent; border: 0;
+  color: var(--fg-3);
+  font-size: 16px;
+  cursor: pointer;
+  width: 28px; height: 28px;
+  border-radius: 4px;
+  display: grid; place-items: center;
+}
+.modal header .close:hover { color: var(--fg-1); background: var(--bg-3); }
+
+.modal-body {
+  flex: 1; min-height: 0;
+  overflow-y: auto;
+  padding: 16px 18px;
+}
+.modal-body::-webkit-scrollbar { width: 8px; }
+.modal-body::-webkit-scrollbar-thumb { background: var(--bg-3); border-radius: 4px; }
+
+.modal footer {
+  display: flex; justify-content: flex-end; gap: 8px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--line);
+  background: var(--bg-2);
+}
+.btn {
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  color: var(--fg-2);
+  padding: 6px 14px;
+  cursor: pointer;
+  border-radius: 4px;
+  font: inherit; font-size: 12px;
+  display: inline-flex; align-items: center; gap: 5px;
+  transition: color var(--dur), border-color var(--dur), background var(--dur);
+}
+.btn:hover { color: var(--fg-1); border-color: var(--fg-3); }
+.btn.primary {
+  background: rgba(var(--brand-rgb), 0.14);
+  border-color: rgba(var(--brand-rgb), 0.50);
+  color: var(--brand);
+}
+.btn.primary:hover {
+  background: rgba(var(--brand-rgb), 0.22);
+  border-color: var(--brand);
+}
+.btn.danger { color: var(--err); border-color: rgba(239, 91, 91, 0.35); }
+.btn.danger:hover { background: rgba(239, 91, 91, 0.10); border-color: var(--err); }
+
+/* ── Sections ─────────────────────────────────────────────────────── */
+section.s {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+section.s:last-child { border-bottom: 0; }
+section.s h4 {
+  margin: 0 0 10px;
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg-1);
+  letter-spacing: 0.02em;
+}
+section.s h4 .count {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--fg-3);
+  background: var(--bg-3);
+  padding: 1px 7px;
+  border-radius: 3px;
+  font-weight: 400;
+}
+section.s p.hint {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: var(--fg-3);
+  line-height: 1.5;
+}
+section.s.danger h4 { color: var(--err); }
+
+/* General settings form rows */
+.form-row {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 6px 0;
+  font-size: 12px;
+  color: var(--fg-2);
+}
+.form-row label.cb { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+.form-row .cb input[type="checkbox"] {
+  width: 14px; height: 14px;
+  accent-color: var(--brand);
+}
+.form-row .lbl {
+  min-width: 152px;
+  flex-shrink: 0;
+  color: var(--fg-2);
+  font-size: 12px;
+}
+.form-row input[type="number"],
+.form-row input[type="text"],
+.form-row select {
+  background: var(--bg-2);
+  border: 1px solid var(--line-strong);
+  color: var(--fg-1);
+  padding: 4px 8px;
+  border-radius: 3px;
+  font: inherit; font-size: 12px;
+  outline: none;
+  min-width: 0;
+}
+.form-row input:focus, .form-row select:focus { border-color: var(--brand); }
+.form-row .hint-inline {
+  font-size: 10.5px;
+  color: var(--fg-3);
+  font-family: var(--font-mono);
+}
+
+/* ── 挂载监听 列表 ────────────────────────────────────────────────── */
+.mon-list {
+  display: flex; flex-direction: column;
+  gap: 6px;
+}
+.mon-row {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+  transition: border-color var(--dur);
+}
+.mon-row:hover { border-color: var(--line-strong); }
+.mon-row.expanded { border-color: var(--line-strong); background: var(--bg-2); }
+
+/* row head — same shape whether folded or expanded */
+.mon-head {
+  display: grid;
+  grid-template-columns: 16px auto auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+.mon-head .src-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+}
+.mon-head .src-dot.stock { background: var(--source-stock); }
+.mon-head .src-dot.option { background: var(--source-option); }
+.mon-head .type-chip {
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 1px 7px;
+  border-radius: 3px;
+  font-family: var(--font-sans);
+}
+.mon-head .type-chip.stock {
+  background: rgba(var(--source-stock-rgb), 0.16);
+  color: var(--source-stock);
+}
+.mon-head .type-chip.option {
+  background: rgba(var(--source-option-rgb), 0.16);
+  color: var(--source-option);
+}
+.mon-head .mon-name {
+  font-size: 12px;
+  color: var(--fg-1);
+  font-weight: 500;
+  border-bottom: 1px dashed transparent;
+}
+.mon-head .mon-name:hover { border-bottom-color: var(--fg-3); }
+.mon-head .mon-url {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--fg-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  margin-left: 4px;
+}
+
+.mon-status {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+}
+.mon-status .state-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+}
+.mon-status.running .state-dot { background: var(--ok); }
+.mon-status.running { color: var(--ok); }
+.mon-status.stopped .state-dot { background: var(--fg-3); }
+.mon-status.stopped { color: var(--fg-3); }
+.mon-status.error .state-dot { background: var(--err); box-shadow: 0 0 0 3px rgba(239,91,91,0.15); }
+.mon-status.error { color: var(--err); }
+
+.mon-actions {
+  display: inline-flex; gap: 4px;
+  align-items: center;
+}
+.mon-btn {
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  color: var(--fg-2);
+  cursor: pointer;
+  border-radius: 3px;
+  font: inherit; font-size: 11px;
+  padding: 3px 8px;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.mon-btn:hover { color: var(--fg-1); border-color: var(--fg-3); }
+.mon-btn.icon-only { padding: 3px 6px; }
+.mon-btn.danger:hover { color: var(--err); border-color: rgba(239,91,91,0.42); }
+.mon-expand {
+  width: 22px; height: 22px;
+  display: grid; place-items: center;
+  color: var(--fg-3);
+  cursor: pointer;
+  border-radius: 3px;
+  transition: transform var(--dur);
+  user-select: none;
+}
+.mon-row.expanded .mon-expand { transform: rotate(180deg); }
+.mon-row.error .mon-expand { color: var(--err); }
+
+/* Expanded body */
+.mon-body {
+  display: none;
+  border-top: 1px dashed var(--line);
+  padding: 12px 14px;
+  background: var(--bg-1);
+}
+.mon-row.expanded .mon-body { display: flex; flex-direction: column; gap: 12px; }
+
+.error-banner {
+  padding: 6px 10px;
+  border-radius: 4px;
+  background: rgba(239, 91, 91, 0.10);
+  border: 1px solid rgba(239, 91, 91, 0.32);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--err);
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.error-banner .glyph { color: var(--err); flex-shrink: 0; }
+
+.editor-block {
+  display: flex; flex-direction: column; gap: 6px;
+}
+.editor-block .editor-label {
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+.editor-block .editor-hint {
+  font-size: 10.5px;
+  color: var(--fg-3);
+  font-family: var(--font-mono);
+}
+
+/* Ticker whitelist editor */
+.ticker-chips {
+  display: flex; flex-wrap: wrap;
+  gap: 6px;
+  padding: 2px 0;
+}
+.tk-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: var(--bg-2);
+  color: var(--fg-1);
+  cursor: pointer;
+}
+.tk-chip .tk-qty { color: var(--fg-3); font-size: 10px; }
+.tk-chip .tk-x {
+  display: inline-flex; place-items: center;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  font-size: 9px;
+  color: var(--err);
+  opacity: 0;
+  transition: opacity var(--dur);
+}
+.tk-chip:hover { border-color: rgba(239, 91, 91, 0.42); background: rgba(239, 91, 91, 0.08); color: var(--err); }
+.tk-chip:hover .tk-x { opacity: 1; }
+.tk-chip:hover .tk-qty { color: rgba(239, 91, 91, 0.6); }
+.tk-add {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px dashed var(--line-strong);
+  background: transparent;
+  color: var(--fg-3);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  cursor: pointer;
+}
+.tk-add:hover { color: var(--brand); border-color: rgba(var(--brand-rgb), 0.50); }
+
+/* Option qty editor */
+.opt-row {
+  display: grid;
+  grid-template-columns: 200px 100px 1fr;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+}
+.opt-row .opt-toggle { display: inline-flex; align-items: center; gap: 6px; color: var(--fg-2); }
+.opt-row input[type="number"] {
+  background: var(--bg-2);
+  border: 1px solid var(--line-strong);
+  color: var(--fg-1);
+  padding: 4px 8px;
+  border-radius: 3px;
+  font: inherit; font-size: 12px;
+  width: 100%;
+  outline: none;
+}
+.opt-row input[type="number"]:disabled { opacity: 0.4; }
+.opt-row .opt-desc {
+  font-size: 10.5px;
+  color: var(--fg-3);
+  font-family: var(--font-mono);
+}
+
+/* ── Add new monitor sub-form ──────────────────────────────────────── */
+.add-form {
+  margin-top: 12px;
+  padding: 12px 14px;
+  background: var(--bg-2);
+  border: 1px dashed var(--line-strong);
+  border-radius: 6px;
+  display: flex; flex-direction: column;
+  gap: 8px;
+}
+.add-form .add-title {
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+.add-form .row {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  align-items: center;
+  gap: 10px;
+}
+.add-form .row.two-col {
+  grid-template-columns: 80px 1fr 80px 1fr;
+}
+.add-form input[type="text"], .add-form select {
+  background: var(--bg-1);
+  border: 1px solid var(--line-strong);
+  color: var(--fg-1);
+  padding: 5px 8px;
+  border-radius: 3px;
+  font: inherit; font-size: 12px;
+  outline: none;
+  width: 100%;
+}
+.add-form input:focus, .add-form select:focus { border-color: var(--brand); }
+.add-form .submit-row {
+  display: flex; justify-content: flex-end;
+  gap: 6px;
+  margin-top: 2px;
+}
+.add-form select option:disabled { color: var(--fg-3); }
+</style>
+</head>
+<body>
+
+<!-- backdrop: faint chat board preview behind -->
+<div class="backdrop">
+  <div class="bg-preview">
+    <div class="line tall"></div>
+    <div class="line"></div>
+    <div class="line tall"></div>
+    <div class="line"></div>
+    <div class="line tall"></div>
+    <div class="line"></div>
+    <div class="line tall"></div>
+  </div>
+</div>
+
+<!-- modal -->
+<div class="modal">
+
+  <header>
+    <span class="page-badge">聊天</span>
+    <h3>alpha-room · 设置</h3>
+    <button class="close" aria-label="关闭">✕</button>
+  </header>
+
+  <div class="modal-body">
+
+    <!-- 通用配置 -->
+    <section class="s">
+      <h4>通用配置</h4>
+      <div class="form-row">
+        <label class="cb">
+          <input type="checkbox" checked>
+          <span>避免重复解析消息（启动 / 重启时跳过 DB 中已存在的 domID）</span>
+        </label>
+      </div>
+      <div class="form-row">
+        <span class="lbl">价格偏差容忍（%）</span>
+        <input type="number" step="0.1" min="0" value="2.0" style="width:80px">
+        <span class="hint-inline">买入若现价 &lt; 信号价 → 市价；否则限价</span>
+      </div>
+      <div class="form-row">
+        <label class="cb">
+          <input type="checkbox" checked>
+          <span>禁止下单历史消息（消息发布时间早于本次监听启动）</span>
+        </label>
+      </div>
+      <div class="form-row">
+        <label class="cb">
+          <input type="checkbox">
+          <span>用无头模式启动网页（Headless）</span>
+        </label>
+      </div>
+      <div class="form-row">
+        <label class="cb">
+          <input type="checkbox">
+          <span>使用 parser v2（实验）</span>
+        </label>
+      </div>
+    </section>
+
+    <!-- 挂载监听 -->
+    <section class="s">
+      <h4>挂载监听 <span class="count">2 个</span></h4>
+      <p class="hint">从这里管理本聊天页关联的正股 / 期权监听 — 每个 URL 对应一个 sender，消息会以信号卡形式出现在上面的聊天列表里。</p>
+
+      <div class="mon-list" style="margin-top:10px">
+
+        <!-- Row 1 — stock, expanded, running, with ticker whitelist editor -->
+        <div class="mon-row expanded stock" data-source="stock">
+          <div class="mon-head">
+            <span class="src-dot stock"></span>
+            <span class="type-chip stock">正股</span>
+            <span class="mon-name" title="双击编辑名称">TSLL 监听</span>
+            <span class="mon-url" title="https://whop.com/joined/alpha-room/tsll-signals/app/">https://whop.com/joined/alpha-room/tsll-signals/app/</span>
+            <span class="mon-actions">
+              <span class="mon-status running"><span class="state-dot"></span>运行中</span>
+              <button class="mon-btn icon-only" title="停止">⏸</button>
+              <button class="mon-btn icon-only" title="重启">↻</button>
+              <button class="mon-btn icon-only danger" title="移除">✕</button>
+              <span class="mon-expand">▾</span>
+            </span>
+          </div>
+          <div class="mon-body">
+            <div class="editor-block">
+              <div class="editor-label">Ticker 白名单 · stock 子页专属</div>
+              <div class="ticker-chips">
+                <button class="tk-chip"><span>TSLA.US</span><span class="tk-qty">· 2000</span><span class="tk-x">✕</span></button>
+                <button class="tk-chip"><span>TSLL.US</span><span class="tk-qty">· 1500</span><span class="tk-x">✕</span></button>
+                <button class="tk-chip"><span>TSLS.US</span><span class="tk-qty">· 800</span><span class="tk-x">✕</span></button>
+                <button class="tk-add">+ 添加</button>
+              </div>
+              <div class="editor-hint">每个 ticker 配额对应单次下单数量；不在白名单的 ticker 解析后 SKIPPED</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Row 2 — option, expanded, error, with qty config editor -->
+        <div class="mon-row expanded option error" data-source="option">
+          <div class="mon-head">
+            <span class="src-dot option"></span>
+            <span class="type-chip option">期权</span>
+            <span class="mon-name" title="双击编辑名称">NVDA 期权监听</span>
+            <span class="mon-url" title="https://whop.com/joined/alpha-room/nvda-options/app/">https://whop.com/joined/alpha-room/nvda-options/app/</span>
+            <span class="mon-actions">
+              <span class="mon-status error" title="Playwright timeout · whop.com 5s">
+                <span class="state-dot"></span>错误
+              </span>
+              <button class="mon-btn icon-only" title="启动">▶</button>
+              <button class="mon-btn icon-only" title="重启">↻</button>
+              <button class="mon-btn icon-only danger" title="移除">✕</button>
+              <span class="mon-expand">▾</span>
+            </span>
+          </div>
+          <div class="mon-body">
+            <div class="error-banner">
+              <span class="glyph">!</span>
+              <span><b style="color:var(--err)">last_error:</b>&nbsp;Playwright timeout reaching whop.com (5s) · 2026-05-20 09:14:32 — 重启或检查 cookie</span>
+            </div>
+            <div class="editor-block">
+              <div class="editor-label">期权购买数量配置 · option 子页专属</div>
+              <div class="opt-row">
+                <label class="opt-toggle">
+                  <input type="checkbox" checked>
+                  <span>启用期权购买张数</span>
+                </label>
+                <input type="number" min="1" step="1" value="5">
+                <span class="opt-desc">固定按该张数下单</span>
+              </div>
+              <div class="opt-row">
+                <label class="opt-toggle">
+                  <input type="checkbox">
+                  <span>启用期权总价上限（USD）</span>
+                </label>
+                <input type="number" min="0" step="0.01" placeholder="—" disabled>
+                <span class="opt-desc">按总价可覆盖的最大张数</span>
+              </div>
+              <div class="editor-hint">两项都不启用时 trader 跳过下单并 SKIPPED；启用两项按"取更小张数"</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Row 3 — stock, folded, stopped -->
+        <div class="mon-row stock" data-source="stock">
+          <div class="mon-head">
+            <span class="src-dot stock"></span>
+            <span class="type-chip stock">正股</span>
+            <span class="mon-name" title="双击编辑名称">AAPL 监听</span>
+            <span class="mon-url" title="https://whop.com/joined/alpha-room/aapl-signals/app/">https://whop.com/joined/alpha-room/aapl-signals/app/</span>
+            <span class="mon-actions">
+              <span class="mon-status stopped"><span class="state-dot"></span>已停</span>
+              <button class="mon-btn icon-only" title="启动">▶</button>
+              <button class="mon-btn icon-only" title="重启">↻</button>
+              <button class="mon-btn icon-only danger" title="移除">✕</button>
+              <span class="mon-expand">▾</span>
+            </span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Add new monitor -->
+      <div class="add-form">
+        <div class="add-title">添加新监听</div>
+        <div class="row">
+          <span class="lbl">URL</span>
+          <input type="text" placeholder="https://whop.com/joined/&lt;channel&gt;/app/">
+        </div>
+        <div class="row two-col">
+          <span class="lbl">类型</span>
+          <select>
+            <option value="stock">正股 (stock)</option>
+            <option value="option">期权 (option)</option>
+            <option value="chat" disabled>聊天 (chat) — 子监听不可</option>
+          </select>
+          <span class="lbl">名称</span>
+          <input type="text" placeholder="如：TSLL 监听">
+        </div>
+        <div class="submit-row">
+          <button class="btn primary">+ 添加监听</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 危险操作 -->
+    <section class="s danger">
+      <h4>危险操作</h4>
+      <p class="hint">清空本页所有历史 task（任务 + 消息 + 指令 + 推送事件全部从数据库删除）；监听不停，会继续抓新消息。</p>
+      <button class="btn danger" style="margin-top:8px">🗑 清空本页历史</button>
+    </section>
+
+  </div>
+
+  <footer>
+    <button class="btn">取消</button>
+    <button class="btn primary">保存</button>
+  </footer>
+</div>
+
+<script>
+  // Toggle row expand on head click (except action buttons)
+  document.querySelectorAll('.mon-head').forEach(function (head) {
+    head.addEventListener('click', function (e) {
+      if (e.target.closest('.mon-btn')) return;
+      head.closest('.mon-row').classList.toggle('expanded');
+    });
+  });
+
+  // Action button stubs
+  document.querySelectorAll('.mon-btn').forEach(function (btn) {
+    btn.addEventListener('click', function (e) { e.stopPropagation(); });
+  });
+</script>
+
+</body>
+</html>
