@@ -74,9 +74,14 @@ export function TickerWhitelistEditor({ tickers, onChange, disabled, error: apiE
 
   const sortedTickers = Object.entries(tickers).sort(([a], [b]) => a.localeCompare(b));
   const displayError = formError ?? apiError;
+  const tickerCount = sortedTickers.length;
 
   return (
     <>
+      {!adding && tickerCount === 0 && (
+        <span className="whitelist-empty">未配置 — 点 + 添加</span>
+      )}
+
       {sortedTickers.map(([ticker, cfg]) => (
         <button
           key={ticker}

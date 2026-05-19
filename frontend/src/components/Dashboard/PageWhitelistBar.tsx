@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { WhopPage, WhopPageSettings } from "../../api/domain-types";
+import type { WhopPage, WhopPageSettingsPatch } from "../../api/domain-types";
 import { api, HttpError } from "../../api/http";
 import { TickerWhitelistEditor } from "../common/TickerWhitelistEditor";
 
@@ -35,7 +35,7 @@ export function PageWhitelistBar({ page }: Props) {
     setBusy(true);
     setError(null);
     try {
-      await api.updateWhopPageSettings(page.id, { tickers: next } as Partial<WhopPageSettings> as WhopPageSettings);
+      await api.updateWhopPageSettings(page.id, { tickers: next } as WhopPageSettingsPatch);
     } catch (e) {
       setError(_toMessage(e));
     } finally {
@@ -43,15 +43,9 @@ export function PageWhitelistBar({ page }: Props) {
     }
   };
 
-  const hasTickers = Object.keys(tickers).length > 0;
-
   return (
     <div className="page-whitelist-bar">
       <span className="whitelist-label">白名单</span>
-
-      {!hasTickers && (
-        <span className="whitelist-empty">未配置 — 点 + 添加</span>
-      )}
 
       <TickerWhitelistEditor
         tickers={tickers}
