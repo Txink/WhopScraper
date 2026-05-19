@@ -38,7 +38,8 @@ function formatExpiryMMDD(iso: string): string {
 
 function formatContract(inst: Instruction): string | null {
   if (inst.strike == null || !inst.expiry) return null;
-  return `${inst.strike}C ${formatExpiryMMDD(inst.expiry)}`;
+  const sideLetter = (inst.option_type ?? "").toUpperCase().startsWith("P") ? "P" : "C";
+  return `${inst.strike}${sideLetter} ${formatExpiryMMDD(inst.expiry)}`;
 }
 
 function formatCum(task: TaskSummary): string | null {

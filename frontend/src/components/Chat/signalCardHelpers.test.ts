@@ -130,6 +130,30 @@ describe("layersForTask", () => {
     expect(layers.sig?.contract).toBe("880C 12/15");
   });
 
+  it("option PUT task: sig.contract uses 'P' side letter", () => {
+    const layers = layersForTask(task({
+      type: "option",
+      instruction: {
+        type: "option",
+        instruction_type: "SELL",
+        ticker: "NVDA",
+        symbol: "NVDA.US",
+        option_type: "PUT",
+        strike: 880,
+        expiry: "2026-12-15",
+        price: 3.1,
+        quantity: 5,
+        price_range: null,
+        position_size: null,
+        stop_loss_price: null,
+        take_profit_price: null,
+        context_source: null,
+        parser_notes: [],
+      } as TaskSummary["instruction"],
+    }));
+    expect(layers.sig?.contract).toBe("880P 12/15");
+  });
+
   it("stock task: sig.contract is null", () => {
     const layers = layersForTask(task({}));
     expect(layers.sig?.contract).toBeNull();

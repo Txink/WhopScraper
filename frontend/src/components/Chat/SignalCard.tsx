@@ -31,7 +31,7 @@ export function SignalCard({
       role="button"
       tabIndex={0}
       onClick={(e) => {
-        if ((e.target as HTMLElement).closest(".confirm-pair, .push-tail")) return;
+        if ((e.target as HTMLElement).closest(".confirm-pair")) return;
         onToggle();
       }}
       onKeyDown={(e) => {
