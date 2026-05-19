@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { WhopPage, WhopPageSettings } from "../../api/domain-types";
 import { api, HttpError } from "../../api/http";
 import { useTasksStore } from "../../stores/tasks";
+import { OptionQuantityEditor } from "../common/OptionQuantityEditor";
 import "./PageSettingsModal.css";
 
 interface Props {
@@ -190,54 +191,20 @@ export function PageSettingsModal({ page, onClose }: Props) {
           {page.source === "option" && (
             <section>
               <h4>期权购买数量配置</h4>
-
-              <div className="option-rule-row">
-                <label className="option-rule-toggle">
-                  <input
-                    type="checkbox"
-                    checked={optionBuyQtyEnabled}
-                    onChange={e => setOptionBuyQtyEnabled(e.target.checked)}
-                  />
-                  <span>启用期权购买张数</span>
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  step="1"
-                  placeholder="期权购买张数"
-                  className="option-rule-input"
-                  value={optionBuyQty}
-                  disabled={!optionBuyQtyEnabled}
-                  onChange={e => setOptionBuyQty(e.target.value)}
-                />
-                <p className="hint small option-rule-desc">固定按该张数下单</p>
-              </div>
-
-              <div className="option-rule-row">
-                <label className="option-rule-toggle">
-                  <input
-                    type="checkbox"
-                    checked={optionTotalLimitEnabled}
-                    onChange={e => setOptionTotalLimitEnabled(e.target.checked)}
-                  />
-                  <span>启用期权总价上限（USD）</span>
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="期权总价上限（USD）"
-                  className="option-rule-input"
-                  value={optionTotalLimit}
-                  disabled={!optionTotalLimitEnabled}
-                  onChange={e => setOptionTotalLimit(e.target.value)}
-                />
-                <p className="hint small option-rule-desc">按总价可覆盖的最大张数</p>
-              </div>
-
-              <p className="hint small">
-                两项都不启用时，trader 会跳过下单并标记 SKIPPED；启用一项按该规则计算，启用两项按同时满足（取更小张数）计算。
-              </p>
+              <OptionQuantityEditor
+                value={{
+                  option_buy_quantity_enabled: optionBuyQtyEnabled,
+                  option_buy_quantity: optionBuyQty === "" ? null : Number(optionBuyQty),
+                  option_total_price_limit_enabled: optionTotalLimitEnabled,
+                  option_total_price_limit: optionTotalLimit === "" ? null : Number(optionTotalLimit),
+                }}
+                onChange={(v) => {
+                  setOptionBuyQtyEnabled(v.option_buy_quantity_enabled);
+                  setOptionBuyQty(v.option_buy_quantity == null ? "" : String(v.option_buy_quantity));
+                  setOptionTotalLimitEnabled(v.option_total_price_limit_enabled);
+                  setOptionTotalLimit(v.option_total_price_limit == null ? "" : String(v.option_total_price_limit));
+                }}
+              />
             </section>
           )}
 
