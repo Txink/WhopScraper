@@ -224,3 +224,7 @@
   background: rgba(138, 107, 214, 0.12);
   color: #a78bfa;
 }
+.type-badge.chat {
+  background: rgba(90, 160, 255, 0.14);
+  color: #7eb5ff;
+}

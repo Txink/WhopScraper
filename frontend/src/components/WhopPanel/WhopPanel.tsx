@@ -110,7 +110,7 @@ function CopyCommandButton({ command }: { command: string }) {
 
 function AddPageSection({ onAdded }: { onAdded: () => void }) {
   const [url, setUrl] = useState("");
-  const [source, setSource] = useState<"stock" | "option">("stock");
+  const [source, setSource] = useState<"stock" | "option" | "chat">("stock");
   const [name, setName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -164,12 +164,13 @@ function AddPageSection({ onAdded }: { onAdded: () => void }) {
             <span>来源类型</span>
             <select
               value={source}
-              onChange={(e) => setSource(e.target.value as "stock" | "option")}
+              onChange={(e) => setSource(e.target.value as "stock" | "option" | "chat")}
               className="add-select"
               disabled={submitting}
             >
               <option value="stock">正股 (stock)</option>
               <option value="option">期权 (option)</option>
+              <option value="chat">聊天 (chat)</option>
             </select>
           </label>
           <label>
@@ -274,7 +275,7 @@ function PageRow({ page, onRefresh }: { page: WhopPage; onRefresh: () => void })
     <tr>
       <td>
         <span className={`type-badge ${page.source}`}>
-          {page.source === "stock" ? "正股" : "期权"}
+          {page.source === "stock" ? "正股" : page.source === "option" ? "期权" : "聊天"}
         </span>
       </td>
       <td className="cell-name">{page.name}</td>

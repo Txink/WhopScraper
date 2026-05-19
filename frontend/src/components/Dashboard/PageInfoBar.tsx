@@ -41,7 +41,9 @@ export function PageInfoBar({
   return (
     <div className="page-info-bar">
       <div className="page-info-row">
-        <span className={`badge ${page.source}`}>{page.source === "stock" ? "正股" : "期权"}</span>
+        <span className={`badge ${page.source}`}>
+          {page.source === "stock" ? "正股" : page.source === "option" ? "期权" : "聊天"}
+        </span>
         <span className="page-name">{page.name}</span>
         <span className="sep">·</span>
         <span>最后轮询 {formatRelative(page.last_poll_at)}</span>

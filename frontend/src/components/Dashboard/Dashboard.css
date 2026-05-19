@@ -11,7 +11,7 @@
 .tab-source-dot { width: 8px; height: 8px; border-radius: 50%; }
 .tab-source-dot.stock { background: #5fbf8b; }
 .tab-source-dot.option { background: #8b6fcf; }
-.tab-source-dot.chat { background: #c688ff; }
+.tab-source-dot.chat { background: #5aa0ff; }
 .tab-count { font-size: 11px; opacity: 0.6; padding-left: 4px; }
 
 .page-meta-row {
@@ -44,6 +44,7 @@
 .page-info-bar .badge { padding: 2px 8px; border-radius: 4px; font-weight: 500; font-size: 11px; }
 .page-info-bar .badge.stock { background: rgba(95,191,139,0.15); color: #5fbf8b; }
 .page-info-bar .badge.option { background: rgba(139,111,207,0.15); color: #8b6fcf; }
+.page-info-bar .badge.chat { background: rgba(90,160,255,0.15); color: #5aa0ff; }
 .page-info-bar .badge.gray { background: rgba(140,140,140,0.15); color: #999; }
 .page-info-bar .badge.db { background: rgba(95, 133, 191, 0.16); color: #80a0d8; }
 .page-info-bar .sep { opacity: 0.4; }
@@ -319,12 +320,12 @@
 .page-action-bar .action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .page-action-bar .action-btn.icon-only,
 .page-action-bar .power-btn.icon-only {
-  padding: 2px 14px;
+  padding: 2px 6px;
   line-height: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 52px;
+  min-width: 30px;
   min-height: 26px;
 }
 
