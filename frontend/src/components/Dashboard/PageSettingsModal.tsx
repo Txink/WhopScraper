@@ -1,14 +1,18 @@
-import { useState } from "react";
+import { useState, useCallback, useEffect } from "react";
 import type { WhopPage, WhopPageSettings } from "../../api/domain-types";
 import { api, HttpError } from "../../api/http";
 import { useTasksStore } from "../../stores/tasks";
 import { OptionQuantityEditor } from "../common/OptionQuantityEditor";
+import { AttachedMonitorsSection } from "./AttachedMonitorsSection";
+import { useChildPagesStore } from "../../stores/childPages";
 import "./PageSettingsModal.css";
 
 interface Props {
   page: WhopPage;
   onClose: () => void;
 }
+
+const EMPTY_PAGES: WhopPage[] = [];
 
 export function PageSettingsModal({ page, onClose }: Props) {
   const [dedupe, setDedupe] = useState(page.settings.dedupe_processed_messages);
@@ -31,6 +35,24 @@ export function PageSettingsModal({ page, onClose }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [clearing, setClearing] = useState(false);
+
+  // ── Child pages (chat-source only) ──────────────────────────────────────
+  const childPages = useChildPagesStore((s) => s.byParent[page.id] ?? EMPTY_PAGES);
+
+  const refetchChildren = useCallback(async () => {
+    try {
+      const r = await api.listWhopPages({ parentChatId: page.id });
+      useChildPagesStore.getState().setByParent(page.id, r.pages);
+    } catch (e) {
+      console.warn("refetch children failed:", e);
+    }
+  }, [page.id]);
+
+  useEffect(() => {
+    if (page.source === "chat") {
+      refetchChildren();
+    }
+  }, [page.id, page.source, refetchChildren]);
 
   const handleClearHistory = async () => {
     if (!confirm(`确认从数据库删除 "${page.name}" 的所有历史 task？\n此操作不可逆，监听仍继续抓新消息。`)) return;
@@ -206,6 +228,14 @@ export function PageSettingsModal({ page, onClose }: Props) {
                 }}
               />
             </section>
+          )}
+
+          {page.source === "chat" && (
+            <AttachedMonitorsSection
+              parentId={page.id}
+              pages={childPages}
+              onRefresh={refetchChildren}
+            />
           )}
 
           <section className="danger-zone">
