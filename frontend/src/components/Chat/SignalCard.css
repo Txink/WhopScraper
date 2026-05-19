@@ -1,0 +1,243 @@
+/* ──────────────────────────────────────────────────────────────────────
+ * SignalCard.css — 3-layer signal bubble for the Chat board
+ *
+ * Source color tokens not yet in tokens.css are defined here as local
+ * custom properties so they stay in sync with the mockup palette.
+ * ────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* Signal-source stripe / dot colors */
+  --source-stock: #5fbf8b;
+  --source-stock-rgb: 95, 191, 139;
+  --source-option: #8b6fcf;
+  --source-option-rgb: 139, 111, 207;
+}
+
+/* ── Signal bubble ────────────────────────────────────────────────── */
+.signal-bubble {
+  position: relative;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  border-bottom-left-radius: 2px;
+  padding: 0;
+  overflow: hidden;
+  cursor: pointer;
+  width: fit-content;
+  min-width: 280px;
+  max-width: 560px;
+  transition: border-color var(--dur) var(--ease),
+              max-width var(--dur) var(--ease);
+}
+
+.signal-bubble:hover {
+  border-color: var(--line-strong);
+}
+
+.signal-bubble[data-state="expanded"] {
+  max-width: 640px;
+}
+
+/* Left stripe via ::before */
+.signal-bubble::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+}
+
+.signal-bubble.stock::before  { background: var(--source-stock); }
+.signal-bubble.option::before { background: var(--source-option); }
+.signal-bubble.neutral::before { background: var(--fg-3); }
+
+/* ── Signal summary (folded 3-layer view) ─────────────────────────── */
+.signal-summary {
+  padding: 8px 12px 8px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Layer 1: raw message text */
+.layer-msg {
+  font-size: 11.5px;
+  color: var(--fg-3);
+  font-style: italic;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.signal-bubble[data-state="expanded"] .layer-msg {
+  -webkit-line-clamp: unset;
+  display: block;
+  white-space: normal;
+  color: var(--fg-2);
+}
+
+/* Layer 2: parsed instruction */
+.layer-sig {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+
+.side-chip {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: var(--radius-chip);
+}
+
+.side-chip.buy  { background: rgba(61, 214, 140, 0.18); color: var(--ok); }
+.side-chip.sell { background: rgba(239, 91, 91, 0.18);  color: var(--err); }
+
+.ticker {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--fg-1);
+}
+
+.contract {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-2);
+}
+
+.price {
+  color: var(--fg-1);
+  font-variant-numeric: tabular-nums;
+}
+
+.qty {
+  color: var(--fg-3);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.parse-extra {
+  font-size: 10.5px;
+  color: var(--fg-3);
+  font-family: var(--font-mono);
+}
+
+/* Confirm pair wrapper — just layout; button styles live in ConfirmActions.css */
+.confirm-pair {
+  margin-left: auto;
+  display: inline-flex;
+  gap: 4px;
+}
+
+/* Layer 2 parse error */
+.layer-error {
+  color: var(--err);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+}
+
+/* Layer 3: order state */
+.layer-ord {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+}
+
+.state-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.state-dot.ok   { background: var(--ok); }
+.state-dot.warn { background: var(--warn); box-shadow: 0 0 0 3px rgba(231, 167, 61, 0.10); }
+.state-dot.err  { background: var(--err); }
+.state-dot.muted { background: var(--fg-3); }
+
+.state-text { color: var(--fg-2); }
+
+.cum {
+  color: var(--fg-3);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.layer-ord .expander {
+  margin-left: auto;
+  color: var(--fg-3);
+  font-size: 10px;
+  user-select: none;
+  transition: transform var(--dur) var(--ease);
+}
+
+.signal-bubble[data-state="expanded"] .layer-ord .expander {
+  transform: rotate(180deg);
+}
+
+/* ── Inline source tag (optional, for aggregated-monitor cards) ───── */
+.signal-source-tag {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
+  color: var(--fg-3);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
+}
+
+.signal-source-tag::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+}
+
+.signal-source-tag.stock::before  { background: var(--source-stock); }
+.signal-source-tag.option::before { background: var(--source-option); }
+
+/* ── Expanded detail section ──────────────────────────────────────── */
+.signal-detail {
+  border-top: 1px dashed var(--line);
+  padding: 10px 12px 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.detail-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detail-label {
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+
+.detail-meta {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--fg-3);
+}
+
+.detail-meta b {
+  color: var(--fg-2);
+  font-weight: 500;
+}
+
+.detail-meta a {
+  color: var(--fg-3);
+  text-decoration: none;
+  border-bottom: 1px dashed var(--fg-3);
+}
