@@ -106,6 +106,29 @@ function taskTime(t: TaskSummary): string {
   return t.message?.posted_at ?? t.created_at;
 }
 
+/** Compute the start (Mon 00:00) and end (next Mon 00:00) of an ISO week
+ *  given its key like "2026-W21". Returns ISO datetime strings without
+ *  timezone, suitable as backend query params. */
+export function isoWeekBounds(weekKey: string): { start: string; end: string } {
+  const m = weekKey.match(/^(\d{4})-W(\d{2})$/);
+  if (!m) throw new Error(`isoWeekBounds: invalid weekKey "${weekKey}"`);
+  const year = Number(m[1]);
+  const week = Number(m[2]);
+  // ISO 8601: week 1 is the week containing Jan 4. Find that week's Monday.
+  const jan4 = new Date(Date.UTC(year, 0, 4));
+  const jan4Day = jan4.getUTCDay() || 7;                  // Sun=0 → 7
+  const week1Mon = new Date(jan4);
+  week1Mon.setUTCDate(jan4.getUTCDate() - jan4Day + 1);   // backtrack to Mon
+  const start = new Date(week1Mon);
+  start.setUTCDate(week1Mon.getUTCDate() + (week - 1) * 7);
+  const end = new Date(start);
+  end.setUTCDate(start.getUTCDate() + 7);
+  // Strip seconds + Z so backend's naive datetime accepts.
+  const fmt = (d: Date) =>
+    `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}T00:00:00`;
+  return { start: fmt(start), end: fmt(end) };
+}
+
 export function computeWeeks(tasks: TaskSummary[]): ComputedWeeks {
   const sorted = [...tasks].sort((a, b) => taskTime(b).localeCompare(taskTime(a)));
   const groups = new Map<string, TaskSummary[]>();

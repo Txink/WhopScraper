@@ -283,6 +283,39 @@
   color: var(--brand); opacity: 0.7;
 }
 
+/* Aggregate signal card (filter mode) — one card groups all stock or option
+ * signals from watched monitors for the week. The ∑ avatar tints to match
+ * the source colour so it's visually distinct from chat sender cards. */
+.chat-card.aggregate .chat-card-head {
+  gap: 10px;
+}
+.avatar-lg {
+  width: 26px; height: 26px; border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: 13px; font-weight: 700;
+  color: var(--bg-0);
+  flex-shrink: 0;
+}
+.chat-card.aggregate .sender-name {
+  font-size: 12px; font-weight: 600; color: var(--fg-1);
+}
+.chat-card.aggregate .meta {
+  margin-left: auto;
+  display: flex; align-items: center; gap: 8px;
+  font-size: 10.5px; color: var(--fg-3);
+}
+.chat-card.aggregate .msg-count {
+  background: var(--bg-3); color: var(--fg-2);
+  padding: 1px 6px; border-radius: 3px; font-size: 10px;
+}
+/* Tint the card border based on signal type for quick at-a-glance scanning. */
+.chat-card.aggregate.stock {
+  border-color: rgba(var(--source-stock-rgb, 99, 190, 123), 0.35);
+}
+.chat-card.aggregate.option {
+  border-color: rgba(var(--source-option-rgb, 130, 120, 220), 0.35);
+}
+
 /* Sits as the last child of .stream (flex-column). flex:1 + min-height:0
  * makes the panel take only the leftover height after PageTabs +
  * .page-meta-row — earlier height:100% double-counted those siblings and
