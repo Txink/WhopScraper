@@ -463,6 +463,26 @@ def test_subminute_seconds_single_message() -> None:
     assert out[0].posted_at.second == 0  # type: ignore[union-attr]
 
 
+def test_subminute_seconds_overflows_into_microsecond_past_60() -> None:
+    """Chat-source bursts can exceed 60 msgs in a single minute; seq>=60
+    overflows into microsecond rather than crashing on replace(second=60)."""
+    base = datetime(2026, 4, 25, 10, 30, 0, tzinfo=UTC)
+    msgs = [_make_msg(f"m{i}", base) for i in range(62)]
+    out = _assign_subminute_seconds(msgs)
+    # 0..59 → second=0..59, microsecond=0
+    for i in range(60):
+        assert out[i].posted_at.second == i  # type: ignore[union-attr]
+        assert out[i].posted_at.microsecond == 0  # type: ignore[union-attr]
+    # 60, 61 → second=59, microsecond=1, 2
+    assert out[60].posted_at.second == 59  # type: ignore[union-attr]
+    assert out[60].posted_at.microsecond == 1  # type: ignore[union-attr]
+    assert out[61].posted_at.second == 59  # type: ignore[union-attr]
+    assert out[61].posted_at.microsecond == 2  # type: ignore[union-attr]
+    # Strict ordering preserved end-to-end.
+    timestamps = [m.posted_at for m in out]
+    assert timestamps == sorted(timestamps)  # type: ignore[type-var]
+
+
 # ---------------------------------------------------------------------------
 # Integration: extract_messages with relative timestamps
 # ---------------------------------------------------------------------------

@@ -207,7 +207,13 @@ def parse_whop_timestamp(text: str, *, now: datetime | None = None) -> datetime 
 
 def _assign_subminute_seconds(messages_in_dom_order: list[Message]) -> list[Message]:
     """For each consecutive run of messages with the same (date, hour, minute),
-    set second=0, 1, 2, ... in DOM order.  Microsecond is always 0.
+    assign monotonically increasing sub-minute offsets in DOM order.
+
+    For ``seq`` in 0..59: ``second=seq, microsecond=0`` (the common case;
+    matches the legacy behavior). For ``seq >= 60`` (chat bursts where one
+    minute holds 60+ messages): ``second=59, microsecond=seq-59``, which
+    keeps strict ordering up to ~1M msgs per minute. Before this overflow
+    branch, ``replace(second=60)`` raised ValueError and crashed the listener.
 
     Returns a NEW list of Message objects (Message is frozen/dataclass).
     Messages with posted_at=None are passed through unchanged.
@@ -225,7 +231,10 @@ def _assign_subminute_seconds(messages_in_dom_order: list[Message]) -> list[Mess
         else:
             seq = 0
             last_minute_key = minute_key
-        new_posted_at = msg.posted_at.replace(second=seq, microsecond=0)
+        if seq < 60:
+            new_posted_at = msg.posted_at.replace(second=seq, microsecond=0)
+        else:
+            new_posted_at = msg.posted_at.replace(second=59, microsecond=seq - 59)
         out.append(replace(msg, posted_at=new_posted_at))
     return out
 
