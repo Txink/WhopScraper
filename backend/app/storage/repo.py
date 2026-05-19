@@ -537,6 +537,9 @@ async def list_tasks(
     symbol: str | None = None,
     ticker: str | None = None,
     statuses: list[Status] | None = None,
+    urls: list[str] | None = None,
+    posted_at_start: datetime | None = None,
+    posted_at_end: datetime | None = None,
 ) -> list[Task]:
     """Return a paginated, filtered list of Tasks.
 
@@ -552,7 +555,18 @@ async def list_tasks(
     (e.g. "TSLA.US"). Pass at most one of these. ``statuses`` accepts a list
     of allowed statuses (used by the /api/trades endpoint to capture both
     FILLED and PARTIAL with one query).
+
+    ``urls``: filter to tasks whose ``message.url`` is in the list.
+    None = no filter. Empty list = short-circuit to [] (match nothing).
+
+    ``posted_at_start`` / ``posted_at_end``: half-open [start, end) window
+    on ``message.posted_at``. Either bound is optional.
     """
+    # Short-circuit BEFORE building any SQL — if the caller asked for "no
+    # urls allowed", they should get nothing, not "no filter applied".
+    if urls is not None and len(urls) == 0:
+        return []
+
     stmt = select(TaskRow).order_by(TaskRow.created_at.desc()).limit(limit)
 
     if cursor_created_at is not None:
@@ -573,6 +587,27 @@ async def list_tasks(
 
     if ticker is not None:
         stmt = stmt.where(TaskRow.ticker == ticker)
+
+    # Join MessageRow only when needed — the per-task hydrate loop below
+    # always re-fetches MessageRow individually anyway, so adding a join
+    # at the WHERE level just gates which TaskRow ids come back.
+    needs_msg_join = (
+        urls is not None
+        or posted_at_start is not None
+        or posted_at_end is not None
+    )
+    if needs_msg_join:
+        stmt = stmt.join(MessageRow, MessageRow.id == TaskRow.id)
+        if urls is not None:
+            stmt = stmt.where(MessageRow.url.in_(urls))
+        if posted_at_start is not None:
+            stmt = stmt.where(
+                MessageRow.posted_at >= posted_at_start.replace(tzinfo=None)
+            )
+        if posted_at_end is not None:
+            stmt = stmt.where(
+                MessageRow.posted_at < posted_at_end.replace(tzinfo=None)
+            )
 
     result = await session.execute(stmt)
     task_rows = list(result.scalars().all())
