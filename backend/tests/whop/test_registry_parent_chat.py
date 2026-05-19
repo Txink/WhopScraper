@@ -157,3 +157,49 @@ async def test_add_page_rejects_chat_as_sub(registry):
             name="c2",
             parent_chat_id=chat.id,
         )
+
+
+@pytest.mark.asyncio
+async def test_remove_chat_parent_orphans_children(registry):
+    chat = await registry.add_page(url="https://whop.com/c/chat-1", source="chat", name="c")
+    a = await registry.add_page(
+        url="https://whop.com/c/stock-a", source="stock", name="A", parent_chat_id=chat.id
+    )
+    b = await registry.add_page(
+        url="https://whop.com/c/option-b", source="option", name="B", parent_chat_id=chat.id
+    )
+    ok = await registry.remove_page(chat.id)
+    assert ok is True
+
+    # Both children survive, parent_chat_id cleared.
+    survivors = {e.id: e for e, _ in registry.list_pages()}
+    assert chat.id not in survivors
+    assert a.id in survivors and survivors[a.id].parent_chat_id is None
+    assert b.id in survivors and survivors[b.id].parent_chat_id is None
+
+
+@pytest.mark.asyncio
+async def test_remove_chat_parent_persists_orphaning(registry, tmp_path):
+    """After remove, restart from disk must see the children as top-level."""
+    chat = await registry.add_page(url="https://whop.com/c/chat-1", source="chat", name="c")
+    await registry.add_page(
+        url="https://whop.com/c/stock-a", source="stock", name="A", parent_chat_id=chat.id
+    )
+    await registry.remove_page(chat.id)
+
+    # Construct a fresh registry pointed at the same pages_file (which the
+    # fixture put inside tmp_path). Verify load_entries sees children as
+    # top-level after the cascade was persisted.
+    from app.core.event_bus import EventBus
+    from app.core.config import Settings as _Settings
+
+    # Use the same Settings construction as the `registry` fixture above.
+    # If the fixture's Settings call differs, mirror it here exactly.
+    fresh = WhopRegistry(
+        bus=EventBus(),
+        settings=registry._settings,  # noqa: SLF001 — same Settings instance is fine for the test
+        pages_file=registry._pages_file,  # same file
+    )
+    await fresh.load_entries()
+    [(survivor, _)] = fresh.list_pages()
+    assert survivor.parent_chat_id is None

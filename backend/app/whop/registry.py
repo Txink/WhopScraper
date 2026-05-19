@@ -261,7 +261,10 @@ class WhopRegistry:
         return entry
 
     async def remove_page(self, page_id: str) -> bool:
-        """Stop listener + remove entry + persist. Returns False if not found."""
+        """Stop listener + remove entry + persist. Cascades children: any sub-
+        monitors whose parent_chat_id == page_id have it cleared, surviving as
+        top-level entries (their listeners continue running, no data loss)."""
+        orphaned_dicts: list[dict[str, Any]] = []
         async with self._lock:
             entry = self._entries.pop(page_id, None)
             if entry is None:
@@ -272,10 +275,27 @@ class WhopRegistry:
                     await listener.stop()
                 except Exception as e:  # noqa: BLE001
                     logger.warning("error stopping removed listener: %s", e)
+
+            # Cascade: children of a chat parent become independent top-level
+            # pages. Their listeners are NOT affected (they're separate entries
+            # in self._listeners, keyed by their own id). The only state change
+            # is parent_chat_id → None, which we persist below.
+            for child in self._entries.values():
+                if child.parent_chat_id == page_id:
+                    child.parent_chat_id = None
+                    orphaned_dicts.append(self._build_page_dict(child))
+
             self._save_entries()
             self._rebuild_url_index()
             page_dict = self._build_page_dict(entry)
+
         await self._publish_page_event("removed", page_dict)
+        # Tell subscribers (WS handler in frontend) that each surviving child
+        # is now a top-level page — the "settings_updated" reason re-publishes
+        # the full page payload, and downstream consumers look at parent_chat_id
+        # to decide which store the page belongs in.
+        for od in orphaned_dicts:
+            await self._publish_page_event("settings_updated", od)
         return True
 
     async def start_page(self, page_id: str) -> bool:
