@@ -123,9 +123,15 @@ export type WhopPageSettingsPatch = components["schemas"]["WhopPageSettingsPatch
 };
 export type WhopPage = Omit<components["schemas"]["WhopPageOut"], "settings"> & {
   settings: WhopPageSettings;
+  /** Set when this page is a sub-monitor under a chat parent.
+   *  Null / undefined means top-level. Until the next ``npm run gen:types``
+   *  regen, this extension carries the new field client-side. */
+  parent_chat_id?: string | null;
 };
 export type WhopPages = components["schemas"]["WhopPagesOut"];
-export type WhopPageCreate = components["schemas"]["WhopPageCreate"];
+export type WhopPageCreate = components["schemas"]["WhopPageCreate"] & {
+  parent_chat_id?: string | null;
+};
 export type WhopCookieStatus = components["schemas"]["WhopCookieStatusOut"];
 export type TickerConfig = components["schemas"]["TickerConfigOut"];
 
