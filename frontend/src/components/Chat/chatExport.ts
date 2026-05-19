@@ -14,18 +14,31 @@ export interface ExportPayloadInput {
   cards: ChatCard[];
 }
 
+export type ExportItemKind = "watched" | "context";
+
+/** Per-card entry — ordered chronologically, mirroring the on-screen
+ *  layout. ``kind`` tells consumers whether this message was the target
+ *  sender's own ("watched") or a borrowed inline / lead-in
+ *  ("context"). For quote cards, the quoted reference is exported
+ *  separately on the card itself. */
+export interface ExportCardItem {
+  kind: ExportItemKind;
+  msg_id: string;
+}
+
 export type ExportCard =
   | {
       card_index: number;
       kind: "batch";
       target_author: string;
-      msg_ids: string[];
+      items: ExportCardItem[];
     }
   | {
       card_index: number;
       kind: "quote";
-      target_msg_id: string;
+      target_author: string;
       quoted: QuotedRef;
+      items: ExportCardItem[];
     };
 
 export interface ExportMessage extends ChatMessageOut {
@@ -44,29 +57,34 @@ export interface ExportPayload {
 }
 
 /** Build a self-contained JSON envelope of the rendered cards + messages.
- *  Overflow-clipped messages are intentionally excluded so the export
- *  mirrors what the operator saw on screen. */
+ *  Messages not surfaced in any card are intentionally excluded so the
+ *  export mirrors what the operator saw on screen. */
 export function buildExportPayload(input: ExportPayloadInput): ExportPayload {
   const cardsOut: ExportCard[] = [];
   const messageIndex = new Map<string, number>();
 
   input.cards.forEach((card, idx) => {
+    const items: ExportCardItem[] = card.items.map((it) => ({
+      kind: it.kind,
+      msg_id: it.msg.id,
+    }));
+    for (const it of card.items) messageIndex.set(it.msg.id, idx);
+
     if (card.kind === "batch") {
       cardsOut.push({
         card_index: idx,
         kind: "batch",
         target_author: card.target_author,
-        msg_ids: card.msgs.map((m) => m.id),
+        items,
       });
-      for (const m of card.msgs) messageIndex.set(m.id, idx);
     } else {
       cardsOut.push({
         card_index: idx,
         kind: "quote",
-        target_msg_id: card.target.id,
+        target_author: card.target_author,
         quoted: { ...card.quoted },
+        items,
       });
-      messageIndex.set(card.target.id, idx);
     }
   });
 

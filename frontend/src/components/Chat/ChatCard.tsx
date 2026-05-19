@@ -1,72 +1,101 @@
-import type { ChatCard as ChatCardData } from "./chatCards";
+import { paletteColorFor } from "./avatarPalette";
+import {
+  watchedCount,
+  type BatchItem,
+  type ChatCard as ChatCardData,
+  type ChatMessageOut,
+} from "./chatCards";
 
 interface Props {
   card: ChatCardData;
 }
 
-export function ChatCard({ card }: Props): JSX.Element {
-  if (card.kind === "quote") {
-    return (
-      <div className="chat-card" data-kind="quote">
-        <div className="chat-card-head">
-          <span className="chat-avatar chat-avatar-target">
-            {card.target.author.slice(-1)}
-          </span>
-          <span className="chat-card-sender">{card.target.author}</span>
-          <span className="chat-card-badge">引用</span>
-          <span className="chat-card-time">
-            {fmtTime(card.target.posted_at)}
-          </span>
-        </div>
-        <div className="chat-thread">
-          <div className="chat-row chat-row-left">
-            <span className="chat-avatar-sm">
-              {card.quoted.author.slice(-1)}
-            </span>
-            <div className="chat-bubble chat-bubble-left">
-              <div>{card.quoted.content}</div>
-              <div className="chat-bubble-meta">
-                <span className="chat-sender-tag">{card.quoted.author}</span>
-                {card.quoted.posted_at && (
-                  <span>{fmtTime(card.quoted.posted_at)}</span>
-                )}
-              </div>
-            </div>
-          </div>
-          <div className="chat-row chat-row-right">
-            <div className="chat-bubble chat-bubble-right">
-              <div>{card.target.content}</div>
-              <div className="chat-bubble-meta">
-                <span>{fmtTime(card.target.posted_at)}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+/** A run of consecutive items inside a card that share the same author
+ *  AND kind — rendered as one chat-group block (matching the highlight
+ *  mode visual: avatar + author head, followed by 1+ bubbles). */
+interface Block {
+  kind: "watched" | "context";
+  author: string;
+  firstAt: string;
+  msgs: ChatMessageOut[];
+}
+
+function buildBlocks(items: BatchItem[]): Block[] {
+  const blocks: Block[] = [];
+  for (const it of items) {
+    const last = blocks[blocks.length - 1];
+    if (last && last.author === it.msg.author && last.kind === it.kind) {
+      last.msgs.push(it.msg);
+    } else {
+      blocks.push({
+        kind: it.kind,
+        author: it.msg.author,
+        firstAt: it.msg.posted_at,
+        msgs: [it.msg],
+      });
+    }
   }
+  return blocks;
+}
+
+export function ChatCard({ card }: Props): JSX.Element {
+  const blocks = buildBlocks(card.items);
+  const lastTs = card.items[card.items.length - 1]?.msg.posted_at ?? "";
 
   return (
-    <div className="chat-card" data-kind="batch">
+    <div className="chat-card" data-kind={card.kind}>
       <div className="chat-card-head">
-        <span className="chat-avatar chat-avatar-target">
+        <span
+          className="chat-avatar"
+          style={{ background: paletteColorFor(card.target_author) }}
+        >
           {card.target_author.slice(-1)}
         </span>
         <span className="chat-card-sender">{card.target_author}</span>
-        <span className="chat-card-msg-count">{card.msgs.length}</span>
-        <span className="chat-card-time">
-          {fmtTime(card.msgs[card.msgs.length - 1].posted_at)}
-        </span>
+        <span className="chat-card-msg-count">{watchedCount(card)}</span>
+        <span className="chat-card-time">{fmtTime(lastTs)}</span>
       </div>
-      <div className="chat-thread">
-        {card.msgs.map((m) => (
-          <div key={m.id} className="chat-row chat-row-right">
-            <div className="chat-bubble chat-bubble-right">
-              <div>{m.content}</div>
-              <div className="chat-bubble-meta">
-                <span>{fmtTime(m.posted_at)}</span>
+      <div className="chat-card-body">
+        {blocks.map((b, i) => renderBlock(b, i))}
+      </div>
+    </div>
+  );
+}
+
+function renderBlock(b: Block, idx: number): JSX.Element {
+  const isWatched = b.kind === "watched";
+  const avatarStyle: React.CSSProperties | undefined = isWatched
+    ? { background: paletteColorFor(b.author) }
+    : undefined;
+  const avatarCls = isWatched
+    ? "chat-avatar"
+    : "chat-avatar chat-avatar-neutral";
+  return (
+    <div
+      key={`${idx}-${b.msgs[0].id}`}
+      className={`chat-group${isWatched ? " chat-group--right" : ""}`}
+    >
+      <div className="chat-group-head">
+        <span className={avatarCls} style={avatarStyle}>
+          {b.author.slice(-1)}
+        </span>
+        <span className="chat-group-author">{b.author}</span>
+        <span className="chat-group-time">{fmtTime(b.firstAt)}</span>
+      </div>
+      <div className="chat-group-body">
+        {b.msgs.map((m) => (
+          <div key={m.id} className="chat-group-bubble">
+            {m.quoted && (
+              <div className="chat-group-quoted" title={m.quoted.content}>
+                <span className="chat-group-quoted-sender">
+                  {m.quoted.author}
+                </span>
+                <span className="chat-group-quoted-body">
+                  {m.quoted.content}
+                </span>
               </div>
-            </div>
+            )}
+            {m.content}
           </div>
         ))}
       </div>

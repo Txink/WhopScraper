@@ -63,6 +63,14 @@
 .chat-thread { padding: 10px 12px; display: flex; flex-direction: column;
                gap: 8px; }
 
+/* Filter-mode card body — wraps a chronological stack of chat-group
+ * blocks (right-aligned for the watched sender, left-aligned for
+ * inline / lead-in context). Padding mirrors the group view's outer
+ * gutters so the two modes render the bubbles at the same offsets
+ * from the card edge; vertical gap keeps adjacent runs distinct. */
+.chat-card-body { padding: 8px 8px 6px; display: flex;
+                  flex-direction: column; gap: 2px; }
+
 .chat-row { display: flex; gap: 8px; align-items: flex-end; }
 .chat-row-right { justify-content: flex-end; }
 
