@@ -142,6 +142,13 @@ LongPortClient    ←──── PushListener
 | `components/RightRail.tsx` | 今日 / 正股持仓 / 期权持仓 |
 | `components/Card/` | Card 全家桶（Compact · Expanded · PushChain · PushDetail · OrderSubmit） |
 | `components/WhopPanel/WhopPanel.tsx` | **Whop 管理 tab：cookie 状态 · 添加 · 列表 · 重启 · 移除** |
+| `components/Chat/SignalCard.tsx` | 信号卡（折叠态 + 展开态，单 accordion）— stock/option 子监听产生的 task 都用这个渲染 |
+| `components/Chat/StreamView.tsx` | highlight 模式扁平流；chat msgs + signal bubbles 共流 |
+| `components/Chat/chatTimeline.ts` | chat msg + 子监听 task 的合流 + filter / highlight 分块 |
+| `components/Dashboard/AttachedMonitorsSection.tsx` | chat 页设置弹窗里的"挂载监听"区块：管理子监听 CRUD + 行内编辑器 |
+| `components/common/TickerWhitelistEditor.tsx` | 复用：ticker 白名单 chip 编辑器（stock 子页 / 独立 stock 页共用） |
+| `components/common/OptionQuantityEditor.tsx` | 复用：期权购买数量配置编辑器（option 子页 / 独立 option 页共用） |
+| `stores/childPages.ts` | chat parent id → 子监听 WhopPage[] 注册表 |
 | `hooks/useStickyTop.ts` | 右栏粘顶动态 offset |
 
 ---
@@ -383,6 +390,9 @@ make db-reset
   - `stock` —— 正股信号，走 `parser/stock_parser.py` 解析为 Task
   - `option` —— 期权信号，走 `parser/option_parser.py`
   - `chat` —— 普通聊天频道，**不解析为 Task**，原始消息直接落 `chat_messages` 表 + 推 WS（`chat.message_stored`），用于看板内的 Chat 面板
+
+> chat 页的设置弹窗（点击 chat tab 上的 ⚙）内可"挂载监听" — 新建 stock/option 子监听后，子监听产生的 task 信号会以 SignalCard 形式嵌入到 chat 列表中，与人发消息按时间序合流。
+
 - **显示名**（可选）：UI 列表里看到的标签，留空就用 URL
 
 后端立即起 Playwright 监听该页面，列表出现新行。**重复 URL** / **占位符 URL（含 xxx/yyy）** 会被前端报错拒绝。
