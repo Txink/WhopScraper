@@ -73,6 +73,10 @@ class WhopPageEntry:
     # because that matches the `source` default; callers MUST pass an explicit
     # `default_settings_for(source)` when constructing for option pages.
     settings: PageSettings = field(default_factory=lambda: default_settings_for("stock"))
+    # Optional reference to the parent chat page that "owns" this stock/option
+    # sub-monitor. None means this is a top-level page (no parent).
+    # Validation (parent must be a chat page, no nesting) is enforced elsewhere.
+    parent_chat_id: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -82,6 +86,7 @@ class WhopPageEntry:
             "name": self.name,
             "added_at": self.added_at.isoformat(),
             "settings": page_settings_to_dict(self.settings),
+            "parent_chat_id": self.parent_chat_id,
         }
 
     @classmethod
@@ -103,6 +108,7 @@ class WhopPageEntry:
             name=d.get("name") or d["url"],
             added_at=datetime.fromisoformat(d["added_at"]),
             settings=settings,
+            parent_chat_id=d.get("parent_chat_id"),
         )
 
 
