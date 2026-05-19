@@ -29,6 +29,7 @@ def test_to_dict_emits_none_when_unset():
         settings=default_settings_for("stock"),
     )
     d = entry.to_dict()
+    assert "parent_chat_id" in d
     assert d["parent_chat_id"] is None
 
 
@@ -42,6 +43,21 @@ def test_from_dict_legacy_missing_field_defaults_to_none():
         "settings": {"dedupe_processed_messages": True},
     }
     entry = WhopPageEntry.from_dict(legacy)
+    assert entry.parent_chat_id is None
+
+
+def test_from_dict_explicit_none_returns_none():
+    """Explicit null in JSON (key present, value None) must also deserialise to None."""
+    d = {
+        "id": "abc123",
+        "url": "https://whop.com/c/foo",
+        "source": "stock",
+        "name": "TSLL 监听",
+        "added_at": "2026-05-20T00:00:00+00:00",
+        "settings": {"dedupe_processed_messages": True},
+        "parent_chat_id": None,
+    }
+    entry = WhopPageEntry.from_dict(d)
     assert entry.parent_chat_id is None
 
 
