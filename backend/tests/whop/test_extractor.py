@@ -44,10 +44,17 @@ def _single_message(
     timestamp: str,
     content: str,
     quote_content: str = "",
+    quote_author: str = "quoted_user",
     has_above: str = "false",
     has_below: str = "false",
 ) -> str:
-    """Build a single Whop message element matching real DOM structure."""
+    """Build a single Whop message element matching real DOM structure.
+
+    Quote block, when ``quote_content`` is set, mirrors the real Whop DOM:
+    avatar + author span (``fui-r-weight-medium``) + content span. The
+    extractor requires both author and content to keep a quote — see
+    ``_extract_quote`` in extractor.py.
+    """
     quote_block = ""
     if quote_content:
         quote_block = f"""\
@@ -56,6 +63,7 @@ def _single_message(
                 <span class="fui-AvatarRoot size-5">
                   <span class="fui-AvatarFallback hidden">X</span>
                 </span>
+                <span class="fui-Text truncate fui-r-size-1 fui-r-weight-medium">{quote_author}</span>
                 <span class="fui-Text truncate fui-r-size-1">{quote_content}</span>
               </div>
             </div>"""
@@ -192,6 +200,7 @@ def test_extract_message_with_quote() -> None:
             "Apr 24, 2026 11:00 AM",
             "已出",
             quote_content="GILD - $130 CALLS 这周 1.5-1.60",
+            quote_author="zhouzhou chen",
         )
     )
     msgs = extract_messages(html, source="stock")
@@ -200,6 +209,9 @@ def test_extract_message_with_quote() -> None:
     assert m.quoted is not None
     assert "GILD" in m.quoted.content or "GILD" in m.quoted.raw_content
     assert m.quoted.id == "post_reply1-quoted"
+    # Author must be captured too — the API drops quotes whose author is
+    # NULL (see _row_to_quoted gating in http.py).
+    assert m.quoted.author == "zhouzhou chen"
 
 
 def test_extract_multiple_messages_unique_ids() -> None:

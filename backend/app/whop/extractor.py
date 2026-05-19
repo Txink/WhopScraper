@@ -345,8 +345,20 @@ def _extract_timestamp_raw(msg_el: Tag) -> str:
     return ""
 
 
-def _extract_quote_content(msg_el: Tag) -> str:
-    """Extract quoted message text from peer/reply block."""
+def _extract_quote(msg_el: Tag) -> tuple[str | None, str]:
+    """Return ``(author, content)`` for the peer/reply quote block inside
+    ``msg_el``, or ``(None, "")`` when no quote is present or the content
+    fails the length sanity check.
+
+    Whop renders a reply as a ``<div class="peer/reply ...">`` containing
+    an avatar + two truncated spans:
+      * author span — ``fui-Text ... fui-r-weight-medium`` (e.g. ``zhouzhou chen``)
+      * content span — ``fui-Text ... truncate`` *without* the weight class
+
+    Both fields are needed downstream — the API gates ``QuotedRefOut`` on
+    ``quoted_author IS NOT NULL`` (see ``_row_to_quoted`` in http.py), so
+    returning only content silently drops the quote from the response.
+    """
     # Find peer/reply container
     quote_el: Tag | None = None
     for div in msg_el.find_all(True):
@@ -358,9 +370,8 @@ def _extract_quote_content(msg_el: Tag) -> str:
             break
 
     if quote_el is None:
-        return ""
+        return (None, "")
 
-    # Find fui-Text truncate spans (not the author span with fui-r-weight-medium)
     candidate_spans = [
         s
         for s in quote_el.find_all(True)
@@ -369,7 +380,14 @@ def _extract_quote_content(msg_el: Tag) -> str:
         and _has_class_fragment(s, "truncate")
     ]
 
-    # Prefer spans WITHOUT fui-r-weight-medium (author name)
+    # Author span: fui-Text + truncate + fui-r-weight-medium
+    author_spans = [
+        s for s in candidate_spans if _has_class_fragment(s, "fui-r-weight-medium")
+    ]
+    author_raw = author_spans[0].get_text(strip=True) if author_spans else ""
+    author = _clean_text(author_raw).strip() if author_raw else ""
+
+    # Content spans: fui-Text + truncate, WITHOUT the weight class
     content_spans = [
         s for s in candidate_spans if not _has_class_fragment(s, "fui-r-weight-medium")
     ]
@@ -380,16 +398,17 @@ def _extract_quote_content(msg_el: Tag) -> str:
     else:
         raw = quote_el.get_text(strip=True)
 
-    # Clean artefacts
     raw = _clean_text(raw)
-    # Remove avatar fallback "X" only when it is a standalone leading char
+    # Strip leading single-letter avatar fallback (only standalone "X").
     raw = re.sub(r"^X\s*(?=[^A-Za-z]|$)", "", raw)
-    # Remove known author name prefix
+    # Legacy: strip known author-prefix that earlier scrapes injected
+    # before we had a real author span. Harmless now.
     raw = re.sub(r"^xiaozhaolucky\s*", "", raw, flags=re.IGNORECASE)
 
-    if 5 < len(raw) < 500:
-        return raw
-    return ""
+    if not (5 < len(raw) < 500):
+        return (None, "")
+
+    return (author or None, raw)
 
 
 def _extract_content(msg_el: Tag, author: str | None, ts_raw: str) -> tuple[str, str]:
@@ -523,15 +542,19 @@ def extract_messages(
                 ts_raw = current_ts_raw
 
             # ---- Quote ----
-            quote_text = _extract_quote_content(msg_el)
+            quote_author, quote_text = _extract_quote(msg_el)
             quoted: Message | None = None
-            if quote_text:
-                # Build a stub Message for the quoted content; ID uses parent + "-quoted"
+            # Require BOTH author and content so the row passes the API's
+            # ``quoted_author IS NOT NULL`` gate (see _row_to_quoted in
+            # http.py). Content-only quotes are dropped — earlier this
+            # function never set author, leaving 25 of 436 captured quotes
+            # invisible in the chat panel.
+            if quote_text and quote_author:
                 quoted = Message(
                     id=f"{msg_id}-quoted",
                     content=quote_text,
                     raw_content=quote_text,
-                    author=None,
+                    author=quote_author,
                     posted_at=current_posted_at,
                     received_at=received_at,
                     source=source,
