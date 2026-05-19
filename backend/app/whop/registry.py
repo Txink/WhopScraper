@@ -75,7 +75,7 @@ class WhopPageEntry:
     settings: PageSettings = field(default_factory=lambda: default_settings_for("stock"))
     # Optional reference to the parent chat page that "owns" this stock/option
     # sub-monitor. None means this is a top-level page (no parent).
-    # Validation (parent must be a chat page, no nesting) is enforced elsewhere.
+    # Validation rules live in `add_page`.
     parent_chat_id: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
@@ -214,6 +214,16 @@ class WhopRegistry:
         if not url or _is_placeholder_url(url):
             raise ValueError(f"invalid or placeholder URL: {url!r}")
 
+        # Pre-lock parent validation — intentionally runs BEFORE acquiring self._lock.
+        # Reason: self._lock is a non-reentrant asyncio.Lock and downstream helpers
+        # (e.g. _start_listener, _save_entries) also expect to be called while the
+        # lock is held; acquiring it here would deadlock or require separate lock
+        # nesting that obscures control flow.
+        # TOCTOU note: a concurrent remove_page could delete the parent between this
+        # check and the insert inside the lock below.  The consequence is benign: the
+        # child entry is stored with a dangling parent_chat_id, and on next reload it
+        # simply promotes to top-level (parent absent → treated as standalone).  This
+        # is the same accepted trade-off as the URL duplicate guard comment below.
         if parent_chat_id is not None:
             parent = self._entries.get(parent_chat_id)
             if parent is None:

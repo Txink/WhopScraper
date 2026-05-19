@@ -10,8 +10,8 @@ from app.whop.page_settings import default_settings_for
 
 
 @pytest.fixture
-def registry(tmp_path) -> WhopRegistry:
-    return WhopRegistry(
+async def registry(tmp_path) -> WhopRegistry:
+    reg = WhopRegistry(
         bus=EventBus(),
         settings=Settings(
             app_token="test",
@@ -19,6 +19,8 @@ def registry(tmp_path) -> WhopRegistry:
         ),
         pages_file=tmp_path / "pages.json",
     )
+    await reg.load_entries()
+    return reg
 
 
 def test_to_dict_includes_parent_chat_id_when_set():
