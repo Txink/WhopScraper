@@ -234,14 +234,25 @@ function Dashboard({ token }: { token: string }) {
   // Gate on pagesLoaded so we don't recompute orphans against a stale/empty
   // page list during the first remount paint (which would falsely flag every
   // task as orphan and trigger the orphan auto-select effect below).
+  const childPagesMap = useChildPagesStore((s) => s.byParent);
   const pageUrls = useMemo(() => new Set(pages.map((p) => p.url)), [pages]);
+  // Merge top-level page URLs with sub-monitor (child) page URLs so that tasks
+  // whose url belongs to a child monitor are NOT counted as orphans.
+  const allMonitoredUrls = useMemo(
+    () =>
+      new Set([
+        ...pages.map((p) => p.url),
+        ...Object.values(childPagesMap).flat().map((p) => p.url),
+      ]),
+    [pages, childPagesMap],
+  );
   useEffect(() => {
     if (!pagesLoaded) return;
     const orphans = tasks.filter(
-      (t) => t.message?.url == null || !pageUrls.has(t.message.url),
+      (t) => t.message?.url == null || !allMonitoredUrls.has(t.message.url),
     );
     setOrphanCount(orphans.length);
-  }, [tasks, pageUrls, setOrphanCount, pagesLoaded]);
+  }, [tasks, allMonitoredUrls, setOrphanCount, pagesLoaded]);
 
   // Auto-select orphan tab when no pages exist but orphans do (so user isn't stuck)
   useEffect(() => {
@@ -258,7 +269,7 @@ function Dashboard({ token }: { token: string }) {
       : pages.find((p) => p.id === activeTabId) ?? null;
   const filteredTasks =
     isOrphanTab
-      ? selectTasksByUrl(tasks, null, pageUrls)
+      ? selectTasksByUrl(tasks, null, allMonitoredUrls)
       : activePage
         ? selectTasksByUrl(tasks, activePage.url, pageUrls)
         : [];
