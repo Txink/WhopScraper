@@ -179,7 +179,7 @@ async def test_remove_chat_parent_orphans_children(registry):
 
 
 @pytest.mark.asyncio
-async def test_remove_chat_parent_persists_orphaning(registry, tmp_path):
+async def test_remove_chat_parent_persists_orphaning(registry):
     """After remove, restart from disk must see the children as top-level."""
     chat = await registry.add_page(url="https://whop.com/c/chat-1", source="chat", name="c")
     await registry.add_page(
@@ -191,15 +191,14 @@ async def test_remove_chat_parent_persists_orphaning(registry, tmp_path):
     # fixture put inside tmp_path). Verify load_entries sees children as
     # top-level after the cascade was persisted.
     from app.core.event_bus import EventBus
-    from app.core.config import Settings as _Settings
 
-    # Use the same Settings construction as the `registry` fixture above.
-    # If the fixture's Settings call differs, mirror it here exactly.
     fresh = WhopRegistry(
         bus=EventBus(),
         settings=registry._settings,  # noqa: SLF001 — same Settings instance is fine for the test
         pages_file=registry._pages_file,  # same file
     )
     await fresh.load_entries()
-    [(survivor, _)] = fresh.list_pages()
+    pages = fresh.list_pages()
+    assert len(pages) == 1
+    survivor = pages[0][0]
     assert survivor.parent_chat_id is None
