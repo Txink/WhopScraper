@@ -2,6 +2,7 @@ import { useState } from "react";
 import { api } from "../../api/http";
 import type { WhopPage } from "../../api/domain-types";
 import {
+  ExportIcon,
   PowerIcon,
   SettingsIcon,
 } from "./icons";
@@ -10,9 +11,12 @@ interface Props {
   page: WhopPage | null;
   mode: "page" | "orphan";
   onOpenSettings: () => void;
+  /** Optional export action — chat pages pass an exporter; others omit
+   *  it and the export button isn't rendered. */
+  onExport?: () => void;
 }
 
-export function PageActionBar({ page, mode, onOpenSettings }: Props) {
+export function PageActionBar({ page, mode, onOpenSettings, onExport }: Props) {
   const [busy, setBusy] = useState(false);
   const isReadonlyTab = mode !== "page" || page === null;
 
@@ -71,6 +75,17 @@ export function PageActionBar({ page, mode, onOpenSettings }: Props) {
       >
         <PowerIcon size={18} />
       </button>
+      {onExport && (
+        <button
+          onClick={onExport}
+          disabled={isReadonlyTab}
+          className="action-btn icon-only"
+          title="导出 JSON"
+          aria-label="导出 JSON"
+        >
+          <ExportIcon size={16} />
+        </button>
+      )}
       <button
         onClick={onOpenSettings}
         disabled={isReadonlyTab}

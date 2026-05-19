@@ -23,6 +23,8 @@ import { TaskStream } from "./components/Dashboard/TaskStream";
 import { WeekPaginator } from "./components/Dashboard/WeekPaginator";
 import { computeWeeks, weekKeyOf, currentIsoWeek } from "./components/Dashboard/weekUtils";
 import { ChatBoardPanel } from "./components/Chat/ChatBoardPanel";
+import { groupIntoCards } from "./components/Chat/chatCards";
+import { buildExportPayload, triggerJsonDownload } from "./components/Chat/chatExport";
 import { useChatStore } from "./stores/chatStore";
 import { OrphanCleanupBar } from "./components/Dashboard/OrphanCleanupBar";
 import { DatabaseRecordsPanel } from "./components/Dashboard/DatabaseRecordsPanel";
@@ -308,6 +310,26 @@ function Dashboard({ token }: { token: string }) {
           page={activePage}
           mode={isOrphanTab ? "orphan" : "page"}
           onOpenSettings={() => setSettingsOpen(true)}
+          onExport={
+            activePage && activePage.source === "chat"
+              ? () => {
+                  const week = currentIsoWeek();
+                  const cache = useChatStore.getState().caches[`${activePage.id}|${week}`];
+                  const messages = cache?.messages ?? [];
+                  const watched = activePage.settings.watched_senders ?? [];
+                  const cards = groupIntoCards(messages, new Set(watched));
+                  const payload = buildExportPayload({
+                    page_id: activePage.id,
+                    page_name: activePage.name ?? activePage.url,
+                    week: cache?.week ?? { start: "", end: "" },
+                    watched_senders: watched,
+                    messages,
+                    cards,
+                  });
+                  triggerJsonDownload(`chat-${activePage.id}-${week}.json`, payload);
+                }
+              : undefined
+          }
         />
       </div>
       {isOrphanTab && <OrphanCleanupBar orphanTasks={filteredTasks} />}

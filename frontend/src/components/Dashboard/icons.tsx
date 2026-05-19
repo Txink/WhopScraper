@@ -94,6 +94,29 @@ export function PowerIcon({ size = 18, className }: IconProps) {
   );
 }
 
+// Download / export glyph — tray with arrow pointing down into it.
+// Used for the "导出 JSON" affordance on chat pages.
+export function ExportIcon({ size = 18, className }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      width={size}
+      height={size}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M8 2 v8" />
+      <polyline points="5 7 8 10 11 7" />
+      <path d="M3 12 v1.5 a1 1 0 0 0 1 1 h8 a1 1 0 0 0 1 -1 v-1.5" />
+    </svg>
+  );
+}
+
 export function SettingsIcon({ size = 18, className }: IconProps) {
   return (
     <svg
