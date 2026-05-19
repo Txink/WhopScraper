@@ -1,4 +1,4 @@
-import {
+import React, {
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -120,6 +120,9 @@ export function ChatBoardPanel({ page, week }: Props) {
 
   // Single-accordion for signal cards across the whole board.
   const [expandedSignalId, setExpandedSignalId] = useState<string | null>(null);
+  useEffect(() => {
+    setExpandedSignalId(null);
+  }, [page.id]);
   const toggleSignal = useCallback((taskId: string) => {
     setExpandedSignalId((curr) => (curr === taskId ? null : taskId));
   }, []);
@@ -178,8 +181,13 @@ export function ChatBoardPanel({ page, week }: Props) {
     const blocks = buildFilterBlocks(timeline, watchedSet, urlToMonitorName);
     body = blocks.map((b, i) => {
       if (b.kind === "chat") {
-        const chatCards = groupIntoCards(b.messages, new Set([b.sender]));
-        return chatCards.map((c) => <ChatCard key={c.id} card={c} />);
+        return (
+          <React.Fragment key={`chat-${b.sender}-${i}`}>
+            {groupIntoCards(b.messages, new Set([b.sender])).map((c) => (
+              <ChatCard key={c.id} card={c} />
+            ))}
+          </React.Fragment>
+        );
       }
       const isStock = b.kind === "aggregate-stock";
       const sourceCls = isStock ? "stock" : "option";
