@@ -192,7 +192,14 @@ class WhopRegistry:
         self._rebuild_url_index()
         return entry
 
-    async def add_page(self, *, url: str, source: str, name: str | None = None) -> WhopPageEntry:
+    async def add_page(
+        self,
+        *,
+        url: str,
+        source: str,
+        name: str | None = None,
+        parent_chat_id: str | None = None,
+    ) -> WhopPageEntry:
         """Add a new page entry + persist (does NOT start listener).
 
         New behaviour: user must explicitly start the listener via
@@ -206,6 +213,17 @@ class WhopRegistry:
             raise ValueError(f"source must be stock|option|chat, got {source!r}")
         if not url or _is_placeholder_url(url):
             raise ValueError(f"invalid or placeholder URL: {url!r}")
+
+        if parent_chat_id is not None:
+            parent = self._entries.get(parent_chat_id)
+            if parent is None:
+                raise ValueError(f"parent_chat_id {parent_chat_id!r} not found")
+            if parent.parent_chat_id is not None:
+                raise ValueError("cannot nest sub-monitors (parent is itself a sub)")
+            if parent.source != "chat":
+                raise ValueError("parent must be source=chat")
+            if source == "chat":
+                raise ValueError("sub-monitor source must be stock or option")
 
         async with self._lock:
             # Authoritative duplicate-URL guard (only check; runs under lock to
@@ -223,6 +241,7 @@ class WhopRegistry:
                 added_at=datetime.now(UTC),
                 # source was validated against ("stock", "option", "chat") above; cast for mypy.
                 settings=default_settings_for(cast(_SourceLiteral, source)),
+                parent_chat_id=parent_chat_id,
             )
             self._entries[entry.id] = entry
             self._save_entries()

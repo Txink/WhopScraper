@@ -1,8 +1,24 @@
 """Tests for WhopPageEntry.parent_chat_id serialization."""
 from datetime import UTC, datetime
 
-from app.whop.registry import WhopPageEntry
+import pytest
+
+from app.core.config import Settings
+from app.core.event_bus import EventBus
+from app.whop.registry import WhopPageEntry, WhopRegistry
 from app.whop.page_settings import default_settings_for
+
+
+@pytest.fixture
+def registry(tmp_path) -> WhopRegistry:
+    return WhopRegistry(
+        bus=EventBus(),
+        settings=Settings(
+            app_token="test",
+            database_url="sqlite+aiosqlite:///:memory:",
+        ),
+        pages_file=tmp_path / "pages.json",
+    )
 
 
 def test_to_dict_includes_parent_chat_id_when_set():
@@ -73,3 +89,69 @@ def test_from_dict_roundtrip_preserves_parent_chat_id():
     )
     dst = WhopPageEntry.from_dict(src.to_dict())
     assert dst.parent_chat_id == "parent_xyz"
+
+
+@pytest.mark.asyncio
+async def test_add_page_with_valid_parent(registry):
+    parent = await registry.add_page(
+        url="https://whop.com/c/chat-1", source="chat", name="alpha-room"
+    )
+    child = await registry.add_page(
+        url="https://whop.com/c/stock-1",
+        source="stock",
+        name="TSLL 监听",
+        parent_chat_id=parent.id,
+    )
+    assert child.parent_chat_id == parent.id
+
+
+@pytest.mark.asyncio
+async def test_add_page_rejects_parent_not_found(registry):
+    with pytest.raises(ValueError, match="parent_chat_id"):
+        await registry.add_page(
+            url="https://whop.com/c/stock-1",
+            source="stock",
+            name="TSLL",
+            parent_chat_id="nonexistent",
+        )
+
+
+@pytest.mark.asyncio
+async def test_add_page_rejects_non_chat_parent(registry):
+    parent = await registry.add_page(
+        url="https://whop.com/c/stock-parent", source="stock", name="Standalone TSLL"
+    )
+    with pytest.raises(ValueError, match="parent must be source=chat"):
+        await registry.add_page(
+            url="https://whop.com/c/stock-1",
+            source="stock",
+            name="TSLL",
+            parent_chat_id=parent.id,
+        )
+
+
+@pytest.mark.asyncio
+async def test_add_page_rejects_nested_sub(registry):
+    chat = await registry.add_page(url="https://whop.com/c/chat-1", source="chat", name="c")
+    sub = await registry.add_page(
+        url="https://whop.com/c/stock-1", source="stock", name="s", parent_chat_id=chat.id
+    )
+    with pytest.raises(ValueError, match="cannot nest"):
+        await registry.add_page(
+            url="https://whop.com/c/stock-2",
+            source="stock",
+            name="s2",
+            parent_chat_id=sub.id,
+        )
+
+
+@pytest.mark.asyncio
+async def test_add_page_rejects_chat_as_sub(registry):
+    chat = await registry.add_page(url="https://whop.com/c/chat-1", source="chat", name="c")
+    with pytest.raises(ValueError, match="sub-monitor source must be stock or option"):
+        await registry.add_page(
+            url="https://whop.com/c/chat-2",
+            source="chat",
+            name="c2",
+            parent_chat_id=chat.id,
+        )
