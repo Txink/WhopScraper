@@ -1,5 +1,5 @@
 """Tests for list_tasks(urls, posted_at_start, posted_at_end)."""
-from datetime import datetime, timezone
+from datetime import datetime
 
 import pytest
 
