@@ -28,7 +28,7 @@ import { crosshairPlugin } from "./crosshairPlugin";
 import { minMaxLabelsPlugin } from "./minMaxLabelsPlugin";
 import { buildSessionSlots } from "./sessionSlots";
 import type { ViewType, ViewConfig } from "./viewConfig";
-import { fmtBjHM, fmtBjDate, fmtBjWeekISO, fmtBjMonth, fmtBjYear, classifyETSession, tradingDayOfET, currentTradingDay } from "./timeFmt";
+import { fmtBjHM, fmtBjDate, fmtBjWeekISO, fmtBjMonth, fmtBjYear, classifyETSession, tradingDayOfET, currentOrLastTradingDay } from "./timeFmt";
 import { usePrefsStore } from "../../stores/prefs";
 import { useQuotesStore } from "../../stores/quotes";
 import { applyLiveTick, bucketKey } from "./liveTick";
@@ -261,7 +261,11 @@ export function DetailChart({
   const visibleBars: Candlestick[] = useMemo(() => {
     // 分时 (intraday view) is the only mode that needs session padding/trim.
     if (view !== "intraday") return bars;
-    const today = currentTradingDay();
+    // On weekends (Sat/Sun) the wall-clock "today" has no bars; fall back
+    // to the most recent weekday so the chart shows Friday's session
+    // instead of an empty canvas. US holidays still fall through here as
+    // gaps — fixing that would need a market-calendar lookup.
+    const today = currentOrLastTradingDay();
     const trimmed = bars.filter((b) => {
       if (!b.timestamp) return false;
       if (tradingDayOfET(b.timestamp) !== today) return false;
@@ -274,7 +278,9 @@ export function DetailChart({
 
   const visibleTrades: Trade[] = useMemo(() => {
     if (view !== "intraday") return trades;
-    const today = currentTradingDay();
+    // Same weekend fallback as visibleBars above — keep the two in sync
+    // so trade bubbles still anchor to bars in the visible session.
+    const today = currentOrLastTradingDay();
     return trades.filter((t) => {
       if (tradingDayOfET(t.ts) !== today) return false;
       if (viewCfg.sessions === "all") return true;

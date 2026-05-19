@@ -1,5 +1,5 @@
 import type { Candlestick } from "../../api/domain-types";
-import { currentTradingDay } from "./timeFmt";
+import { currentOrLastTradingDay } from "./timeFmt";
 import type { IntradaySession as SessionMode } from "./viewConfig";
 
 /** Granularity used for intraday and minute-bar views. */
@@ -72,8 +72,10 @@ export function buildSessionSlots(
   const win = SESSION_WINDOW[sessions];
   if (!intervalMin || !win) return realBars;
 
-  // Trading day's pre-market open in BJ (16:00 same date).
-  const tradingDay = currentTradingDay(); // "YYYY-MM-DD" (ET calendar)
+  // Trading day's pre-market open in BJ (16:00 same date). On weekends we
+  // anchor to the most recent weekday so Friday's bars line up with the
+  // computed slot window — same fallback DetailChart's filter uses.
+  const tradingDay = currentOrLastTradingDay(); // "YYYY-MM-DD" (ET calendar)
   const tradingDayBjStartMs = Date.parse(`${tradingDay}T16:00:00+08:00`);
   if (Number.isNaN(tradingDayBjStartMs)) return realBars;
 
