@@ -156,4 +156,13 @@ describe("pageTabs store", () => {
     });
     expect(usePageTabsStore.getState().activeTabId).toBe("b");
   });
+
+  it("removePageIfPresent drops the page when present, no-op otherwise", () => {
+    const p: WhopPage = makePage({ id: "p1" });
+    usePageTabsStore.setState({ pages: [p], activeTabId: "p1", expandedTaskIdByTab: {}, orphanCount: 0, pagesLoaded: true });
+    usePageTabsStore.getState().removePageIfPresent("missing");
+    expect(usePageTabsStore.getState().pages).toEqual([p]);
+    usePageTabsStore.getState().removePageIfPresent("p1");
+    expect(usePageTabsStore.getState().pages).toEqual([]);
+  });
 });
