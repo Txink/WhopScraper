@@ -29,6 +29,8 @@ interface Props {
 
 export type SenderMode = "filter" | "highlight";
 
+const EMPTY_PAGES: WhopPage[] = [];
+
 const modeStorageKey = (pageId: string): string => `chat-sender-mode-${pageId}`;
 
 function loadMode(pageId: string): SenderMode {
@@ -72,7 +74,7 @@ export function ChatBoardPanel({ page, week }: Props) {
   }, [page.id, week, fetch]);
 
   // ── Child monitor pages + their tasks ────────────────────────────────
-  const children = useChildPagesStore((s) => s.byParent[page.id] ?? []);
+  const children = useChildPagesStore((s) => s.byParent[page.id] ?? EMPTY_PAGES);
   const childUrls = useMemo(() => children.map((c) => c.url), [children]);
   const urlToMonitorName = useMemo(
     () => Object.fromEntries(children.map((c) => [c.url, c.name])),
