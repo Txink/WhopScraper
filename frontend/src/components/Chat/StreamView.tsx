@@ -21,8 +21,12 @@ export function StreamView({
   return (
     <div className="stream-view">
       {groups.map((g, i) => {
-        const align: "left" | "right" = watched.has(g.sender) ? "right" : "left";
+        const isWatched = watched.has(g.sender);
+        const align: "left" | "right" = isWatched ? "right" : "left";
         if (g.kind === "msgs") {
+          // dim only when a watched set exists AND this sender isn't in it —
+          // without that, every sender would gray out when nothing's watched.
+          const dim = watched.size > 0 && !isWatched;
           return (
             <ChatMessage
               key={`${i}-${g.sender}`}
@@ -30,6 +34,7 @@ export function StreamView({
               firstAt={g.entries[0].posted_at}
               messages={g.entries}
               align={align}
+              dim={dim}
             />
           );
         }

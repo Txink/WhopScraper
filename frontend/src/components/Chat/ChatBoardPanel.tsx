@@ -209,61 +209,64 @@ export function ChatBoardPanel({ page, week }: Props) {
       <div className="chat-empty">本周无消息 · 切换周或调整发送者过滤</div>
     );
   } else if (mode === "filter" && watchedSenders.length > 0) {
-    const blocks = buildFilterBlocks(timeline, watchedSet, urlToMonitorName);
-    body = blocks.map((b, i) => {
-      if (b.kind === "chat") {
-        return (
-          <React.Fragment key={`chat-${b.sender}-${i}`}>
-            {groupIntoCards(b.messages, new Set([b.sender])).map((c) => (
-              <ChatCard key={c.id} card={c} />
-            ))}
-          </React.Fragment>
-        );
-      }
-      const isStock = b.kind === "aggregate-stock";
-      const sourceCls = isStock ? "stock" : "option";
-      const titleZh = isStock ? "正股信号" : "期权信号";
-      return (
-        <div key={i} className={`chat-card aggregate ${sourceCls}`}>
-          <div className="chat-card-head">
-            <span
-              className="avatar-lg"
-              style={{
-                background: isStock
-                  ? "var(--source-stock)"
-                  : "var(--source-option)",
-              }}
-            >
-              ∑
-            </span>
-            <span className="sender-name">{titleZh}</span>
-            <span className="meta">
-              <span className="msg-count">{b.tasks.length} signals</span>
-              <span>{b.monitorNames.join(" + ")}</span>
-            </span>
-          </div>
-          <div className="chat-thread">
-            {b.tasks.map((t) => {
-              const Card = t.type === "option" ? OptionCard : StockCard;
-              const monitorName =
-                urlToMonitorName[t.message.url ?? ""] ?? "(unknown)";
-              return (
-                <Card
-                  key={t.id}
-                  monitorName={monitorName}
-                  task={t}
-                  pushEvents={pushEventsByTask[t.id] ?? []}
-                  expanded={expandedSignalId === t.id}
-                  onToggle={() => toggleSignal(t.id)}
-                  autoTrade={autoTrade}
-                  align="left"
-                />
-              );
-            })}
-          </div>
-        </div>
-      );
-    });
+    // Chat side: groupIntoCards consumes the FULL message list so its
+    // MAX_CONTEXT_PER_BATCH=5 buffer/gap logic can split a watched run
+    // into a new big card whenever 5+ non-watched messages intervene.
+    // Aggregate stock/option blocks come from buildFilterBlocks.
+    const chatCards = groupIntoCards(messages, watchedSet);
+    const aggBlocks = buildFilterBlocks(timeline, watchedSet, urlToMonitorName);
+    body = (
+      <>
+        {chatCards.map((c) => (
+          <ChatCard key={c.id} card={c} />
+        ))}
+        {aggBlocks.map((b, i) => {
+          const isStock = b.kind === "aggregate-stock";
+          const sourceCls = isStock ? "stock" : "option";
+          const titleZh = isStock ? "正股信号" : "期权信号";
+          return (
+            <div key={`agg-${b.kind}-${i}`} className={`chat-card aggregate ${sourceCls}`}>
+              <div className="chat-card-head">
+                <span
+                  className="avatar-lg"
+                  style={{
+                    background: isStock
+                      ? "var(--source-stock)"
+                      : "var(--source-option)",
+                  }}
+                >
+                  ∑
+                </span>
+                <span className="sender-name">{titleZh}</span>
+                <span className="meta">
+                  <span className="msg-count">{b.tasks.length} signals</span>
+                  <span>{b.monitorNames.join(" + ")}</span>
+                </span>
+              </div>
+              <div className="chat-thread">
+                {b.tasks.map((t) => {
+                  const Card = t.type === "option" ? OptionCard : StockCard;
+                  const monitorName =
+                    urlToMonitorName[t.message.url ?? ""] ?? "(unknown)";
+                  return (
+                    <Card
+                      key={t.id}
+                      monitorName={monitorName}
+                      task={t}
+                      pushEvents={pushEventsByTask[t.id] ?? []}
+                      expanded={expandedSignalId === t.id}
+                      onToggle={() => toggleSignal(t.id)}
+                      autoTrade={autoTrade}
+                      align="left"
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </>
+    );
   } else {
     // Highlight mode or no watched senders → stream view.
     // All routes go through StreamView, which internally renders ChatMessage

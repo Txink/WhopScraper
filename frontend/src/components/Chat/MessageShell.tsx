@@ -8,6 +8,10 @@ export interface MessageShellProps {
   avatarText?: string;
   align: "left" | "right";
   senderTone?: "stock" | "option";
+  /** When true, render the avatar with .chat-avatar-neutral (gray bg + fg-2
+   *  text) instead of a per-name palette color. Used in highlight mode for
+   *  non-watched senders so the watched ones visually pop. */
+  dim?: boolean;
   children: React.ReactNode;
 }
 
@@ -26,6 +30,7 @@ export function MessageShell({
   avatarText,
   align,
   senderTone,
+  dim,
   children,
 }: MessageShellProps): JSX.Element {
   const cls = [
@@ -37,13 +42,16 @@ export function MessageShell({
     .filter(Boolean)
     .join(" ");
 
-  const bg = avatarColor ?? paletteColorFor(sender);
+  const avatarCls = dim ? "chat-avatar chat-avatar-neutral" : "chat-avatar";
+  const avatarStyle: React.CSSProperties | undefined = dim
+    ? undefined
+    : { background: avatarColor ?? paletteColorFor(sender) };
   const txt = avatarText ?? sender.slice(-1);
 
   return (
     <div className={cls} data-sender={sender}>
       <div className="chat-group-head">
-        <span className="chat-avatar" style={{ background: bg }}>
+        <span className={avatarCls} style={avatarStyle}>
           {txt}
         </span>
         <span className="chat-group-author">{sender}</span>

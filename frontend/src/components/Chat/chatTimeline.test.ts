@@ -44,7 +44,7 @@ describe("buildTimeline", () => {
 });
 
 describe("buildFilterBlocks", () => {
-  it("aggregates all stock signals into one 正股 card, opt into 期权 card", () => {
+  it("aggregates stock signals into one 正股 block, opt into one 期权 block", () => {
     const tl = buildTimeline(
       [msg("m1", "alpha", "2026-05-20T01:00Z")],
       [
@@ -56,7 +56,6 @@ describe("buildFilterBlocks", () => {
     );
     const blocks = buildFilterBlocks(tl, new Set(["alpha", "TSLL 监听", "NVDA 期权监听"]), urlToName);
     const kinds = blocks.map(b => b.kind);
-    expect(kinds).toContain("chat");
     expect(kinds).toContain("aggregate-stock");
     expect(kinds).toContain("aggregate-option");
     const stockBlock = blocks.find(b => b.kind === "aggregate-stock");
@@ -65,7 +64,7 @@ describe("buildFilterBlocks", () => {
     }
   });
 
-  it("aggregate card hidden when none of its monitor chips are watched", () => {
+  it("aggregate block hidden when none of its monitor chips are watched", () => {
     const tl = buildTimeline(
       [], [signalTask("t1", "2026-05-20T01:01Z", "stock", "https://stock-a")],
       urlToName,
@@ -74,15 +73,14 @@ describe("buildFilterBlocks", () => {
     expect(blocks.find(b => b.kind === "aggregate-stock")).toBeUndefined();
   });
 
-  it("filter only the chat sender — signals aren't visible", () => {
+  it("watching only the chat sender — no aggregate blocks", () => {
     const tl = buildTimeline(
       [msg("m1", "alpha", "2026-05-20T01:00Z")],
       [signalTask("t1", "2026-05-20T01:01Z", "stock", "https://stock-a")],
       urlToName,
     );
     const blocks = buildFilterBlocks(tl, new Set(["alpha"]), urlToName);
-    expect(blocks.find(b => b.kind === "aggregate-stock")).toBeUndefined();
-    expect(blocks.find(b => b.kind === "chat")).toBeDefined();
+    expect(blocks).toHaveLength(0);
   });
 });
 

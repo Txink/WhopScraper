@@ -25,47 +25,38 @@ export function buildTimeline(
 }
 
 export type FilterBlock =
-  | { kind: "chat"; sender: string; messages: ChatMessageOut[] }
   | { kind: "aggregate-stock"; tasks: TaskSummary[]; monitorNames: string[] }
   | { kind: "aggregate-option"; tasks: TaskSummary[]; monitorNames: string[] };
 
-/** Filter mode: build per-watched-sender chat blocks + 0-1 aggregate stock
- *  block + 0-1 aggregate option block. ``watched`` is the union of selected
- *  sender chip names (humans + monitor names). */
+/** Filter mode: produce the 0-1 aggregate stock block + 0-1 aggregate option
+ *  block for the watched monitors. Chat-side rendering goes through
+ *  ``groupIntoCards`` on the full message list (so its MAX_CONTEXT_PER_BATCH
+ *  gap-splitting logic sees non-watched messages and can correctly break
+ *  runs into separate big cards). */
 export function buildFilterBlocks(
   timeline: TimelineEntry[],
   watched: Set<string>,
   urlToMonitorName: Record<string, string> = {},
 ): FilterBlock[] {
-  const bySender = new Map<string, ChatMessageOut[]>();
   const stockTasks: TaskSummary[] = [];
   const optionTasks: TaskSummary[] = [];
   const stockMonitors = new Set<string>();
   const optionMonitors = new Set<string>();
 
   for (const e of timeline) {
-    if (e.kind === "msg") {
-      if (!watched.has(e.msg.author)) continue;
-      const list = bySender.get(e.msg.author) ?? [];
-      list.push(e.msg);
-      bySender.set(e.msg.author, list);
+    if (e.kind === "msg") continue;
+    const name = urlToMonitorName[e.task.message.url ?? ""] ?? "(unknown)";
+    if (!watched.has(name)) continue;
+    if (e.task.type === "option") {
+      optionTasks.push(e.task);
+      optionMonitors.add(name);
     } else {
-      const name = urlToMonitorName[e.task.message.url ?? ""] ?? "(unknown)";
-      if (!watched.has(name)) continue;
-      if (e.task.type === "option") {
-        optionTasks.push(e.task);
-        optionMonitors.add(name);
-      } else {
-        stockTasks.push(e.task);
-        stockMonitors.add(name);
-      }
+      stockTasks.push(e.task);
+      stockMonitors.add(name);
     }
   }
 
   const blocks: FilterBlock[] = [];
-  for (const [sender, messages] of bySender) {
-    blocks.push({ kind: "chat", sender, messages });
-  }
   if (stockTasks.length > 0) {
     blocks.push({
       kind: "aggregate-stock", tasks: stockTasks,

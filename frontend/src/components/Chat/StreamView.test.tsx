@@ -94,4 +94,34 @@ describe("StreamView routing", () => {
     );
     expect(container.querySelectorAll(".chat-group")).toHaveLength(0);
   });
+
+  it("watched set is non-empty + this sender is NOT watched → dim avatar (chat-avatar-neutral)", () => {
+    const { container } = render(
+      <StreamView
+        groups={groups()}
+        watched={new Set(["someone-else"])}
+        pushEventsByTask={{}}
+        expandedTaskId={null}
+        onToggleTask={() => {}}
+        autoTrade={true}
+      />,
+    );
+    const avatar = container.querySelector('[data-sender="alpha"] .chat-avatar');
+    expect(avatar?.classList.contains("chat-avatar-neutral")).toBe(true);
+  });
+
+  it("watched set is empty → no dim (alpha keeps palette color)", () => {
+    const { container } = render(
+      <StreamView
+        groups={groups()}
+        watched={new Set()}
+        pushEventsByTask={{}}
+        expandedTaskId={null}
+        onToggleTask={() => {}}
+        autoTrade={true}
+      />,
+    );
+    const avatar = container.querySelector('[data-sender="alpha"] .chat-avatar');
+    expect(avatar?.classList.contains("chat-avatar-neutral")).toBe(false);
+  });
 });
