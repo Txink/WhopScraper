@@ -1,5 +1,3 @@
-import type React from "react";
-
 export interface PlainBubbleProps {
   content: string;
   quoted?: { author: string; content: string } | null;

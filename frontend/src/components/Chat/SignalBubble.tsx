@@ -11,6 +11,9 @@ export interface SignalBubbleProps {
   expanded: boolean;
   onToggle(): void;
   autoTrade: boolean;
+  /** Must match task.type. StockCard always passes "stock"; OptionCard always
+   *  passes "option". Drives sourceClass, qty unit suffix (" 张"), and the
+   *  option-only strike/expiry detail rows. */
   variant: "stock" | "option";
 }
 

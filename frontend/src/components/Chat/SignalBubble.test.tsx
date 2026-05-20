@@ -1,5 +1,5 @@
-import { render } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { render, fireEvent } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { SignalBubble } from "./SignalBubble";
 import {
   makeStockTask,
@@ -76,5 +76,37 @@ describe("SignalBubble", () => {
       />,
     );
     expect(container.innerHTML).toMatchSnapshot();
+  });
+
+  it("order-pending · confirm-pair renders when autoTrade=false + INSTRUCTION_READY", () => {
+    const { container } = render(
+      <SignalBubble
+        task={makeStockTask({ status: "INSTRUCTION_READY" })}
+        pushEvents={[]}
+        expanded={false}
+        onToggle={() => {}}
+        autoTrade={false}
+        variant="stock"
+      />,
+    );
+    expect(container.querySelector(".confirm-pair")).not.toBeNull();
+  });
+
+  it("click inside .confirm-pair does NOT fire onToggle", () => {
+    const onToggle = vi.fn();
+    const { container } = render(
+      <SignalBubble
+        task={makeStockTask({ status: "INSTRUCTION_READY" })}
+        pushEvents={[]}
+        expanded={false}
+        onToggle={onToggle}
+        autoTrade={false}
+        variant="stock"
+      />,
+    );
+    const confirmEl = container.querySelector(".confirm-pair");
+    expect(confirmEl).not.toBeNull();
+    fireEvent.click(confirmEl as Element);
+    expect(onToggle).not.toHaveBeenCalled();
   });
 });
