@@ -48,4 +48,21 @@ describe("MessageShell", () => {
     );
     expect(container.innerHTML).toMatchSnapshot();
   });
+
+  it("explicit avatar overrides · color and text", () => {
+    const { container } = render(
+      <MessageShell
+        sender="TSLL"
+        firstAt="2026-05-21T01:00:00Z"
+        align="left"
+        avatarColor="#ff0000"
+        avatarText="T"
+      >
+        <div className="chat-group-bubble">x</div>
+      </MessageShell>,
+    );
+    const avatar = container.querySelector(".chat-avatar");
+    expect(avatar?.textContent).toBe("T");
+    expect(avatar?.getAttribute("style") ?? "").toContain("rgb(255, 0, 0)");
+  });
 });

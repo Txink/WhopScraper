@@ -11,6 +11,9 @@ export interface MessageShellProps {
   children: React.ReactNode;
 }
 
+// Local-time HH:mm formatter. Duplicates same logic in ChatCard.tsx and
+// (until Tasks 8/10 delete them) StreamView.tsx + GroupChatView.tsx —
+// keep behavior in sync or extract to a shared util in a follow-up.
 function fmtTime(iso: string): string {
   const normalized = /[Zz]|[+-]\d\d:?\d\d$/.test(iso) ? iso : `${iso}Z`;
   const d = new Date(normalized);
