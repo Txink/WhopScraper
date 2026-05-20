@@ -62,10 +62,20 @@ class WhopBrowser:
         self,
         url: str,
         *,
-        wait_until: _WaitUntil = "networkidle",
+        wait_until: _WaitUntil = "domcontentloaded",
         timeout_ms: int = 30000,
     ) -> bool:
-        """Navigate to URL. Returns True if no exception."""
+        """Navigate to URL. Returns True if no exception.
+
+        ``wait_until`` defaults to ``domcontentloaded`` (DOM parsed). Whop
+        is a SPA that keeps WebSocket / analytics / heartbeat connections
+        live indefinitely, so ``networkidle`` (the Playwright default,
+        which waits for 500 ms with zero in-flight requests) never fires
+        and ``goto()`` always burns the full 30 s timeout. The listener's
+        polling loop picks up any DOM that finishes rendering after the
+        initial commit, so settling for ``domcontentloaded`` here costs
+        nothing in correctness.
+        """
         if self._page is None:
             raise RuntimeError("WhopBrowser not started")
         try:
