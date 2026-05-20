@@ -1,0 +1,11 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`PlainBubble > long · multi-line content 1`] = `
+"<div class="chat-group-bubble">line 1
+line 2
+line 3 with more text</div>"
+`;
+
+exports[`PlainBubble > short · plain text 1`] = `"<div class="chat-group-bubble">hi</div>"`;
+
+exports[`PlainBubble > with-quoted · embeds quoted preview 1`] = `"<div class="chat-group-bubble"><div class="chat-group-quoted" title="if we break 470 i'm taking calls"><span class="chat-group-quoted-sender">alpha</span><span class="chat-group-quoted-body">if we break 470 i'm taking calls</span></div>same — also stalking NVDA 880C</div>"`;
