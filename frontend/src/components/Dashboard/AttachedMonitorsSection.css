@@ -271,6 +271,17 @@
   color: var(--fg-3);
 }
 
+/* When `.page-whitelist-bar` is reused inside the modal (via the
+ * `embedded` modifier), strip the decorative top border / spacing that
+ * only makes sense below the dashboard page header. The chip + button
+ * sizing rules from Dashboard.css still apply because the base class
+ * is unchanged. */
+.editor-block .page-whitelist-bar.embedded {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
 /* ── Add-monitor sub-form ─────────────────────────────────────────────── */
 .mon-add-form {
   margin-top: 12px;

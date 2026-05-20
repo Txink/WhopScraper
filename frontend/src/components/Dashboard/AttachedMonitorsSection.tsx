@@ -258,17 +258,22 @@ function MonRow({ page, expanded, onToggle, onRefresh }: RowProps) {
           {page.source === "stock" && (
             <div className="editor-block">
               <div className="editor-label">Ticker 白名单</div>
-              <TickerWhitelistEditor
-                tickers={(page.settings.tickers ?? {}) as Record<string, TickerConfig>}
-                onChange={(next) =>
-                  api
-                    .updateWhopPageSettings(page.id, {
-                      tickers: next,
-                    } as WhopPageSettingsPatch)
-                    .then(onRefresh)
-                    .catch((e) => alert(e instanceof Error ? e.message : String(e)))
-                }
-              />
+              {/* Reuse `.page-whitelist-bar` so chip/+button styles defined in
+               * Dashboard.css apply here too. `.embedded` modifier strips the
+               * dashed border-top that only makes sense under a page header. */}
+              <div className="page-whitelist-bar embedded">
+                <TickerWhitelistEditor
+                  tickers={(page.settings.tickers ?? {}) as Record<string, TickerConfig>}
+                  onChange={(next) =>
+                    api
+                      .updateWhopPageSettings(page.id, {
+                        tickers: next,
+                      } as WhopPageSettingsPatch)
+                      .then(onRefresh)
+                      .catch((e) => alert(e instanceof Error ? e.message : String(e)))
+                  }
+                />
+              </div>
             </div>
           )}
 
