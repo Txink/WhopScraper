@@ -1,13 +1,18 @@
-import { useState } from "react";
+import { useState, useCallback, useEffect } from "react";
 import type { WhopPage, WhopPageSettings } from "../../api/domain-types";
 import { api, HttpError } from "../../api/http";
 import { useTasksStore } from "../../stores/tasks";
+import { OptionQuantityEditor } from "../common/OptionQuantityEditor";
+import { AttachedMonitorsSection } from "./AttachedMonitorsSection";
+import { useChildPagesStore } from "../../stores/childPages";
 import "./PageSettingsModal.css";
 
 interface Props {
   page: WhopPage;
   onClose: () => void;
 }
+
+const EMPTY_PAGES: WhopPage[] = [];
 
 export function PageSettingsModal({ page, onClose }: Props) {
   const [dedupe, setDedupe] = useState(page.settings.dedupe_processed_messages);
@@ -30,6 +35,24 @@ export function PageSettingsModal({ page, onClose }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [clearing, setClearing] = useState(false);
+
+  // ── Child pages (chat-source only) ──────────────────────────────────────
+  const childPages = useChildPagesStore((s) => s.byParent[page.id] ?? EMPTY_PAGES);
+
+  const refetchChildren = useCallback(async () => {
+    try {
+      const r = await api.listWhopPages({ parentChatId: page.id });
+      useChildPagesStore.getState().setByParent(page.id, r.pages);
+    } catch (e) {
+      console.warn("refetch children failed:", e);
+    }
+  }, [page.id]);
+
+  useEffect(() => {
+    if (page.source === "chat") {
+      refetchChildren();
+    }
+  }, [page.id, page.source, refetchChildren]);
 
   const handleClearHistory = async () => {
     if (!confirm(`确认从数据库删除 "${page.name}" 的所有历史 task？\n此操作不可逆，监听仍继续抓新消息。`)) return;
@@ -190,55 +213,29 @@ export function PageSettingsModal({ page, onClose }: Props) {
           {page.source === "option" && (
             <section>
               <h4>期权购买数量配置</h4>
-
-              <div className="option-rule-row">
-                <label className="option-rule-toggle">
-                  <input
-                    type="checkbox"
-                    checked={optionBuyQtyEnabled}
-                    onChange={e => setOptionBuyQtyEnabled(e.target.checked)}
-                  />
-                  <span>启用期权购买张数</span>
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  step="1"
-                  placeholder="期权购买张数"
-                  className="option-rule-input"
-                  value={optionBuyQty}
-                  disabled={!optionBuyQtyEnabled}
-                  onChange={e => setOptionBuyQty(e.target.value)}
-                />
-                <p className="hint small option-rule-desc">固定按该张数下单</p>
-              </div>
-
-              <div className="option-rule-row">
-                <label className="option-rule-toggle">
-                  <input
-                    type="checkbox"
-                    checked={optionTotalLimitEnabled}
-                    onChange={e => setOptionTotalLimitEnabled(e.target.checked)}
-                  />
-                  <span>启用期权总价上限（USD）</span>
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="期权总价上限（USD）"
-                  className="option-rule-input"
-                  value={optionTotalLimit}
-                  disabled={!optionTotalLimitEnabled}
-                  onChange={e => setOptionTotalLimit(e.target.value)}
-                />
-                <p className="hint small option-rule-desc">按总价可覆盖的最大张数</p>
-              </div>
-
-              <p className="hint small">
-                两项都不启用时，trader 会跳过下单并标记 SKIPPED；启用一项按该规则计算，启用两项按同时满足（取更小张数）计算。
-              </p>
+              <OptionQuantityEditor
+                value={{
+                  option_buy_quantity_enabled: optionBuyQtyEnabled,
+                  option_buy_quantity: optionBuyQty === "" ? null : Number(optionBuyQty),
+                  option_total_price_limit_enabled: optionTotalLimitEnabled,
+                  option_total_price_limit: optionTotalLimit === "" ? null : Number(optionTotalLimit),
+                }}
+                onChange={(v) => {
+                  setOptionBuyQtyEnabled(v.option_buy_quantity_enabled);
+                  setOptionBuyQty(v.option_buy_quantity == null ? "" : String(v.option_buy_quantity));
+                  setOptionTotalLimitEnabled(v.option_total_price_limit_enabled);
+                  setOptionTotalLimit(v.option_total_price_limit == null ? "" : String(v.option_total_price_limit));
+                }}
+              />
             </section>
+          )}
+
+          {page.source === "chat" && (
+            <AttachedMonitorsSection
+              parentId={page.id}
+              pages={childPages}
+              onRefresh={refetchChildren}
+            />
           )}
 
           <section className="danger-zone">

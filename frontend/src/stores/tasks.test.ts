@@ -151,4 +151,18 @@ describe("selectTasksByUrl", () => {
   it("returns empty for unknown url", () => {
     expect(selectTasksByUrl(tasks, "nope", pageUrls)).toEqual([]);
   });
+
+  it("regression: child-monitor urls in urlSet are excluded from orphan results", () => {
+    // Simulate the fix: allMonitoredUrls includes child page url "u3-child".
+    // A task with that url must NOT appear in the orphan list.
+    const tasksWithChild: TaskSummary[] = [
+      makeTask("a", "u1"),          // top-level page
+      makeTask("b", "u3-child"),    // sub-monitor page (child)
+      makeTask("c", null),          // truly orphan (no url)
+      makeTask("d", "u4-unknown"),  // truly orphan (url not in any monitor)
+    ];
+    const allMonitoredUrls = new Set(["u1", "u3-child"]); // merged top-level + child
+    expect(selectTasksByUrl(tasksWithChild, null, allMonitoredUrls).map(t => t.id))
+      .toEqual(["c", "d"]);
+  });
 });

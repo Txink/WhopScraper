@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { weekKeyOf, formatWeekRange, computeWeeks } from "./weekUtils";
+import { weekKeyOf, formatWeekRange, computeWeeks, isoWeekBounds } from "./weekUtils";
 import type { TaskSummary } from "../../api/domain-types";
 
 describe("weekKeyOf", () => {
@@ -107,6 +107,19 @@ describe("computeWeeks", () => {
     } as unknown as TaskSummary;
     const r = computeWeeks([t]);
     expect(r.weeks[0]?.key).toBe("2026-04-19");
+  });
+});
+
+describe("isoWeekBounds", () => {
+  it("2026-W21 → start 2026-05-18T00:00:00, end 2026-05-25T00:00:00", () => {
+    const r = isoWeekBounds("2026-W21");
+    expect(r.start).toBe("2026-05-18T00:00:00");
+    expect(r.end).toBe("2026-05-25T00:00:00");
+  });
+
+  it("rejects malformed keys", () => {
+    expect(() => isoWeekBounds("2026/W21")).toThrow();
+    expect(() => isoWeekBounds("2026-W2")).toThrow();
   });
 });
 

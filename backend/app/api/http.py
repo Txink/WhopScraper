@@ -226,17 +226,24 @@ def build_http_router(
 
     @router.get("/api/tasks", response_model=TaskListOut)
     async def list_tasks_endpoint(
-        limit: int = Query(50, ge=1, le=200),
+        limit: int = Query(50, ge=1, le=500),
         cursor: datetime | None = None,
         status: str | None = None,
         type: Annotated[str | None, Query(alias="type")] = None,
         symbol: str | None = None,
+        urls: Annotated[list[str] | None, Query()] = None,
+        week_start: datetime | None = None,
+        week_end: datetime | None = None,
     ) -> TaskListOut:
         """Return a paginated, optionally-filtered list of tasks.
 
         Pagination is cursor-based: pass ``cursor=<ISO-datetime>`` from
         ``next_cursor`` in the previous page to advance.  ``next_cursor`` is
         ``null`` when no further pages exist.
+
+        Multi-value URL filter: pass ``?urls=u1&urls=u2``. Time window:
+        ``week_start`` / ``week_end`` apply a half-open [start, end) filter on
+        ``message.posted_at``.
         """
         status_enum: Status | None = None
         if status is not None:
@@ -253,6 +260,9 @@ def build_http_router(
                 status=status_enum,
                 type_=type,
                 symbol=symbol,
+                urls=urls,
+                posted_at_start=week_start,
+                posted_at_end=week_end,
             )
         summaries = [task_to_summary(t) for t in tasks]
         next_cur: datetime | None = tasks[-1].created_at if len(tasks) == limit else None
@@ -1459,20 +1469,34 @@ def build_http_router(
     if whop_registry is not None:
 
         @router.get("/api/whop/pages", response_model=WhopPagesOut)
-        async def list_whop_pages() -> WhopPagesOut:
-            pages = whop_registry.list_pages()
+        async def list_whop_pages(
+            parent_chat_id: str | None = None,
+        ) -> WhopPagesOut:
+            """List monitored pages.
+
+            Default (no query param): only top-level pages (parent_chat_id IS NULL).
+            With ``?parent_chat_id=<id>``: only that parent's sub-monitors.
+            """
+            if parent_chat_id is None:
+                pages = whop_registry.list_pages()
+            else:
+                pages = whop_registry.list_pages(parent_chat_id=parent_chat_id)
             return WhopPagesOut(pages=[whop_page_to_out(e, ll) for e, ll in pages])
 
         @router.post("/api/whop/pages", response_model=WhopPageOut, status_code=201)
         async def create_whop_page(body: WhopPageCreate) -> WhopPageOut:
             try:
                 entry = await whop_registry.add_page(
-                    url=body.url, source=body.source, name=body.name
+                    url=body.url,
+                    source=body.source,
+                    name=body.name,
+                    parent_chat_id=body.parent_chat_id,
                 )
             except ValueError as exc:
                 raise HTTPException(400, detail=str(exc)) from exc
-            # Re-read to include listener status
-            for e, ll in whop_registry.list_pages():
+            # Re-read to include listener status. Use parent_chat_id=None so we can
+            # find subs (they aren't in the default top-level listing).
+            for e, ll in whop_registry.list_pages(parent_chat_id=None):
                 if e.id == entry.id:
                     return whop_page_to_out(e, ll)
             raise HTTPException(500, detail="added but lost track")
@@ -1486,7 +1510,7 @@ def build_http_router(
             # via list_pages(); the page may not exist (concurrent delete,
             # bad id) in which case remove_page below 404s.
             source: str | None = None
-            for entry, _ll in whop_registry.list_pages():
+            for entry, _ll in whop_registry.list_pages(parent_chat_id=None):
                 if entry.id == page_id:
                     source = entry.source
                     break
@@ -1519,7 +1543,7 @@ def build_http_router(
             regardless of the active filter selection.
             """
             page = None
-            for entry, _ll in whop_registry.list_pages():
+            for entry, _ll in whop_registry.list_pages(parent_chat_id=None):
                 if entry.id == page_id:
                     page = entry
                     break
@@ -1552,7 +1576,7 @@ def build_http_router(
             ok = await whop_registry.restart_page(page_id)
             if not ok:
                 raise HTTPException(404, detail="page not found or restart failed")
-            for e, ll in whop_registry.list_pages():
+            for e, ll in whop_registry.list_pages(parent_chat_id=None):
                 if e.id == page_id:
                     return whop_page_to_out(e, ll)
             raise HTTPException(500, detail="restart succeeded but lost track")
@@ -1568,7 +1592,7 @@ def build_http_router(
             ok = await whop_registry.start_page(page_id)
             if not ok:
                 raise HTTPException(404, detail="page not found or start failed")
-            for e, ll in whop_registry.list_pages():
+            for e, ll in whop_registry.list_pages(parent_chat_id=None):
                 if e.id == page_id:
                     return whop_page_to_out(e, ll)
             raise HTTPException(500, detail="started but lost track")
@@ -1583,7 +1607,7 @@ def build_http_router(
             ok = await whop_registry.stop_page(page_id)
             if not ok:
                 raise HTTPException(404, detail="page not found")
-            for e, ll in whop_registry.list_pages():
+            for e, ll in whop_registry.list_pages(parent_chat_id=None):
                 if e.id == page_id:
                     return whop_page_to_out(e, ll)
             raise HTTPException(500, detail="stopped but lost track")
@@ -1658,7 +1682,7 @@ def build_http_router(
                 raise HTTPException(404, detail=str(exc)) from exc
             except ValueError as exc:
                 raise HTTPException(400, detail=str(exc)) from exc
-            for e, ll in whop_registry.list_pages():
+            for e, ll in whop_registry.list_pages(parent_chat_id=None):
                 if e.id == entry.id:
                     return whop_page_to_out(e, ll)
             raise HTTPException(500, detail="updated but lost track")
@@ -1673,7 +1697,7 @@ def build_http_router(
             force=true since it's an explicit user choice.
             """
             if not body.force:
-                active_urls = {entry.url for entry, _ in whop_registry.list_pages()}
+                active_urls = {entry.url for entry, _ in whop_registry.list_pages(parent_chat_id=None)}
                 if body.url is not None and body.url in active_urls:
                     raise HTTPException(
                         400,

@@ -353,3 +353,160 @@ def test_acceptance_unknown_ticker_skipped(monkeypatch, tmp_path) -> None:
         assert len(stock_orders) == 0, (
             f"expected 0 stock orders, got {fake_broker.submitted_orders}"
         )
+
+
+# ---------------------------------------------------------------------------
+# §11.7  Chat parent + stock sub-monitor: signal pipeline & cascade-on-remove
+# ---------------------------------------------------------------------------
+
+
+def test_acceptance_chat_with_stock_submonitor_produces_signal(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,  # noqa: ANN001
+) -> None:
+    """A stock sub-monitor under a chat parent emits a task just like an
+    independent stock page; the task is findable via ?urls= filter."""
+
+    monkeypatch.setattr(
+        "app.whop.registry._DEFAULT_PAGES_FILE",
+        tmp_path / "test_pages.json",
+    )
+
+    settings = _settings_for_test("chat-signals-token")
+    broker = FakeBrokerClient(dry_run=True)
+    app = create_app(settings=settings, broker_override=broker, skip_whop=True)
+    app.dependency_overrides[get_settings] = lambda: settings
+
+    with TestClient(app) as client:
+        token = {"token": "chat-signals-token"}
+
+        # 1. Create chat parent via REST.
+        chat_r = client.post(
+            "/api/whop/pages",
+            params=token,
+            json={
+                "url": "https://whop.com/c/alpha-chat",
+                "source": "chat",
+                "name": "alpha-room",
+            },
+        )
+        assert chat_r.status_code == 201, chat_r.text
+        chat = chat_r.json()
+
+        # 2. Create stock sub-monitor under the chat parent via REST.
+        sub_r = client.post(
+            "/api/whop/pages",
+            params=token,
+            json={
+                "url": "https://whop.com/c/tsll-sub",
+                "source": "stock",
+                "name": "TSLL 监听",
+                "parent_chat_id": chat["id"],
+            },
+        )
+        assert sub_r.status_code == 201, sub_r.text
+        sub = sub_r.json()
+        assert sub["parent_chat_id"] == chat["id"]
+
+        # 3. Publish a whop message tagged with the sub-monitor's url.
+        state = app.state.app_state
+        msg = Message(
+            id="chat-sig-001",
+            content="TSLL 26.5 加一半",
+            raw_content="TSLL 26.5 加一半",
+            author="alpha_trader",
+            posted_at=datetime(2026, 4, 25, 10, 42, tzinfo=UTC),
+            received_at=datetime(2026, 4, 25, 10, 42, 1, tzinfo=UTC),
+            source="stock",
+            url=sub["url"],
+        )
+
+        async def _flow() -> None:
+            await state.bus.publish(Event(Topics.MESSAGE_RECEIVED, MessagePayload(message=msg)))
+            await state.bus.wait_idle(timeout=2)
+            await state.bus.wait_idle(timeout=2)
+
+        assert client.portal is not None
+        client.portal.call(_flow)
+
+        # 4. Query tasks filtered by the sub-monitor's url.
+        r = client.get(
+            "/api/tasks",
+            params={"token": "chat-signals-token", "urls": sub["url"]},
+        )
+        assert r.status_code == 200, r.text
+        data = r.json()
+        assert any(t["id"] == "chat-sig-001" for t in data["tasks"]), (
+            f"sub-monitor task not found via urls filter; response={data}"
+        )
+
+        # 5. The default top-level /api/whop/pages must NOT include the sub-monitor.
+        top = client.get("/api/whop/pages", params=token).json()["pages"]
+        top_ids = {p["id"] for p in top}
+        assert chat["id"] in top_ids
+        assert sub["id"] not in top_ids
+        assert all(p["parent_chat_id"] is None for p in top)
+
+        # 6. Filtering by parent returns only the sub-monitor.
+        children = client.get(
+            "/api/whop/pages",
+            params={**token, "parent_chat_id": chat["id"]},
+        ).json()["pages"]
+        assert len(children) == 1
+        assert children[0]["id"] == sub["id"]
+
+
+def test_acceptance_removing_chat_promotes_sub_to_toplevel(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,  # noqa: ANN001
+) -> None:
+    """Removing a chat parent cascades: its sub-monitors keep running and
+    become top-level entries with parent_chat_id=None."""
+
+    monkeypatch.setattr(
+        "app.whop.registry._DEFAULT_PAGES_FILE",
+        tmp_path / "test_pages.json",
+    )
+
+    settings = _settings_for_test("chat-remove-token")
+    broker = FakeBrokerClient(dry_run=True)
+    app = create_app(settings=settings, broker_override=broker, skip_whop=True)
+    app.dependency_overrides[get_settings] = lambda: settings
+
+    with TestClient(app) as client:
+        token = {"token": "chat-remove-token"}
+
+        chat_r = client.post(
+            "/api/whop/pages",
+            params=token,
+            json={"url": "https://whop.com/c/chat-rm", "source": "chat", "name": "c"},
+        )
+        assert chat_r.status_code == 201, chat_r.text
+        chat = chat_r.json()
+
+        sub_r = client.post(
+            "/api/whop/pages",
+            params=token,
+            json={
+                "url": "https://whop.com/c/stock-rm",
+                "source": "stock",
+                "name": "TSLL 监听",
+                "parent_chat_id": chat["id"],
+            },
+        )
+        assert sub_r.status_code == 201, sub_r.text
+        sub = sub_r.json()
+
+        # Delete the chat parent.
+        r = client.delete(f"/api/whop/pages/{chat['id']}", params=token)
+        assert r.status_code == 204, r.text
+
+        # Sub-monitor now appears in the default top-level list with parent_chat_id=None.
+        top = client.get("/api/whop/pages", params=token).json()["pages"]
+        ids = {p["id"] for p in top}
+        assert sub["id"] in ids, f"sub-monitor not promoted to top-level; pages={top}"
+        survivor = next(p for p in top if p["id"] == sub["id"])
+        assert survivor["parent_chat_id"] is None
+
+        # The deleted chat parent must no longer appear.
+        assert chat["id"] not in ids

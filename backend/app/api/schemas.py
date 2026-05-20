@@ -595,6 +595,7 @@ class WhopPageOut(BaseModel):
     last_poll_at: datetime | None
     messages_published: int
     last_error: str | None
+    parent_chat_id: str | None = None
 
 
 class WhopPagesOut(BaseModel):
@@ -605,6 +606,7 @@ class WhopPageCreate(BaseModel):
     url: str
     source: Literal["stock", "option", "chat"]
     name: str | None = None
+    parent_chat_id: str | None = None
 
 
 class WhopCookieStatusOut(BaseModel):
@@ -885,6 +887,7 @@ def whop_page_to_out(
             last_poll_at=listener.last_poll_at,
             messages_published=listener.messages_published,
             last_error=listener.last_error,
+            parent_chat_id=entry.parent_chat_id,
         )
     return WhopPageOut(
         id=entry.id,
@@ -898,6 +901,7 @@ def whop_page_to_out(
         last_poll_at=None,
         messages_published=0,
         last_error=None,
+        parent_chat_id=entry.parent_chat_id,
     )
 
 

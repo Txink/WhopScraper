@@ -1,10 +1,25 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type { WhopPage } from "../../api/domain-types";
+import { api } from "../../api/http";
 import { useChatStore } from "../../stores/chatStore";
+import { useChildPagesStore } from "../../stores/childPages";
+import { useTasksStore } from "../../stores/tasks";
+import { useConnStore } from "../../stores/conn";
+import { isoWeekBounds } from "../Dashboard/weekUtils";
 import { groupIntoCards } from "./chatCards";
 import { ChatCard } from "./ChatCard";
 import { ChatSenderBar } from "./ChatSenderBar";
 import { GroupChatView } from "./GroupChatView";
+import { buildTimeline, buildFilterBlocks, buildStreamGroups } from "./chatTimeline";
+import { SignalCard } from "./SignalCard";
+import { StreamView } from "./StreamView";
 import "./ChatBoardPanel.css";
 
 interface Props {
@@ -56,40 +71,117 @@ export function ChatBoardPanel({ page, week }: Props) {
     fetch(page.id, week, []);
   }, [page.id, week, fetch]);
 
+  // ── Child monitor pages + their tasks ────────────────────────────────
+  const children = useChildPagesStore((s) => s.byParent[page.id] ?? []);
+  const childUrls = useMemo(() => children.map((c) => c.url), [children]);
+  const urlToMonitorName = useMemo(
+    () => Object.fromEntries(children.map((c) => [c.url, c.name])),
+    [children],
+  );
+
+  const allTasks = useTasksStore((s) => s.tasks);
+  const pushEventsByTask = useTasksStore((s) => s.pushEventsByTask);
+  const autoTrade = useConnStore((s) => s.autoTrade);
+
+  const childTasks = useMemo(
+    () =>
+      allTasks.filter(
+        (t) => t.message.url != null && childUrls.includes(t.message.url),
+      ),
+    [allTasks, childUrls],
+  );
+
+  // Fetch children + their tasks on mount / page / week change.
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const r = await api.listWhopPages({ parentChatId: page.id });
+        if (!alive) return;
+        useChildPagesStore.getState().setByParent(page.id, r.pages);
+
+        const urls = r.pages.map((p) => p.url);
+        if (urls.length === 0) return;
+        const { start, end } = isoWeekBounds(week);
+        const tr = await api.listTasks({
+          urls,
+          week_start: start,
+          week_end: end,
+          limit: 500,
+        });
+        if (!alive) return;
+        for (const t of tr.tasks) useTasksStore.getState().upsertTask(t);
+      } catch (e) {
+        console.warn("chat children fetch failed:", e);
+      }
+    })();
+    return () => { alive = false; };
+  }, [page.id, week]);
+
+  // Single-accordion for signal cards across the whole board.
+  const [expandedSignalId, setExpandedSignalId] = useState<string | null>(null);
+  useEffect(() => {
+    setExpandedSignalId(null);
+  }, [page.id]);
+  const toggleSignal = useCallback((taskId: string) => {
+    setExpandedSignalId((curr) => (curr === taskId ? null : taskId));
+  }, []);
+
+  // ── Data ─────────────────────────────────────────────────────────────
   const messages = cache?.messages ?? [];
   const authors = cache?.authors ?? [];
 
-  const cards = useMemo(
-    () => groupIntoCards(messages, new Set(watchedSenders)),
-    [messages, watchedSenders],
+  /** name → "stock" | "option" for children whose source is known. */
+  const monitorSources = useMemo<Record<string, "stock" | "option">>(
+    () =>
+      Object.fromEntries(
+        children
+          .filter((c) => c.source === "stock" || c.source === "option")
+          .map((c) => [c.name, c.source as "stock" | "option"]),
+      ),
+    [children],
+  );
+
+  /** authors from chat messages merged with child monitor pages.
+   *  Monitor names are included even when count=0 so users can toggle
+   *  them on before any signal arrives this week. */
+  const authorsWithMonitors = useMemo(() => {
+    const seen = new Set<string>();
+    const out: { name: string; count: number }[] = [];
+    for (const a of authors) {
+      out.push(a);
+      seen.add(a.name);
+    }
+    for (const c of children) {
+      if (seen.has(c.name)) continue;
+      const count = childTasks.filter((t) => t.message.url === c.url).length;
+      out.push({ name: c.name, count });
+    }
+    return out;
+  }, [authors, children, childTasks]);
+
+  const watchedSet = useMemo(() => new Set(watchedSenders), [watchedSenders]);
+
+  // Merged chronological timeline of chat messages + child tasks.
+  const timeline = useMemo(
+    () => buildTimeline(messages, childTasks, urlToMonitorName),
+    [messages, childTasks, urlToMonitorName],
   );
 
   function handleSenderChange(next: string[]) {
     setWatchedSenders(next);
   }
 
-  // Sticky-bottom scroll. ref starts true so the first paint (and week
-  // switches that re-populate the list) anchors at the bottom. After
-  // that, scroll events update the flag — if the user scrolls up to
-  // read history, new messages no longer yank the view back down.
-  // useLayoutEffect avoids a one-frame flicker where the list briefly
-  // shows at top before scrolling.
+  // ── Sticky-bottom scroll ──────────────────────────────────────────────
   const boardRef = useRef<HTMLDivElement | null>(null);
   const wasAtBottomRef = useRef(true);
 
-  // New messages: snap to bottom ONLY when user was already there. Never
-  // yank up a user who scrolled to read history.
   useLayoutEffect(() => {
     const el = boardRef.current;
     if (!el || !wasAtBottomRef.current) return;
     el.scrollTop = el.scrollHeight;
   }, [messages.length]);
 
-  // View-shape transitions (mode toggle, first watched added or last
-  // watched removed): the layout flips between cards / group view /
-  // empty so dramatically that preserving the old scrollTop drops the
-  // user at a meaningless middle position. Force re-anchor and reset
-  // the ref — subsequent new messages will follow automatically.
   const hasWatched = watchedSenders.length > 0;
   useLayoutEffect(() => {
     const el = boardRef.current;
@@ -104,33 +196,99 @@ export function ChatBoardPanel({ page, week }: Props) {
     wasAtBottomRef.current = distFromBottom < 120;
   }
 
-  // Routing:
-  //   no msgs → empty state
-  //   no watched → group view (mode is moot — nothing to filter/highlight)
-  //   filter mode → batch/quote cards for watched only
-  //   highlight mode → group view with watched senders' avatar tinted
+  // ── Routing ───────────────────────────────────────────────────────────
+  //   no timeline items → empty state
+  //   filter mode + watched senders → buildFilterBlocks → chat/aggregate cards
+  //   highlight mode (or no watched) → buildStreamGroups → StreamView
   let body: React.ReactNode;
-  if (messages.length === 0) {
+
+  if (timeline.length === 0) {
     body = (
-      <div className="chat-empty">本周无聊天消息 · 切换周或调整发送者过滤</div>
+      <div className="chat-empty">本周无消息 · 切换周或调整发送者过滤</div>
     );
-  } else if (watchedSenders.length === 0) {
-    body = <GroupChatView messages={messages} />;
-  } else if (mode === "filter") {
-    body = cards.map((c) => <ChatCard key={c.id} card={c} />);
+  } else if (mode === "filter" && watchedSenders.length > 0) {
+    const blocks = buildFilterBlocks(timeline, watchedSet, urlToMonitorName);
+    body = blocks.map((b, i) => {
+      if (b.kind === "chat") {
+        return (
+          <React.Fragment key={`chat-${b.sender}-${i}`}>
+            {groupIntoCards(b.messages, new Set([b.sender])).map((c) => (
+              <ChatCard key={c.id} card={c} />
+            ))}
+          </React.Fragment>
+        );
+      }
+      const isStock = b.kind === "aggregate-stock";
+      const sourceCls = isStock ? "stock" : "option";
+      const titleZh = isStock ? "正股信号" : "期权信号";
+      return (
+        <div key={i} className={`chat-card aggregate ${sourceCls}`}>
+          <div className="chat-card-head">
+            <span
+              className="avatar-lg"
+              style={{
+                background: isStock
+                  ? "var(--source-stock)"
+                  : "var(--source-option)",
+              }}
+            >
+              ∑
+            </span>
+            <span className="sender-name">{titleZh}</span>
+            <span className="meta">
+              <span className="msg-count">{b.tasks.length} signals</span>
+              <span>{b.monitorNames.join(" + ")}</span>
+            </span>
+          </div>
+          <div className="chat-thread">
+            {b.tasks.map((t) => (
+              <div key={t.id} className="chat-row">
+                <SignalCard
+                  task={t}
+                  pushEvents={pushEventsByTask[t.id] ?? []}
+                  expanded={expandedSignalId === t.id}
+                  onToggle={() => toggleSignal(t.id)}
+                  autoTrade={autoTrade}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    });
   } else {
-    body = <GroupChatView messages={messages} watched={new Set(watchedSenders)} />;
+    // Highlight mode or no watched senders → stream view.
+    // If there are no child tasks and no watched senders, fall back to the
+    // original GroupChatView so the pure-chat path is unchanged.
+    if (childTasks.length === 0 && watchedSenders.length === 0) {
+      body = <GroupChatView messages={messages} />;
+    } else if (childTasks.length === 0 && mode === "highlight") {
+      body = <GroupChatView messages={messages} watched={watchedSet} />;
+    } else {
+      const groups = buildStreamGroups(timeline, urlToMonitorName);
+      body = (
+        <StreamView
+          groups={groups}
+          watched={watchedSet}
+          pushEventsByTask={pushEventsByTask}
+          expandedTaskId={expandedSignalId}
+          onToggleTask={toggleSignal}
+          autoTrade={autoTrade}
+        />
+      );
+    }
   }
 
   return (
     <div className="chat-panel">
       <ChatSenderBar
         pageId={page.id}
-        authors={authors}
+        authors={authorsWithMonitors}
         watchedSenders={watchedSenders}
         onChange={handleSenderChange}
         mode={mode}
         onModeChange={handleModeChange}
+        monitorSources={monitorSources}
       />
       <div className="chat-board" ref={boardRef} onScroll={handleBoardScroll}>
         {body}

@@ -7,9 +7,10 @@ import { useStatsStore } from "./stores/stats";
 import { usePositionsStore } from "./stores/positions";
 import { useQuotesStore } from "./stores/quotes";
 import { useExecutionsStore } from "./stores/executions";
-import type { Quote, Execution } from "./api/domain-types";
+import type { Quote, Execution, WhopPage } from "./api/domain-types";
 import { useViewStore } from "./stores/view";
 import { usePageTabsStore } from "./stores/pageTabs";
+import { useChildPagesStore } from "./stores/childPages";
 import { TopBar } from "./components/TopBar";
 import { PositionsPanel } from "./components/Positions/PositionsPanel";
 import { Login } from "./components/Login";
@@ -162,7 +163,24 @@ function Dashboard({ token }: { token: string }) {
       token,
       onEvent: (evt) => {
         if (evt.type === "whop.page_changed") {
-          usePageTabsStore.getState().applyPageChanged(evt);
+          const payload = evt.payload as { action: string; page?: WhopPage };
+          if (payload.page) {
+            if (payload.page.parent_chat_id != null) {
+              // Sub-monitor: route into childPagesStore, ensure it doesn't show
+              // up in top-level tabs.
+              useChildPagesStore.getState().upsert(payload.page);
+              usePageTabsStore.getState().removePageIfPresent(payload.page.id);
+            } else {
+              // Top-level: ensure childPagesStore drops it (in case it was a sub
+              // that got promoted by a parent removal cascade), then forward to
+              // the page-tabs store as today.
+              useChildPagesStore.getState().remove(payload.page.id);
+              usePageTabsStore.getState().applyPageChanged(evt);
+            }
+          } else {
+            // No page payload — delegate to the existing handler unchanged.
+            usePageTabsStore.getState().applyPageChanged(evt);
+          }
         } else if (evt.type === "quote.snapshot") {
           // Streaming broker quote — overlay into quotesStore so the
           // PositionCard's last_done updates in real time. payload shape:
@@ -216,14 +234,25 @@ function Dashboard({ token }: { token: string }) {
   // Gate on pagesLoaded so we don't recompute orphans against a stale/empty
   // page list during the first remount paint (which would falsely flag every
   // task as orphan and trigger the orphan auto-select effect below).
+  const childPagesMap = useChildPagesStore((s) => s.byParent);
   const pageUrls = useMemo(() => new Set(pages.map((p) => p.url)), [pages]);
+  // Merge top-level page URLs with sub-monitor (child) page URLs so that tasks
+  // whose url belongs to a child monitor are NOT counted as orphans.
+  const allMonitoredUrls = useMemo(
+    () =>
+      new Set([
+        ...pages.map((p) => p.url),
+        ...Object.values(childPagesMap).flat().map((p) => p.url),
+      ]),
+    [pages, childPagesMap],
+  );
   useEffect(() => {
     if (!pagesLoaded) return;
     const orphans = tasks.filter(
-      (t) => t.message?.url == null || !pageUrls.has(t.message.url),
+      (t) => t.message?.url == null || !allMonitoredUrls.has(t.message.url),
     );
     setOrphanCount(orphans.length);
-  }, [tasks, pageUrls, setOrphanCount, pagesLoaded]);
+  }, [tasks, allMonitoredUrls, setOrphanCount, pagesLoaded]);
 
   // Auto-select orphan tab when no pages exist but orphans do (so user isn't stuck)
   useEffect(() => {
@@ -240,7 +269,7 @@ function Dashboard({ token }: { token: string }) {
       : pages.find((p) => p.id === activeTabId) ?? null;
   const filteredTasks =
     isOrphanTab
-      ? selectTasksByUrl(tasks, null, pageUrls)
+      ? selectTasksByUrl(tasks, null, allMonitoredUrls)
       : activePage
         ? selectTasksByUrl(tasks, activePage.url, pageUrls)
         : [];

@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import * as httpModule from "../../api/http";
 import { PageSettingsModal } from "./PageSettingsModal";
 import type { WhopPage } from "../../api/domain-types";
+import { useChildPagesStore } from "../../stores/childPages";
 
 const stockPage: WhopPage = {
   id: "a", url: "u", source: "stock", name: "S", added_at: "2026-04-25T00:00:00Z",
@@ -25,6 +26,21 @@ const optionPage: WhopPage = {
   settings: {
     dedupe_processed_messages: true,
     price_deviation_tolerance: 5.0,
+    block_historical_messages: false,
+    launch_headless: false,
+    tickers: null,
+    option_buy_quantity_enabled: false,
+    option_buy_quantity: null,
+    option_total_price_limit_enabled: false,
+    option_total_price_limit: null,
+  },
+};
+
+const chatPage: WhopPage = {
+  ...stockPage, id: "c", source: "chat", name: "Chat",
+  settings: {
+    dedupe_processed_messages: false,
+    price_deviation_tolerance: 0,
     block_historical_messages: false,
     launch_headless: false,
     tickers: null,
@@ -145,6 +161,42 @@ describe("<PageSettingsModal>", () => {
     await waitFor(() => expect(spy).toHaveBeenCalled());
     const arg = spy.mock.calls[0][1];
     expect(arg.parser_version).toBe("v1");
+  });
+
+  describe("chat-source page", () => {
+    beforeEach(() => {
+      // Reset child pages store between tests
+      useChildPagesStore.getState().setByParent("c", []);
+    });
+
+    it("renders AttachedMonitorsSection for chat-source pages", async () => {
+      vi.spyOn(httpModule.api, "listWhopPages").mockResolvedValue({ pages: [] });
+      render(<PageSettingsModal page={chatPage} onClose={vi.fn()} />);
+      // Section heading is always present, even with zero children
+      await waitFor(() => expect(screen.getByText(/挂载监听/)).toBeInTheDocument());
+    });
+
+    it("fetches child pages on mount for chat-source pages", async () => {
+      const listSpy = vi.spyOn(httpModule.api, "listWhopPages").mockResolvedValue({ pages: [] });
+      render(<PageSettingsModal page={chatPage} onClose={vi.fn()} />);
+      await waitFor(() => expect(listSpy).toHaveBeenCalledWith({ parentChatId: "c" }));
+    });
+
+    it("does NOT render AttachedMonitorsSection for stock-source pages", () => {
+      render(<PageSettingsModal page={stockPage} onClose={vi.fn()} />);
+      expect(screen.queryByText(/挂载监听/)).not.toBeInTheDocument();
+    });
+
+    it("does NOT render AttachedMonitorsSection for option-source pages", () => {
+      render(<PageSettingsModal page={optionPage} onClose={vi.fn()} />);
+      expect(screen.queryByText(/挂载监听/)).not.toBeInTheDocument();
+    });
+
+    it("does NOT call listWhopPages for stock-source pages", () => {
+      const listSpy = vi.spyOn(httpModule.api, "listWhopPages").mockResolvedValue({ pages: [] });
+      render(<PageSettingsModal page={stockPage} onClose={vi.fn()} />);
+      expect(listSpy).not.toHaveBeenCalled();
+    });
   });
 
 });

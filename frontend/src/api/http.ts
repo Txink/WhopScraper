@@ -86,6 +86,9 @@ export const api = {
     status?: string;
     type?: string;
     symbol?: string;
+    urls?: string[];
+    week_start?: string;  // ISO datetime
+    week_end?: string;
   } = {}): Promise<TaskList> {
     const qs = new URLSearchParams();
     if (params.limit !== undefined) qs.set("limit", String(params.limit));
@@ -93,6 +96,9 @@ export const api = {
     if (params.status) qs.set("status", params.status);
     if (params.type) qs.set("type", params.type);
     if (params.symbol) qs.set("symbol", params.symbol);
+    if (params.urls) for (const u of params.urls) qs.append("urls", u);
+    if (params.week_start) qs.set("week_start", params.week_start);
+    if (params.week_end) qs.set("week_end", params.week_end);
     const suffix = qs.toString() ? `?${qs.toString()}` : "";
     return request<TaskList>(`/api/tasks${suffix}`);
   },
@@ -213,8 +219,11 @@ export const api = {
     });
   },
 
-  async listWhopPages(): Promise<WhopPages> {
-    return request<WhopPages>("/api/whop/pages");
+  async listWhopPages(opts?: { parentChatId?: string }): Promise<WhopPages> {
+    const qs = opts?.parentChatId
+      ? `?parent_chat_id=${encodeURIComponent(opts.parentChatId)}`
+      : "";
+    return request<WhopPages>(`/api/whop/pages${qs}`);
   },
 
   async addWhopPage(body: WhopPageCreate): Promise<WhopPage> {

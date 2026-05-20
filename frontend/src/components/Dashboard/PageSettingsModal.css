@@ -15,7 +15,7 @@
   background: var(--bg-1);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-card);
-  width: 600px;
+  width: 780px;
   max-width: 90vw;
   max-height: 80vh;
   display: flex;
@@ -61,6 +61,7 @@
   padding: var(--space-4);
   overflow-y: auto;
   flex: 1;
+  min-height: 0;
 }
 .modal-body section {
   margin-bottom: var(--space-4);

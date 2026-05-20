@@ -33,6 +33,14 @@ from app.whop.page_settings import (
 
 logger = logging.getLogger(__name__)
 
+
+class _Sentinel:
+    """Marker for keyword args that need to distinguish 'caller passed None'
+    from 'caller didn't pass anything'. Don't export."""
+
+
+_DEFAULT = _Sentinel()
+
 # Source literal alias used by the cast() calls below; matches the type signature
 # of default_settings_for / page_settings_from_dict in app.whop.page_settings.
 _SourceLiteral = Literal["stock", "option", "chat"]
@@ -73,6 +81,10 @@ class WhopPageEntry:
     # because that matches the `source` default; callers MUST pass an explicit
     # `default_settings_for(source)` when constructing for option pages.
     settings: PageSettings = field(default_factory=lambda: default_settings_for("stock"))
+    # Optional reference to the parent chat page that "owns" this stock/option
+    # sub-monitor. None means this is a top-level page (no parent).
+    # Validation rules live in `add_page`.
+    parent_chat_id: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -82,6 +94,7 @@ class WhopPageEntry:
             "name": self.name,
             "added_at": self.added_at.isoformat(),
             "settings": page_settings_to_dict(self.settings),
+            "parent_chat_id": self.parent_chat_id,
         }
 
     @classmethod
@@ -103,6 +116,7 @@ class WhopPageEntry:
             name=d.get("name") or d["url"],
             added_at=datetime.fromisoformat(d["added_at"]),
             settings=settings,
+            parent_chat_id=d.get("parent_chat_id"),
         )
 
 
@@ -186,7 +200,14 @@ class WhopRegistry:
         self._rebuild_url_index()
         return entry
 
-    async def add_page(self, *, url: str, source: str, name: str | None = None) -> WhopPageEntry:
+    async def add_page(
+        self,
+        *,
+        url: str,
+        source: str,
+        name: str | None = None,
+        parent_chat_id: str | None = None,
+    ) -> WhopPageEntry:
         """Add a new page entry + persist (does NOT start listener).
 
         New behaviour: user must explicitly start the listener via
@@ -200,6 +221,27 @@ class WhopRegistry:
             raise ValueError(f"source must be stock|option|chat, got {source!r}")
         if not url or _is_placeholder_url(url):
             raise ValueError(f"invalid or placeholder URL: {url!r}")
+
+        # Pre-lock parent validation — intentionally runs BEFORE acquiring self._lock.
+        # Reason: self._lock is a non-reentrant asyncio.Lock and downstream helpers
+        # (e.g. _start_listener, _save_entries) also expect to be called while the
+        # lock is held; acquiring it here would deadlock or require separate lock
+        # nesting that obscures control flow.
+        # TOCTOU note: a concurrent remove_page could delete the parent between this
+        # check and the insert inside the lock below.  The consequence is benign: the
+        # child entry is stored with a dangling parent_chat_id, and on next reload it
+        # simply promotes to top-level (parent absent → treated as standalone).  This
+        # is the same accepted trade-off as the URL duplicate guard comment below.
+        if parent_chat_id is not None:
+            parent = self._entries.get(parent_chat_id)
+            if parent is None:
+                raise ValueError(f"parent_chat_id {parent_chat_id!r} not found")
+            if parent.parent_chat_id is not None:
+                raise ValueError("cannot nest sub-monitors (parent is itself a sub)")
+            if parent.source != "chat":
+                raise ValueError("parent must be source=chat")
+            if source == "chat":
+                raise ValueError("sub-monitor source must be stock or option")
 
         async with self._lock:
             # Authoritative duplicate-URL guard (only check; runs under lock to
@@ -217,6 +259,7 @@ class WhopRegistry:
                 added_at=datetime.now(UTC),
                 # source was validated against ("stock", "option", "chat") above; cast for mypy.
                 settings=default_settings_for(cast(_SourceLiteral, source)),
+                parent_chat_id=parent_chat_id,
             )
             self._entries[entry.id] = entry
             self._save_entries()
@@ -226,7 +269,10 @@ class WhopRegistry:
         return entry
 
     async def remove_page(self, page_id: str) -> bool:
-        """Stop listener + remove entry + persist. Returns False if not found."""
+        """Stop listener + remove entry + persist. Cascades children: any sub-
+        monitors whose parent_chat_id == page_id have it cleared, surviving as
+        top-level entries (their listeners continue running, no data loss)."""
+        orphaned_dicts: list[dict[str, Any]] = []
         async with self._lock:
             entry = self._entries.pop(page_id, None)
             if entry is None:
@@ -237,10 +283,27 @@ class WhopRegistry:
                     await listener.stop()
                 except Exception as e:  # noqa: BLE001
                     logger.warning("error stopping removed listener: %s", e)
+
+            # Cascade: children of a chat parent become independent top-level
+            # pages. Their listeners are NOT affected (they're separate entries
+            # in self._listeners, keyed by their own id). The only state change
+            # is parent_chat_id → None, which we persist below.
+            for child in self._entries.values():
+                if child.parent_chat_id == page_id:
+                    child.parent_chat_id = None
+                    orphaned_dicts.append(self._build_page_dict(child))
+
             self._save_entries()
             self._rebuild_url_index()
             page_dict = self._build_page_dict(entry)
+
         await self._publish_page_event("removed", page_dict)
+        # Tell subscribers (WS handler in frontend) that each surviving child
+        # is now a top-level page — the "settings_updated" reason re-publishes
+        # the full page payload, and downstream consumers look at parent_chat_id
+        # to decide which store the page belongs in.
+        for od in orphaned_dicts:
+            await self._publish_page_event("settings_updated", od)
         return True
 
     async def start_page(self, page_id: str) -> bool:
@@ -363,9 +426,31 @@ class WhopRegistry:
 
     # ---- read ops ----
 
-    def list_pages(self) -> list[tuple[WhopPageEntry, WhopListener | None]]:
-        """Return entries + their (optional) live listener. No lock — caller is read-only."""
-        return [(e, self._listeners.get(e.id)) for e in self._entries.values()]
+    def list_pages(
+        self,
+        *,
+        parent_chat_id: str | None | _Sentinel = _DEFAULT,
+    ) -> list[tuple[WhopPageEntry, WhopListener | None]]:
+        """Return entries + their (optional) live listener.
+
+        Default behaviour: only top-level entries (``parent_chat_id IS NULL``).
+        Pass ``parent_chat_id=<id>`` to get that parent's sub-monitors only.
+        Pass ``parent_chat_id=None`` explicitly to opt in to all entries
+        regardless of parent (internal use, e.g. URL routing, shutdown).
+        """
+        if isinstance(parent_chat_id, _Sentinel):
+            return [
+                (e, self._listeners.get(e.id))
+                for e in self._entries.values()
+                if e.parent_chat_id is None
+            ]
+        if parent_chat_id is None:
+            return [(e, self._listeners.get(e.id)) for e in self._entries.values()]
+        return [
+            (e, self._listeners.get(e.id))
+            for e in self._entries.values()
+            if e.parent_chat_id == parent_chat_id
+        ]
 
     def get_settings_for_url(self, url: str | None) -> PageSettings | None:
         """O(1) reverse lookup: url → PageSettings. Returns None for unknown/None url.

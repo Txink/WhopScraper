@@ -25,6 +25,7 @@ interface PageTabsState {
   setOrphanCount(n: number): void;
   markPagesLoaded(): void;
   applyPageChanged(evt: WsEvent): void;
+  removePageIfPresent(pageId: string): void;
   reset(): void;
 }
 
@@ -93,6 +94,13 @@ export const usePageTabsStore = create<PageTabsState>((set, get) => ({
         activeTabId = pages[0]?.id ?? null;
       }
       return { pages, activeTabId };
+    });
+  },
+
+  removePageIfPresent(pageId) {
+    set(state => {
+      if (!state.pages.some(p => p.id === pageId)) return state;
+      return { pages: state.pages.filter(p => p.id !== pageId) };
     });
   },
 

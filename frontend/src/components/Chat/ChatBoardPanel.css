@@ -283,6 +283,39 @@
   color: var(--brand); opacity: 0.7;
 }
 
+/* Aggregate signal card (filter mode) — one card groups all stock or option
+ * signals from watched monitors for the week. The ∑ avatar tints to match
+ * the source colour so it's visually distinct from chat sender cards. */
+.chat-card.aggregate .chat-card-head {
+  gap: 10px;
+}
+.avatar-lg {
+  width: 26px; height: 26px; border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: 13px; font-weight: 700;
+  color: var(--bg-0);
+  flex-shrink: 0;
+}
+.chat-card.aggregate .sender-name {
+  font-size: 12px; font-weight: 600; color: var(--fg-1);
+}
+.chat-card.aggregate .meta {
+  margin-left: auto;
+  display: flex; align-items: center; gap: 8px;
+  font-size: 10.5px; color: var(--fg-3);
+}
+.chat-card.aggregate .msg-count {
+  background: var(--bg-3); color: var(--fg-2);
+  padding: 1px 6px; border-radius: 3px; font-size: 10px;
+}
+/* Tint the card border based on signal type for quick at-a-glance scanning. */
+.chat-card.aggregate.stock {
+  border-color: rgba(var(--source-stock-rgb, 99, 190, 123), 0.35);
+}
+.chat-card.aggregate.option {
+  border-color: rgba(var(--source-option-rgb, 130, 120, 220), 0.35);
+}
+
 /* Sits as the last child of .stream (flex-column). flex:1 + min-height:0
  * makes the panel take only the leftover height after PageTabs +
  * .page-meta-row — earlier height:100% double-counted those siblings and
@@ -291,3 +324,89 @@
               flex: 1; min-height: 0; }
 .chat-panel .chat-board { flex: 1; min-height: 0; overflow-y: auto; }
 .chat-empty { padding: 60px 20px; text-align: center; color: var(--fg-2); }
+
+/* ── Stream view (highlight mode) ─────────────────────────────────────
+   Single long flat list, no card outer per sender. Consecutive same-
+   sender items share an avatar + name head. Watched senders get brand
+   tint; unwatched stay neutral.
+   ────────────────────────────────────────────────────────────────── */
+.stream-view {
+  display: flex; flex-direction: column;
+  gap: 14px;
+}
+.stream-group {
+  display: flex; flex-direction: column;
+  gap: 4px;
+}
+.stream-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 0 0 30px;
+  margin-bottom: 2px;
+}
+.stream-group.watched .stream-head { padding-left: 0; padding-right: 30px; justify-content: flex-end; }
+.stream-head .avatar-sm { margin: 0; }
+.stream-head .stream-author {
+  font-size: 11.5px;
+  color: var(--fg-2);
+  font-weight: 500;
+}
+.stream-group.watched .stream-head .stream-author { color: var(--brand); }
+.stream-group.monitor.stock .stream-head .stream-author { color: var(--source-stock); }
+.stream-group.monitor.option .stream-head .stream-author { color: var(--source-option); }
+.stream-head .stream-time {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--fg-3);
+}
+.stream-body {
+  display: flex; flex-direction: column;
+  gap: 4px;
+  padding-left: 30px;
+}
+.stream-group.watched .stream-body { padding-left: 0; padding-right: 30px; align-items: flex-end; }
+.stream-bubble {
+  max-width: 78%;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  color: var(--fg-1);
+  word-break: break-word;
+}
+.stream-group.watched .stream-bubble {
+  background: rgba(var(--brand-rgb), 0.10);
+  border-color: rgba(var(--brand-rgb), 0.32);
+}
+/* Signal bubble inside the stream-body — already styled; just align */
+.stream-body .signal-bubble { align-self: flex-start; }
+.stream-group.watched .stream-body .signal-bubble { align-self: flex-end; }
+
+/* Highlight mode: mute non-watched groups; hover restores full opacity */
+.board[data-mode="highlight"] .stream-group:not(.watched) {
+  opacity: 0.72;
+}
+.board[data-mode="highlight"] .stream-group:not(.watched):hover { opacity: 1; }
+
+/* ── Monitor sender chips — source-dot prefix ──────────────────────────
+   A tiny colored dot before the avatar distinguishes monitor (signal-
+   source) chips from plain human-sender chips at a glance. The chip
+   itself gets a small extra left-padding to accommodate the dot without
+   changing its overall height or border-radius.
+   ────────────────────────────────────────────────────────────────────── */
+.chat-watched-chip.monitor {
+  padding-left: 7px;
+}
+.chat-sender-popover-item.monitor {
+  padding-left: 7px;
+}
+.chat-watched-chip .src-dot,
+.chat-sender-popover-item .src-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-block;
+}
+.src-dot.stock  { background: var(--source-stock,  #5fbf8b); }
+.src-dot.option { background: var(--source-option, #8b6fcf); }
