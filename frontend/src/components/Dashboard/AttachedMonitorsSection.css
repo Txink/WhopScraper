@@ -133,34 +133,45 @@
   align-items: center;
 }
 
-/* Status pill */
+/* Status pill — sized to match .type-chip so the "正股" + "错误" chip
+ * pair reads as a single status bar with consistent rhythm. */
 .mon-status {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  font-family: var(--font-mono);
-  font-size: 10.5px;
+  gap: 4px;
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  padding: 1px 7px;
+  border-radius: var(--radius-chip);
+  font-weight: 500;
+  white-space: nowrap;
   margin-right: 4px;
 }
 
 .mon-status .state-dot {
-  width: 7px;
-  height: 7px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
-.mon-status.running         { color: var(--ok); }
+.mon-status.running {
+  color: var(--ok);
+  background: rgba(61, 214, 140, 0.14);
+}
 .mon-status.running .state-dot { background: var(--ok); }
 
-.mon-status.stopped         { color: var(--fg-3); }
+.mon-status.stopped {
+  color: var(--fg-3);
+  background: var(--bg-3);
+}
 .mon-status.stopped .state-dot { background: var(--fg-3); }
 
-.mon-status.error           { color: var(--err); }
-.mon-status.error .state-dot {
-  background: var(--err);
-  box-shadow: 0 0 0 3px rgba(239, 91, 91, 0.15);
+.mon-status.error {
+  color: var(--err);
+  background: rgba(239, 91, 91, 0.16);
 }
+.mon-status.error .state-dot { background: var(--err); }
 
 /* Icon buttons */
 .mon-btn {
