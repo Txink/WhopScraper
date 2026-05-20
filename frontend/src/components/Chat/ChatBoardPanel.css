@@ -71,22 +71,6 @@
 .chat-card-body { padding: 8px 8px 6px; display: flex;
                   flex-direction: column; gap: 2px; }
 
-.chat-row { display: flex; gap: 8px; align-items: flex-end; }
-.chat-row-right { justify-content: flex-end; }
-
-.chat-bubble { position: relative; max-width: 78%; padding: 6px 10px;
-               border-radius: 8px; font-size: 12px; line-height: 1.5;
-               word-break: break-word; }
-.chat-bubble-left  { background: var(--bg-2); border: 1px solid var(--line);
-                     border-bottom-left-radius: 2px; color: var(--fg-1); }
-.chat-bubble-right { background: rgba(var(--brand-rgb), 0.10);
-                     border: 1px solid rgba(var(--brand-rgb), 0.32);
-                     border-bottom-right-radius: 2px; color: var(--fg-1); }
-.chat-bubble-meta { margin-top: 4px; font-family: var(--font-mono);
-                    font-size: 9.5px; color: var(--fg-3);
-                    display: flex; gap: 6px; justify-content: flex-end; }
-.chat-sender-tag { color: var(--fg-2); }
-
 /* Group-chat view (no sender selected): flat Slack/Discord-style stream.
  * One header per consecutive same-author run; subsequent msgs indent under it.
  * No card chrome — visually distinct from the watched-sender highlight cards. */
