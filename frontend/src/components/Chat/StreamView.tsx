@@ -34,7 +34,7 @@ export function StreamView({
             className={`stream-group${isWatched ? " watched" : ""}`}
             data-sender={g.sender}
           >
-            <div className="stream-head">
+            <div className="chat-stream-head">
               <span className="avatar-sm" style={{ background: paletteColorFor(g.sender) }}>
                 {g.sender.slice(-1)}
               </span>

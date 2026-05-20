@@ -338,33 +338,43 @@
   display: flex; flex-direction: column;
   gap: 4px;
 }
-.stream-head {
+/* Per-group header. Named `chat-stream-head` (not `.stream-head`) so it
+ * doesn't collide with App.css's monitor-view section header, which
+ * forced `justify-content: space-between` + `text-transform: uppercase`
+ * onto every chat group row. */
+.chat-stream-head {
   display: flex; align-items: center; gap: 8px;
   padding: 0 0 0 30px;
   margin-bottom: 2px;
 }
-.stream-group.watched .stream-head { padding-left: 0; padding-right: 30px; justify-content: flex-end; }
-.stream-head .avatar-sm { margin: 0; }
-.stream-head .stream-author {
+.stream-group.watched .chat-stream-head { padding-left: 0; padding-right: 30px; justify-content: flex-end; }
+.chat-stream-head .avatar-sm { margin: 0; }
+.chat-stream-head .stream-author {
   font-size: 11.5px;
   color: var(--fg-2);
   font-weight: 500;
 }
-.stream-group.watched .stream-head .stream-author { color: var(--brand); }
-.stream-group.monitor.stock .stream-head .stream-author { color: var(--source-stock); }
-.stream-group.monitor.option .stream-head .stream-author { color: var(--source-option); }
-.stream-head .stream-time {
+.stream-group.watched .chat-stream-head .stream-author { color: var(--brand); }
+.stream-group.monitor.stock .chat-stream-head .stream-author { color: var(--source-stock); }
+.stream-group.monitor.option .chat-stream-head .stream-author { color: var(--source-option); }
+.chat-stream-head .stream-time {
   font-family: var(--font-mono);
   font-size: 10px;
   color: var(--fg-3);
 }
+/* `align-items: flex-start` keeps short bubbles hugging their content;
+ * without it the column's default `stretch` stretched every bubble to
+ * `max-width: 78%` regardless of text length. Watched groups override
+ * to `flex-end` for the right-aligned iMessage-style look. */
 .stream-body {
   display: flex; flex-direction: column;
+  align-items: flex-start;
   gap: 4px;
   padding-left: 30px;
 }
 .stream-group.watched .stream-body { padding-left: 0; padding-right: 30px; align-items: flex-end; }
 .stream-bubble {
+  width: fit-content;
   max-width: 78%;
   padding: 6px 10px;
   border-radius: 8px;
