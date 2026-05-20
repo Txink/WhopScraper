@@ -8,6 +8,7 @@ let _msgN = 0;
 let _taskN = 0;
 let _pushN = 0;
 
+// Fixed anchor date for deterministic snapshot timestamps. Must not change without re-baselining all snapshots.
 const BASE_ISO = "2026-05-21T01:00:00Z";
 
 function tickIso(base: string, n: number): string {
@@ -112,12 +113,24 @@ export function makeStockTask(over: Partial<TaskSummary> = {}): TaskSummary {
 }
 
 export function makeOptionTask(over: Partial<TaskSummary> = {}): TaskSummary {
-  return makeStockTask({
+  const n = _taskN++;
+  return {
+    id: `t${n}`,
     type: "option",
+    status: "FILLED",
+    order_id: null,
+    stage_timings: {},
+    reject_reason: null,
     message: {
-      ...makeStockTask().message,
+      id: `tm${n}`,
+      source: "whop",
       author: "NVDA 期权监听",
       content: "NVDA 880C 12/15 × 5",
+      raw_content: "NVDA 880C 12/15 × 5",
+      posted_at: tickIso(BASE_ISO, n),
+      received_at: tickIso(BASE_ISO, n),
+      url: "https://whop.com/x",
+      quoted_message_id: null,
     },
     instruction: {
       type: "option",
@@ -136,17 +149,12 @@ export function makeOptionTask(over: Partial<TaskSummary> = {}): TaskSummary {
       context_source: null,
       parser_notes: [],
     },
-    ...over,
-  } as TaskSummary);
-}
-
-export function makeFilledStockTask(over: Partial<TaskSummary> = {}): TaskSummary {
-  return makeStockTask({
-    status: "FILLED",
     last_cum_qty: 100,
     last_cum_avg_price: 199.87,
+    created_at: tickIso(BASE_ISO, n),
+    updated_at: tickIso(BASE_ISO, n),
     ...over,
-  });
+  } as TaskSummary;
 }
 
 export function makeFailedParseTask(over: Partial<TaskSummary> = {}): TaskSummary {

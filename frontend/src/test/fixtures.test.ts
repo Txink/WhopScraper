@@ -22,6 +22,8 @@ describe("fixtures defaults are deterministic", () => {
     const list = makeConsecutiveMessages("bob", ["hi", "yo"]);
     expect(list.map((m) => m.author)).toEqual(["bob", "bob"]);
     expect(list[0].posted_at).not.toBe(list[1].posted_at);
+    expect(list[0].posted_at).toBe("2026-05-21T01:01:00.000Z");
+    expect(list[1].posted_at).toBe("2026-05-21T01:02:00.000Z");
   });
 
   it("makeStockTask defaults to FILLED + instruction set", () => {
@@ -53,5 +55,7 @@ describe("fixtures defaults are deterministic", () => {
   it("makePushEvent returns a sensible default", () => {
     const e = makePushEvent();
     expect(e.state).toBe("submit");
+    expect(e.id).toBe("e0");
+    expect(e.received_at).toBe("2026-05-21T01:00:00.000Z");
   });
 });
