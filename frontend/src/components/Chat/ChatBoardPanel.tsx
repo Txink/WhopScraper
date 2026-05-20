@@ -16,9 +16,9 @@ import { isoWeekBounds } from "../Dashboard/weekUtils";
 import { groupIntoCards } from "./chatCards";
 import { ChatCard } from "./ChatCard";
 import { ChatSenderBar } from "./ChatSenderBar";
-import { GroupChatView } from "./GroupChatView";
 import { buildTimeline, buildFilterBlocks, buildStreamGroups } from "./chatTimeline";
-import { SignalCard } from "./SignalCard";
+import { StockCard } from "./StockCard";
+import { OptionCard } from "./OptionCard";
 import { StreamView } from "./StreamView";
 import "./ChatBoardPanel.css";
 
@@ -243,42 +243,42 @@ export function ChatBoardPanel({ page, week }: Props) {
             </span>
           </div>
           <div className="chat-thread">
-            {b.tasks.map((t) => (
-              <div key={t.id} className="chat-row">
-                <SignalCard
+            {b.tasks.map((t) => {
+              const Card = t.type === "option" ? OptionCard : StockCard;
+              const monitorName =
+                urlToMonitorName[t.message.url ?? ""] ?? "(unknown)";
+              return (
+                <Card
+                  key={t.id}
+                  monitorName={monitorName}
                   task={t}
                   pushEvents={pushEventsByTask[t.id] ?? []}
                   expanded={expandedSignalId === t.id}
                   onToggle={() => toggleSignal(t.id)}
                   autoTrade={autoTrade}
+                  align="left"
                 />
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       );
     });
   } else {
     // Highlight mode or no watched senders → stream view.
-    // If there are no child tasks and no watched senders, fall back to the
-    // original GroupChatView so the pure-chat path is unchanged.
-    if (childTasks.length === 0 && watchedSenders.length === 0) {
-      body = <GroupChatView messages={messages} />;
-    } else if (childTasks.length === 0 && mode === "highlight") {
-      body = <GroupChatView messages={messages} watched={watchedSet} />;
-    } else {
-      const groups = buildStreamGroups(timeline, urlToMonitorName);
-      body = (
-        <StreamView
-          groups={groups}
-          watched={watchedSet}
-          pushEventsByTask={pushEventsByTask}
-          expandedTaskId={expandedSignalId}
-          onToggleTask={toggleSignal}
-          autoTrade={autoTrade}
-        />
-      );
-    }
+    // All routes go through StreamView, which internally renders ChatMessage
+    // for chat-msg groups and StockCard/OptionCard for signal groups.
+    const groups = buildStreamGroups(timeline, urlToMonitorName);
+    body = (
+      <StreamView
+        groups={groups}
+        watched={watchedSet}
+        pushEventsByTask={pushEventsByTask}
+        expandedTaskId={expandedSignalId}
+        onToggleTask={toggleSignal}
+        autoTrade={autoTrade}
+      />
+    );
   }
 
   return (
