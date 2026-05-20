@@ -102,6 +102,8 @@
 .chat-group--right .chat-group-bubble { align-self: flex-end; }
 .chat-group-head { display: flex; align-items: center; gap: 8px; }
 .chat-group-author { font-size: 12px; font-weight: 600; color: var(--fg-1); }
+.chat-group.monitor.stock  .chat-group-author { color: var(--source-stock); }
+.chat-group.monitor.option .chat-group-author { color: var(--source-option); }
 .chat-group-time { font-family: var(--font-mono); font-size: 10.5px;
                    color: var(--fg-3); }
 .chat-group-body { display: flex; flex-direction: column; gap: 3px;

@@ -1,0 +1,9 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`MessageShell > left · default 1`] = `"<div class="chat-group" data-sender="alpha"><div class="chat-group-head"><span class="chat-avatar" style="background: rgb(255, 140, 82);">a</span><span class="chat-group-author">alpha</span><span class="chat-group-time">09:00</span></div><div class="chat-group-body"><div class="chat-group-bubble">hello</div></div></div>"`;
+
+exports[`MessageShell > monitor-option-tone · author renders in source-option color 1`] = `"<div class="chat-group monitor option" data-sender="NVDA 期权监听"><div class="chat-group-head"><span class="chat-avatar" style="background: rgb(90, 160, 255);">听</span><span class="chat-group-author">NVDA 期权监听</span><span class="chat-group-time">09:00</span></div><div class="chat-group-body"><div class="signal-bubble option">…</div></div></div>"`;
+
+exports[`MessageShell > monitor-stock-tone · author renders in source-stock color 1`] = `"<div class="chat-group monitor stock" data-sender="TSLL 监听"><div class="chat-group-head"><span class="chat-avatar" style="background: rgb(198, 136, 255);">听</span><span class="chat-group-author">TSLL 监听</span><span class="chat-group-time">09:00</span></div><div class="chat-group-body"><div class="signal-bubble stock">…</div></div></div>"`;
+
+exports[`MessageShell > right · watched sender (iMessage-style) 1`] = `"<div class="chat-group chat-group--right" data-sender="alpha"><div class="chat-group-head"><span class="chat-avatar" style="background: rgb(255, 140, 82);">a</span><span class="chat-group-author">alpha</span><span class="chat-group-time">09:00</span></div><div class="chat-group-body"><div class="chat-group-bubble">hello</div></div></div>"`;
