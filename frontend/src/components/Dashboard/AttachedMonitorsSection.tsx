@@ -11,12 +11,20 @@ interface Props {
    * `children`) to avoid shadowing React's implicit children prop. */
   pages: WhopPage[];
   onRefresh(): void;
+  /** When set, the component is in single-source mode: pages are filtered
+   *  to this source, the source dropdown in the add-form is hidden, and
+   *  copy is tailored. Used by the tabbed chat-source settings modal. */
+  sourceFilter?: "stock" | "option";
 }
 
-export function AttachedMonitorsSection({ parentId, pages, onRefresh }: Props) {
+export function AttachedMonitorsSection({ parentId, pages, onRefresh, sourceFilter }: Props) {
+  const filtered = sourceFilter ? pages.filter((p) => p.source === sourceFilter) : pages;
+
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [addForm, setAddForm] = useState<{ url: string; source: "stock" | "option"; name: string }>({
-    url: "", source: "stock", name: "",
+    url: "",
+    source: sourceFilter ?? "stock",
+    name: "",
   });
   const [addErr, setAddErr] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -32,7 +40,7 @@ export function AttachedMonitorsSection({ parentId, pages, onRefresh }: Props) {
         name: addForm.name.trim() || null,
         parent_chat_id: parentId,
       });
-      setAddForm({ url: "", source: "stock", name: "" });
+      setAddForm({ url: "", source: sourceFilter ?? "stock", name: "" });
       onRefresh();
     } catch (e) {
       setAddErr(e instanceof HttpError ? e.message : String(e));
@@ -41,17 +49,30 @@ export function AttachedMonitorsSection({ parentId, pages, onRefresh }: Props) {
     }
   };
 
+  const sourceLabel =
+    sourceFilter === "stock" ? "正股" : sourceFilter === "option" ? "期权" : "";
+
   return (
     <section className="attached-monitors">
-      <h4>
-        挂载监听 <span className="count">{pages.length} 个</span>
-      </h4>
-      <p className="hint small">
-        从这里管理本聊天页关联的正股 / 期权监听 — 每个 URL 对应一个 sender，消息会以信号卡形式出现在聊天列表里。
-      </p>
+      {sourceFilter ? (
+        <p className="hint small">
+          管理本聊天页关联的{sourceLabel}监听 — 每个 URL 对应一个 sender，
+          {sourceLabel}信号会以信号卡形式出现在聊天列表里。
+          <span className="count" style={{ marginLeft: 8 }}>{filtered.length} 个</span>
+        </p>
+      ) : (
+        <>
+          <h4>
+            挂载监听 <span className="count">{filtered.length} 个</span>
+          </h4>
+          <p className="hint small">
+            从这里管理本聊天页关联的正股 / 期权监听 — 每个 URL 对应一个 sender，消息会以信号卡形式出现在聊天列表里。
+          </p>
+        </>
+      )}
 
       <div className="mon-list">
-        {pages.map((page) => (
+        {filtered.map((page) => (
           <MonRow
             key={page.id}
             page={page}
@@ -63,7 +84,7 @@ export function AttachedMonitorsSection({ parentId, pages, onRefresh }: Props) {
       </div>
 
       <form className="mon-add-form" onSubmit={handleAdd}>
-        <div className="add-title">添加新监听</div>
+        <div className="add-title">添加{sourceLabel}监听</div>
         <input
           type="url"
           placeholder="https://whop.com/joined/<channel>/app/"
@@ -72,35 +93,45 @@ export function AttachedMonitorsSection({ parentId, pages, onRefresh }: Props) {
           required
           disabled={submitting}
         />
-        <div className="add-row">
-          <select
-            value={addForm.source}
-            onChange={(e) =>
-              setAddForm({ ...addForm, source: e.target.value as "stock" | "option" })
-            }
-            disabled={submitting}
-          >
-            <option value="stock">正股 (stock)</option>
-            <option value="option">期权 (option)</option>
-            <option value="chat" disabled>
-              聊天 (chat) — 子监听不可
-            </option>
-          </select>
+        {sourceFilter ? (
           <input
             type="text"
-            placeholder="名称（如：TSLL 监听）"
+            placeholder={`名称（如：${sourceFilter === "option" ? "NVDA 期权" : "TSLL"} 监听）`}
             value={addForm.name}
             onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
             disabled={submitting}
           />
-        </div>
+        ) : (
+          <div className="add-row">
+            <select
+              value={addForm.source}
+              onChange={(e) =>
+                setAddForm({ ...addForm, source: e.target.value as "stock" | "option" })
+              }
+              disabled={submitting}
+            >
+              <option value="stock">正股 (stock)</option>
+              <option value="option">期权 (option)</option>
+              <option value="chat" disabled>
+                聊天 (chat) — 子监听不可
+              </option>
+            </select>
+            <input
+              type="text"
+              placeholder="名称（如：TSLL 监听）"
+              value={addForm.name}
+              onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
+              disabled={submitting}
+            />
+          </div>
+        )}
         {addErr && <div className="add-error">{addErr}</div>}
         <button
           type="submit"
           className="btn primary"
           disabled={submitting || !addForm.url.trim()}
         >
-          {submitting ? "添加中..." : "+ 添加监听"}
+          {submitting ? "添加中..." : `+ 添加${sourceLabel}监听`}
         </button>
       </form>
     </section>

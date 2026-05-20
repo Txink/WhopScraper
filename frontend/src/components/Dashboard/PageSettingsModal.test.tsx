@@ -169,11 +169,40 @@ describe("<PageSettingsModal>", () => {
       useChildPagesStore.getState().setByParent("c", []);
     });
 
-    it("renders AttachedMonitorsSection for chat-source pages", async () => {
+    it("renders 3-tab nav (消息监听 / 正股监听 / 期权监听)", async () => {
       vi.spyOn(httpModule.api, "listWhopPages").mockResolvedValue({ pages: [] });
       render(<PageSettingsModal page={chatPage} onClose={vi.fn()} />);
-      // Section heading is always present, even with zero children
-      await waitFor(() => expect(screen.getByText(/挂载监听/)).toBeInTheDocument());
+      expect(screen.getByRole("tab", { name: /消息监听/ })).toBeInTheDocument();
+      expect(screen.getByRole("tab", { name: /正股监听/ })).toBeInTheDocument();
+      expect(screen.getByRole("tab", { name: /期权监听/ })).toBeInTheDocument();
+    });
+
+    it("default tab is 消息监听 — shows dedupe + headless + 清空消息", async () => {
+      vi.spyOn(httpModule.api, "listWhopPages").mockResolvedValue({ pages: [] });
+      render(<PageSettingsModal page={chatPage} onClose={vi.fn()} />);
+      expect(screen.getByLabelText(/避免重复解析/)).toBeInTheDocument();
+      expect(screen.getByLabelText(/无头模式启动网页/)).toBeInTheDocument();
+      expect(screen.getByText(/清空消息/)).toBeInTheDocument();
+      // Tolerance, block_historical, parser_v2 should NOT be shown for chat
+      expect(screen.queryByLabelText(/价格偏差容忍/)).not.toBeInTheDocument();
+      expect(screen.queryByLabelText(/禁止下单历史消息/)).not.toBeInTheDocument();
+      expect(screen.queryByLabelText(/parser v2/i)).not.toBeInTheDocument();
+    });
+
+    it("clicking 正股监听 tab renders the stock sub-monitor add form", async () => {
+      vi.spyOn(httpModule.api, "listWhopPages").mockResolvedValue({ pages: [] });
+      render(<PageSettingsModal page={chatPage} onClose={vi.fn()} />);
+      fireEvent.click(screen.getByRole("tab", { name: /正股监听/ }));
+      // Add-form submit button is unique enough — title + button both contain
+      // "添加正股监听", so target the button role.
+      expect(screen.getByRole("button", { name: /\+ 添加正股监听/ })).toBeInTheDocument();
+    });
+
+    it("clicking 期权监听 tab renders the option sub-monitor add form", async () => {
+      vi.spyOn(httpModule.api, "listWhopPages").mockResolvedValue({ pages: [] });
+      render(<PageSettingsModal page={chatPage} onClose={vi.fn()} />);
+      fireEvent.click(screen.getByRole("tab", { name: /期权监听/ }));
+      expect(screen.getByRole("button", { name: /\+ 添加期权监听/ })).toBeInTheDocument();
     });
 
     it("fetches child pages on mount for chat-source pages", async () => {
@@ -182,14 +211,31 @@ describe("<PageSettingsModal>", () => {
       await waitFor(() => expect(listSpy).toHaveBeenCalledWith({ parentChatId: "c" }));
     });
 
-    it("does NOT render AttachedMonitorsSection for stock-source pages", () => {
-      render(<PageSettingsModal page={stockPage} onClose={vi.fn()} />);
-      expect(screen.queryByText(/挂载监听/)).not.toBeInTheDocument();
+    it("chat-source save patches only dedupe + launch_headless", async () => {
+      vi.spyOn(httpModule.api, "listWhopPages").mockResolvedValue({ pages: [] });
+      const spy = vi.spyOn(httpModule.api, "updateWhopPageSettings").mockResolvedValue(chatPage);
+      render(<PageSettingsModal page={chatPage} onClose={vi.fn()} />);
+      fireEvent.click(screen.getByLabelText(/无头模式启动网页/));
+      fireEvent.click(screen.getByText(/^保存/));
+      await waitFor(() => expect(spy).toHaveBeenCalled());
+      const arg = spy.mock.calls[0][1];
+      expect(arg.launch_headless).toBe(true);
+      expect(arg.dedupe_processed_messages).toBe(false);
+      // Fields not exposed to chat-source modal must NOT be patched —
+      // backend's per-field merge then preserves their existing values.
+      expect("price_deviation_tolerance" in arg).toBe(false);
+      expect("block_historical_messages" in arg).toBe(false);
+      expect("parser_version" in arg).toBe(false);
     });
 
-    it("does NOT render AttachedMonitorsSection for option-source pages", () => {
+    it("does NOT render tab nav for stock-source pages", () => {
+      render(<PageSettingsModal page={stockPage} onClose={vi.fn()} />);
+      expect(screen.queryByRole("tab", { name: /消息监听/ })).not.toBeInTheDocument();
+    });
+
+    it("does NOT render tab nav for option-source pages", () => {
       render(<PageSettingsModal page={optionPage} onClose={vi.fn()} />);
-      expect(screen.queryByText(/挂载监听/)).not.toBeInTheDocument();
+      expect(screen.queryByRole("tab", { name: /消息监听/ })).not.toBeInTheDocument();
     });
 
     it("does NOT call listWhopPages for stock-source pages", () => {

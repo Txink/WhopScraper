@@ -57,6 +57,40 @@
   border-color: var(--line-strong);
 }
 
+/* ========== Tabs (chat-source only) ========== */
+.modal-tabs {
+  display: flex;
+  gap: 0;
+  padding: 0 var(--space-4);
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+.modal-tabs button {
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 10px 14px;
+  cursor: pointer;
+  color: var(--fg-3);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: -1px;
+  transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+.modal-tabs button:hover { color: var(--fg-2); }
+.modal-tabs button.active {
+  color: var(--fg-1);
+  border-bottom-color: var(--brand);
+}
+.modal-tabs .tab-count {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--fg-3);
+  margin-left: 4px;
+}
+.modal-tabs button.active .tab-count { color: var(--fg-2); }
+
 .modal-body {
   padding: var(--space-4);
   overflow-y: auto;

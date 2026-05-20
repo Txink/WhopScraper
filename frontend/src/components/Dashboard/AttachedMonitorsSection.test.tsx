@@ -68,7 +68,7 @@ describe("AttachedMonitorsSection", () => {
     render(<AttachedMonitorsSection parentId="chat1" pages={[]} onRefresh={onRefresh} />);
     const urlInput = screen.getByPlaceholderText(/https/i);
     fireEvent.change(urlInput, { target: { value: "https://example.com/x" } });
-    fireEvent.click(screen.getByText(/添加监听/));
+    fireEvent.click(screen.getByRole("button", { name: /\+ 添加监听/ }));
     await waitFor(() => expect(api.addWhopPage).toHaveBeenCalled());
     expect(api.addWhopPage).toHaveBeenCalledWith(expect.objectContaining({
       url: "https://example.com/x",
