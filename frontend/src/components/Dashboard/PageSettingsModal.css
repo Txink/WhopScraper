@@ -135,8 +135,12 @@
 
 /* Checkbox visual style now lives globally in styles/tokens.css. */
 
-.modal-body input[type="number"],
-.modal-body input[type="text"],
+/* `:not(.ticker-add-input)` keeps the inline ticker whitelist editor's two
+ * inputs borderless — the outer `.ticker-add-form` pill draws the only
+ * border. Without this guard the higher-specificity `.modal-body input[type]`
+ * rule overrides `.page-whitelist-bar .ticker-add-input { border: 0 }`. */
+.modal-body input[type="number"]:not(.ticker-add-input),
+.modal-body input[type="text"]:not(.ticker-add-input),
 .modal-body .tickers-table input {
   background: var(--bg-2);
   border: 1px solid var(--line-strong);
@@ -149,18 +153,18 @@
   transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
   width: 100%;
 }
-.modal-body input[type="number"]::placeholder,
-.modal-body input[type="text"]::placeholder,
+.modal-body input[type="number"]:not(.ticker-add-input)::placeholder,
+.modal-body input[type="text"]:not(.ticker-add-input)::placeholder,
 .modal-body .tickers-table input::placeholder {
   color: var(--fg-3);
 }
-.modal-body input[type="number"]:focus,
-.modal-body input[type="text"]:focus,
+.modal-body input[type="number"]:not(.ticker-add-input):focus,
+.modal-body input[type="text"]:not(.ticker-add-input):focus,
 .modal-body .tickers-table input:focus {
   border-color: var(--brand);
   box-shadow: 0 0 0 2px rgba(63, 181, 197, 0.18);
 }
-.modal-body input[type="number"] {
+.modal-body input[type="number"]:not(.ticker-add-input) {
   width: 120px;
 }
 
@@ -309,7 +313,9 @@
 }
 
 /* ========== Error block ========== */
-.modal-body .error {
+/* Renamed from .error → .modal-error to avoid colliding with .mon-status.error
+ * (and any other component that happens to use a generic .error modifier). */
+.modal-body .modal-error {
   color: var(--err);
   background: rgba(239, 91, 91, 0.10);
   border: 1px solid rgba(239, 91, 91, 0.25);

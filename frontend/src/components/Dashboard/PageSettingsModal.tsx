@@ -381,7 +381,7 @@ export function PageSettingsModal({ page, onClose }: Props) {
             </>
           )}
 
-          {error && <div className="error">{error}</div>}
+          {error && <div className="modal-error">{error}</div>}
         </div>
 
         <footer>
