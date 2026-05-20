@@ -2,9 +2,10 @@
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  /* No backdrop-filter on purpose — full-viewport blur re-rasterizes on
+   * every modal reflow (e.g. tab switch), spiking GPU usage when the
+   * chat list behind is busy. A solid darken does the same UX job. */
+  background: rgba(0, 0, 0, 0.65);
   z-index: 100;
   display: flex;
   align-items: center;
