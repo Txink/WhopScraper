@@ -53,6 +53,7 @@ interface MessageShellProps {
   sender: string;
   firstAt: string;                          // ISO timestamp; 内部 fmtTime 化为 HH:mm
   avatarColor?: string;                     // 默认走 paletteColorFor(sender)
+  avatarText?: string;                      // 默认 sender.slice(-1)（沿用 GroupChatView / StreamView 既有约定）
   align: "left" | "right";                  // 右对齐 = watched 发送者
   senderTone?: "stock" | "option";          // 染色 monitor 名（用 source-stock / source-option）
   children: React.ReactNode;                // body 槽：bubble 或 bubble 列表
@@ -100,6 +101,13 @@ interface StockCardProps {
 ### 高层组件总是带 head
 
 aggregate 路径（filter 模式）里每条信号也使用完整 `StockCard` / `OptionCard`，不引入 `hideHead` 分支。三个高层组件职责单一，没有条件渲染。
+
+### 内部装配约定
+
+- `StockCard` 内部固定向 `MessageShell` 传 `senderTone="stock"`，向 `SignalBubble` 传 `variant="stock"`。
+- `OptionCard` 内部固定向 `MessageShell` 传 `senderTone="option"`，向 `SignalBubble` 传 `variant="option"`。
+- `ChatMessage` 不传 `senderTone`（普通消息走默认 fg 色）。
+- 三者向 `MessageShell` 传 `align` 透传（来自调用方），其他外观字段（`avatarColor` / `avatarText`）走默认。
 
 ## 测试基础设施
 
