@@ -9,6 +9,8 @@ The handler:
   denormalizing the optional ``quoted`` nested message into the
   ``quoted_*`` columns so a row renders correctly even when the quoted
   message is not present in the local DB.
+- If the message carries an ``image_url``, downloads it to
+  ``data_dir/chat-images/<msg_id>.<ext>`` and records the filename.
 - Persists via :func:`repo.upsert_chat_message` (which is idempotent on
   primary-key conflict — duplicate ids are a no-op).
 - For non-historical (live) messages only, broadcasts a follow-up
@@ -20,8 +22,11 @@ The handler:
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
+from pathlib import Path
 
+import httpx
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.event_bus import Event, EventBus
@@ -35,8 +40,51 @@ from app.storage import repo
 from app.storage.db import session_scope
 from app.storage.schema import ChatMessageRow
 
+_log = logging.getLogger(__name__)
 
-def _row_from_message(page_id: str, msg: Message) -> ChatMessageRow:
+_CONTENT_TYPE_EXT: dict[str, str] = {
+    "image/avif": ".avif",
+    "image/png": ".png",
+    "image/jpeg": ".jpg",
+    "image/jpg": ".jpg",
+    "image/webp": ".webp",
+    "image/gif": ".gif",
+}
+
+
+async def _download_image(
+    msg_id: str, remote_url: str, data_dir: Path
+) -> str | None:
+    """Download *remote_url* into ``<data_dir>/chat-images/<msg_id><ext>``.
+
+    Returns the filename (basename only) on success, or None on any
+    failure (network error, HTTP error, timeout). All errors are caught
+    and logged — image cache failures must not break message ingestion.
+    """
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(remote_url)
+            resp.raise_for_status()
+            ct = resp.headers.get("Content-Type", "").split(";")[0].strip().lower()
+            ext = _CONTENT_TYPE_EXT.get(ct, ".bin")
+            target_dir = data_dir / "chat-images"
+            target_dir.mkdir(parents=True, exist_ok=True)
+            filename = f"{msg_id}{ext}"
+            (target_dir / filename).write_bytes(resp.content)
+            return filename
+    except Exception:  # noqa: BLE001
+        _log.warning(
+            "chat image download failed for msg_id=%s url=%s",
+            msg_id,
+            remote_url,
+            exc_info=True,
+        )
+        return None
+
+
+def _row_from_message(
+    page_id: str, msg: Message, image_filename: str | None
+) -> ChatMessageRow:
     """Build a ``ChatMessageRow`` from a domain :class:`Message`.
 
     Denormalizes the optional ``quoted`` nested message into the
@@ -59,14 +107,25 @@ def _row_from_message(page_id: str, msg: Message) -> ChatMessageRow:
         quoted_author=q.author if q else None,
         quoted_content=q.content if q else None,
         quoted_posted_at=q.posted_at if q else None,
+        image_filename=image_filename,
     )
 
 
 def register_chat_writer(
     bus: EventBus,
     session_factory: async_sessionmaker[AsyncSession],
+    data_dir: Path,
 ) -> list[Callable[[], None]]:
     """Subscribe the chat-writer handler to *bus*.
+
+    Parameters
+    ----------
+    bus:
+        The application event bus.
+    session_factory:
+        Async SQLAlchemy session factory.
+    data_dir:
+        Root data directory; images are saved under ``<data_dir>/chat-images/``.
 
     Returns a list of unsubscribe callables; call each to detach the
     handler. Matches the shape of
@@ -75,7 +134,19 @@ def register_chat_writer(
 
     async def _handler(event: Event) -> None:
         payload: ChatMessagePayload = event.payload  # pyright: ignore[reportAssignmentType]
-        row = _row_from_message(payload.page_id, payload.message)
+        msg = payload.message
+
+        image_filename: str | None = None
+        if msg.image_url:
+            image_filename = await _download_image(msg.id, msg.image_url, data_dir)
+
+        # Skip rows that have neither text content nor a successfully
+        # downloaded image (covers the rare case where extraction caught
+        # an image_url but the download failed AND content was empty).
+        if not msg.content and image_filename is None:
+            return
+
+        row = _row_from_message(payload.page_id, msg, image_filename)
         async with session_scope(session_factory) as session:
             await repo.upsert_chat_message(session, row)
         if not payload.is_historical:

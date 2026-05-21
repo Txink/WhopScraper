@@ -7,6 +7,7 @@ one level above the ``backend/`` directory.
 from __future__ import annotations
 
 import functools
+from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -53,6 +54,11 @@ class Settings(BaseSettings):
     max_option_quantity: int = 3
     price_deviation_tolerance: float = 5.0
     stock_price_deviation_tolerance: float = 1.0
+
+    # ------------------------------------------------------------------ #
+    # Data directory                                                       #
+    # ------------------------------------------------------------------ #
+    data_dir: Path = Path("data")
 
     # ------------------------------------------------------------------ #
     # Database                                                             #

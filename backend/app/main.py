@@ -188,7 +188,7 @@ def create_app(
         state.unsubs.extend(register_storage_listeners(bus, session_factory))
 
         # Chat writer: CHAT_MESSAGE_RECEIVED → persist + publish CHAT_MESSAGE_STORED.
-        state.unsubs.extend(register_chat_writer(bus, session_factory))
+        state.unsubs.extend(register_chat_writer(bus, session_factory, settings.data_dir))
 
         # Trader + push_listener are broker-dependent. Wrap in a closure so
         # _broker_reload() below can tear them down and rebuild against the
