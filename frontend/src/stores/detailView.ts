@@ -33,6 +33,11 @@ interface DetailViewState {
   /** Sub-config for the `dayK` tab group — day/week/month/year share one
    *  visual tab; this is the granularity the popover is set to. */
   dayKGranularity: DayKGranularity;
+  /** Sub-config for the `overlay` tab — ET trading-day strings (YYYY-MM-DD)
+   *  to overlay on the comparison chart. Capped at 5 by the toggle
+   *  helper; insertion order is preserved so each date keeps the same
+   *  series color across re-renders. */
+  overlayDates: string[];
 
   selectedBuys: Set<string>;
   selectedSells: Set<string>;
@@ -45,9 +50,17 @@ interface DetailViewState {
   setMinuteGranularity(g: MinuteGranularity): void;
   setMultidayWindow(w: MultidayWindow): void;
   setDayKGranularity(g: DayKGranularity): void;
+  /** Toggle an ET trading-day in/out of overlayDates. No-op if the cap
+   *  (5) would be exceeded — UI is expected to disable the affordance
+   *  in that state. */
+  toggleOverlayDate(date: string): void;
+  clearOverlayDates(): void;
   toggleTrade(tradeId: string, side: "BUY" | "SELL"): void;
   clearSelection(): void;
 }
+
+/** Max overlay slots — matches the user-visible "最多同时显示5个" cap. */
+export const OVERLAY_MAX = 5;
 
 export const useDetailViewStore = create<DetailViewState>((set) => ({
   selectedSymbol: null,
@@ -58,6 +71,7 @@ export const useDetailViewStore = create<DetailViewState>((set) => ({
   minuteGranularity: "5min",
   multidayWindow: 5,
   dayKGranularity: "day",
+  overlayDates: [],
   selectedBuys: new Set(),
   selectedSells: new Set(),
 
@@ -75,6 +89,15 @@ export const useDetailViewStore = create<DetailViewState>((set) => ({
   setMinuteGranularity: (g) => set({ minuteGranularity: g }),
   setMultidayWindow: (w) => set({ multidayWindow: w }),
   setDayKGranularity: (g) => set({ dayKGranularity: g }),
+  toggleOverlayDate: (date) =>
+    set((state) => {
+      if (state.overlayDates.includes(date)) {
+        return { overlayDates: state.overlayDates.filter((d) => d !== date) };
+      }
+      if (state.overlayDates.length >= OVERLAY_MAX) return state;
+      return { overlayDates: [...state.overlayDates, date] };
+    }),
+  clearOverlayDates: () => set({ overlayDates: [] }),
   toggleTrade: (tradeId, side) =>
     set((state) => {
       if (side === "BUY") {

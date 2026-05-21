@@ -9,8 +9,12 @@ import { usePairsStore } from "../../stores/pairs";
 import { useDetailViewStore } from "../../stores/detailView";
 import { resolveViewConfig, type ViewType } from "./viewConfig";
 import { TabPopover } from "./TabPopover";
+import { CalendarPopover } from "./CalendarPopover";
 import { DetailSummary } from "./DetailSummary";
 import { DetailChart } from "./DetailChart";
+import {
+  DetailChartOverlay, OVERLAY_COLORS, useOverlayBars, overlayBarSlot,
+} from "./DetailChartOverlay";
 import { PairDetailModal } from "./PairDetailModal";
 import { TradeList, type TradeListFilter } from "./TradeList";
 import { ConfirmModal } from "./ConfirmModal";
@@ -59,10 +63,11 @@ export type HoverInfo =
 /** Visible chart tabs. The `dayK` tab is a tab-group: it represents
  *  whichever of day/week/month/year is currently set via its popover
  *  (1 / 7 / 30 / 365日). Other tabs map 1:1 onto a single ViewType. */
-type TabId = "intraday" | "minute" | "multiday" | "dayK";
+type TabId = "intraday" | "minute" | "multiday" | "overlay" | "dayK";
 const TABS: Array<{ id: TabId; label: string }> = [
   { id: "intraday", label: "日内" },
   { id: "multiday", label: "多日" },
+  { id: "overlay",  label: "多日重叠" },
   { id: "minute",   label: "分钟" },
   { id: "dayK",     label: "日K" },
 ];
@@ -99,6 +104,12 @@ interface HeadProps {
   setMultidayWindow(w: import("./viewConfig").MultidayWindow): void;
   dayKGranularity: import("./viewConfig").DayKGranularity;
   setDayKGranularity(g: import("./viewConfig").DayKGranularity): void;
+  overlayDates: string[];
+  toggleOverlayDate(date: string): void;
+  /** Map of ET trading-day → last close (latest bar's close on that
+   *  date). null when bars haven't arrived yet so the legend can show
+   *  a placeholder instead of a stale number. */
+  overlayCloseByDate: Record<string, number | null>;
   hoverInfo: HoverInfo;
 }
 
@@ -109,6 +120,7 @@ function DetailChartHead(props: HeadProps) {
     minuteGranularity, setMinuteGranularity,
     multidayWindow, setMultidayWindow,
     dayKGranularity, setDayKGranularity,
+    overlayDates, toggleOverlayDate, overlayCloseByDate,
     hoverInfo,
   } = props;
 
@@ -116,6 +128,7 @@ function DetailChartHead(props: HeadProps) {
   const intradayAnchor = useRef<HTMLButtonElement | null>(null);
   const minuteAnchor = useRef<HTMLButtonElement | null>(null);
   const multidayAnchor = useRef<HTMLButtonElement | null>(null);
+  const overlayAnchor = useRef<HTMLButtonElement | null>(null);
   const dayKAnchor = useRef<HTMLButtonElement | null>(null);
   const [openPopover, setOpenPopover] = useState<TabId | null>(null);
 
@@ -138,6 +151,7 @@ function DetailChartHead(props: HeadProps) {
             )
             : t.id === "minute" ? minuteGranularity
             : t.id === "multiday" ? `${multidayWindow}日`
+            : t.id === "overlay" ? (overlayDates.length > 0 ? `${overlayDates.length}日` : "选择")
             : t.id === "dayK" ? dayKDaysLabel(dayKGranularity)
             : null;
           const popoverOpen = openPopover === t.id;
@@ -145,6 +159,7 @@ function DetailChartHead(props: HeadProps) {
             t.id === "intraday" ? intradayAnchor
             : t.id === "minute" ? minuteAnchor
             : t.id === "multiday" ? multidayAnchor
+            : t.id === "overlay" ? overlayAnchor
             : t.id === "dayK" ? dayKAnchor
             : undefined;
           return (
@@ -158,7 +173,9 @@ function DetailChartHead(props: HeadProps) {
                   const targetView: ViewType =
                     t.id === "dayK" ? dayKGranularity : t.id;
                   setView(targetView);
-                  setOpenPopover(null);
+                  // overlay tab opens its calendar on activation too so the
+                  // user doesn't have to click twice to start selecting days.
+                  setOpenPopover(t.id === "overlay" ? "overlay" : null);
                   return;
                 }
                 setOpenPopover((cur) => (cur === t.id ? null : t.id));
@@ -171,32 +188,61 @@ function DetailChartHead(props: HeadProps) {
         })}
       </div>
 
-      <div className="chart-hover-info">
-        {hoverInfo && (
-          <>
-            <div className="hover-row-1">
-              <span className="time">{hoverInfo.time}</span>
-              {hoverInfo.kind === "candle" ? (
-                <>
-                  <span className="ohlc-item">开 <b>${hoverInfo.open.toFixed(3)}</b></span>
-                  <span className="ohlc-item">收 <b>${hoverInfo.close.toFixed(3)}</b></span>
-                  <span className="ohlc-item">高 <b>${hoverInfo.high.toFixed(3)}</b></span>
-                  <span className="ohlc-item">低 <b>${hoverInfo.low.toFixed(3)}</b></span>
-                </>
-              ) : (
-                <span className="price">${hoverInfo.close.toFixed(3)}</span>
-              )}
-            </div>
-            {hoverInfo.agg && (
-              <div className={`hover-row-2 agg-${hoverInfo.agg.type.toLowerCase()}`}>
-                {hoverInfo.agg.type === "B" ? "买入" : hoverInfo.agg.type === "S" ? "卖出" : "做T"}
-                {" "}
-                {hoverInfo.agg.qty.toLocaleString("en-US")} 股 @ ${hoverInfo.agg.price.toFixed(3)}
+      {/* Overlay tab swaps the hover-info readout for a date↔color
+          legend. The legend lives outside .chart-hover-info so it can
+          pin to the card's top-right edge directly and wrap its own
+          items into a second line without dragging the tabs row down. */}
+      {view === "overlay" ? (
+        overlayDates.length > 0 && (
+          <div className="overlay-legend">
+            {overlayDates.map((d, i) => {
+              // YYYY-MM-DD → YY-MM-DD so two items fit per row.
+              const shortDate = d.slice(2);
+              const close = overlayCloseByDate[d];
+              return (
+                <span key={d} className="overlay-legend-item">
+                  <span
+                    className="overlay-legend-swatch"
+                    style={{ background: OVERLAY_COLORS[i % OVERLAY_COLORS.length] }}
+                    aria-hidden
+                  />
+                  <span className="overlay-legend-date">{shortDate}</span>
+                  <span className="overlay-legend-price">
+                    {close == null ? "—" : `$${close.toFixed(2)}`}
+                  </span>
+                </span>
+              );
+            })}
+          </div>
+        )
+      ) : (
+        <div className="chart-hover-info">
+          {hoverInfo && (
+            <>
+              <div className="hover-row-1">
+                <span className="time">{hoverInfo.time}</span>
+                {hoverInfo.kind === "candle" ? (
+                  <>
+                    <span className="ohlc-item">开 <b>${hoverInfo.open.toFixed(3)}</b></span>
+                    <span className="ohlc-item">收 <b>${hoverInfo.close.toFixed(3)}</b></span>
+                    <span className="ohlc-item">高 <b>${hoverInfo.high.toFixed(3)}</b></span>
+                    <span className="ohlc-item">低 <b>${hoverInfo.low.toFixed(3)}</b></span>
+                  </>
+                ) : (
+                  <span className="price">${hoverInfo.close.toFixed(3)}</span>
+                )}
               </div>
-            )}
-          </>
-        )}
-      </div>
+              {hoverInfo.agg && (
+                <div className={`hover-row-2 agg-${hoverInfo.agg.type.toLowerCase()}`}>
+                  {hoverInfo.agg.type === "B" ? "买入" : hoverInfo.agg.type === "S" ? "卖出" : "做T"}
+                  {" "}
+                  {hoverInfo.agg.qty.toLocaleString("en-US")} 股 @ ${hoverInfo.agg.price.toFixed(3)}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
 
       {/* 日内 popover — sessions */}
       <TabPopover
@@ -247,6 +293,19 @@ function DetailChartHead(props: HeadProps) {
           >{w}日</button>
         ))}
       </TabPopover>
+
+      {/* 多日重叠 popover — calendar. Toggling a date adds/removes it
+          from overlayDates; the chart subscribes via the store. */}
+      <CalendarPopover
+        open={openPopover === "overlay"}
+        anchorRef={overlayAnchor}
+        containerRef={containerRef}
+        selectedDates={overlayDates}
+        max={5}
+        slotColors={OVERLAY_COLORS as readonly string[] as string[]}
+        onToggle={toggleOverlayDate}
+        onClose={() => setOpenPopover(null)}
+      />
 
       {/* 日K popover — collapses day/week/month/year into one tab; each
           option remembers itself in dayKGranularity and immediately
@@ -301,6 +360,40 @@ export function DetailPane({ position, onBack }: Props) {
   const setMultidayWindow = useDetailViewStore((s) => s.setMultidayWindow);
   const dayKGranularity = useDetailViewStore((s) => s.dayKGranularity);
   const setDayKGranularity = useDetailViewStore((s) => s.setDayKGranularity);
+  const overlayDates = useDetailViewStore((s) => s.overlayDates);
+  const toggleOverlayDate = useDetailViewStore((s) => s.toggleOverlayDate);
+  // Shared between the head's legend (date + price) and the overlay
+  // chart so both render off the same cached fetch.
+  const overlayBars = useOverlayBars(symbol, overlayDates);
+  // Slot index (0…959 minutes from 04:00 ET) the cursor is currently
+  // on inside the overlay chart, or null when not hovering. Drives the
+  // legend's per-day price column so the numbers track the cursor.
+  const [overlayHoverSlot, setOverlayHoverSlot] = useState<number | null>(null);
+  const overlayCloseByDate = useMemo<Record<string, number | null>>(() => {
+    const out: Record<string, number | null> = {};
+    for (const d of overlayDates) {
+      const dayBars = overlayBars.barsByDate[d] ?? [];
+      if (dayBars.length === 0) { out[d] = null; continue; }
+      if (overlayHoverSlot != null) {
+        // Hovering — find the bar at the cursor's slot. Missing slot =
+        // gap in that day's line, render "—" rather than a stale price.
+        let match: number | null = null;
+        for (const b of dayBars) {
+          if (!b.timestamp) continue;
+          if (overlayBarSlot(b.timestamp) === overlayHoverSlot) {
+            match = b.close;
+            break;
+          }
+        }
+        out[d] = match;
+      } else {
+        // Idle state — show the day's last close.
+        const last = dayBars[dayBars.length - 1]!;
+        out[d] = last.close;
+      }
+    }
+    return out;
+  }, [overlayDates, overlayBars.barsByDate, overlayHoverSlot]);
   const selectedBuys = useDetailViewStore((s) => s.selectedBuys);
   const selectedSells = useDetailViewStore((s) => s.selectedSells);
   const activePairId = useDetailViewStore((s) => s.activePairId);
@@ -465,6 +558,10 @@ export function DetailPane({ position, onBack }: Props) {
   }, [ticker, tradesLoading, tradesTotal, appendTrades]);
 
   useEffect(() => {
+    // The overlay view drives its own per-day fetches inside
+    // DetailChartOverlay; skip the single-bars-array pull so we don't
+    // race or churn DetailPane's gate state.
+    if (view === "overlay") return;
     let alive = true;
     const opts = viewCfg.period === "today"
       ? { granularity: viewCfg.granularity, sessions: viewCfg.sessions }
@@ -788,10 +885,22 @@ export function DetailPane({ position, onBack }: Props) {
           setMultidayWindow={setMultidayWindow}
           dayKGranularity={dayKGranularity}
           setDayKGranularity={setDayKGranularity}
+          overlayDates={overlayDates}
+          toggleOverlayDate={toggleOverlayDate}
+          overlayCloseByDate={overlayCloseByDate}
           hoverInfo={hoverInfo}
         />
         <div className="detail-chart-wrap" data-view={view}>
-          {bars && bars.bars.length > 0 && tradesInitialized && pairsInitialized && barsInitialized ? (
+          {view === "overlay" ? (
+            <DetailChartOverlay
+              symbol={symbol}
+              dates={overlayDates}
+              barsByDate={overlayBars.barsByDate}
+              loadingDates={overlayBars.loadingDates}
+              errorDates={overlayBars.errorDates}
+              onHoverSlot={setOverlayHoverSlot}
+            />
+          ) : bars && bars.bars.length > 0 && tradesInitialized && pairsInitialized && barsInitialized ? (
             <DetailChart
               symbol={symbol}
               bars={bars.bars}

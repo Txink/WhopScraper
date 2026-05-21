@@ -1150,3 +1150,136 @@ input[type="checkbox"].sel-sell:checked {
   color: var(--brand);
   font-weight: 500;
 }
+
+/* ─── Calendar popover ─── 多日重叠 tab. Reuses .tab-popover for
+ *  positioning + dismissal; lays out as a vertical column rather than
+ *  the horizontal pill row. */
+.tab-popover.calendar-popover {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  gap: 6px;
+  padding: 10px 12px 8px;
+  min-width: 240px;
+}
+.calendar-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px;
+}
+.calendar-title {
+  font-size: 12px; color: var(--fg-1); font-weight: 600;
+  font-family: var(--font-mono);
+}
+.calendar-nav {
+  width: 22px; height: 22px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--bg-2); color: var(--fg-2);
+  border: 1px solid var(--line); border-radius: 4px;
+  cursor: pointer; font-size: 12px; line-height: 1;
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+.calendar-nav:hover { background: var(--bg-hover); color: var(--fg-1); }
+.calendar-weekdays {
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--fg-3);
+  text-align: center;
+  margin-top: 2px;
+}
+.calendar-grid {
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.calendar-cell {
+  height: 26px; width: 100%;
+  padding: 0;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  background: var(--bg-2);
+  color: var(--fg-1);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+.calendar-cell:hover:not(:disabled):not(.selected) {
+  background: var(--bg-hover);
+}
+.calendar-cell.out-of-month { color: var(--fg-3); opacity: 0.55; }
+.calendar-cell.today:not(.selected) {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+.calendar-cell.future {
+  opacity: 0.35; cursor: not-allowed;
+}
+.calendar-cell.disabled:not(.selected) {
+  opacity: 0.45; cursor: not-allowed;
+}
+.calendar-cell.selected {
+  font-weight: 600;
+  /* color comes from inline style (slot palette) so the cell matches
+   * the line series in the overlay chart. */
+}
+.calendar-foot {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--fg-3);
+  margin-top: 2px;
+}
+.calendar-foot .hint { letter-spacing: 0.02em; }
+
+/* ─── Overlay legend ─── lives directly inside .detail-chart-head as
+ *  a sibling of .chart-tabs, pinned to the card's top-right edge via
+ *  ``margin-left: auto``. Each item reads as "▬ YY-MM-DD $price";
+ *  cap is ~two items per row so 3-5 dates wrap to two/three right-
+ *  aligned lines without ever bleeding back onto the tabs row. */
+.overlay-legend {
+  margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+  /* ~140px per item, gap 10px → 2 items fit ≈ 290px. */
+  max-width: 300px;
+  gap: 3px 10px;
+  justify-content: flex-end;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--fg-2);
+  pointer-events: none;
+}
+.overlay-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+.overlay-legend-swatch {
+  width: 14px;
+  height: 2px;
+  border-radius: 1px;
+  display: inline-block;
+  flex: 0 0 auto;
+}
+.overlay-legend-date { color: var(--fg-3); }
+.overlay-legend-price { color: var(--fg-1); font-weight: 500; }
+
+/* ─── Overlay chart placeholders ─── shown when no dates are selected
+ *  yet, while fetches are in flight, or when a fetch fails for one of
+ *  the selected days. Absolutely positioned inside .chart-canvas-wrap
+ *  so they overlay on top of any in-progress canvas without affecting
+ *  its layout. */
+.overlay-empty, .overlay-loading, .overlay-error {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--fg-3);
+}
+.overlay-loading { color: var(--fg-2); top: auto; bottom: 8px; right: 8px; left: auto;
+                   pointer-events: none; font-size: 10.5px; }
+.overlay-error { color: var(--danger, #f43f5e); top: auto; bottom: 8px; right: 8px; left: auto;
+                 font-size: 10.5px; }
+.overlay-empty b { color: var(--brand); margin: 0 4px; }

@@ -12,7 +12,7 @@
 import type { Period } from "../../stores/candlesticks";
 
 export type ViewType =
-  | "intraday" | "minute" | "multiday"
+  | "intraday" | "minute" | "multiday" | "overlay"
   | "day" | "week" | "month" | "year";
 
 export type IntradaySession = "regular" | "pre" | "post" | "overnight" | "all";
@@ -106,6 +106,21 @@ export function resolveViewConfig(view: ViewType, sub: ViewSubState): ViewConfig
         liveCfg: { periodMinutes: 5, allowAppend: false },
         sessionBgEnabled: false,
         dayMarkersEnabled: true,
+        livePulseEnabled: false,
+      };
+    case "overlay":
+      // The overlay view doesn't share DetailPane's single-symbol bars
+      // fetch path — DetailPane branches on `view === "overlay"` and
+      // hands off to DetailChartOverlay, which fetches per-day intraday
+      // bars itself. This config is a placeholder so the discriminated
+      // union stays exhaustive; the period field is unused.
+      return {
+        period: "today",
+        datasetType: "line",
+        initialVisibleCount: Number.POSITIVE_INFINITY,
+        liveCfg: null,
+        sessionBgEnabled: false,
+        dayMarkersEnabled: false,
         livePulseEnabled: false,
       };
     case "day":
