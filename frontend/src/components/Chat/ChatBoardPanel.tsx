@@ -12,7 +12,14 @@ import { useChatStore } from "../../stores/chatStore";
 import { useChildPagesStore } from "../../stores/childPages";
 import { useTasksStore } from "../../stores/tasks";
 import { useConnStore } from "../../stores/conn";
-import { isoWeekBounds } from "../Dashboard/weekUtils";
+import {
+  dayKeyOf,
+  isoWeekBounds,
+  isoWeekOfDay,
+  monthOf,
+  todayInShanghai,
+  weeksCoveringMonth,
+} from "../Dashboard/weekUtils";
 import { groupIntoCards } from "./chatCards";
 import { ChatCard } from "./ChatCard";
 import { ChatSenderBar } from "./ChatSenderBar";
@@ -20,11 +27,11 @@ import { buildTimeline, buildFilterBlocks, buildStreamGroups } from "./chatTimel
 import { StockCard } from "./StockCard";
 import { OptionCard } from "./OptionCard";
 import { StreamView } from "./StreamView";
+import { DayPicker } from "./DayPicker";
 import "./ChatBoardPanel.css";
 
 interface Props {
   page: WhopPage;
-  week: string;                  // e.g., "2026-W21"
 }
 
 export type SenderMode = "filter" | "highlight";
@@ -44,9 +51,19 @@ function persistMode(pageId: string, mode: SenderMode): void {
   try { localStorage.setItem(modeStorageKey(pageId), mode); } catch { /* noop */ }
 }
 
-export function ChatBoardPanel({ page, week }: Props) {
-  const cache = useChatStore((s) => s.caches[`${page.id}|${week}`]);
+export function ChatBoardPanel({ page }: Props) {
+  // Currently-selected calendar day, drives both the visible-message
+  // filter and the ISO-week that gets fetched into chatStore.
+  const [selectedDate, setSelectedDate] = useState<string>(todayInShanghai());
+  // Reset to today whenever the active page changes.
+  useEffect(() => { setSelectedDate(todayInShanghai()); }, [page.id]);
+
+  const selectedWeek = isoWeekOfDay(selectedDate);
+  const today = todayInShanghai();
+
+  const cache = useChatStore((s) => s.caches[`${page.id}|${selectedWeek}`]);
   const fetch = useChatStore((s) => s.fetch);
+  const allCaches = useChatStore((s) => s.caches);
 
   // Local state seeded from page settings; stays responsive to chip toggles
   // without waiting for parent re-fetch. Re-syncs if upstream settings change
@@ -68,10 +85,11 @@ export function ChatBoardPanel({ page, week }: Props) {
   }
 
   useEffect(() => {
-    // Fetch full week's messages once per (page, week). Senders filter is
-    // applied client-side via groupIntoCards — no need to re-fetch on toggle.
-    fetch(page.id, week, []);
-  }, [page.id, week, fetch]);
+    // Fetch full week's messages once per (page, selectedWeek). Senders
+    // and day filters are applied client-side — no need to re-fetch on
+    // toggles within the same week.
+    fetch(page.id, selectedWeek, []);
+  }, [page.id, selectedWeek, fetch]);
 
   // ── Child monitor pages + their tasks ────────────────────────────────
   const children = useChildPagesStore((s) => s.byParent[page.id] ?? EMPTY_PAGES);
@@ -104,7 +122,7 @@ export function ChatBoardPanel({ page, week }: Props) {
 
         const urls = r.pages.map((p) => p.url);
         if (urls.length === 0) return;
-        const { start, end } = isoWeekBounds(week);
+        const { start, end } = isoWeekBounds(selectedWeek);
         const tr = await api.listTasks({
           urls,
           week_start: start,
@@ -118,7 +136,7 @@ export function ChatBoardPanel({ page, week }: Props) {
       }
     })();
     return () => { alive = false; };
-  }, [page.id, week]);
+  }, [page.id, selectedWeek]);
 
   // Single-accordion for signal cards across the whole board.
   const [expandedSignalId, setExpandedSignalId] = useState<string | null>(null);
@@ -130,8 +148,45 @@ export function ChatBoardPanel({ page, week }: Props) {
   }, []);
 
   // ── Data ─────────────────────────────────────────────────────────────
-  const messages = cache?.messages ?? [];
+  const rawMessages = cache?.messages ?? [];
   const authors = cache?.authors ?? [];
+
+  // Day-filter both messages and child-task signals to selectedDate so
+  // every downstream consumer (groupIntoCards, buildTimeline, ...)
+  // sees only that day's content.
+  const messages = useMemo(
+    () => rawMessages.filter((m) => dayKeyOf(m.posted_at) === selectedDate),
+    [rawMessages, selectedDate],
+  );
+  const dayFilteredChildTasks = useMemo(
+    () =>
+      childTasks.filter(
+        (t) => dayKeyOf(t.message.posted_at) === selectedDate,
+      ),
+    [childTasks, selectedDate],
+  );
+
+  /** Author chip counts for the selected day. Preserves the chip list
+   *  shape from the week-cache `authors` (so chips don't flicker when
+   *  switching days) but replaces each count with the count from today.
+   *  Authors not in the week cache but present in today's messages are
+   *  appended at the end. */
+  const dayScopedAuthors = useMemo(() => {
+    const dayCounts = new Map<string, number>();
+    for (const m of messages) {
+      dayCounts.set(m.author, (dayCounts.get(m.author) ?? 0) + 1);
+    }
+    const seen = new Set<string>();
+    const out: { name: string; count: number }[] = [];
+    for (const a of authors) {
+      out.push({ name: a.name, count: dayCounts.get(a.name) ?? 0 });
+      seen.add(a.name);
+    }
+    for (const [name, count] of dayCounts) {
+      if (!seen.has(name)) out.push({ name, count });
+    }
+    return out;
+  }, [messages, authors]);
 
   /** name → "stock" | "option" for children whose source is known. */
   const monitorSources = useMemo<Record<string, "stock" | "option">>(
@@ -144,30 +199,34 @@ export function ChatBoardPanel({ page, week }: Props) {
     [children],
   );
 
-  /** authors from chat messages merged with child monitor pages.
-   *  Monitor names are included even when count=0 so users can toggle
-   *  them on before any signal arrives this week. */
+  /** Chip bar entries for ChatSenderBar. List shape is taken from the
+   *  week (chat authors + monitor pages) so the bar stays stable when
+   *  the selected day changes; counts are day-scoped so the badge on
+   *  each chip matches the messages and signals actually visible. */
   const authorsWithMonitors = useMemo(() => {
     const seen = new Set<string>();
     const out: { name: string; count: number }[] = [];
-    for (const a of authors) {
+    for (const a of dayScopedAuthors) {
       out.push(a);
       seen.add(a.name);
     }
     for (const c of children) {
       if (seen.has(c.name)) continue;
-      const count = childTasks.filter((t) => t.message.url === c.url).length;
+      const count = dayFilteredChildTasks.filter(
+        (t) => t.message.url === c.url,
+      ).length;
       out.push({ name: c.name, count });
     }
     return out;
-  }, [authors, children, childTasks]);
+  }, [dayScopedAuthors, children, dayFilteredChildTasks]);
 
   const watchedSet = useMemo(() => new Set(watchedSenders), [watchedSenders]);
 
-  // Merged chronological timeline of chat messages + child tasks.
+  // Merged chronological timeline of chat messages + child tasks
+  // (already filtered to selectedDate above).
   const timeline = useMemo(
-    () => buildTimeline(messages, childTasks, urlToMonitorName),
-    [messages, childTasks, urlToMonitorName],
+    () => buildTimeline(messages, dayFilteredChildTasks, urlToMonitorName),
+    [messages, dayFilteredChildTasks, urlToMonitorName],
   );
 
   function handleSenderChange(next: string[]) {
@@ -198,6 +257,35 @@ export function ChatBoardPanel({ page, week }: Props) {
     wasAtBottomRef.current = distFromBottom < 120;
   }
 
+  // ── Calendar prefetch (covers the visible month so dots are reliable) ─
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState<string>(monthOf(selectedDate));
+
+  useEffect(() => {
+    if (!calendarOpen) return;
+    for (const w of weeksCoveringMonth(calendarMonth)) {
+      const key = `${page.id}|${w}`;
+      if (!allCaches[key]) fetch(page.id, w, []);
+    }
+  }, [calendarOpen, calendarMonth, page.id, fetch, allCaches]);
+
+  const prefetching = useMemo(() => {
+    if (!calendarOpen) return false;
+    return weeksCoveringMonth(calendarMonth).some(
+      (w) => !allCaches[`${page.id}|${w}`],
+    );
+  }, [calendarOpen, calendarMonth, page.id, allCaches]);
+
+  const hasMessagesOnDay = useCallback(
+    (dayKey: string) => {
+      const week = isoWeekOfDay(dayKey);
+      const c = allCaches[`${page.id}|${week}`];
+      if (!c) return false;
+      return c.messages.some((m) => dayKeyOf(m.posted_at) === dayKey);
+    },
+    [allCaches, page.id],
+  );
+
   // ── Routing ───────────────────────────────────────────────────────────
   //   no timeline items → empty state
   //   filter mode + watched senders → buildFilterBlocks → chat/aggregate cards
@@ -206,7 +294,7 @@ export function ChatBoardPanel({ page, week }: Props) {
 
   if (timeline.length === 0) {
     body = (
-      <div className="chat-empty">本周无消息 · 切换周或调整发送者过滤</div>
+      <div className="chat-empty">这一天还没有消息</div>
     );
   } else if (mode === "filter" && watchedSenders.length > 0) {
     // Chat side: groupIntoCards consumes the FULL message list so its
@@ -298,6 +386,18 @@ export function ChatBoardPanel({ page, week }: Props) {
       <div className="chat-board" ref={boardRef} onScroll={handleBoardScroll}>
         {body}
       </div>
+      <DayPicker
+        selectedDate={selectedDate}
+        maxDate={today}
+        hasMessagesOnDay={hasMessagesOnDay}
+        prefetching={prefetching}
+        onChange={setSelectedDate}
+        onCalendarOpenChange={(open, month) => {
+          setCalendarOpen(open);
+          if (open) setCalendarMonth(month);
+        }}
+        onVisibleMonthChange={setCalendarMonth}
+      />
     </div>
   );
 }

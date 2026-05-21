@@ -327,8 +327,13 @@
  * makes the panel take only the leftover height after PageTabs +
  * .page-meta-row — earlier height:100% double-counted those siblings and
  * the bottom of chat-board got clipped by .stream { overflow: hidden }. */
-.chat-panel { display: flex; flex-direction: column;
-              flex: 1; min-height: 0; }
+.chat-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
 .chat-panel .chat-board { flex: 1; min-height: 0; overflow-y: auto; }
 .chat-empty { padding: 60px 20px; text-align: center; color: var(--fg-2); }
 
