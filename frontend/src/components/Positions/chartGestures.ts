@@ -51,7 +51,7 @@ export function computeDragZoom(input: DragZoomInput): DragZoomResult | null {
 
   // Width clamps (per-view minRange + optional maxRange from viewCfg limits).
   if (newWidth < input.limits.minRange) newWidth = input.limits.minRange;
-  if (input.limits.maxRange != null && newWidth > input.limits.maxRange) {
+  if (input.limits.maxRange !== undefined && newWidth > input.limits.maxRange) {
     newWidth = input.limits.maxRange;
   }
 

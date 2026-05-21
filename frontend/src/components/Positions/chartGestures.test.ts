@@ -86,8 +86,10 @@ describe("computeDragZoom", () => {
       startMin: 900, startMax: 999, startIdx: 990,
       limits: { dataLen: 1000, minRange: 5 },  // no maxRange
     })!;
-    expect(out.newMax).toBeLessThanOrEqual(999);
-    expect(out.newMin).toBeGreaterThanOrEqual(0);
+    // startWidth=99, startFrac=(990-900)/99≈0.909, factor=exp(-1)≈0.368,
+    // newWidth≈269 → newMax≈1014.5 → right-clamp: newMax=999, newMin≈730
+    expect(out.newMax).toBe(999);
+    expect(out.newMin).toBeCloseTo(730, 0);
   });
 
   it("clamps to 0 when zooming out near the left edge", () => {
@@ -96,6 +98,9 @@ describe("computeDragZoom", () => {
       startMin: 0, startMax: 100, startIdx: 10,
       limits: { dataLen: 1000, minRange: 5 },
     })!;
-    expect(out.newMin).toBeGreaterThanOrEqual(0);
+    // startWidth=100, startFrac=0.1, factor=exp(-1)≈0.368,
+    // newWidth≈272 → newMin≈-17.2 → left-clamp: newMin=0, newMax≈272
+    expect(out.newMin).toBe(0);
+    expect(out.newMax).toBeCloseTo(272, 0);
   });
 });
