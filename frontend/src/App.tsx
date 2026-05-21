@@ -363,12 +363,11 @@ function Dashboard({ token }: { token: string }) {
       </div>
       {isOrphanTab && <OrphanCleanupBar orphanTasks={filteredTasks} />}
       {/* Chat-source pages render ChatBoardPanel (owns its own scroll
-          container) instead of the TaskStream message list. Week-
-          navigation for chat pages is not yet implemented — we always
-          pass the current ISO week. TODO(future): wire WeekPaginator to
-          ChatBoardPanel using the ISO-week format. */}
+          container) instead of the TaskStream message list. The panel
+          owns its own day-based date picker (see DayPicker.tsx); the
+          parent doesn't need to pass a week. */}
       {activePage && activePage.source === "chat" ? (
-        <ChatBoardPanel page={activePage} week={currentIsoWeek()} />
+        <ChatBoardPanel page={activePage} />
       ) : (
         /* Scrollable wrapper for the message list — tabs and meta-row
             above stay pinned (they're outside this div), only the day-
