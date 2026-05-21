@@ -131,6 +131,27 @@
   white-space: normal;
 }
 
+/* Image attached to a chat message. Caps height so a 4K-tall mock-up
+ * doesn't blow out the row; width hugs the bubble's 600px max. The
+ * image renders above the text content (image first, caption second). */
+.chat-group-bubble .chat-group-image {
+  display: block;
+  max-width: 100%;
+  max-height: 360px;
+  border-radius: 4px;
+  margin-bottom: 4px;
+}
+
+/* Image-only bubbles (no caption) tighten the padding so the image
+ * looks framed, not floating inside a text-sized rectangle. */
+.chat-group-bubble--image-only {
+  padding: 4px;
+}
+
+.chat-group-bubble--image-only .chat-group-image {
+  margin-bottom: 0;
+}
+
 .chat-sender-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
                    padding: 8px 14px; border-bottom: 1px solid var(--line);
                    background: var(--bg-1); }
