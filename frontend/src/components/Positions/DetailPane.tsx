@@ -173,9 +173,7 @@ function DetailChartHead(props: HeadProps) {
                   const targetView: ViewType =
                     t.id === "dayK" ? dayKGranularity : t.id;
                   setView(targetView);
-                  // overlay tab opens its calendar on activation too so the
-                  // user doesn't have to click twice to start selecting days.
-                  setOpenPopover(t.id === "overlay" ? "overlay" : null);
+                  setOpenPopover(null);
                   return;
                 }
                 setOpenPopover((cur) => (cur === t.id ? null : t.id));
