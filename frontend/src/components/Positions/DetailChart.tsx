@@ -630,7 +630,7 @@ export function DetailChart({
     try {
       chartRef.current = new Chart(canvas, cfg);
       // Drag-zoom + wheel-pan only on candle / K-line views per spec.
-      // intraday, multiday, and overlay keep Chart.js default (passive) behavior.
+      // intraday and multiday keep Chart.js default (passive) behavior.
       const gestureEnabled =
         view === "minute" || view === "day" || view === "week" ||
         view === "month" || view === "year";
