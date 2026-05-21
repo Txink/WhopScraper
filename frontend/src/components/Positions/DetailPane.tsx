@@ -194,8 +194,9 @@ function DetailChartHead(props: HeadProps) {
         overlayDates.length > 0 && (
           <div className="overlay-legend">
             {overlayDates.map((d, i) => {
-              // YYYY-MM-DD → YY-MM-DD so two items fit per row.
-              const shortDate = d.slice(2);
+              // YYYY-MM-DD → MM-DD (year omitted; legend is always for
+              // the current viewing context, so the year adds no info).
+              const shortDate = d.slice(5);
               const close = overlayCloseByDate[d];
               return (
                 <span key={d} className="overlay-legend-item">
