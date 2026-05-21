@@ -13,6 +13,8 @@ import {
   isoWeekOfDay,
   weeksCoveringMonth,
   formatDayLabel,
+  chatDayKeyOf,
+  chatTodayInShanghai,
 } from "./weekUtils";
 import type { TaskSummary } from "../../api/domain-types";
 
@@ -306,5 +308,58 @@ describe("formatDayLabel", () => {
     const label = formatDayLabel(`${otherYear}-01-15`);
     expect(label).toMatch(/^\d{4}年\d{1,2}月\d{1,2}日 周[一二三四五六日]$/);
     expect(label).toContain(`${otherYear}年`);
+  });
+
+  it("accepts an explicit today reference and labels against it", () => {
+    // With chat-context today=2026-05-20, the dayKey 2026-05-21 is "tomorrow"
+    // — not today, not yesterday — so it should fall through to the M月D日 format.
+    expect(formatDayLabel("2026-05-21", "2026-05-20")).toMatch(
+      /^\d{1,2}月\d{1,2}日 周[一二三四五六日]$/,
+    );
+    expect(formatDayLabel("2026-05-20", "2026-05-20")).toBe("今天");
+    expect(formatDayLabel("2026-05-19", "2026-05-20")).toBe("昨天");
+  });
+});
+
+describe("chatDayKeyOf", () => {
+  it("returns the previous calendar day for 03:00 Beijing", () => {
+    // 2026-05-22 03:00 Beijing = 2026-05-21T19:00:00Z UTC
+    expect(chatDayKeyOf("2026-05-21T19:00:00Z")).toBe("2026-05-21");
+  });
+
+  it("returns the previous calendar day for 05:59 Beijing", () => {
+    // 2026-05-22 05:59 Beijing = 2026-05-21T21:59:00Z UTC
+    expect(chatDayKeyOf("2026-05-21T21:59:00Z")).toBe("2026-05-21");
+  });
+
+  it("returns the new calendar day starting at 06:00 Beijing", () => {
+    // 2026-05-22 06:00 Beijing = 2026-05-21T22:00:00Z UTC
+    expect(chatDayKeyOf("2026-05-21T22:00:00Z")).toBe("2026-05-22");
+  });
+
+  it("agrees with dayKeyOf for an afternoon timestamp", () => {
+    // 2026-05-21 14:00 Beijing — well past 06:00, so chat-day matches calendar.
+    expect(chatDayKeyOf("2026-05-21T06:00:00Z")).toBe(
+      dayKeyOf("2026-05-21T06:00:00Z"),
+    );
+  });
+});
+
+describe("chatTodayInShanghai", () => {
+  it("matches chatDayKeyOf(now)", () => {
+    expect(chatTodayInShanghai()).toBe(chatDayKeyOf(new Date().toISOString()));
+  });
+
+  it("is either today or yesterday relative to calendar today", () => {
+    // Between 00:00 and 06:00 Beijing, chatTodayInShanghai is the prior
+    // calendar day; otherwise the two agree. Both shapes are valid;
+    // the function MUST never drift further than one day.
+    const chatToday = chatTodayInShanghai();
+    const today = todayInShanghai();
+    if (chatToday !== today) {
+      expect(addDays(chatToday, 1)).toBe(today);
+    } else {
+      expect(chatToday).toBe(today);
+    }
   });
 });

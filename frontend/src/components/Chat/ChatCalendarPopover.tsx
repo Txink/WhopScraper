@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef } from "react";
 import {
   addDays,
+  chatTodayInShanghai,
   daysInMonth,
   monthOf,
-  todayInShanghai,
 } from "../Dashboard/weekUtils";
 import "./DayPicker.css";
 
@@ -77,7 +77,7 @@ export function ChatCalendarPopover({
   }, [onClose]);
 
   const cells = useMemo(() => buildGrid(visibleMonth), [visibleMonth]);
-  const today = todayInShanghai();
+  const today = chatTodayInShanghai();
 
   const [year, monthNum] = visibleMonth.split("-").map(Number);
   const titleZh = `${year} 年 ${monthNum} 月`;

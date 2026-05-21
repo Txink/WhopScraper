@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   addDays,
+  chatTodayInShanghai,
   formatDayLabel,
   monthOf,
 } from "../Dashboard/weekUtils";
@@ -75,7 +76,7 @@ export function DayPicker({
         className="day-picker-center"
         onClick={() => toggleOpen()}
       >
-        {formatDayLabel(selectedDate)}
+        {formatDayLabel(selectedDate, chatTodayInShanghai())}
       </button>
       <button
         type="button"

@@ -243,8 +243,10 @@ function _weekdayZh(dayKey: string): string {
  *   - same year    → "5月18日 周日"
  *   - cross year   → "2025年12月31日 周三"
  */
-export function formatDayLabel(dayKey: string): string {
-  const today = todayInShanghai();
+export function formatDayLabel(
+  dayKey: string,
+  today: string = todayInShanghai(),
+): string {
   if (dayKey === today) return "今天";
   if (dayKey === addDays(today, -1)) return "昨天";
   const [y, mo, d] = dayKey.split("-").map(Number);
@@ -253,6 +255,24 @@ export function formatDayLabel(dayKey: string): string {
   return sameYear
     ? `${mo}月${d}日 ${wd}`
     : `${y}年${mo}月${d}日 ${wd}`;
+}
+
+/** Boundary hour (Beijing) at which a new "chat day" starts. Messages
+ *  posted before this hour belong to the prior chat-day. */
+export const CHAT_DAY_BOUNDARY_HOUR = 6;
+
+/** Beijing-calendar dayKey for a chat message, treating each "chat day"
+ *  as starting at 06:00 Beijing. A message at 03:00 Beijing on May 22
+ *  belongs to the May-21 chat day. */
+export function chatDayKeyOf(isoTs: string): string {
+  const shifted = new Date(
+    new Date(isoTs).getTime() - CHAT_DAY_BOUNDARY_HOUR * 3600 * 1000,
+  );
+  return dayKeyOf(shifted.toISOString());
+}
+
+export function chatTodayInShanghai(): string {
+  return chatDayKeyOf(new Date().toISOString());
 }
 
 export function computeWeeks(tasks: TaskSummary[]): ComputedWeeks {
