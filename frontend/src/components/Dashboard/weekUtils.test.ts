@@ -1,5 +1,14 @@
 import { describe, it, expect } from "vitest";
-import { weekKeyOf, formatWeekRange, computeWeeks, isoWeekBounds } from "./weekUtils";
+import {
+  weekKeyOf,
+  formatWeekRange,
+  computeWeeks,
+  isoWeekBounds,
+  dayKeyOf,
+  todayInShanghai,
+  addDays,
+  monthOf,
+} from "./weekUtils";
 import type { TaskSummary } from "../../api/domain-types";
 
 describe("weekKeyOf", () => {
@@ -145,5 +154,66 @@ describe("weekKeyOf — Beijing-pinned", () => {
     // Real UTC 2025-12-31T20:00:00Z = Beijing 2026-01-01T04:00 (Thursday).
     // Beijing-Thursday Jan 1 → walk back 4 days → Sunday Dec 28 2025.
     expect(weekKeyOf("2025-12-31T20:00:00Z")).toBe("2025-12-28");
+  });
+});
+
+describe("dayKeyOf", () => {
+  it("returns the Beijing-calendar YYYY-MM-DD for an afternoon timestamp", () => {
+    // 2026-05-21 14:00 Beijing = 2026-05-21T06:00:00Z UTC
+    expect(dayKeyOf("2026-05-21T06:00:00Z")).toBe("2026-05-21");
+  });
+
+  it("returns Beijing's date for a midnight-edge UTC timestamp", () => {
+    // 2026-05-20 16:30 UTC = 2026-05-21 00:30 Beijing → '2026-05-21'
+    expect(dayKeyOf("2026-05-20T16:30:00Z")).toBe("2026-05-21");
+  });
+
+  it("returns the prior day for a late-night Beijing → UTC offset case", () => {
+    // 2026-05-21 15:59 UTC = 2026-05-21 23:59 Beijing → '2026-05-21'
+    expect(dayKeyOf("2026-05-21T15:59:00Z")).toBe("2026-05-21");
+    // 2026-05-21 16:00 UTC = 2026-05-22 00:00 Beijing → '2026-05-22'
+    expect(dayKeyOf("2026-05-21T16:00:00Z")).toBe("2026-05-22");
+  });
+});
+
+describe("todayInShanghai", () => {
+  it("returns a string in YYYY-MM-DD shape", () => {
+    const v = todayInShanghai();
+    expect(v).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it("matches dayKeyOf(new Date().toISOString())", () => {
+    expect(todayInShanghai()).toBe(dayKeyOf(new Date().toISOString()));
+  });
+});
+
+describe("addDays", () => {
+  it("adds and subtracts days within a month", () => {
+    expect(addDays("2026-05-21", 1)).toBe("2026-05-22");
+    expect(addDays("2026-05-21", -1)).toBe("2026-05-20");
+    expect(addDays("2026-05-21", 0)).toBe("2026-05-21");
+  });
+
+  it("rolls over month boundaries", () => {
+    expect(addDays("2026-05-31", 1)).toBe("2026-06-01");
+    expect(addDays("2026-06-01", -1)).toBe("2026-05-31");
+  });
+
+  it("rolls over year boundaries", () => {
+    expect(addDays("2025-12-31", 1)).toBe("2026-01-01");
+    expect(addDays("2026-01-01", -1)).toBe("2025-12-31");
+  });
+
+  it("handles Feb 29 in a leap year", () => {
+    expect(addDays("2028-02-28", 1)).toBe("2028-02-29");
+    expect(addDays("2028-02-29", 1)).toBe("2028-03-01");
+  });
+});
+
+describe("monthOf", () => {
+  it("returns YYYY-MM", () => {
+    expect(monthOf("2026-05-21")).toBe("2026-05");
+    expect(monthOf("2026-01-01")).toBe("2026-01");
+    expect(monthOf("2025-12-31")).toBe("2025-12");
   });
 });

@@ -41,6 +41,22 @@ export function weekKeyOf(ts: string): string {
 }
 
 /**
+ * Beijing-calendar YYYY-MM-DD for any ISO timestamp. Same projection as
+ * weekKeyOf — go through Intl to extract the Beijing date parts.
+ */
+export function dayKeyOf(isoTs: string): string {
+  const parts = _BJ_PARTS.formatToParts(new Date(isoTs));
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+  const y = get("year");
+  const mo = get("month");
+  const dd = get("day");
+  if (!y || !mo || !dd) {
+    throw new Error(`dayKeyOf: bad parts for "${isoTs}"`);
+  }
+  return `${y}-${mo}-${dd}`;
+}
+
+/**
  * Today's ISO week label (``YYYY-Www``) anchored to Asia/Shanghai.
  *
  * Used as the ``week`` query param for the chat-messages endpoint, which
@@ -127,6 +143,29 @@ export function isoWeekBounds(weekKey: string): { start: string; end: string } {
   const fmt = (d: Date) =>
     `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}T00:00:00`;
   return { start: fmt(start), end: fmt(end) };
+}
+
+export function todayInShanghai(): string {
+  return dayKeyOf(new Date().toISOString());
+}
+
+/** Parse "YYYY-MM-DD" via UTC anchor → add `n` days → reformat. Pure
+ *  date arithmetic, immune to host-tz drift. */
+export function addDays(dayKey: string, n: number): string {
+  const m = dayKey.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) throw new Error(`addDays: invalid dayKey "${dayKey}"`);
+  const anchor = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+  anchor.setUTCDate(anchor.getUTCDate() + n);
+  const y = anchor.getUTCFullYear();
+  const mo = String(anchor.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(anchor.getUTCDate()).padStart(2, "0");
+  return `${y}-${mo}-${d}`;
+}
+
+export function monthOf(dayKey: string): string {
+  const m = dayKey.match(/^(\d{4})-(\d{2})-\d{2}$/);
+  if (!m) throw new Error(`monthOf: invalid dayKey "${dayKey}"`);
+  return `${m[1]}-${m[2]}`;
 }
 
 export function computeWeeks(tasks: TaskSummary[]): ComputedWeeks {
