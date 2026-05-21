@@ -33,6 +33,7 @@ import { usePrefsStore } from "../../stores/prefs";
 import { useQuotesStore } from "../../stores/quotes";
 import { applyLiveTick, bucketKey } from "./liveTick";
 import { findBarForTrade, buildDayBoundaries } from "./tradeToBar";
+import { attachChartGestures, type GestureChart } from "./chartGestures";
 
 Chart.register(
   LineController, ScatterController,
@@ -531,30 +532,15 @@ export function DetailChart({
             showLabels: view === "multiday",
           },
           zoom: {
-            pan: {
-              enabled: view !== "multiday", mode: "x", threshold: 4,
-              onPanComplete: ({ chart }) => {
-                setIsZoomed(true);
-                chart.update("none");
-                // If the user has panned close to the left edge of the
-                // loaded data, ask the parent for older bars. Parent
-                // dedupes in-flight fetches.
-                const xMin = chart.scales.x.min as number;
-                if (Number.isFinite(xMin) && xMin <= PAN_BACK_THRESHOLD) {
-                  onNeedOlderRef.current?.();
-                }
-              },
-            },
+            // Built-in handlers disabled — chartGestures.ts attaches its own
+            // listeners that call chart.zoomScale() / chart.pan() directly.
+            // Limits are still enforced via the manual computeDragZoom path.
+            pan: { enabled: false, mode: "x" },
             zoom: {
-              wheel: { enabled: view !== "multiday", speed: 0.05 },
-              pinch: { enabled: view !== "multiday" },
+              wheel: { enabled: false },
+              pinch: { enabled: false },
               mode: "x",
-              onZoomComplete: ({ chart }) => { setIsZoomed(true); chart.update("none"); },
             },
-            // Candle views cap the visible window at 250 bars so the user
-            // can't zoom out into an unreadable thumbnail. minRange = 5
-            // applies to every view. Line views (intraday/multiday) skip
-            // the upper cap — they show all loaded bars by design.
             limits: {
               x: {
                 min: 0,
@@ -640,13 +626,35 @@ export function DetailChart({
       }
     };
     canvas.addEventListener("mouseleave", onLeave);
+    let detachGestures: (() => void) | null = null;
     try {
       chartRef.current = new Chart(canvas, cfg);
+      // Drag-zoom + wheel-pan only on candle / K-line views per spec.
+      // intraday and multiday keep Chart.js default (passive) behavior.
+      const gestureEnabled =
+        view === "minute" || view === "day" || view === "week" ||
+        view === "month" || view === "year";
+      detachGestures = attachChartGestures(
+        canvas,
+        chartRef.current as unknown as GestureChart,
+        {
+          enabled: gestureEnabled,
+          dataLen: () => dataRef.current?.closes.length ?? 0,
+          limits: {
+            minRange: 5,
+            maxRange: viewCfg.datasetType === "candlestick" ? 250 : undefined,
+          },
+          panBackThreshold: PAN_BACK_THRESHOLD,
+          onAction: () => setIsZoomed(true),
+          onNeedOlder: () => onNeedOlderRef.current?.(),
+        },
+      );
     } catch (err) {
       if (import.meta.env.DEV) console.warn("DetailChart: Chart init skipped", err);
     }
     return () => {
       canvas.removeEventListener("mouseleave", onLeave);
+      detachGestures?.();
       chartRef.current?.destroy();
       chartRef.current = null;
     };
