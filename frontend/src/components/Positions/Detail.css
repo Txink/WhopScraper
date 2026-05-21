@@ -337,7 +337,13 @@
   top: 0;
   z-index: 1;
 }
-.trade-tbl th.compact, .trade-tbl td.compact { padding: 9px 6px; width: 32px; }
+.trade-tbl th.compact, .trade-tbl td.compact { padding: 9px 6px; width: 32px; text-align: center; }
+/* The inline-block checkbox aligns to the text baseline by default,
+ * which lands a few pixels below the td's vertical middle. Force the
+ * box to align to the line-box middle so the checkbox (and the +/- P/L
+ * glyph that replaces it on fully-bound rows) sit truly centered. */
+.trade-tbl td.compact input[type="checkbox"],
+.trade-tbl td.compact .t-pl-mark { vertical-align: middle; }
 .trade-tbl td {
   padding: 8px 12px;
   border-bottom: 1px solid var(--line);
@@ -420,6 +426,20 @@ input[type="checkbox"].sel-sell:checked {
   background: var(--err);
   border-color: var(--err);
 }
+
+/* P/L glyph shown in the checkbox slot once a trade is fully bound
+ * (avail === 0). +/- only — magnitude lives in the pair chips and the
+ * bind-builder. Color uses --up-color / --down-color so the red+/green-
+ * convention flips with the user's red-up vs green-up preference. */
+.trade-tbl .t-pl-mark {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 16px;
+  line-height: 1;
+}
+.trade-tbl .t-pl-mark.pos { color: var(--up-color); }
+.trade-tbl .t-pl-mark.neg { color: var(--down-color); }
 
 /* ─── Bind builder (sticky bottom of trade panel) ─── */
 .bind-builder {

@@ -37,7 +37,7 @@ describe("IntradaySpark", () => {
     const { container } = render(
       <IntradaySpark
         symbol="TSLA.US" market="US" session="regular"
-        bars={baseBars} lastDone={103} openPrice={100}
+        bars={baseBars} lastDone={103} refPrice={100}
       />,
     );
     expect(container.querySelector(".ispark-svg")).not.toBeNull();
@@ -50,7 +50,7 @@ describe("IntradaySpark", () => {
     const { container } = render(
       <IntradaySpark
         symbol="TSLA.US" market="US" session="regular"
-        bars={baseBars} lastDone={103} openPrice={100}
+        bars={baseBars} lastDone={103} refPrice={100}
       />,
     );
     const active = container.querySelector(".ispark-region-label.active");
@@ -61,28 +61,28 @@ describe("IntradaySpark", () => {
     const { container } = render(
       <IntradaySpark
         symbol="TSLA.US" market="US" session="regular"
-        bars={baseBars} lastDone={103} openPrice={100}
+        bars={baseBars} lastDone={103} refPrice={100}
       />,
     );
     expect(container.querySelectorAll(".ispark-divider")).toHaveLength(2);
   });
 
-  it("applies .pos when lastDone >= openPrice", () => {
+  it("applies .pos when lastDone >= refPrice", () => {
     const { container } = render(
       <IntradaySpark
         symbol="TSLA.US" market="US" session="regular"
-        bars={baseBars} lastDone={103} openPrice={100}
+        bars={baseBars} lastDone={103} refPrice={100}
       />,
     );
     expect(container.querySelector(".ispark.pos")).not.toBeNull();
     expect(container.querySelector(".ispark.neg")).toBeNull();
   });
 
-  it("applies .neg when lastDone < openPrice", () => {
+  it("applies .neg when lastDone < refPrice", () => {
     const { container } = render(
       <IntradaySpark
         symbol="TSLA.US" market="US" session="regular"
-        bars={baseBars} lastDone={98} openPrice={100}
+        bars={baseBars} lastDone={98} refPrice={100}
       />,
     );
     expect(container.querySelector(".ispark.neg")).not.toBeNull();
@@ -92,7 +92,7 @@ describe("IntradaySpark", () => {
     const { container } = render(
       <IntradaySpark
         symbol="TSLA.US" market="US" session="regular"
-        bars={baseBars} lastDone={103} openPrice={100}
+        bars={baseBars} lastDone={103} refPrice={100}
       />,
     );
     expect(container.querySelector(".ispark-pulse")).not.toBeNull();
@@ -102,7 +102,7 @@ describe("IntradaySpark", () => {
     const { container } = render(
       <IntradaySpark
         symbol="TSLA.US" market="US" session="closed"
-        bars={baseBars} lastDone={null} openPrice={100}
+        bars={baseBars} lastDone={null} refPrice={100}
       />,
     );
     expect(container.querySelector(".ispark-pulse")).toBeNull();
@@ -117,7 +117,7 @@ describe("IntradaySpark", () => {
     const { container } = render(
       <IntradaySpark
         symbol="TSLA.US" market="US" session="regular"
-        bars={undefined} lastDone={null} openPrice={null}
+        bars={undefined} lastDone={null} refPrice={null}
       />,
     );
     expect(container.querySelector(".ispark-skeleton")).not.toBeNull();
@@ -128,7 +128,7 @@ describe("IntradaySpark", () => {
     const { container } = render(
       <IntradaySpark
         symbol="TSLA.US" market="US" session="regular"
-        bars={[]} lastDone={null} openPrice={null}
+        bars={[]} lastDone={null} refPrice={null}
       />,
     );
     expect(container.querySelector(".ispark-line")).toBeNull();
@@ -139,7 +139,7 @@ describe("IntradaySpark", () => {
     const { container } = render(
       <IntradaySpark
         symbol="TSLA.US" market="US" session="regular"
-        bars={baseBars} lastDone={103} openPrice={100}
+        bars={baseBars} lastDone={103} refPrice={100}
       />,
     );
     const d = container.querySelector(".ispark-line")?.getAttribute("d") ?? "";
@@ -155,7 +155,7 @@ describe("IntradaySpark", () => {
       <IntradaySpark
         symbol="0700.HK" market="HK" session="regular"
         bars={[bar("2026-05-14T09:30:00", 48), lunchBar, bar("2026-05-14T13:00:00", 52)]}
-        lastDone={52} openPrice={48}
+        lastDone={52} refPrice={48}
       />,
     );
     expect(regionTexts(container)).toEqual(["盘中"]);

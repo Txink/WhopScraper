@@ -12,7 +12,13 @@ interface Props {
   bars: Candlestick[] | undefined;
   session: SessionLabel;
   lastDone: number | null;
-  openPrice: number | null;
+  /** Reference price the line's pos/neg color is measured against.
+   *  Must match the daily change-pct baseline the caller is showing in
+   *  its badge: prev_close in pre/regular/closed, today_close in post/
+   *  overnight. Using today's open here would disagree with the badge
+   *  on gap days (e.g. open > prev_close > last → badge red+, line green).
+   *  ``null`` falls back to the chart's first visible bar. */
+  refPrice: number | null;
 }
 
 // ViewBox is stretched via preserveAspectRatio="none" to fit the
@@ -45,7 +51,7 @@ export function IntradaySpark({
   // symbol prop is intentionally unused inside the component — it's
   // accepted so callers can group by ticker. Renamed to _symbol to
   // signal that.
-  symbol: _symbol, market, bars, session, lastDone, openPrice,
+  symbol: _symbol, market, bars, session, lastDone, refPrice,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [containerSize, setContainerSize] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
@@ -177,11 +183,14 @@ export function IntradaySpark({
     // would be moot.
   }, [points, yLo, yHi]);
 
-  // Color decision: pos when last >= open, else neg.
+  // Color decision: pos when last >= refPrice (the same baseline the
+  // caller's % badge uses — typically prev_close, or today_close in
+  // post/overnight). Falling back to the first visible bar keeps the
+  // line colored sensibly when refPrice is unavailable.
   const lastClose = points.length > 0 ? points[points.length - 1].close : null;
-  const refOpen = openPrice ?? (points.length > 0 ? points[0].close : null);
-  const isPos = lastClose != null && refOpen != null
-    ? lastClose >= refOpen
+  const ref = refPrice ?? (points.length > 0 ? points[0].close : null);
+  const isPos = lastClose != null && ref != null
+    ? lastClose >= ref
     : true;
 
   // Pulse dot pixel coords. Re-computed every render — quote pushes

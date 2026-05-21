@@ -259,6 +259,19 @@ export function TradeList({
               const isSel = t.side === "BUY"
                 ? selectedBuys.has(t.id)
                 : selectedSells.has(t.id);
+              // When a trade is fully bound (avail === 0), surface its
+              // P/L sign in the checkbox slot. Sum of pair.profit across
+              // the trade's bound pairs decides + vs -; profit === 0
+              // intentionally falls into "+" ("中性归不亏"). Colors flow
+              // through --up-color / --down-color so they flip with the
+              // user's price-direction preference.
+              const boundProfit = avail === 0
+                ? tags.reduce(
+                    (s, [pid]) => s + (pairs.find((p) => p.id === pid)?.profit ?? 0),
+                    0,
+                  )
+                : 0;
+              const isProfit = boundProfit >= 0;
               // Row color: highlight the active pair's color when this row
               // is part of it; otherwise first allocation. No allocation →
               // no row color.
@@ -283,7 +296,7 @@ export function TradeList({
                   }
                 >
                   <td className="compact" onClick={(e) => e.stopPropagation()}>
-                    {!disableBinding && avail > 0 && (
+                    {!disableBinding && (avail > 0 ? (
                       <input
                         type="checkbox"
                         className={t.side === "BUY" ? "sel-buy" : "sel-sell"}
@@ -291,7 +304,14 @@ export function TradeList({
                         onChange={() => toggleTrade(t.id, t.side as "BUY" | "SELL")}
                         title={`将剩余 ${avail} 股加入做T 绑定`}
                       />
-                    )}
+                    ) : (
+                      <span
+                        className={`t-pl-mark ${isProfit ? "pos" : "neg"}`}
+                        title={`${isProfit ? "盈" : "亏"} ${boundProfit >= 0 ? "+" : ""}${fmt(boundProfit, 2)}`}
+                      >
+                        {isProfit ? "+" : "−"}
+                      </span>
+                    ))}
                   </td>
                   <td className="tic">{fmtBjRel(t.ts)}</td>
                   <td style={{ textAlign: "center" }}>
