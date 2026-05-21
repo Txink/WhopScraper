@@ -33,7 +33,7 @@ import { usePrefsStore } from "../../stores/prefs";
 import { useQuotesStore } from "../../stores/quotes";
 import { applyLiveTick, bucketKey } from "./liveTick";
 import { findBarForTrade, buildDayBoundaries } from "./tradeToBar";
-import { attachChartGestures } from "./chartGestures";
+import { attachChartGestures, type GestureChart } from "./chartGestures";
 
 Chart.register(
   LineController, ScatterController,
@@ -636,7 +636,7 @@ export function DetailChart({
         view === "month" || view === "year";
       detachGestures = attachChartGestures(
         canvas,
-        chartRef.current as unknown as import("./chartGestures").GestureChart,
+        chartRef.current as unknown as GestureChart,
         {
           enabled: gestureEnabled,
           dataLen: () => dataRef.current?.closes.length ?? 0,

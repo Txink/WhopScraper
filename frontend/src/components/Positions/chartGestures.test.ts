@@ -319,4 +319,37 @@ describe("attachChartGestures", () => {
     expect(zoomScale).not.toHaveBeenCalled();
     canvas.remove();
   });
+
+  it("reads dataLen via getter on each pointer event (lazy, not cached)", () => {
+    const canvas = document.createElement("canvas");
+    document.body.appendChild(canvas);
+    const { chart, zoomScale } = makeFakeChart();
+    let liveLen = 100;
+    const detach = attachChartGestures(canvas, chart, {
+      enabled: true,
+      dataLen: () => liveLen,
+      limits: { minRange: 5 },  // no maxRange so the data bound is what clamps
+      panBackThreshold: 0,
+    });
+
+    // Start the drag with dataLen=100 — right-edge clamp would be index 99.
+    canvas.dispatchEvent(pointer("pointerdown", 100));
+    canvas.dispatchEvent(pointer("pointermove", -200));  // zoom out
+    // Mutate len AFTER the first event. A cached attach-time read would
+    // continue to clamp at 99; a lazy per-event read picks up the new bound.
+    liveLen = 500;
+    canvas.dispatchEvent(pointer("pointermove", -400));  // zoom out further
+
+    // The last zoomScale call should reflect the updated dataLen by allowing
+    // newMax to exceed 99. If dataLen were cached at attach time, newMax
+    // would be clamped to 99.
+    expect(zoomScale).toHaveBeenCalled();
+    const lastCall = zoomScale.mock.calls[zoomScale.mock.calls.length - 1];
+    const range = lastCall[1] as { min: number; max: number };
+    expect(range.max).toBeGreaterThan(99);
+
+    canvas.dispatchEvent(pointer("pointerup", -400));
+    detach();
+    canvas.remove();
+  });
 });
