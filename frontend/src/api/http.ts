@@ -31,6 +31,21 @@ function cfg(): HttpConfig {
   return _config;
 }
 
+/** Build a full URL with ``?token=`` appended for endpoints that load via
+ *  ``<img src>`` / ``<a href>`` etc. — i.e. requests the browser issues
+ *  itself without going through ``fetch``, so they can't carry an
+ *  ``Authorization`` header. Returns the input untouched if it's already
+ *  absolute (e.g. a third-party CDN URL). */
+export function authedAssetUrl(path: string | null | undefined): string {
+  if (!path) return "";
+  // Absolute URL or data: — leave alone, those aren't our endpoints.
+  if (/^[a-z][a-z0-9+.-]*:/i.test(path)) return path;
+  const { baseUrl, token } = cfg();
+  const url = new URL(path, baseUrl);
+  url.searchParams.set("token", token);
+  return url.toString();
+}
+
 
 export class HttpError extends Error {
   constructor(

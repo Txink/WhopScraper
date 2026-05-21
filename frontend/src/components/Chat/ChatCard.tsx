@@ -1,4 +1,5 @@
 import { paletteColorFor } from "./avatarPalette";
+import { authedAssetUrl } from "../../api/http";
 import {
   watchedCount,
   type BatchItem,
@@ -103,7 +104,7 @@ function renderBlock(b: Block, idx: number): JSX.Element {
               {m.image_url && (
                 <img
                   className="chat-group-image"
-                  src={m.image_url}
+                  src={authedAssetUrl(m.image_url)}
                   alt=""
                 />
               )}

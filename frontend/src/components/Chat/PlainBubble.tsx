@@ -1,3 +1,5 @@
+import { authedAssetUrl } from "../../api/http";
+
 export interface PlainBubbleProps {
   content: string;
   quoted?: { author: string; content: string } | null;
@@ -20,7 +22,7 @@ export function PlainBubble({
         </div>
       )}
       {imageUrl && (
-        <img className="chat-group-image" src={imageUrl} alt="" />
+        <img className="chat-group-image" src={authedAssetUrl(imageUrl)} alt="" />
       )}
       {content}
     </div>
