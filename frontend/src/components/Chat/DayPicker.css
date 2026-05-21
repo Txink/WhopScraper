@@ -120,17 +120,16 @@
   align-items: center;
   justify-content: center;
 }
-.day-picker .calendar-cell:hover:not(:disabled):not(.is-selected) { background: rgba(255, 255, 255, 0.08); }
+.day-picker .calendar-cell:hover:not(:disabled) { background: rgba(255, 255, 255, 0.08); }
 .day-picker .calendar-cell:disabled { opacity: 0.28; cursor: not-allowed; }
 .day-picker .calendar-cell.is-other-month { color: var(--fg-3); }
-.day-picker .calendar-cell.is-today { box-shadow: inset 0 0 0 1px var(--brand); }
-.day-picker .calendar-cell.is-selected { background: var(--brand); color: var(--bg-0); }
 
-/* Has-messages indicator: a soft green chip hugging the digit. Sits inside
- * the cell so it stays smaller than the full cell hover overlay. Suppressed
- * on the selected day because the full-cell brand fill already conveys
- * focus. Uses --ok's green (not --up-color, which flips for CN red-up
- * users — "has data" should not invert based on price-direction prefs). */
+/* Has-messages indicator: a dark forest-green chip hugging the digit. Sits
+ * inside the cell so it stays smaller than the full cell hover overlay.
+ * Suppressed on the selected day because the full-cell brand fill already
+ * conveys focus. Uses a hardcoded dark green (matching --candle-up-color's
+ * shade) so it does NOT flip for CN red-up users — "has data" must not
+ * invert based on price-direction prefs. */
 .day-picker .calendar-cell-digit {
   display: inline-flex;
   align-items: center;
@@ -142,7 +141,15 @@
   font-variant-numeric: tabular-nums;
 }
 .day-picker .calendar-cell.has-messages:not(.is-selected) .calendar-cell-digit {
-  background: rgba(61, 214, 140, 0.55);
+  background: #147a48;
+  color: #fff;
+}
+.day-picker .calendar-cell.is-selected .calendar-cell-digit {
+  min-width: 22px;
+  height: 22px;
+  padding: 0 4px;
+  background: var(--brand);
+  color: var(--bg-0);
 }
 
 /* Centered spinner overlay shown while month prefetch is in flight.
