@@ -239,7 +239,6 @@ export function DetailChart({
   const visibleBarsRef = useRef<Candlestick[]>([]);
   const markersRef = useRef<AggMarker[]>([]);
 
-  const pulseRef = useRef<HTMLDivElement | null>(null);
   // Local mutable state for live mode. We keep extended bars HERE (not in
   // the bars store) so DetailPane's barsInitialized gate and other
   // downstream consumers aren't churned by quote-push frequency.
@@ -764,12 +763,10 @@ export function DetailChart({
   // liveCfg is null for day/week/month/year (K-line) views; live updates
   // are active for intraday, minute, and multiday views.
   const liveCfg = viewCfg.liveCfg;
-  const isLiveMode = liveCfg != null;
 
   // Effect C — live tick. Drives all minute-level views (intraday/minute/multiday).
   // RAF-throttled so a tight quote burst doesn't trigger N chart updates
-  // per frame. Mutates Chart data in place (never the bars store) and
-  // repositions a DOM pulse dot at the last bar.
+  // per frame. Mutates Chart data in place — never the bars store.
   useEffect(() => {
     if (!liveCfg) return;
     const chart = chartRef.current;
@@ -798,12 +795,9 @@ export function DetailChart({
       state.rafId = null;
       const q = useQuotesStore.getState().quotesBySymbol[symbol];
       const lastDone = q?.last_done;
-      if (lastDone == null || lastDone === 0) {
-        // Degraded quote (e.g. halted symbol) — hide the pulse so it doesn't
-        // animate against a stale position. The next valid push re-shows it.
-        pulseRef.current?.classList.remove("visible", "down");
-        return;
-      }
+      // Degraded quote (e.g. halted symbol with last_done null/0). Skip
+      // the tick — nothing to apply and nothing to display.
+      if (lastDone == null || lastDone === 0) return;
       const nowMs = Date.now();
 
       // RAF can fire faster than the quote stream — skip if neither price
@@ -824,98 +818,60 @@ export function DetailChart({
         periodMinutes,
         allowAppend,
       });
-      // If the helper bailed (stale guard, empty bars, etc.) we still want
-      // to position the pulse dot — but no chart mutation is needed.
       const dataChanged = out.bars !== state.bars;
       state.bars = out.bars;
       state.labels = out.labels;
       state.lastApplied = lastDone;
 
+      if (!dataChanged) return;
       const ch = chartRef.current;
       if (!ch || !priceDataset) return;
 
-      if (dataChanged) {
-        ch.data.labels = out.labels;
-        // Candle datasets carry {x,o,h,l,c} objects; line datasets carry
-        // plain close numbers. Mirror whichever shape the dataset uses so
-        // the live tick works for both intraday/multiday (line) and
-        // minute (candlestick).
-        let dataLen: number;
-        if (viewCfg.datasetType === "candlestick") {
-          const candleData = priceDataset.data as Array<{
-            x: number; o: number; h: number; l: number; c: number;
-          }>;
-          const lastBarIdx = out.bars.length - 1;
-          const lastBar = out.bars[lastBarIdx]!;
-          if (out.crossedBoundary) {
-            candleData.push({
-              x: lastBarIdx,
-              o: lastBar.open, h: lastBar.high, l: lastBar.low, c: lastBar.close,
-            });
-          } else if (candleData.length > 0) {
-            const last = candleData[candleData.length - 1]!;
-            last.o = lastBar.open;
-            last.h = lastBar.high;
-            last.l = lastBar.low;
-            last.c = lastBar.close;
-          }
-          dataLen = candleData.length;
+      ch.data.labels = out.labels;
+      // Candle datasets carry {x,o,h,l,c} objects; line datasets carry
+      // plain close numbers. Mirror whichever shape the dataset uses so
+      // the live tick works for both intraday/multiday (line) and
+      // minute (candlestick).
+      let dataLen: number;
+      if (viewCfg.datasetType === "candlestick") {
+        const candleData = priceDataset.data as Array<{
+          x: number; o: number; h: number; l: number; c: number;
+        }>;
+        const lastBarIdx = out.bars.length - 1;
+        const lastBar = out.bars[lastBarIdx]!;
+        if (out.crossedBoundary) {
+          candleData.push({
+            x: lastBarIdx,
+            o: lastBar.open, h: lastBar.high, l: lastBar.low, c: lastBar.close,
+          });
+        } else if (candleData.length > 0) {
+          const last = candleData[candleData.length - 1]!;
+          last.o = lastBar.open;
+          last.h = lastBar.high;
+          last.l = lastBar.low;
+          last.c = lastBar.close;
+        }
+        dataLen = candleData.length;
+      } else {
+        const priceData = priceDataset.data as unknown as number[];
+        if (out.crossedBoundary) {
+          priceData.push(lastDone);
         } else {
-          const priceData = priceDataset.data as unknown as number[];
-          if (out.crossedBoundary) {
-            priceData.push(lastDone);
-          } else {
-            priceData[priceData.length - 1] = lastDone;
-          }
-          dataLen = priceData.length;
+          priceData[priceData.length - 1] = lastDone;
         }
-        const xMax = dataLen - 1;
-        const opts = ch.options as unknown as {
-          scales: { x: { max: number; min: number } };
-          plugins: { zoom: { limits: { x: { max: number } } } };
-        };
-        // Stretch right edge only if user hasn't manually panned away.
-        if ((ch.scales.x.max as number) >= xMax - 1) {
-          opts.scales.x.max = xMax;
-        }
-        opts.plugins.zoom.limits.x.max = xMax;
-        ch.update("none");
+        dataLen = priceData.length;
       }
-
-      // Position the pulse dot at the last printed bar — not the last
-      // slot index. buildSessionSlots() reserves slots for the entire
-      // session window (e.g. 960 minutes when sessions = "all"); using
-      // `length - 1` would pin the pulse to the end of the session even
-      // when prints have only reached mid-session, parking it far past
-      // where the line actually ends.
-      const pulse = pulseRef.current;
-      if (pulse) {
-        const priceArr = priceDataset.data as unknown as Array<
-          number | null | { c?: number | null }
-        >;
-        let lastIdx = -1;
-        for (let i = priceArr.length - 1; i >= 0; i--) {
-          const v = priceArr[i];
-          const num = typeof v === "number" ? v : v?.c;
-          if (num != null && Number.isFinite(num)) {
-            lastIdx = i;
-            break;
-          }
-        }
-        if (lastIdx < 0) {
-          pulse.classList.remove("visible", "down");
-        } else {
-          const px = ch.scales.x.getPixelForValue(lastIdx);
-          const py = ch.scales.y.getPixelForValue(lastDone);
-          if (Number.isFinite(px) && Number.isFinite(py)) {
-            pulse.style.left = `${px}px`;
-            pulse.style.top = `${py}px`;
-            pulse.classList.add("visible");
-            const isDown = (q?.change ?? 0) < 0;
-            pulse.classList.toggle("down", isDown);
-          }
-        }
+      const xMax = dataLen - 1;
+      const opts = ch.options as unknown as {
+        scales: { x: { max: number; min: number } };
+        plugins: { zoom: { limits: { x: { max: number } } } };
+      };
+      // Stretch right edge only if user hasn't manually panned away.
+      if ((ch.scales.x.max as number) >= xMax - 1) {
+        opts.scales.x.max = xMax;
       }
+      opts.plugins.zoom.limits.x.max = xMax;
+      ch.update("none");
     };
 
     // Each store push schedules a single RAF.
@@ -928,8 +884,8 @@ export function DetailChart({
       state.rafId = requestAnimationFrame(tick);
     });
 
-    // Kick once at mount so the dot is positioned on the most-recent
-    // already-pushed quote without waiting for the next push.
+    // Kick once at mount so the chart reflects the most-recent already-
+    // pushed quote without waiting for the next push.
     liveStateRef.current.rafId = requestAnimationFrame(tick);
 
     return () => {
@@ -937,7 +893,6 @@ export function DetailChart({
       const state = liveStateRef.current;
       if (state?.rafId != null) cancelAnimationFrame(state.rafId);
       liveStateRef.current = null;
-      pulseRef.current?.classList.remove("visible", "down");
     };
     // Re-seeds on view changes (view/granularity/symbol). The other deps
     // are read via refs at tick-time, not at effect-mount time.
@@ -956,7 +911,6 @@ export function DetailChart({
   return (
     <div className="chart-canvas-wrap">
       <canvas ref={canvasRef} />
-      {isLiveMode && viewCfg.livePulseEnabled && <div ref={pulseRef} className="live-pulse" aria-hidden />}
       {isZoomed && (
         <button
           className="chart-reset-btn"

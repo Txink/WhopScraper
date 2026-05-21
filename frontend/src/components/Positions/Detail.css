@@ -967,34 +967,6 @@ input[type="checkbox"].sel-sell:checked {
   font-weight: 600;
 }
 
-/* Live-mode "now" indicator overlaid on the last bar's data point. Mounted
- * in all minute-level views (today/分时, today/Nmin, 5D/7D/15D) — see
- * DetailChart.tsx's liveCfg gate. Positioned by JS via
- * chart.scales.{x,y}.getPixelForValue; the pulse is purely cosmetic. */
-.live-pulse {
-  position: absolute;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--up-color);
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-  z-index: 2;
-  opacity: 0;
-  transition: opacity 200ms ease;
-}
-.live-pulse.visible {
-  opacity: 1;
-  animation: live-pulse-anim 1.2s ease-out infinite;
-}
-.live-pulse.down { background: var(--down-color); }
-
-@keyframes live-pulse-anim {
-  0%   { transform: translate(-50%, -50%) scale(1);   opacity: 1;   }
-  60%  { transform: translate(-50%, -50%) scale(2.2); opacity: 0;   }
-  100% { transform: translate(-50%, -50%) scale(2.2); opacity: 0;   }
-}
-
 /* ─── Panel-scoped confirm dialog ───
  * Anchors inside ``.detail-pane`` (which carries ``position: relative``),
  * NOT the viewport — keeps the dialog visually in the middle of the

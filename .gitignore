@@ -58,3 +58,5 @@ frontend/vite.config.js
 # Parser validation harness
 data/parser_validation_report.json
 data/golden_batches/
+
+backend/data/

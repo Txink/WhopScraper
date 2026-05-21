@@ -100,23 +100,6 @@ describe("DetailChart candlestick dataset shape", () => {
 });
 
 describe("DetailChart live-mode wiring", () => {
-  it("renders .live-pulse only for intraday (the line view that benefits from the latest-price dot)", () => {
-    const { container } = renderView("intraday");
-    expect(container.querySelector(".live-pulse")).not.toBeNull();
-  });
-
-  it.each([
-    ["minute"],
-    ["multiday"],
-    ["day"],
-    ["week"],
-    ["month"],
-    ["year"],
-  ] as const)("omits .live-pulse for %s", (view) => {
-    const { container } = renderView(view);
-    expect(container.querySelector(".live-pulse")).toBeNull();
-  });
-
   it("survives a quote upsert in live mode without throwing", () => {
     renderView("intraday");
     expect(() => {

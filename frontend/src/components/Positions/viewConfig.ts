@@ -57,10 +57,6 @@ export interface ViewConfig {
   sessionBgEnabled: boolean;
   /** Enable vertical day-separator guides — multiday line only. */
   dayMarkersEnabled: boolean;
-  /** Render the blinking dot at the latest price. Only the intraday line
-   *  view shows it; minute/multiday still drive live ticks but suppress
-   *  the visual since their bars carry the same "most recent" cue. */
-  livePulseEnabled: boolean;
 }
 
 const _MINUTE_LIVE: Record<MinuteGranularity, number> = {
@@ -79,7 +75,6 @@ export function resolveViewConfig(view: ViewType, sub: ViewSubState): ViewConfig
         liveCfg: { periodMinutes: 1, allowAppend: true },
         sessionBgEnabled: true,
         dayMarkersEnabled: false,
-        livePulseEnabled: true,
       };
     case "minute":
       return {
@@ -96,7 +91,6 @@ export function resolveViewConfig(view: ViewType, sub: ViewSubState): ViewConfig
         liveCfg: { periodMinutes: _MINUTE_LIVE[sub.minuteGranularity], allowAppend: true },
         sessionBgEnabled: false,
         dayMarkersEnabled: false,
-        livePulseEnabled: false,
       };
     case "multiday":
       return {
@@ -106,7 +100,6 @@ export function resolveViewConfig(view: ViewType, sub: ViewSubState): ViewConfig
         liveCfg: { periodMinutes: 5, allowAppend: false },
         sessionBgEnabled: false,
         dayMarkersEnabled: true,
-        livePulseEnabled: false,
       };
     case "overlay":
       // The overlay view doesn't share DetailPane's single-symbol bars
@@ -121,7 +114,6 @@ export function resolveViewConfig(view: ViewType, sub: ViewSubState): ViewConfig
         liveCfg: null,
         sessionBgEnabled: false,
         dayMarkersEnabled: false,
-        livePulseEnabled: false,
       };
     case "day":
       return _candleConfig("day", 80);
@@ -142,6 +134,5 @@ function _candleConfig(period: Period, initialVisibleCount: number): ViewConfig 
     liveCfg: null,
     sessionBgEnabled: false,
     dayMarkersEnabled: false,
-    livePulseEnabled: false,
   };
 }
