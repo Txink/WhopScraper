@@ -123,12 +123,13 @@ export function ChatCalendarPopover({
           const disabled = dayKey > maxDate;
           const isToday = dayKey === today;
           const isSelected = dayKey === selectedDate;
-          const showDot = hasMessagesOnDay(dayKey);
+          const hasMessages = hasMessagesOnDay(dayKey);
           const classes = [
             "calendar-cell",
             !inMonth && "is-other-month",
             isToday && "is-today",
             isSelected && "is-selected",
+            hasMessages && "has-messages",
           ]
             .filter(Boolean)
             .join(" ");
@@ -144,13 +145,16 @@ export function ChatCalendarPopover({
                 onPickDay(dayKey);
               }}
             >
-              {dayNum}
-              {showDot && <span className="calendar-dot" />}
+              <span className="calendar-cell-digit">{dayNum}</span>
             </button>
           );
         })}
+        {loading && (
+          <div className="calendar-spinner" aria-hidden="true">
+            <div className="calendar-spinner-ring" />
+          </div>
+        )}
       </div>
-      {loading && <div className="calendar-loading">加载中…</div>}
     </div>
   );
 }

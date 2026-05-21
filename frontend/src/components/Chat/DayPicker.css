@@ -1,19 +1,21 @@
-/* Floating bottom-right control */
+/* Floating bottom-center control */
 .day-picker {
   position: absolute;
-  right: 12px;
+  left: 50%;
   bottom: 12px;
+  transform: translateX(-50%);
   z-index: 5;
   display: flex;
   align-items: center;
   gap: 4px;
   padding: 4px 6px;
-  background: rgba(20, 22, 28, 0.82);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  /* --bg-2 with alpha so the chat board shows through the blur. */
+  background: rgba(23, 31, 42, 0.82);
+  border: 1px solid var(--line-strong);
   border-radius: 999px;
   backdrop-filter: blur(8px);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.32);
-  color: #e7e9ee;
+  color: var(--fg-1);
   font-size: 13px;
   user-select: none;
 }
@@ -45,7 +47,7 @@
   border: none;
   color: inherit;
   padding: 4px 10px;
-  border-radius: 12px;
+  border-radius: 999px;
   cursor: pointer;
   font: inherit;
   min-width: 96px;
@@ -53,27 +55,31 @@
 }
 .day-picker-center:hover { background: rgba(255, 255, 255, 0.08); }
 
-/* Calendar popover anchored above the center button */
-.calendar-popover {
+/* Calendar popover anchored above the center button.
+ * Scoped under .day-picker so the unprefixed .calendar-* class names used
+ * by ChatCalendarPopover don't collide with the positions overlay's own
+ * .tab-popover.calendar-popover (which reuses the same class names). */
+.day-picker .calendar-popover {
   position: absolute;
   bottom: calc(100% + 8px);
-  right: 0;
-  background: #1c1f26;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-2);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-card);
   padding: 12px;
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
   width: 280px;
-  color: #e7e9ee;
+  color: var(--fg-1);
   font-size: 13px;
 }
-.calendar-head {
+.day-picker .calendar-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 8px;
 }
-.calendar-head button {
+.day-picker .calendar-head button {
   background: transparent;
   border: none;
   color: inherit;
@@ -82,31 +88,31 @@
   height: 24px;
   border-radius: 50%;
 }
-.calendar-head button:hover { background: rgba(255, 255, 255, 0.08); }
-.calendar-head .calendar-title { font-weight: 600; }
+.day-picker .calendar-head button:hover { background: rgba(255, 255, 255, 0.08); }
+.day-picker .calendar-head .calendar-title { font-weight: 600; }
 
-.calendar-week-names {
+.day-picker .calendar-week-names {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 2px;
   text-align: center;
-  color: rgba(231, 233, 238, 0.5);
+  color: var(--fg-2);
   font-size: 11px;
   margin-bottom: 4px;
 }
 
-.calendar-grid {
+.day-picker .calendar-grid {
+  position: relative;
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 2px;
 }
-.calendar-cell {
-  position: relative;
+.day-picker .calendar-cell {
   aspect-ratio: 1;
   border: none;
   background: transparent;
   color: inherit;
-  border-radius: 8px;
+  border-radius: var(--radius-card);
   cursor: pointer;
   font: inherit;
   padding: 0;
@@ -114,28 +120,48 @@
   align-items: center;
   justify-content: center;
 }
-.calendar-cell:hover:not(:disabled) { background: rgba(255, 255, 255, 0.08); }
-.calendar-cell:disabled { opacity: 0.28; cursor: not-allowed; }
-.calendar-cell.is-other-month { color: rgba(231, 233, 238, 0.32); }
-.calendar-cell.is-today { box-shadow: inset 0 0 0 1px #4f9cf9; }
-.calendar-cell.is-selected { background: #2f6ed1; color: #fff; }
-.calendar-cell.is-selected:hover { background: #3c79d8; }
+.day-picker .calendar-cell:hover:not(:disabled):not(.is-selected) { background: rgba(255, 255, 255, 0.08); }
+.day-picker .calendar-cell:disabled { opacity: 0.28; cursor: not-allowed; }
+.day-picker .calendar-cell.is-other-month { color: var(--fg-3); }
+.day-picker .calendar-cell.is-today { box-shadow: inset 0 0 0 1px var(--brand); }
+.day-picker .calendar-cell.is-selected { background: var(--brand); color: var(--bg-0); }
 
-.calendar-dot {
-  position: absolute;
-  bottom: 4px;
-  left: 50%;
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: #4f9cf9;
-  transform: translateX(-50%);
+/* Has-messages indicator: a soft green chip hugging the digit. Sits inside
+ * the cell so it stays smaller than the full cell hover overlay. Suppressed
+ * on the selected day because the full-cell brand fill already conveys
+ * focus. Uses --ok's green (not --up-color, which flips for CN red-up
+ * users — "has data" should not invert based on price-direction prefs). */
+.day-picker .calendar-cell-digit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 2px;
+  border-radius: var(--radius-card);
+  font-variant-numeric: tabular-nums;
 }
-.calendar-cell.is-selected .calendar-dot { background: #fff; }
+.day-picker .calendar-cell.has-messages:not(.is-selected) .calendar-cell-digit {
+  background: rgba(61, 214, 140, 0.55);
+}
 
-.calendar-loading {
-  margin-top: 8px;
-  font-size: 11px;
-  color: rgba(231, 233, 238, 0.5);
-  text-align: center;
+/* Centered spinner overlay shown while month prefetch is in flight.
+ * pointer-events:none keeps cells clickable underneath. */
+.day-picker .calendar-spinner {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+.day-picker .calendar-spinner-ring {
+  width: 22px;
+  height: 22px;
+  border: 2px solid rgba(var(--brand-rgb), 0.18);
+  border-top-color: var(--brand);
+  border-radius: 50%;
+  animation: calendar-spin 0.8s linear infinite;
+}
+@keyframes calendar-spin {
+  to { transform: rotate(360deg); }
 }
