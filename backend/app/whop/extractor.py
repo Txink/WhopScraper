@@ -411,7 +411,7 @@ def _extract_quote(msg_el: Tag) -> tuple[str | None, str]:
     return (author or None, raw)
 
 
-def _extract_image_url(msg_el) -> str | None:
+def _extract_image_url(msg_el: Tag) -> str | None:
     """Return the first whop.com-hosted image URL inside any attachment
     block of this message element, or None.
 
@@ -421,7 +421,7 @@ def _extract_image_url(msg_el) -> str | None:
     for attach in msg_el.find_all(attrs={"data-attachment-id": True}):
         img = attach.find("img", src=re.compile(r"whop\.com"))
         if img and img.get("src"):
-            return img["src"]
+            return str(img["src"])
     return None
 
 

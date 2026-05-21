@@ -1,4 +1,5 @@
 from pathlib import Path
+
 from bs4 import BeautifulSoup
 
 from app.whop.extractor import _extract_image_url, extract_messages
