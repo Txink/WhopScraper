@@ -587,9 +587,15 @@ export function DetailChart({
                 const b = visibleBarsRef.current[i];
                 if (!b) continue;
                 if (viewCfg.datasetType === "candlestick") {
+                  // buildSessionSlots() pads unprinted slots with null
+                  // high/low (typed as number) so Chart.js draws a gap.
+                  // Skip them here — a null in min/max coerces to 0 via
+                  // JS comparison and would yank the axis to include 0.
+                  if (b.low == null || b.high == null) continue;
                   if (b.low < vMin) vMin = b.low;
                   if (b.high > vMax) vMax = b.high;
                 } else {
+                  if (b.close == null) continue;
                   if (b.close < vMin) vMin = b.close;
                   if (b.close > vMax) vMax = b.close;
                 }
