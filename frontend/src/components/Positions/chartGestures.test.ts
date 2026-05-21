@@ -165,7 +165,7 @@ describe("attachChartGestures", () => {
     const { chart, zoomScale, pan } = makeFakeChart();
     const detach = attachChartGestures(canvas, chart, {
       enabled: false,
-      dataLen: 1000,
+      dataLen: () => 1000,
       limits: { minRange: 5, maxRange: 250 },
       panBackThreshold: 20,
     });
@@ -185,7 +185,7 @@ describe("attachChartGestures", () => {
     const onAction = vi.fn();
     const detach = attachChartGestures(canvas, chart, {
       enabled: true,
-      dataLen: 1000,
+      dataLen: () => 1000,
       limits: { minRange: 5, maxRange: 250 },
       panBackThreshold: 20,
       onAction,
@@ -214,7 +214,7 @@ describe("attachChartGestures", () => {
     const onAction = vi.fn();
     const detach = attachChartGestures(canvas, chart, {
       enabled: true,
-      dataLen: 1000,
+      dataLen: () => 1000,
       limits: { minRange: 5, maxRange: 250 },
       panBackThreshold: 20,
       onAction,
@@ -238,7 +238,7 @@ describe("attachChartGestures", () => {
     const { chart, zoomScale, pan } = makeFakeChart();
     const detach = attachChartGestures(canvas, chart, {
       enabled: true,
-      dataLen: 1000,
+      dataLen: () => 1000,
       limits: { minRange: 5, maxRange: 250 },
       panBackThreshold: 20,
     });
@@ -284,7 +284,7 @@ describe("attachChartGestures", () => {
     const onNeedOlder = vi.fn();
     const detach = attachChartGestures(canvas, chart, {
       enabled: true,
-      dataLen: 1000,
+      dataLen: () => 1000,
       limits: { minRange: 5, maxRange: 250 },
       panBackThreshold: 20,
       onNeedOlder,
@@ -309,7 +309,7 @@ describe("attachChartGestures", () => {
     const { chart, zoomScale } = makeFakeChart();
     const detach = attachChartGestures(canvas, chart, {
       enabled: true,
-      dataLen: 1000,
+      dataLen: () => 1000,
       limits: { minRange: 5, maxRange: 250 },
       panBackThreshold: 20,
     });

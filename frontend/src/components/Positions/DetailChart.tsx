@@ -639,7 +639,7 @@ export function DetailChart({
         chartRef.current as unknown as import("./chartGestures").GestureChart,
         {
           enabled: gestureEnabled,
-          dataLen: data.closes.length,
+          dataLen: () => dataRef.current?.closes.length ?? 0,
           limits: {
             minRange: 5,
             maxRange: viewCfg.datasetType === "candlestick" ? 250 : undefined,

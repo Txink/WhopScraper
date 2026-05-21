@@ -119,8 +119,10 @@ export interface GestureChart {
 export interface AttachOpts {
   /** When false, attach a no-op (no listeners). Per-view gate. */
   enabled: boolean;
-  /** Current loaded-bar count. Used to clamp drag-zoom against dataMax. */
-  dataLen: number;
+  /** Returns the current loaded-bar count. Called fresh on each pointer
+   *  event so prepended bars (via onNeedOlder) and live-tick appends are
+   *  reflected in the drag-zoom clamp without re-attaching listeners. */
+  dataLen: () => number;
   /** Min/max range limits passed through to `computeDragZoom`. */
   limits: { minRange: number; maxRange?: number };
   /** Bar-index threshold near 0 below which `onNeedOlder` fires. */
@@ -210,7 +212,7 @@ export function attachChartGestures(
         startMax: dragState.startMax,
         startIdx: dragState.startIdx,
         limits: {
-          dataLen: opts.dataLen,
+          dataLen: opts.dataLen(),
           minRange: opts.limits.minRange,
           maxRange: opts.limits.maxRange,
         },
