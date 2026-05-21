@@ -8,6 +8,11 @@ import {
   todayInShanghai,
   addDays,
   monthOf,
+  daysInMonth,
+  currentIsoWeek,
+  isoWeekOfDay,
+  weeksCoveringMonth,
+  formatDayLabel,
 } from "./weekUtils";
 import type { TaskSummary } from "../../api/domain-types";
 
@@ -215,5 +220,90 @@ describe("monthOf", () => {
     expect(monthOf("2026-05-21")).toBe("2026-05");
     expect(monthOf("2026-01-01")).toBe("2026-01");
     expect(monthOf("2025-12-31")).toBe("2025-12");
+  });
+});
+
+describe("daysInMonth", () => {
+  it("returns 31 day-keys for May 2026", () => {
+    const days = daysInMonth("2026-05");
+    expect(days).toHaveLength(31);
+    expect(days[0]).toBe("2026-05-01");
+    expect(days[30]).toBe("2026-05-31");
+  });
+
+  it("returns 30 day-keys for June 2026", () => {
+    expect(daysInMonth("2026-06")).toHaveLength(30);
+  });
+
+  it("returns 28 day-keys for February 2026 (non-leap)", () => {
+    const days = daysInMonth("2026-02");
+    expect(days).toHaveLength(28);
+    expect(days[27]).toBe("2026-02-28");
+  });
+
+  it("returns 29 day-keys for February 2028 (leap)", () => {
+    const days = daysInMonth("2028-02");
+    expect(days).toHaveLength(29);
+    expect(days[28]).toBe("2028-02-29");
+  });
+});
+
+describe("isoWeekOfDay", () => {
+  it("returns 'YYYY-Www' for a mid-week date", () => {
+    // 2026-05-21 is a Thursday in week 21 of 2026.
+    expect(isoWeekOfDay("2026-05-21")).toBe("2026-W21");
+  });
+
+  it("matches currentIsoWeek() for today", () => {
+    const today = todayInShanghai();
+    expect(isoWeekOfDay(today)).toBe(currentIsoWeek());
+  });
+
+  it("handles year-boundary ISO weeks (early January assigned to prior year)", () => {
+    // 2027-01-01 is a Friday; could be W53 of 2026 or W01 of 2027.
+    expect(isoWeekOfDay("2027-01-01")).toMatch(/^\d{4}-W\d{2}$/);
+  });
+});
+
+describe("weeksCoveringMonth", () => {
+  it("returns the distinct ISO weeks touched by every day of the month, in order", () => {
+    const weeks = weeksCoveringMonth("2026-05");
+    expect(weeks.length).toBeGreaterThanOrEqual(4);
+    expect(weeks.length).toBeLessThanOrEqual(6);
+    weeks.forEach((w) => expect(w).toMatch(/^\d{4}-W\d{2}$/));
+    expect(new Set(weeks).size).toBe(weeks.length);
+    expect(weeks[0]).toBe(isoWeekOfDay("2026-05-01"));
+    expect(weeks[weeks.length - 1]).toBe(isoWeekOfDay("2026-05-31"));
+  });
+});
+
+describe("formatDayLabel", () => {
+  it("returns '今天' for today's dayKey", () => {
+    expect(formatDayLabel(todayInShanghai())).toBe("今天");
+  });
+
+  it("returns '昨天' for yesterday's dayKey", () => {
+    expect(formatDayLabel(addDays(todayInShanghai(), -1))).toBe("昨天");
+  });
+
+  it("returns 'M月D日 周X' for a same-year non-recent date", () => {
+    const today = todayInShanghai();
+    const year = today.slice(0, 4);
+    const candidate = `${year}-07-15`;
+    if (candidate === today || candidate === addDays(today, -1)) {
+      return;
+    }
+    const label = formatDayLabel(candidate);
+    expect(label).toMatch(/^\d{1,2}月\d{1,2}日 周[一二三四五六日]$/);
+    expect(label).toContain("7月15日");
+  });
+
+  it("returns 'YYYY年M月D日 周X' for a cross-year date", () => {
+    const today = todayInShanghai();
+    const year = Number(today.slice(0, 4));
+    const otherYear = year - 1;
+    const label = formatDayLabel(`${otherYear}-01-15`);
+    expect(label).toMatch(/^\d{4}年\d{1,2}月\d{1,2}日 周[一二三四五六日]$/);
+    expect(label).toContain(`${otherYear}年`);
   });
 });

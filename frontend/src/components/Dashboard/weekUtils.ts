@@ -168,6 +168,93 @@ export function monthOf(dayKey: string): string {
   return `${m[1]}-${m[2]}`;
 }
 
+export function daysInMonth(monthKey: string): string[] {
+  const m = monthKey.match(/^(\d{4})-(\d{2})$/);
+  if (!m) throw new Error(`daysInMonth: invalid monthKey "${monthKey}"`);
+  const year = Number(m[1]);
+  const month = Number(m[2]);
+  // Day 0 of next month = last day of this month (UTC date math).
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const out: string[] = [];
+  for (let d = 1; d <= lastDay; d++) {
+    out.push(`${m[1]}-${m[2]}-${String(d).padStart(2, "0")}`);
+  }
+  return out;
+}
+
+/** ISO-8601 week label "YYYY-Www" for a Beijing-calendar dayKey. The
+ *  ISO year and week number can differ from the input year around
+ *  Jan/Dec boundaries (e.g. 2027-01-01 may fall in 2026-W53). */
+export function isoWeekOfDay(dayKey: string): string {
+  const m = dayKey.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) throw new Error(`isoWeekOfDay: invalid dayKey "${dayKey}"`);
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const d = Number(m[3]);
+  const anchor = new Date(Date.UTC(y, mo - 1, d));
+  const dayNum = anchor.getUTCDay() || 7;            // Sun=0 → 7
+  anchor.setUTCDate(anchor.getUTCDate() + 4 - dayNum); // Thursday of this ISO week
+  const yearStart = new Date(Date.UTC(anchor.getUTCFullYear(), 0, 1));
+  const weekNum = Math.ceil(
+    ((anchor.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7,
+  );
+  return `${anchor.getUTCFullYear()}-W${String(weekNum).padStart(2, "0")}`;
+}
+
+export function weeksCoveringMonth(monthKey: string): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const day of daysInMonth(monthKey)) {
+    const w = isoWeekOfDay(day);
+    if (!seen.has(w)) {
+      seen.add(w);
+      out.push(w);
+    }
+  }
+  return out;
+}
+
+const _BJ_WEEKDAY = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Shanghai",
+  weekday: "short",
+});
+
+const _WEEKDAY_ZH: Record<string, string> = {
+  Sun: "周日",
+  Mon: "周一",
+  Tue: "周二",
+  Wed: "周三",
+  Thu: "周四",
+  Fri: "周五",
+  Sat: "周六",
+};
+
+function _weekdayZh(dayKey: string): string {
+  const m = dayKey.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) throw new Error(`_weekdayZh: invalid dayKey "${dayKey}"`);
+  const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12));
+  const wd = _BJ_WEEKDAY.formatToParts(d).find((p) => p.type === "weekday")?.value ?? "";
+  return _WEEKDAY_ZH[wd] ?? wd;
+}
+
+/** Chinese-friendly day label. Rules:
+ *   - today        → "今天"
+ *   - yesterday    → "昨天"
+ *   - same year    → "5月18日 周日"
+ *   - cross year   → "2025年12月31日 周三"
+ */
+export function formatDayLabel(dayKey: string): string {
+  const today = todayInShanghai();
+  if (dayKey === today) return "今天";
+  if (dayKey === addDays(today, -1)) return "昨天";
+  const [y, mo, d] = dayKey.split("-").map(Number);
+  const wd = _weekdayZh(dayKey);
+  const sameYear = String(y) === today.slice(0, 4);
+  return sameYear
+    ? `${mo}月${d}日 ${wd}`
+    : `${y}年${mo}月${d}日 ${wd}`;
+}
+
 export function computeWeeks(tasks: TaskSummary[]): ComputedWeeks {
   const sorted = [...tasks].sort((a, b) => taskTime(b).localeCompare(taskTime(a)));
   const groups = new Map<string, TaskSummary[]>();
