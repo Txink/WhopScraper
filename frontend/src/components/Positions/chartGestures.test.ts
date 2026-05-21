@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeDragZoom } from "./chartGestures";
+import { computeDragZoom, computeWheelPan } from "./chartGestures";
 
 describe("computeDragZoom", () => {
   const baseLimits = { dataLen: 1000, minRange: 5, maxRange: 250 };
@@ -102,5 +102,24 @@ describe("computeDragZoom", () => {
     // newWidth≈272 → newMin≈-17.2 → left-clamp: newMin=0, newMax≈272
     expect(out.newMin).toBe(0);
     expect(out.newMax).toBeCloseTo(272, 0);
+  });
+});
+
+describe("computeWheelPan", () => {
+  it("uses deltaX when non-zero (trackpad horizontal scroll)", () => {
+    // deltaX > 0 = page scrolls right = chart view shifts right → positive pan x
+    expect(computeWheelPan({ deltaX: 30, deltaY: 0 })).toBe(30);
+    expect(computeWheelPan({ deltaX: -30, deltaY: 0 })).toBe(-30);
+  });
+
+  it("falls back to deltaY when deltaX is 0 (mouse wheel)", () => {
+    // deltaY > 0 = wheel scrolled down → view moves toward older bars (left)
+    // → chart.pan({x: +deltaY}) (positive pan x shifts data right under view = view shifts left)
+    expect(computeWheelPan({ deltaX: 0, deltaY: 100 })).toBe(100);
+    expect(computeWheelPan({ deltaX: 0, deltaY: -100 })).toBe(-100);
+  });
+
+  it("prefers deltaX over deltaY when both present", () => {
+    expect(computeWheelPan({ deltaX: 10, deltaY: 100 })).toBe(10);
   });
 });

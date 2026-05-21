@@ -75,3 +75,21 @@ export function computeDragZoom(input: DragZoomInput): DragZoomResult | null {
 
   return { newMin, newMax };
 }
+
+export interface WheelInput {
+  deltaX: number;
+  deltaY: number;
+}
+
+/** Map a wheel event's delta to a horizontal pan pixel amount that gets
+ *  fed to `chart.pan({x: ...})`. Trackpad horizontal scroll (deltaX) wins
+ *  when present; otherwise vertical wheel/scroll falls back to deltaY.
+ *
+ *  Sign convention: positive return value pans the view toward older
+ *  bars (left) — chartjs-plugin-zoom's `chart.pan({x: +n})` shifts the
+ *  data right relative to the chart area, which presents as the view
+ *  moving left. */
+export function computeWheelPan(input: WheelInput): number {
+  if (input.deltaX !== 0) return input.deltaX;
+  return input.deltaY;
+}
