@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { computeDragZoom, computeWheelPan } from "./chartGestures";
+import { describe, it, expect, vi } from "vitest";
+import { computeDragZoom, computeWheelPan, attachChartGestures, type GestureChart } from "./chartGestures";
 
 describe("computeDragZoom", () => {
   const baseLimits = { dataLen: 1000, minRange: 5, maxRange: 250 };
@@ -121,5 +121,202 @@ describe("computeWheelPan", () => {
 
   it("prefers deltaX over deltaY when both present", () => {
     expect(computeWheelPan({ deltaX: 10, deltaY: 100 })).toBe(10);
+  });
+});
+
+function makeFakeChart(): {
+  chart: GestureChart;
+  zoomScale: ReturnType<typeof vi.fn>;
+  pan: ReturnType<typeof vi.fn>;
+} {
+  const zoomScale = vi.fn();
+  const pan = vi.fn();
+  const chart: GestureChart = {
+    scales: {
+      x: {
+        min: 100, max: 200,
+        getValueForPixel: (px: number) => {
+          // Linear: px 0→100, px 400→200
+          return 100 + (px / 400) * 100;
+        },
+      },
+    },
+    zoomScale,
+    pan,
+  };
+  return { chart, zoomScale, pan };
+}
+
+function pointer(type: string, x: number, opts: Partial<PointerEventInit> = {}): PointerEvent {
+  return new PointerEvent(type, {
+    pointerId: opts.pointerId ?? 1,
+    clientX: x,
+    clientY: 0,
+    bubbles: true,
+    cancelable: true,
+    ...opts,
+  });
+}
+
+describe("attachChartGestures", () => {
+  it("noop when enabled: false (no chart calls on pointer events)", () => {
+    const canvas = document.createElement("canvas");
+    document.body.appendChild(canvas);
+    const { chart, zoomScale, pan } = makeFakeChart();
+    const detach = attachChartGestures(canvas, chart, {
+      enabled: false,
+      dataLen: 1000,
+      limits: { minRange: 5, maxRange: 250 },
+      panBackThreshold: 20,
+    });
+    canvas.dispatchEvent(pointer("pointerdown", 100));
+    canvas.dispatchEvent(pointer("pointermove", 240));
+    canvas.dispatchEvent(pointer("pointerup", 240));
+    expect(zoomScale).not.toHaveBeenCalled();
+    expect(pan).not.toHaveBeenCalled();
+    detach();
+    canvas.remove();
+  });
+
+  it("single-pointer horizontal drag calls zoomScale on the x axis", () => {
+    const canvas = document.createElement("canvas");
+    document.body.appendChild(canvas);
+    const { chart, zoomScale } = makeFakeChart();
+    const onAction = vi.fn();
+    const detach = attachChartGestures(canvas, chart, {
+      enabled: true,
+      dataLen: 1000,
+      limits: { minRange: 5, maxRange: 250 },
+      panBackThreshold: 20,
+      onAction,
+    });
+
+    canvas.dispatchEvent(pointer("pointerdown", 100));
+    canvas.dispatchEvent(pointer("pointermove", 240));  // +140px → ~2× zoom in
+    expect(zoomScale).toHaveBeenCalled();
+    const call = zoomScale.mock.calls[zoomScale.mock.calls.length - 1];
+    expect(call[0]).toBe("x");
+    const range = call[1] as { min: number; max: number };
+    const width = range.max - range.min;
+    expect(width).toBeGreaterThan(48);
+    expect(width).toBeLessThan(52);
+
+    canvas.dispatchEvent(pointer("pointerup", 240));
+    expect(onAction).toHaveBeenCalled();
+    detach();
+    canvas.remove();
+  });
+
+  it("wheel event calls chart.pan({x: ...}) and preventDefaults", () => {
+    const canvas = document.createElement("canvas");
+    document.body.appendChild(canvas);
+    const { chart, pan } = makeFakeChart();
+    const onAction = vi.fn();
+    const detach = attachChartGestures(canvas, chart, {
+      enabled: true,
+      dataLen: 1000,
+      limits: { minRange: 5, maxRange: 250 },
+      panBackThreshold: 20,
+      onAction,
+    });
+
+    const wheel = new WheelEvent("wheel", {
+      deltaX: 0, deltaY: 50,
+      bubbles: true, cancelable: true,
+    });
+    canvas.dispatchEvent(wheel);
+    expect(pan).toHaveBeenCalledWith({ x: 50 }, undefined, "none");
+    expect(wheel.defaultPrevented).toBe(true);
+    expect(onAction).toHaveBeenCalled();
+    detach();
+    canvas.remove();
+  });
+
+  it("two simultaneous pointers switch to pan mode (center delta per event)", () => {
+    const canvas = document.createElement("canvas");
+    document.body.appendChild(canvas);
+    const { chart, zoomScale, pan } = makeFakeChart();
+    const detach = attachChartGestures(canvas, chart, {
+      enabled: true,
+      dataLen: 1000,
+      limits: { minRange: 5, maxRange: 250 },
+      panBackThreshold: 20,
+    });
+
+    canvas.dispatchEvent(pointer("pointerdown", 100, { pointerId: 1 }));
+    canvas.dispatchEvent(pointer("pointerdown", 200, { pointerId: 2 }));
+    // After the 2nd pointerdown, the in-progress drag-zoom is abandoned.
+    expect(zoomScale).not.toHaveBeenCalled();
+
+    // Pointer 1 alone moves +20 → center moves +10 (other finger unchanged).
+    canvas.dispatchEvent(pointer("pointermove", 120, { pointerId: 1 }));
+    expect(pan).toHaveBeenCalledTimes(1);
+    expect((pan.mock.calls[0]![0] as { x: number }).x).toBeCloseTo(10, 1);
+
+    // Pointer 2 alone moves +20 → center moves another +10.
+    canvas.dispatchEvent(pointer("pointermove", 220, { pointerId: 2 }));
+    expect(pan).toHaveBeenCalledTimes(2);
+    expect((pan.mock.calls[1]![0] as { x: number }).x).toBeCloseTo(10, 1);
+
+    // Cumulative pan = 20px, matching "both fingers moved 20px right".
+    canvas.dispatchEvent(pointer("pointerup", 120, { pointerId: 1 }));
+    canvas.dispatchEvent(pointer("pointerup", 220, { pointerId: 2 }));
+    detach();
+    canvas.remove();
+  });
+
+  it("fires onNeedOlder when post-zoom min ≤ panBackThreshold", () => {
+    const canvas = document.createElement("canvas");
+    document.body.appendChild(canvas);
+    const { chart, zoomScale } = makeFakeChart();
+    // Chart starts already near the left edge so a zoom-out pushes min to 0.
+    chart.scales.x.min = 20;
+    chart.scales.x.max = 80;
+    chart.scales.x.getValueForPixel = (px: number) => 20 + (px / 400) * 60;
+
+    // Mirror zoomScale into the scale so the post-action check sees fresh min.
+    let installedMin = chart.scales.x.min;
+    zoomScale.mockImplementation((_id, range) => {
+      installedMin = range.min;
+      chart.scales.x.min = range.min;
+      chart.scales.x.max = range.max;
+    });
+    const onNeedOlder = vi.fn();
+    const detach = attachChartGestures(canvas, chart, {
+      enabled: true,
+      dataLen: 1000,
+      limits: { minRange: 5, maxRange: 250 },
+      panBackThreshold: 20,
+      onNeedOlder,
+    });
+
+    // pointerdown at px 200 → startIdx = 50 (middle of [20,80])
+    canvas.dispatchEvent(pointer("pointerdown", 200));
+    // Drag far left → big zoom-out, window clamps to maxRange 250 and pivots
+    // around startIdx 50 with fraction 0.5 → newMin = 50 - 125 = -75 → clamp 0.
+    canvas.dispatchEvent(pointer("pointermove", -1000));
+    expect(onNeedOlder).toHaveBeenCalled();
+    expect(installedMin).toBeLessThanOrEqual(20);
+
+    canvas.dispatchEvent(pointer("pointerup", -1000));
+    detach();
+    canvas.remove();
+  });
+
+  it("detach removes listeners (no chart calls after teardown)", () => {
+    const canvas = document.createElement("canvas");
+    document.body.appendChild(canvas);
+    const { chart, zoomScale } = makeFakeChart();
+    const detach = attachChartGestures(canvas, chart, {
+      enabled: true,
+      dataLen: 1000,
+      limits: { minRange: 5, maxRange: 250 },
+      panBackThreshold: 20,
+    });
+    detach();
+    canvas.dispatchEvent(pointer("pointerdown", 100));
+    canvas.dispatchEvent(pointer("pointermove", 240));
+    expect(zoomScale).not.toHaveBeenCalled();
+    canvas.remove();
   });
 });

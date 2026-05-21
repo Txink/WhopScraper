@@ -1,5 +1,22 @@
 import "@testing-library/jest-dom/vitest";
 
+// jsdom 25 does not implement PointerEvent. Polyfill it as a thin subclass of
+// MouseEvent so pointer-event dispatching works in gesture smoke tests.
+if (typeof globalThis.PointerEvent === "undefined") {
+  class PointerEventPolyfill extends MouseEvent {
+    readonly pointerId: number;
+    readonly pointerType: string;
+    readonly isPrimary: boolean;
+    constructor(type: string, init: PointerEventInit = {}) {
+      super(type, init);
+      this.pointerId = init.pointerId ?? 0;
+      this.pointerType = init.pointerType ?? "mouse";
+      this.isPrimary = init.isPrimary ?? true;
+    }
+  }
+  globalThis.PointerEvent = PointerEventPolyfill as unknown as typeof PointerEvent;
+}
+
 // Mock HammerJS at the global level before any modules that use it are loaded.
 // Chart.js plugin zoom requires HammerJS, which tries to attach event listeners
 // during initialization. This fails in jsdom because the document/window object

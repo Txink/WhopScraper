@@ -93,3 +93,184 @@ export function computeWheelPan(input: WheelInput): number {
   if (input.deltaX !== 0) return input.deltaX;
   return input.deltaY;
 }
+
+/** Subset of the Chart.js + chartjs-plugin-zoom surface we depend on.
+ *  Defined as an interface so unit tests can pass a fake. */
+export interface GestureChart {
+  scales: {
+    x: {
+      min: number;
+      max: number;
+      getValueForPixel: (px: number) => number | undefined;
+    };
+  };
+  zoomScale: (
+    scaleId: string,
+    range: { min: number; max: number },
+    transition?: string,
+  ) => void;
+  pan: (
+    amount: { x?: number; y?: number },
+    scales?: unknown,
+    mode?: string,
+  ) => void;
+}
+
+export interface AttachOpts {
+  /** When false, attach a no-op (no listeners). Per-view gate. */
+  enabled: boolean;
+  /** Current loaded-bar count. Used to clamp drag-zoom against dataMax. */
+  dataLen: number;
+  /** Min/max range limits passed through to `computeDragZoom`. */
+  limits: { minRange: number; maxRange?: number };
+  /** Bar-index threshold near 0 below which `onNeedOlder` fires. */
+  panBackThreshold: number;
+  /** Fired after any pan/zoom action — parent uses this to set its
+   *  isZoomed flag (drives the reset-button visibility). */
+  onAction?: () => void;
+  /** Fired when pan/zoom-out brings the visible window's min within
+   *  `panBackThreshold` of bar 0. Parent fetches older bars. */
+  onNeedOlder?: () => void;
+}
+
+/** Attach gesture handlers to `canvas` that drive `chart` per the new
+ *  mapping (drag=zoom, wheel/multi-pointer=pan). Returns a teardown
+ *  function that removes every listener it installed. Calling with
+ *  `enabled: false` returns a no-op teardown. */
+export function attachChartGestures(
+  canvas: HTMLCanvasElement,
+  chart: GestureChart,
+  opts: AttachOpts,
+): () => void {
+  if (!opts.enabled) return () => {};
+
+  // Active pointers — used to switch between drag-zoom (1 pointer) and
+  // pan (2 pointers). Map pointerId → last clientX.
+  const pointers = new Map<number, number>();
+
+  // Drag-zoom state — captured on the first pointerdown.
+  let dragState: {
+    startPx: number;
+    startMin: number;
+    startMax: number;
+    startIdx: number;
+  } | null = null;
+
+  // Pan state — center X across active pointers, captured when we enter
+  // multi-pointer mode.
+  let panCenterX: number | null = null;
+
+  // jsdom doesn't compute offsetX (no layout), and even in real browsers
+  // a canvas offset only matches clientX if it's at the viewport origin.
+  // Always derive the canvas-local X via getBoundingClientRect.
+  const getCanvasX = (clientX: number): number => {
+    const rect = canvas.getBoundingClientRect();
+    return clientX - rect.left;
+  };
+
+  const checkNeedOlder = () => {
+    if (chart.scales.x.min <= opts.panBackThreshold) {
+      opts.onNeedOlder?.();
+    }
+  };
+
+  const onPointerDown = (e: PointerEvent) => {
+    canvas.setPointerCapture?.(e.pointerId);
+    pointers.set(e.pointerId, e.clientX);
+    if (pointers.size === 1) {
+      const startPx = getCanvasX(e.clientX);
+      const startIdx = chart.scales.x.getValueForPixel(startPx);
+      if (startIdx == null || !Number.isFinite(startIdx)) {
+        dragState = null;
+        return;
+      }
+      dragState = {
+        startPx,
+        startMin: chart.scales.x.min,
+        startMax: chart.scales.x.max,
+        startIdx,
+      };
+    } else if (pointers.size === 2) {
+      // Switching from drag-zoom to pan — abandon any in-progress drag.
+      dragState = null;
+      const xs = Array.from(pointers.values());
+      panCenterX = (xs[0]! + xs[1]!) / 2;
+    }
+  };
+
+  const onPointerMove = (e: PointerEvent) => {
+    if (!pointers.has(e.pointerId)) return;
+    pointers.set(e.pointerId, e.clientX);
+
+    if (pointers.size === 1 && dragState) {
+      const out = computeDragZoom({
+        startPx: dragState.startPx,
+        currentPx: getCanvasX(e.clientX),
+        startMin: dragState.startMin,
+        startMax: dragState.startMax,
+        startIdx: dragState.startIdx,
+        limits: {
+          dataLen: opts.dataLen,
+          minRange: opts.limits.minRange,
+          maxRange: opts.limits.maxRange,
+        },
+      });
+      if (out) {
+        chart.zoomScale("x", { min: out.newMin, max: out.newMax }, "none");
+        opts.onAction?.();
+        checkNeedOlder();
+      }
+    } else if (pointers.size >= 2 && panCenterX != null) {
+      const xs = Array.from(pointers.values());
+      const newCenter = (xs[0]! + xs[1]!) / 2;
+      const dx = newCenter - panCenterX;
+      panCenterX = newCenter;
+      if (Math.abs(dx) > 0) {
+        chart.pan({ x: dx }, undefined, "none");
+        opts.onAction?.();
+        checkNeedOlder();
+      }
+    }
+  };
+
+  const endPointer = (e: PointerEvent) => {
+    canvas.releasePointerCapture?.(e.pointerId);
+    pointers.delete(e.pointerId);
+    if (pointers.size === 0) {
+      dragState = null;
+      panCenterX = null;
+    } else if (pointers.size === 1) {
+      // Returning to single-pointer — abandon pan mode but don't auto-start
+      // a new drag-zoom from mid-gesture. The user has to release and re-press.
+      panCenterX = null;
+      dragState = null;
+    }
+  };
+
+  const onWheel = (e: WheelEvent) => {
+    e.preventDefault();
+    const panAmount = computeWheelPan({ deltaX: e.deltaX, deltaY: e.deltaY });
+    if (panAmount === 0) return;
+    chart.pan({ x: panAmount }, undefined, "none");
+    opts.onAction?.();
+    checkNeedOlder();
+  };
+
+  canvas.addEventListener("pointerdown", onPointerDown);
+  canvas.addEventListener("pointermove", onPointerMove);
+  canvas.addEventListener("pointerup", endPointer);
+  canvas.addEventListener("pointercancel", endPointer);
+  // passive: false so preventDefault works (otherwise the page scrolls).
+  canvas.addEventListener("wheel", onWheel, { passive: false });
+
+  return () => {
+    canvas.removeEventListener("pointerdown", onPointerDown);
+    canvas.removeEventListener("pointermove", onPointerMove);
+    canvas.removeEventListener("pointerup", endPointer);
+    canvas.removeEventListener("pointercancel", endPointer);
+    canvas.removeEventListener("wheel", onWheel);
+    pointers.clear();
+    dragState = null;
+    panCenterX = null;
+  };
+}
