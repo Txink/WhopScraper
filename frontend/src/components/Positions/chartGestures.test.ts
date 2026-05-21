@@ -106,21 +106,22 @@ describe("computeDragZoom", () => {
 });
 
 describe("computeWheelPan", () => {
-  it("uses deltaX when non-zero (trackpad horizontal scroll)", () => {
-    // deltaX > 0 = page scrolls right = chart view shifts right → positive pan x
-    expect(computeWheelPan({ deltaX: 30, deltaY: 0 })).toBe(30);
-    expect(computeWheelPan({ deltaX: -30, deltaY: 0 })).toBe(-30);
+  it("uses deltaX when non-zero (trackpad horizontal scroll), negated", () => {
+    // Content follows finger: swipe right (deltaX < 0) → view moves right.
+    // chart.pan({x: +n}) moves the view LEFT, so we negate deltaX.
+    expect(computeWheelPan({ deltaX: 30, deltaY: 0 })).toBe(-30);
+    expect(computeWheelPan({ deltaX: -30, deltaY: 0 })).toBe(30);
   });
 
-  it("falls back to deltaY when deltaX is 0 (mouse wheel)", () => {
-    // deltaY > 0 = wheel scrolled down → view moves toward older bars (left)
-    // → chart.pan({x: +deltaY}) (positive pan x shifts data right under view = view shifts left)
-    expect(computeWheelPan({ deltaX: 0, deltaY: 100 })).toBe(100);
-    expect(computeWheelPan({ deltaX: 0, deltaY: -100 })).toBe(-100);
+  it("falls back to deltaY when deltaX is 0 (mouse wheel), negated", () => {
+    // Scroll down (deltaY > 0) = view moves forward in time (right) toward newer bars.
+    // chart.pan({x: +n}) moves the view LEFT, so we negate deltaY.
+    expect(computeWheelPan({ deltaX: 0, deltaY: 100 })).toBe(-100);
+    expect(computeWheelPan({ deltaX: 0, deltaY: -100 })).toBe(100);
   });
 
   it("prefers deltaX over deltaY when both present", () => {
-    expect(computeWheelPan({ deltaX: 10, deltaY: 100 })).toBe(10);
+    expect(computeWheelPan({ deltaX: 10, deltaY: 100 })).toBe(-10);
   });
 });
 
@@ -225,7 +226,7 @@ describe("attachChartGestures", () => {
       bubbles: true, cancelable: true,
     });
     canvas.dispatchEvent(wheel);
-    expect(pan).toHaveBeenCalledWith({ x: 50 }, undefined, "none");
+    expect(pan).toHaveBeenCalledWith({ x: -50 }, undefined, "none");
     expect(wheel.defaultPrevented).toBe(true);
     expect(onAction).toHaveBeenCalled();
     detach();

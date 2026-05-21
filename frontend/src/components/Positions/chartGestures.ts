@@ -85,13 +85,14 @@ export interface WheelInput {
  *  fed to `chart.pan({x: ...})`. Trackpad horizontal scroll (deltaX) wins
  *  when present; otherwise vertical wheel/scroll falls back to deltaY.
  *
- *  Sign convention: positive return value pans the view toward older
- *  bars (left) — chartjs-plugin-zoom's `chart.pan({x: +n})` shifts the
- *  data right relative to the chart area, which presents as the view
- *  moving left. */
+ *  Direction follows content-follows-finger: scrolling down / swiping
+ *  left moves the view forward in time (toward newer bars on the right).
+ *  Implemented by negating both deltas — chartjs-plugin-zoom's
+ *  `chart.pan({x: +n})` shifts the view left, so we want `-deltaY` for
+ *  "scroll down = view goes right". */
 export function computeWheelPan(input: WheelInput): number {
-  if (input.deltaX !== 0) return input.deltaX;
-  return input.deltaY;
+  if (input.deltaX !== 0) return -input.deltaX;
+  return -input.deltaY;
 }
 
 /** Subset of the Chart.js + chartjs-plugin-zoom surface we depend on.
