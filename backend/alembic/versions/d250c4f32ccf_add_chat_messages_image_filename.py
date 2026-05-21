@@ -9,17 +9,17 @@ basename (e.g. ``post_1CbE4.avif``) so the data directory remains portable;
 the API composes the full URL at response time.  Nullable with no default —
 rows without an image carry NULL.
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
 
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = 'd250c4f32ccf'
-down_revision: Union[str, Sequence[str], None] = 'd170f76b4e44'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = 'd170f76b4e44'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:

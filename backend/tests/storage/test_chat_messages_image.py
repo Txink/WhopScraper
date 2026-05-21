@@ -1,10 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
-
-UTC = timezone.utc
-
-import pytest
+from datetime import UTC, datetime
 
 from app.storage.db import session_scope
 from app.storage.schema import ChatMessageRow
