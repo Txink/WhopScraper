@@ -882,19 +882,38 @@ export function DetailChart({
         ch.update("none");
       }
 
-      // Position the pulse dot at the last (x, y) data point.
+      // Position the pulse dot at the last printed bar — not the last
+      // slot index. buildSessionSlots() reserves slots for the entire
+      // session window (e.g. 960 minutes when sessions = "all"); using
+      // `length - 1` would pin the pulse to the end of the session even
+      // when prints have only reached mid-session, parking it far past
+      // where the line actually ends.
       const pulse = pulseRef.current;
       if (pulse) {
-        const priceArr = priceDataset.data as unknown as number[];
-        const lastIdx = priceArr.length - 1;
-        const px = ch.scales.x.getPixelForValue(lastIdx);
-        const py = ch.scales.y.getPixelForValue(lastDone);
-        if (Number.isFinite(px) && Number.isFinite(py)) {
-          pulse.style.left = `${px}px`;
-          pulse.style.top = `${py}px`;
-          pulse.classList.add("visible");
-          const isDown = (q?.change ?? 0) < 0;
-          pulse.classList.toggle("down", isDown);
+        const priceArr = priceDataset.data as unknown as Array<
+          number | null | { c?: number | null }
+        >;
+        let lastIdx = -1;
+        for (let i = priceArr.length - 1; i >= 0; i--) {
+          const v = priceArr[i];
+          const num = typeof v === "number" ? v : v?.c;
+          if (num != null && Number.isFinite(num)) {
+            lastIdx = i;
+            break;
+          }
+        }
+        if (lastIdx < 0) {
+          pulse.classList.remove("visible", "down");
+        } else {
+          const px = ch.scales.x.getPixelForValue(lastIdx);
+          const py = ch.scales.y.getPixelForValue(lastDone);
+          if (Number.isFinite(px) && Number.isFinite(py)) {
+            pulse.style.left = `${px}px`;
+            pulse.style.top = `${py}px`;
+            pulse.classList.add("visible");
+            const isDown = (q?.change ?? 0) < 0;
+            pulse.classList.toggle("down", isDown);
+          }
         }
       }
     };

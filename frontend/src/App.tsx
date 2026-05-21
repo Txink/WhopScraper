@@ -112,6 +112,14 @@ function Dashboard({ token }: { token: string }) {
     refreshPositions();
   }, [conn.ws]);
 
+  // Debounce timer for execution-driven positions refetch. A successful
+  // order can produce a burst of partial-fill execution.update pushes
+  // before the order goes fully filled; coalescing them into one
+  // /api/positions call avoids hammering the endpoint while still
+  // giving the UI an up-to-date qty / avg_cost / P&L within ~600ms of
+  // the last fill in the burst.
+  const positionsRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // On mount: fetch health + initial tasks + pages; open WS; fetch stats + positions
   useEffect(() => {
     let alive = true;
@@ -196,6 +204,16 @@ function Dashboard({ token }: { token: string }) {
           const p = evt.payload as Execution;
           if (p?.order_id) {
             useExecutionsStore.getState().upsertExecution(p);
+            // A fill changes the underlying position (qty, avg_cost,
+            // market value). Schedule a debounced positions refetch so
+            // bursts of partial fills coalesce into a single call.
+            if (positionsRefreshTimerRef.current != null) {
+              clearTimeout(positionsRefreshTimerRef.current);
+            }
+            positionsRefreshTimerRef.current = setTimeout(() => {
+              positionsRefreshTimerRef.current = null;
+              refreshPositions();
+            }, 600);
           }
         } else if (evt.type === "chat.message_stored") {
           // WS payload is just ``{page_id, message_id}`` (see
@@ -227,6 +245,10 @@ function Dashboard({ token }: { token: string }) {
     return () => {
       alive = false;
       client.disconnect();
+      if (positionsRefreshTimerRef.current != null) {
+        clearTimeout(positionsRefreshTimerRef.current);
+        positionsRefreshTimerRef.current = null;
+      }
     };
   }, []);  // eslint-disable-line react-hooks/exhaustive-deps
 

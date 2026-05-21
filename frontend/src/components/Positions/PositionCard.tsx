@@ -179,7 +179,11 @@ export function PositionCard({ position, quote, intraday, executions, onClick }:
         {/* 3 decimals: TSLL et al. trade in sub-dollar increments where the
             third digit is informative — 2 decimals would collapse e.g.
             $9.235 and $9.237 into the same display. */}
-        <span className="pcard-price">{last != null ? `$${fmt(last, 3)}` : "—"}</span>
+        <span
+          className={`pcard-price ${change == null ? "" : isPos ? "pos" : "neg"}`}
+        >
+          {last != null ? `$${fmt(last, 3)}` : "—"}
+        </span>
         {change != null && (
           <span className={`pcard-change ${isPos ? "pos" : "neg"}`}>
             {isPos ? "▲" : "▼"} {pct(changePct)}
@@ -201,7 +205,7 @@ export function PositionCard({ position, quote, intraday, executions, onClick }:
           bars={intraday?.bars}
           session={tradeSession}
           lastDone={last}
-          openPrice={quote?.open ?? null}
+          refPrice={dayBaseline}
         />
       </div>
 

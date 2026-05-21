@@ -708,35 +708,27 @@ export function DetailPane({ position, onBack }: Props) {
     });
   }, [ticker, setTrades]);
 
-  const onUnbindPair = useCallback((pairId: number) => {
-    setPendingConfirm({
-      title: `解绑 T-${pairId} 配对`,
-      description: `该配对会被删除，关联的交易回到"未做T"状态，可重新参与其他做T 绑定。`,
-      confirmLabel: "解绑",
-      danger: true,
-      onConfirm: async () => {
-        try {
-          await api.deletePair(pairId);
-          // Drop the pair from the local store.
-          const livePairs = usePairsStore.getState().byTicker[ticker] ?? [];
-          setPairs(ticker, livePairs.filter((p) => p.id !== pairId));
-          // Strip [pairId, *] from any trade tags so the做T chip column
-          // updates immediately without a re-fetch.
-          const currentTrades = useTradesStore.getState().byTicker[ticker] ?? [];
-          const cleared = currentTrades
-            .filter((t) => (t.t_pair_tags ?? []).some(([pid]) => pid === pairId))
-            .map((t) => ({
-              ...t,
-              t_pair_tags: (t.t_pair_tags ?? []).filter(([pid]) => pid !== pairId),
-            }));
-          if (cleared.length > 0) appendTrades(ticker, cleared);
-          // Close the pair-detail modal by clearing activePairId.
-          setActivePair(null);
-        } catch (e) {
-          console.error("unbindPair failed", e);
-        }
-      },
-    });
+  const onUnbindPair = useCallback(async (pairId: number) => {
+    try {
+      await api.deletePair(pairId);
+      // Drop the pair from the local store.
+      const livePairs = usePairsStore.getState().byTicker[ticker] ?? [];
+      setPairs(ticker, livePairs.filter((p) => p.id !== pairId));
+      // Strip [pairId, *] from any trade tags so the做T chip column
+      // updates immediately without a re-fetch.
+      const currentTrades = useTradesStore.getState().byTicker[ticker] ?? [];
+      const cleared = currentTrades
+        .filter((t) => (t.t_pair_tags ?? []).some(([pid]) => pid === pairId))
+        .map((t) => ({
+          ...t,
+          t_pair_tags: (t.t_pair_tags ?? []).filter(([pid]) => pid !== pairId),
+        }));
+      if (cleared.length > 0) appendTrades(ticker, cleared);
+      // Close the pair-detail modal by clearing activePairId.
+      setActivePair(null);
+    } catch (e) {
+      console.error("unbindPair failed", e);
+    }
   }, [ticker, setPairs, appendTrades, setActivePair]);
 
   const onSyncRecentTrades = useCallback(async () => {

@@ -312,6 +312,8 @@
   font-weight: 600;
   letter-spacing: -0.01em;
 }
+.pcard-price.pos { color: var(--up-color); }
+.pcard-price.neg { color: var(--down-color); }
 .pcard-change {
   font-family: var(--font-mono);
   font-size: 11px;
@@ -614,6 +616,8 @@
   font-weight: 600;
   letter-spacing: -0.01em;
 }
+.ocard-price.pos { color: var(--up-color); }
+.ocard-price.neg { color: var(--down-color); }
 .ocard-change {
   font-family: var(--font-mono);
   font-size: 11px;

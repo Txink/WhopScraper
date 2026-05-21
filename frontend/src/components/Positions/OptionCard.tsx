@@ -175,7 +175,11 @@ export function OptionCard({ position, quote, history, executions, onClick }: Pr
       </div>
 
       <div className="ocard-price-row">
-        <span className="ocard-price">{last != null ? `$${fmt(last)}` : "—"}</span>
+        <span
+          className={`ocard-price ${change == null ? "" : dayPos ? "pos" : "neg"}`}
+        >
+          {last != null ? `$${fmt(last)}` : "—"}
+        </span>
         {change != null && (
           <span className={`ocard-change ${dayPos ? "pos" : "neg"}`}>
             {dayPos ? "▲" : "▼"} {dayPos ? "+" : ""}{changePct.toFixed(2)}%
