@@ -69,7 +69,9 @@ async def _download_image(
             ext = _CONTENT_TYPE_EXT.get(ct, ".bin")
             target_dir = data_dir / "chat-images"
             target_dir.mkdir(parents=True, exist_ok=True)
-            filename = f"{msg_id}{ext}"
+            # Path(...).name strips any "../" or "/" segments — defensive
+            # against the (today impossible) case of a malicious msg_id.
+            filename = f"{Path(msg_id).name}{ext}"
             (target_dir / filename).write_bytes(resp.content)
             return filename
     except Exception:  # noqa: BLE001

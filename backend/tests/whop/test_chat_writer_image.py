@@ -15,9 +15,14 @@ from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
+import httpx
 
-from app.whop.chat_writer import _download_image
+from app.core.event_bus import Event, EventBus
+from app.core.events import ChatMessagePayload, Topics
+from app.domain.message import Message
+from app.storage.db import session_scope
+from app.storage.schema import ChatMessageRow
+from app.whop.chat_writer import _download_image, register_chat_writer
 
 
 async def test_download_image_happy_path(tmp_path: Path) -> None:
@@ -66,11 +71,9 @@ async def test_download_image_maps_content_types(tmp_path: Path) -> None:
 
 
 async def test_download_image_returns_none_on_http_error(tmp_path: Path) -> None:
-    import httpx as _httpx
-
     fake_resp = MagicMock(status_code=403, content=b"", headers={})
     fake_resp.raise_for_status = MagicMock(
-        side_effect=_httpx.HTTPStatusError("403", request=MagicMock(), response=fake_resp)
+        side_effect=httpx.HTTPStatusError("403", request=MagicMock(), response=fake_resp)
     )
     fake_client = AsyncMock()
     fake_client.get = AsyncMock(return_value=fake_resp)
@@ -87,10 +90,8 @@ async def test_download_image_returns_none_on_http_error(tmp_path: Path) -> None
 
 
 async def test_download_image_returns_none_on_timeout(tmp_path: Path) -> None:
-    import httpx as _httpx
-
     fake_client = AsyncMock()
-    fake_client.get = AsyncMock(side_effect=_httpx.TimeoutException("timed out"))
+    fake_client.get = AsyncMock(side_effect=httpx.TimeoutException("timed out"))
     fake_client.__aenter__.return_value = fake_client
     fake_client.__aexit__.return_value = None
 
@@ -101,15 +102,8 @@ async def test_download_image_returns_none_on_timeout(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Integration test: handler downloads image + writes row
+# Integration tests: handler downloads image + writes row
 # ---------------------------------------------------------------------------
-
-from app.core.event_bus import Event, EventBus  # noqa: E402
-from app.core.events import ChatMessagePayload, Topics  # noqa: E402
-from app.domain.message import Message  # noqa: E402
-from app.storage.db import session_scope  # noqa: E402
-from app.storage.schema import ChatMessageRow  # noqa: E402
-from app.whop.chat_writer import register_chat_writer  # noqa: E402
 
 
 async def test_handler_downloads_image_and_writes_row(
@@ -154,3 +148,47 @@ async def test_handler_downloads_image_and_writes_row(
         row = await session.get(ChatMessageRow, "m_int_1")
         assert row is not None
         assert row.image_filename == "m_int_1.png"
+
+
+async def test_handler_writes_row_with_text_when_image_download_fails(
+    tmp_path: Path,
+    session_factory: object,
+) -> None:
+    """Message has BOTH text caption AND image_url, but download fails:
+    row must still be written with content set and image_filename=None.
+
+    Guards the ``and`` in the skip-empty rule at chat_writer.py:146 — a
+    future change to ``or`` would silently drop these rows."""
+    bus = EventBus()
+    register_chat_writer(bus, session_factory, tmp_path)  # type: ignore[arg-type]
+
+    fake_client = AsyncMock()
+    fake_client.get = AsyncMock(side_effect=httpx.TimeoutException("timed out"))
+    fake_client.__aenter__.return_value = fake_client
+    fake_client.__aexit__.return_value = None
+
+    msg = Message(
+        id="m_text_with_failed_image",
+        content="here is the caption",
+        raw_content="here is the caption",
+        author="alice",
+        posted_at=datetime(2026, 5, 21, tzinfo=UTC),
+        received_at=datetime(2026, 5, 21, tzinfo=UTC),
+        source="chat",
+        image_url="https://example.com/expired.png",
+    )
+    payload = ChatMessagePayload(
+        page_id="page_1", message=msg, is_historical=False
+    )
+
+    with patch("app.whop.chat_writer.httpx.AsyncClient", return_value=fake_client):
+        await bus.publish(Event(topic=Topics.CHAT_MESSAGE_RECEIVED, payload=payload))
+        await bus.wait_idle(timeout=2)
+
+    assert not (tmp_path / "chat-images" / "m_text_with_failed_image.png").exists()
+
+    async with session_scope(session_factory) as session:  # type: ignore[arg-type]
+        row = await session.get(ChatMessageRow, "m_text_with_failed_image")
+        assert row is not None
+        assert row.content == "here is the caption"
+        assert row.image_filename is None
