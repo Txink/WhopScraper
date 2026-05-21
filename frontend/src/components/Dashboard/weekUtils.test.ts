@@ -260,8 +260,9 @@ describe("isoWeekOfDay", () => {
   });
 
   it("handles year-boundary ISO weeks (early January assigned to prior year)", () => {
-    // 2027-01-01 is a Friday; could be W53 of 2026 or W01 of 2027.
-    expect(isoWeekOfDay("2027-01-01")).toMatch(/^\d{4}-W\d{2}$/);
+    // 2027-01-01 is a Friday; its ISO week's Thursday is 2026-12-31,
+    // so the label is the prior year's W53.
+    expect(isoWeekOfDay("2027-01-01")).toBe("2026-W53");
   });
 });
 
