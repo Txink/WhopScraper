@@ -40,6 +40,7 @@ from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy import desc, func, select
 
@@ -164,7 +165,19 @@ def _row_to_chat_out(row: ChatMessageRow) -> ChatMessageOut:
         content=row.content,
         posted_at=row.posted_at,
         quoted=quoted,
+        image_url=f"/api/chat-images/{row.id}" if row.image_filename else None,
     )
+
+
+_IMAGE_MEDIA_TYPES = {
+    ".avif": "image/avif",
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".webp": "image/webp",
+    ".gif": "image/gif",
+    ".bin": "application/octet-stream",
+}
 
 
 def build_http_router(
@@ -1570,6 +1583,28 @@ def build_http_router(
                 authors=[ChatAuthorOut(name=a, count=c) for a, c in authors],
                 week=ChatWeekWindowOut(start=week_start, end=week_end),
             )
+
+        @router.get("/api/chat-images/{message_id}")
+        async def get_chat_image(message_id: str) -> FileResponse:
+            """Serve a cached chat image from ``<data_dir>/chat-images/``.
+
+            The chat_writer downloads images at scrape time (see
+            ``app.whop.chat_writer._download_image``). This endpoint returns
+            the bytes with a media type inferred from the file extension.
+            404 if the row is missing, the row has no image, or the file is
+            missing on disk.
+            """
+            async with session_scope(session_factory) as session:
+                row = await session.get(ChatMessageRow, message_id)
+            if row is None or not row.image_filename:
+                raise HTTPException(404, detail="image not found")
+            path = settings.data_dir / "chat-images" / row.image_filename
+            if not path.exists():
+                raise HTTPException(404, detail="image file missing")
+            media_type = _IMAGE_MEDIA_TYPES.get(
+                path.suffix.lower(), "application/octet-stream"
+            )
+            return FileResponse(path, media_type=media_type)
 
         @router.post("/api/whop/pages/{page_id}/restart", response_model=WhopPageOut)
         async def restart_whop_page(page_id: str) -> WhopPageOut:

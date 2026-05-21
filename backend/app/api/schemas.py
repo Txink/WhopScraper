@@ -653,6 +653,7 @@ class ChatMessageOut(BaseModel):
     content: str
     posted_at: datetime
     quoted: QuotedRefOut | None = None
+    image_url: str | None = None
 
 
 class ChatAuthorOut(BaseModel):
