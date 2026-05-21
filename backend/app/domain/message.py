@@ -19,6 +19,7 @@ class Message:
     received_at: datetime
     source: Source
     url: str | None = None  # 新增：来源页 url；None 表示孤儿（migration 前数据）
+    image_url: str | None = None  # 新增：聊天消息中的图片链接（临时，不持久化）
     quoted: Message | None = None
     history_hint: list[Message] = field(default_factory=list)
 

@@ -1,5 +1,5 @@
 from dataclasses import FrozenInstanceError
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 
 import pytest
 
@@ -12,8 +12,8 @@ def _make(**overrides):
         content="NVDA 135C 本周 2.15 进",
         raw_content="NVDA 135C 本周 2.15 进 🚀",
         author="big-elephant",
-        posted_at=datetime(2026, 4, 25, 10, 42, 15, tzinfo=UTC),
-        received_at=datetime(2026, 4, 25, 10, 42, 15, 82_000, tzinfo=UTC),
+        posted_at=datetime(2026, 4, 25, 10, 42, 15, tzinfo=timezone.utc),
+        received_at=datetime(2026, 4, 25, 10, 42, 15, 82_000, tzinfo=timezone.utc),
         source="option",
         quoted=None,
         history_hint=[],
@@ -48,3 +48,13 @@ def test_message_with_quoted_chain():
     parent = _make(id="msg-parent")
     child = _make(id="msg-child", quoted=parent)
     assert child.quoted is parent
+
+
+def test_message_accepts_image_url():
+    msg = _make(image_url="https://example.com/x.png")
+    assert msg.image_url == "https://example.com/x.png"
+
+
+def test_message_image_url_defaults_to_none():
+    msg = _make()
+    assert msg.image_url is None
