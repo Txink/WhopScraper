@@ -47,9 +47,9 @@ def _msg(id_: str, author: str = "alice", quoted: Message | None = None) -> Mess
     )
 
 
-async def test_chat_writer_persists_basic_message(session_factory) -> None:
+async def test_chat_writer_persists_basic_message(session_factory, tmp_path) -> None:
     bus = EventBus()
-    register_chat_writer(bus, session_factory)
+    register_chat_writer(bus, session_factory, tmp_path)
 
     await bus.publish(Event(
         topic=Topics.CHAT_MESSAGE_RECEIVED,
@@ -68,9 +68,9 @@ async def test_chat_writer_persists_basic_message(session_factory) -> None:
         assert rows[0].quoted_author is None
 
 
-async def test_chat_writer_denormalizes_quote(session_factory) -> None:
+async def test_chat_writer_denormalizes_quote(session_factory, tmp_path) -> None:
     bus = EventBus()
-    register_chat_writer(bus, session_factory)
+    register_chat_writer(bus, session_factory, tmp_path)
 
     quoted = _msg("m_quoted", author="bob")
     await bus.publish(Event(
@@ -91,7 +91,7 @@ async def test_chat_writer_denormalizes_quote(session_factory) -> None:
         assert rows[0].quoted_message_id == "m_quoted"
 
 
-async def test_chat_writer_skips_broadcast_when_historical(session_factory) -> None:
+async def test_chat_writer_skips_broadcast_when_historical(session_factory, tmp_path) -> None:
     bus = EventBus()
     seen: list[Event] = []
 
@@ -99,7 +99,7 @@ async def test_chat_writer_skips_broadcast_when_historical(session_factory) -> N
         seen.append(event)
 
     bus.subscribe(Topics.CHAT_MESSAGE_STORED, _capture)
-    register_chat_writer(bus, session_factory)
+    register_chat_writer(bus, session_factory, tmp_path)
 
     await bus.publish(Event(
         topic=Topics.CHAT_MESSAGE_RECEIVED,
@@ -110,7 +110,7 @@ async def test_chat_writer_skips_broadcast_when_historical(session_factory) -> N
     assert seen == []  # no STORED broadcast for historical replay
 
 
-async def test_chat_writer_broadcasts_when_live(session_factory) -> None:
+async def test_chat_writer_broadcasts_when_live(session_factory, tmp_path) -> None:
     bus = EventBus()
     seen: list[Event] = []
 
@@ -118,7 +118,7 @@ async def test_chat_writer_broadcasts_when_live(session_factory) -> None:
         seen.append(event)
 
     bus.subscribe(Topics.CHAT_MESSAGE_STORED, _capture)
-    register_chat_writer(bus, session_factory)
+    register_chat_writer(bus, session_factory, tmp_path)
 
     await bus.publish(Event(
         topic=Topics.CHAT_MESSAGE_RECEIVED,
@@ -132,9 +132,9 @@ async def test_chat_writer_broadcasts_when_live(session_factory) -> None:
     assert payload.message_id == "m1"
 
 
-async def test_chat_writer_idempotent_on_replay(session_factory) -> None:
+async def test_chat_writer_idempotent_on_replay(session_factory, tmp_path) -> None:
     bus = EventBus()
-    register_chat_writer(bus, session_factory)
+    register_chat_writer(bus, session_factory, tmp_path)
 
     payload = ChatMessagePayload(page_id="p1", message=_msg("m1"))
     await bus.publish(Event(topic=Topics.CHAT_MESSAGE_RECEIVED, payload=payload))

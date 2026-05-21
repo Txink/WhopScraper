@@ -71,22 +71,6 @@
 .chat-card-body { padding: 8px 8px 6px; display: flex;
                   flex-direction: column; gap: 2px; }
 
-.chat-row { display: flex; gap: 8px; align-items: flex-end; }
-.chat-row-right { justify-content: flex-end; }
-
-.chat-bubble { position: relative; max-width: 78%; padding: 6px 10px;
-               border-radius: 8px; font-size: 12px; line-height: 1.5;
-               word-break: break-word; }
-.chat-bubble-left  { background: var(--bg-2); border: 1px solid var(--line);
-                     border-bottom-left-radius: 2px; color: var(--fg-1); }
-.chat-bubble-right { background: rgba(var(--brand-rgb), 0.10);
-                     border: 1px solid rgba(var(--brand-rgb), 0.32);
-                     border-bottom-right-radius: 2px; color: var(--fg-1); }
-.chat-bubble-meta { margin-top: 4px; font-family: var(--font-mono);
-                    font-size: 9.5px; color: var(--fg-3);
-                    display: flex; gap: 6px; justify-content: flex-end; }
-.chat-sender-tag { color: var(--fg-2); }
-
 /* Group-chat view (no sender selected): flat Slack/Discord-style stream.
  * One header per consecutive same-author run; subsequent msgs indent under it.
  * No card chrome — visually distinct from the watched-sender highlight cards. */
@@ -102,6 +86,8 @@
 .chat-group--right .chat-group-bubble { align-self: flex-end; }
 .chat-group-head { display: flex; align-items: center; gap: 8px; }
 .chat-group-author { font-size: 12px; font-weight: 600; color: var(--fg-1); }
+.chat-group.monitor.stock  .chat-group-author { color: var(--source-stock); }
+.chat-group.monitor.option .chat-group-author { color: var(--source-option); }
 .chat-group-time { font-family: var(--font-mono); font-size: 10.5px;
                    color: var(--fg-3); }
 .chat-group-body { display: flex; flex-direction: column; gap: 3px;
@@ -143,6 +129,27 @@
   overflow: hidden;
   word-break: break-word;
   white-space: normal;
+}
+
+/* Image attached to a chat message. Caps height so a 4K-tall mock-up
+ * doesn't blow out the row; width hugs the bubble's 600px max. The
+ * image renders above the text content (image first, caption second). */
+.chat-group-bubble .chat-group-image {
+  display: block;
+  max-width: 100%;
+  max-height: 360px;
+  border-radius: 4px;
+  margin-bottom: 4px;
+}
+
+/* Image-only bubbles (no caption) tighten the padding so the image
+ * looks framed, not floating inside a text-sized rectangle. */
+.chat-group-bubble--image-only {
+  padding: 4px;
+}
+
+.chat-group-bubble--image-only .chat-group-image {
+  margin-bottom: 0;
 }
 
 .chat-sender-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
@@ -334,60 +341,6 @@
   display: flex; flex-direction: column;
   gap: 14px;
 }
-.stream-group {
-  display: flex; flex-direction: column;
-  gap: 4px;
-}
-.stream-head {
-  display: flex; align-items: center; gap: 8px;
-  padding: 0 0 0 30px;
-  margin-bottom: 2px;
-}
-.stream-group.watched .stream-head { padding-left: 0; padding-right: 30px; justify-content: flex-end; }
-.stream-head .avatar-sm { margin: 0; }
-.stream-head .stream-author {
-  font-size: 11.5px;
-  color: var(--fg-2);
-  font-weight: 500;
-}
-.stream-group.watched .stream-head .stream-author { color: var(--brand); }
-.stream-group.monitor.stock .stream-head .stream-author { color: var(--source-stock); }
-.stream-group.monitor.option .stream-head .stream-author { color: var(--source-option); }
-.stream-head .stream-time {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--fg-3);
-}
-.stream-body {
-  display: flex; flex-direction: column;
-  gap: 4px;
-  padding-left: 30px;
-}
-.stream-group.watched .stream-body { padding-left: 0; padding-right: 30px; align-items: flex-end; }
-.stream-bubble {
-  max-width: 78%;
-  padding: 6px 10px;
-  border-radius: 8px;
-  font-size: 12px;
-  line-height: 1.5;
-  background: var(--bg-2);
-  border: 1px solid var(--line);
-  color: var(--fg-1);
-  word-break: break-word;
-}
-.stream-group.watched .stream-bubble {
-  background: rgba(var(--brand-rgb), 0.10);
-  border-color: rgba(var(--brand-rgb), 0.32);
-}
-/* Signal bubble inside the stream-body — already styled; just align */
-.stream-body .signal-bubble { align-self: flex-start; }
-.stream-group.watched .stream-body .signal-bubble { align-self: flex-end; }
-
-/* Highlight mode: mute non-watched groups; hover restores full opacity */
-.board[data-mode="highlight"] .stream-group:not(.watched) {
-  opacity: 0.72;
-}
-.board[data-mode="highlight"] .stream-group:not(.watched):hover { opacity: 1; }
 
 /* ── Monitor sender chips — source-dot prefix ──────────────────────────
    A tiny colored dot before the avatar distinguishes monitor (signal-

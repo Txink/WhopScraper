@@ -1,73 +1,127 @@
-import { render, screen } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { StreamView } from "./StreamView";
 import type { StreamGroup } from "./chatTimeline";
-import type { TaskSummary } from "../../api/domain-types";
+import {
+  makeMessage,
+  makeStockTask,
+  makeOptionTask,
+} from "../../test/fixtures";
 
-function makeStreamGroups(): StreamGroup[] {
+function groups(): StreamGroup[] {
+  const m1 = makeMessage({ author: "alpha", content: "hi" });
+  const m2 = makeMessage({ author: "alpha", content: "again" });
   return [
-    {
-      kind: "msgs",
-      sender: "alpha",
-      entries: [
-        { id: "m1", page_id: "p", author: "alpha", content: "hi", posted_at: "2026-05-20T01:00:00Z" },
-        { id: "m2", page_id: "p", author: "alpha", content: "again", posted_at: "2026-05-20T01:01:00Z" },
-      ],
-    },
-    {
-      kind: "signal",
-      sender: "TSLL 监听",
-      task: {
-        id: "t1", type: "stock", status: "FILLED",
-        message: {
-          id: "t1", source: "whop", author: "TSLL 监听",
-          content: "buy", posted_at: "2026-05-20T01:02:00Z",
-          received_at: "2026-05-20T01:02:00Z", url: "https://x",
-        },
-        instruction: { instruction_type: "BUY", ticker: "TSLL", symbol: "TSLL.US", price: 200, quantity: 100 },
-        last_cum_qty: 100, last_cum_avg_price: 199.87,
-        created_at: "x", updated_at: "x",
-      } as unknown as TaskSummary,
-    },
+    { kind: "msgs", sender: "alpha", entries: [m1, m2] },
+    { kind: "signal", sender: "TSLL 监听", task: makeStockTask() },
+    { kind: "signal", sender: "NVDA 期权监听", task: makeOptionTask() },
   ];
 }
 
-describe("StreamView", () => {
-  it("renders consecutive msg group as multiple bubbles + signal group as SignalCard", () => {
-    render(<StreamView
-      groups={makeStreamGroups()}
-      watched={new Set(["alpha"])}
-      pushEventsByTask={{}}
-      expandedTaskId={null}
-      onToggleTask={() => {}}
-      autoTrade={true}
-    />);
-    expect(screen.getByText("hi")).toBeInTheDocument();
-    expect(screen.getByText("again")).toBeInTheDocument();
-    expect(screen.getByText(/TSLL\.US/)).toBeInTheDocument();
+describe("StreamView routing", () => {
+  it("msg group → ChatMessage (chat-group without monitor class)", () => {
+    const { container } = render(
+      <StreamView
+        groups={groups()}
+        watched={new Set()}
+        pushEventsByTask={{}}
+        expandedTaskId={null}
+        onToggleTask={() => {}}
+        autoTrade={true}
+      />,
+    );
+    const msgGroup = container.querySelector('[data-sender="alpha"]');
+    expect(msgGroup?.className).toBe("chat-group");
   });
 
-  it("watched sender's group gets the watched class", () => {
-    const { container } = render(<StreamView
-      groups={makeStreamGroups()}
-      watched={new Set(["alpha"])}
-      pushEventsByTask={{}}
-      expandedTaskId={null}
-      onToggleTask={() => {}}
-      autoTrade={true}
-    />);
-    const alphaGroup = container.querySelector('[data-sender="alpha"]');
-    expect(alphaGroup?.classList.contains("watched")).toBe(true);
-    const monitorGroup = container.querySelector('[data-sender="TSLL 监听"]');
-    expect(monitorGroup?.classList.contains("watched")).toBe(false);
+  it("stock signal group → StockCard (chat-group.monitor.stock)", () => {
+    const { container } = render(
+      <StreamView
+        groups={groups()}
+        watched={new Set()}
+        pushEventsByTask={{}}
+        expandedTaskId={null}
+        onToggleTask={() => {}}
+        autoTrade={true}
+      />,
+    );
+    const node = container.querySelector('[data-sender="TSLL 监听"]');
+    expect(node?.classList.contains("monitor")).toBe(true);
+    expect(node?.classList.contains("stock")).toBe(true);
   });
 
-  it("renders nothing visible when groups is empty", () => {
-    const { container } = render(<StreamView
-      groups={[]} watched={new Set()} pushEventsByTask={{}}
-      expandedTaskId={null} onToggleTask={() => {}} autoTrade={true}
-    />);
-    // No stream-group items
-    expect(container.querySelectorAll(".stream-group")).toHaveLength(0);
+  it("option signal group → OptionCard (chat-group.monitor.option)", () => {
+    const { container } = render(
+      <StreamView
+        groups={groups()}
+        watched={new Set()}
+        pushEventsByTask={{}}
+        expandedTaskId={null}
+        onToggleTask={() => {}}
+        autoTrade={true}
+      />,
+    );
+    const node = container.querySelector('[data-sender="NVDA 期权监听"]');
+    expect(node?.classList.contains("monitor")).toBe(true);
+    expect(node?.classList.contains("option")).toBe(true);
+  });
+
+  it("watched sender → align=right (chat-group--right)", () => {
+    const { container } = render(
+      <StreamView
+        groups={groups()}
+        watched={new Set(["alpha"])}
+        pushEventsByTask={{}}
+        expandedTaskId={null}
+        onToggleTask={() => {}}
+        autoTrade={true}
+      />,
+    );
+    const node = container.querySelector('[data-sender="alpha"]');
+    expect(node?.classList.contains("chat-group--right")).toBe(true);
+  });
+
+  it("empty groups → no children", () => {
+    const { container } = render(
+      <StreamView
+        groups={[]}
+        watched={new Set()}
+        pushEventsByTask={{}}
+        expandedTaskId={null}
+        onToggleTask={() => {}}
+        autoTrade={true}
+      />,
+    );
+    expect(container.querySelectorAll(".chat-group")).toHaveLength(0);
+  });
+
+  it("watched set is non-empty + this sender is NOT watched → dim avatar (chat-avatar-neutral)", () => {
+    const { container } = render(
+      <StreamView
+        groups={groups()}
+        watched={new Set(["someone-else"])}
+        pushEventsByTask={{}}
+        expandedTaskId={null}
+        onToggleTask={() => {}}
+        autoTrade={true}
+      />,
+    );
+    const avatar = container.querySelector('[data-sender="alpha"] .chat-avatar');
+    expect(avatar?.classList.contains("chat-avatar-neutral")).toBe(true);
+  });
+
+  it("watched set is empty → no dim (alpha keeps palette color)", () => {
+    const { container } = render(
+      <StreamView
+        groups={groups()}
+        watched={new Set()}
+        pushEventsByTask={{}}
+        expandedTaskId={null}
+        onToggleTask={() => {}}
+        autoTrade={true}
+      />,
+    );
+    const avatar = container.querySelector('[data-sender="alpha"] .chat-avatar');
+    expect(avatar?.classList.contains("chat-avatar-neutral")).toBe(false);
   });
 });

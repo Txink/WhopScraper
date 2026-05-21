@@ -5,24 +5,23 @@ import { PushChain } from "../Card/PushChain";
 import { fmtBeijingFull } from "../Card/cardHelpers";
 import "./SignalCard.css";
 
-export interface SignalCardProps {
+export interface SignalBubbleProps {
   task: TaskSummary;
   pushEvents: PushEvent[];
-  /** Controlled: parent decides whether this card is expanded. */
   expanded: boolean;
-  /** Click the bubble → parent toggles. */
   onToggle(): void;
   autoTrade: boolean;
+  /** Must match task.type. StockCard always passes "stock"; OptionCard always
+   *  passes "option". Drives sourceClass, qty unit suffix (" 张"), and the
+   *  option-only strike/expiry detail rows. */
+  variant: "stock" | "option";
 }
 
-export function SignalCard({
-  task, pushEvents, expanded, onToggle, autoTrade,
-}: SignalCardProps): JSX.Element {
+export function SignalBubble({
+  task, pushEvents, expanded, onToggle, autoTrade, variant,
+}: SignalBubbleProps): JSX.Element {
   const layers = layersForTask(task, { autoTrade });
-  const sourceClass =
-    layers.kind === "parse_error" ? "neutral"
-    : task.type === "option" ? "option"
-    : "stock";
+  const sourceClass = layers.kind === "parse_error" ? "neutral" : variant;
 
   return (
     <div
@@ -42,10 +41,8 @@ export function SignalCard({
       }}
     >
       <div className="signal-summary">
-        {/* Layer 1: MSG */}
         <div className="layer-msg" title={layers.msg}>{layers.msg}</div>
 
-        {/* Layer 2: SIG */}
         {layers.sig && (
           <div className="layer-sig">
             {layers.sig.error ? (
@@ -59,7 +56,7 @@ export function SignalCard({
                 {layers.sig.contract && <span className="contract">{layers.sig.contract}</span>}
                 {layers.sig.price != null && <span className="price">${layers.sig.price.toFixed(2)}</span>}
                 {layers.sig.quantity != null && (
-                  <span className="qty">× {layers.sig.quantity}{task.type === "option" ? " 张" : ""}</span>
+                  <span className="qty">× {layers.sig.quantity}{variant === "option" ? " 张" : ""}</span>
                 )}
                 {layers.sig.showConfirmActions && (
                   <span className="confirm-pair">
@@ -71,7 +68,6 @@ export function SignalCard({
           </div>
         )}
 
-        {/* Layer 3: ORD */}
         {layers.ord && (
           <div className="layer-ord">
             <span className={`state-dot ${layers.ord.dot}`} />
@@ -82,7 +78,6 @@ export function SignalCard({
         )}
       </div>
 
-      {/* Expanded detail */}
       {expanded && (
         <div className="signal-detail">
           <div className="detail-block">
@@ -102,10 +97,10 @@ export function SignalCard({
                 {layers.sig.parseDeltaMs != null && (
                   <> · parse +{layers.sig.parseDeltaMs.toFixed(3)}ms</>
                 )}
-                {task.type === "option" && task.instruction.strike != null && (
+                {variant === "option" && task.instruction.strike != null && (
                   <> · strike {task.instruction.strike}</>
                 )}
-                {task.type === "option" && task.instruction.expiry && (
+                {variant === "option" && task.instruction.expiry && (
                   <> · expiry {task.instruction.expiry}</>
                 )}
               </div>

@@ -12,6 +12,7 @@ export interface ChatMessageOut {
   content: string;
   posted_at: string;
   quoted?: QuotedRef;
+  image_url?: string | null;
 }
 
 /** Ordered, kind-tagged entry inside a card. ``watched`` items render

@@ -1,0 +1,9 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ChatMessage > consecutive-3-msgs · three bubbles share one head 1`] = `"<div class="chat-group" data-sender="bob"><div class="chat-group-head"><span class="chat-avatar" style="background: rgb(239, 91, 91);">b</span><span class="chat-group-author">bob</span><span class="chat-group-time">09:01</span></div><div class="chat-group-body"><div class="chat-group-bubble">first</div><div class="chat-group-bubble">second</div><div class="chat-group-bubble">third</div></div></div>"`;
+
+exports[`ChatMessage > right-aligned · watched sender renders chat-group--right 1`] = `"<div class="chat-group chat-group--right" data-sender="carol"><div class="chat-group-head"><span class="chat-avatar" style="background: rgb(61, 214, 140);">l</span><span class="chat-group-author">carol</span><span class="chat-group-time">09:04</span></div><div class="chat-group-body"><div class="chat-group-bubble">watched-msg</div></div></div>"`;
+
+exports[`ChatMessage > single · one bubble under one head 1`] = `"<div class="chat-group" data-sender="alpha"><div class="chat-group-head"><span class="chat-avatar" style="background: rgb(255, 140, 82);">a</span><span class="chat-group-author">alpha</span><span class="chat-group-time">09:00</span></div><div class="chat-group-body"><div class="chat-group-bubble">hi</div></div></div>"`;
+
+exports[`ChatMessage > with-quoted · embeds quoted preview in bubble 1`] = `"<div class="chat-group" data-sender="alpha"><div class="chat-group-head"><span class="chat-avatar" style="background: rgb(255, 140, 82);">a</span><span class="chat-group-author">alpha</span><span class="chat-group-time">09:05</span></div><div class="chat-group-body"><div class="chat-group-bubble"><div class="chat-group-quoted" title="long NVDA"><span class="chat-group-quoted-sender">bob</span><span class="chat-group-quoted-body">long NVDA</span></div>agreed</div></div></div>"`;

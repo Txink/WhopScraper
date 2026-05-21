@@ -1828,6 +1828,7 @@ async def upsert_chat_message(session: AsyncSession, row: ChatMessageRow) -> Non
         quoted_author=row.quoted_author,
         quoted_content=row.quoted_content,
         quoted_posted_at=row.quoted_posted_at,
+        image_filename=row.image_filename,
     ).on_conflict_do_nothing(index_elements=["id"])
     await session.execute(stmt)
 

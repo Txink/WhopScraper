@@ -411,6 +411,20 @@ def _extract_quote(msg_el: Tag) -> tuple[str | None, str]:
     return (author or None, raw)
 
 
+def _extract_image_url(msg_el: Tag) -> str | None:
+    """Return the first whop.com-hosted image URL inside any attachment
+    block of this message element, or None.
+
+    We scope to ``[data-attachment-id]`` rather than scanning the whole
+    message tree to avoid accidentally matching avatars or reply
+    previews."""
+    for attach in msg_el.find_all(attrs={"data-attachment-id": True}):
+        img = attach.find("img", src=re.compile(r"whop\.com"))
+        if img and img.get("src"):
+            return str(img["src"])
+    return None
+
+
 def _extract_content(msg_el: Tag, author: str | None, ts_raw: str) -> tuple[str, str]:
     """Return (content, raw_content) from message bubble(s).
 
@@ -559,27 +573,25 @@ def extract_messages(
                     received_at=received_at,
                     source=source,
                     quoted=None,
+                    image_url=None,
                     history_hint=[],
                 )
 
             # ---- Content ----
             content, raw_content = _extract_content(msg_el, author, ts_raw)
 
-            # ---- Skip empty / metadata-only messages ----
-            if not content:
+            # ---- Extract image URL (if any) ----
+            image_url = _extract_image_url(msg_el)
+
+            # Skip messages with neither content nor image. Pure image-only
+            # messages now flow through; the writer will download the image.
+            if not content and image_url is None:
                 continue
 
-            # Also skip messages whose content is pure metadata
-            if _should_filter(content):
+            # Also skip messages whose content is pure metadata (but keep
+            # image-only messages — they have no text content to filter).
+            if content and _should_filter(content):
                 continue
-
-            # ---- Check for image-only messages ----
-            has_attachment = bool(
-                msg_el.find(attrs={"data-attachment-id": True})
-                or msg_el.find("img", src=re.compile(r"whop\.com"))
-            )
-            if has_attachment and (not content or re.match(r"^(由\s*)?\d+\s*阅读$", content)):
-                continue  # pure image with only read-count text
 
             message = Message(
                 id=msg_id,
@@ -590,6 +602,7 @@ def extract_messages(
                 received_at=received_at,
                 source=source,
                 quoted=quoted,
+                image_url=image_url,
                 history_hint=[],
             )
             messages.append(message)

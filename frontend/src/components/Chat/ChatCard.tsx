@@ -83,29 +83,42 @@ function renderBlock(b: Block, idx: number): JSX.Element {
         <span className="chat-group-time">{fmtTime(b.firstAt)}</span>
       </div>
       <div className="chat-group-body">
-        {b.msgs.map((m) => (
-          <div key={m.id} className="chat-group-bubble">
-            {m.quoted && (
-              <div className="chat-group-quoted" title={m.quoted.content}>
-                <span className="chat-group-quoted-sender">
-                  {m.quoted.author}
-                </span>
-                <span className="chat-group-quoted-body">
-                  {m.quoted.content}
-                </span>
-              </div>
-            )}
-            {m.content}
-          </div>
-        ))}
+        {b.msgs.map((m) => {
+          const imageOnly = !!m.image_url && m.content.length === 0;
+          const cls = imageOnly
+            ? "chat-group-bubble chat-group-bubble--image-only"
+            : "chat-group-bubble";
+          return (
+            <div key={m.id} className={cls}>
+              {m.quoted && (
+                <div className="chat-group-quoted" title={m.quoted.content}>
+                  <span className="chat-group-quoted-sender">
+                    {m.quoted.author}
+                  </span>
+                  <span className="chat-group-quoted-body">
+                    {m.quoted.content}
+                  </span>
+                </div>
+              )}
+              {m.image_url && (
+                <img
+                  className="chat-group-image"
+                  src={m.image_url}
+                  alt=""
+                />
+              )}
+              {m.content}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
 }
 
 function fmtTime(iso: string): string {
-  // See GroupChatView.fmtTime — backend serializes UTC posted_at as naive
-  // ISO; force UTC parse before letting the browser apply its local offset.
+  // Backend serializes UTC posted_at as naive ISO; force UTC parse before
+  // letting the browser apply its local offset. Mirrors MessageShell.fmtTime.
   const normalized = /[Zz]|[+-]\d\d:?\d\d$/.test(iso) ? iso : `${iso}Z`;
   const d = new Date(normalized);
   return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
