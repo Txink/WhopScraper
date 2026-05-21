@@ -166,6 +166,28 @@ export function ChatBoardPanel({ page }: Props) {
     [childTasks, selectedDate],
   );
 
+  /** Author chip counts for the selected day. Preserves the chip list
+   *  shape from the week-cache `authors` (so chips don't flicker when
+   *  switching days) but replaces each count with the count from today.
+   *  Authors not in the week cache but present in today's messages are
+   *  appended at the end. */
+  const dayScopedAuthors = useMemo(() => {
+    const dayCounts = new Map<string, number>();
+    for (const m of messages) {
+      dayCounts.set(m.author, (dayCounts.get(m.author) ?? 0) + 1);
+    }
+    const seen = new Set<string>();
+    const out: { name: string; count: number }[] = [];
+    for (const a of authors) {
+      out.push({ name: a.name, count: dayCounts.get(a.name) ?? 0 });
+      seen.add(a.name);
+    }
+    for (const [name, count] of dayCounts) {
+      if (!seen.has(name)) out.push({ name, count });
+    }
+    return out;
+  }, [messages, authors]);
+
   /** name → "stock" | "option" for children whose source is known. */
   const monitorSources = useMemo<Record<string, "stock" | "option">>(
     () =>
@@ -177,23 +199,26 @@ export function ChatBoardPanel({ page }: Props) {
     [children],
   );
 
-  /** authors from chat messages merged with child monitor pages.
-   *  Monitor names are included even when count=0 so users can toggle
-   *  them on before any signal arrives this week. */
+  /** Chip bar entries for ChatSenderBar. List shape is taken from the
+   *  week (chat authors + monitor pages) so the bar stays stable when
+   *  the selected day changes; counts are day-scoped so the badge on
+   *  each chip matches the messages and signals actually visible. */
   const authorsWithMonitors = useMemo(() => {
     const seen = new Set<string>();
     const out: { name: string; count: number }[] = [];
-    for (const a of authors) {
+    for (const a of dayScopedAuthors) {
       out.push(a);
       seen.add(a.name);
     }
     for (const c of children) {
       if (seen.has(c.name)) continue;
-      const count = childTasks.filter((t) => t.message.url === c.url).length;
+      const count = dayFilteredChildTasks.filter(
+        (t) => t.message.url === c.url,
+      ).length;
       out.push({ name: c.name, count });
     }
     return out;
-  }, [authors, children, childTasks]);
+  }, [dayScopedAuthors, children, dayFilteredChildTasks]);
 
   const watchedSet = useMemo(() => new Set(watchedSenders), [watchedSenders]);
 
