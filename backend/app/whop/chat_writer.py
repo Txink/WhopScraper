@@ -145,6 +145,15 @@ def register_chat_writer(
         # Skip rows that have neither text content nor a successfully
         # downloaded image (covers the rare case where extraction caught
         # an image_url but the download failed AND content was empty).
+        #
+        # Note: for image-only messages where the first scrape's download
+        # fails, the row is never written. ``upsert_chat_message`` is
+        # idempotent on conflict, so a later re-scrape that succeeds will
+        # write the row — but if the same id is seen again with another
+        # failed download, it stays absent. In practice the live extractor
+        # rarely re-emits the same id; this is the spec's accepted
+        # tradeoff (image-only + cold-cache + expired URL = permanently
+        # lost). Text-bearing messages are always written.
         if not msg.content and image_filename is None:
             return
 

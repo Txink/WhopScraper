@@ -150,6 +150,52 @@ async def test_handler_downloads_image_and_writes_row(
         assert row.image_filename == "m_int_1.png"
 
 
+async def test_handler_skips_row_when_image_only_and_download_fails(
+    tmp_path: Path,
+    session_factory: object,
+) -> None:
+    """Image-only message (content="") + download failure → row NOT written.
+
+    Guards the second half of the ``and`` in the skip guard at
+    chat_writer.py:148 — a future change to ``or`` would let empty
+    rows leak into the DB and produce ghost bubbles in the UI."""
+    bus = EventBus()
+    register_chat_writer(bus, session_factory, tmp_path)  # type: ignore[arg-type]
+
+    fake_client = AsyncMock()
+    fake_client.get = AsyncMock(side_effect=httpx.TimeoutException("timed out"))
+    fake_client.__aenter__.return_value = fake_client
+    fake_client.__aexit__.return_value = None
+
+    msg = Message(
+        id="m_image_only_failed",
+        content="",
+        raw_content="",
+        author="alice",
+        posted_at=datetime(2026, 5, 21, tzinfo=UTC),
+        received_at=datetime(2026, 5, 21, tzinfo=UTC),
+        source="chat",
+        image_url="https://example.com/expired.png",
+    )
+    payload = ChatMessagePayload(
+        page_id="page_1", message=msg, is_historical=False
+    )
+
+    with patch("app.whop.chat_writer.httpx.AsyncClient", return_value=fake_client):
+        await bus.publish(Event(topic=Topics.CHAT_MESSAGE_RECEIVED, payload=payload))
+        await bus.wait_idle(timeout=2)
+
+    # No image file
+    assert not (tmp_path / "chat-images").exists() or not any(
+        (tmp_path / "chat-images").iterdir()
+    )
+
+    # No row in DB — message was correctly skipped
+    async with session_scope(session_factory) as session:  # type: ignore[arg-type]
+        row = await session.get(ChatMessageRow, "m_image_only_failed")
+        assert row is None
+
+
 async def test_handler_writes_row_with_text_when_image_download_fails(
     tmp_path: Path,
     session_factory: object,

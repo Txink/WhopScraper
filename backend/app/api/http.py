@@ -942,15 +942,13 @@ def build_http_router(
             # Non-today periods always use regular session.
             sessions = "regular"
 
-        # ``before`` is only meaningful for the longer-horizon periods —
-        # the "today" view shows a single trading day so panning back into
-        # yesterday would change the entire data contract. Reject early
-        # rather than silently fetching latest.
-        if before is not None and period == "today":
-            raise HTTPException(
-                400,
-                detail="`before` is not supported for the today period",
-            )
+        # ``before`` semantics:
+        #   - K-line periods: pan-back history extension.
+        #   - today period: fetch the intraday window ending at ``before``
+        #     (count = bars_per_day from above). Used by the "多日重叠"
+        #     overlay view to grab a specific historical trading day's
+        #     full-session line via history_candlesticks_by_offset; the
+        #     client server-side filters down to its target date.
 
         try:
             bars = _get_broker().get_candlesticks(
@@ -1598,7 +1596,15 @@ def build_http_router(
                 row = await session.get(ChatMessageRow, message_id)
             if row is None or not row.image_filename:
                 raise HTTPException(404, detail="image not found")
-            path = settings.data_dir / "chat-images" / row.image_filename
+            # Defense-in-depth: chat_writer.py sanitizes filenames at write
+            # time via Path(msg_id).name, so legitimate rows always have a
+            # safe basename. Re-confirming the resolved path lives under
+            # the chat-images dir guards against any future code path (or
+            # manual DB edit) that stores an un-sanitized filename.
+            images_root = (settings.data_dir / "chat-images").resolve()
+            path = (images_root / row.image_filename).resolve()
+            if not path.is_relative_to(images_root):
+                raise HTTPException(404, detail="image not found")
             if not path.exists():
                 raise HTTPException(404, detail="image file missing")
             media_type = _IMAGE_MEDIA_TYPES.get(
