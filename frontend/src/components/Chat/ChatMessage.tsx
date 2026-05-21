@@ -18,7 +18,12 @@ export function ChatMessage({
   return (
     <MessageShell sender={sender} firstAt={firstAt} align={align} dim={dim}>
       {messages.map((m) => (
-        <PlainBubble key={m.id} content={m.content} quoted={m.quoted ?? null} />
+        <PlainBubble
+          key={m.id}
+          content={m.content}
+          quoted={m.quoted ?? null}
+          imageUrl={m.image_url ?? null}
+        />
       ))}
     </MessageShell>
   );
