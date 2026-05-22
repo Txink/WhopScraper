@@ -79,9 +79,17 @@ def create_app(
     # root and fall back to Python's WARNING-only ``lastResort`` handler.
     # ``basicConfig(force=True)`` installs a StreamHandler on root and sets
     # its level — required for INFO-level push listener logs to print.
+    # Use uvicorn's DefaultFormatter so app.* lines get level colorization
+    # matching uvicorn's own output (INFO green, WARNING yellow, ERROR red).
+    from uvicorn.logging import DefaultFormatter
+
+    _root_handler = logging.StreamHandler()
+    _root_handler.setFormatter(
+        DefaultFormatter("%(levelprefix)s %(name)s: %(message)s", use_colors=True)
+    )
     logging.basicConfig(
         level=settings.log_level.upper(),
-        format="%(levelname)s:    %(name)s: %(message)s",
+        handlers=[_root_handler],
         force=True,
     )
 

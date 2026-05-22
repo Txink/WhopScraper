@@ -7,10 +7,10 @@ install:
 
 dev:
 	@echo "Starting backend (:8000) + frontend (:5173) — Ctrl+C 同时停两个"
-	@bash -c 'trap "kill 0" EXIT INT TERM; \
-		(cd backend && uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000 2>&1 | sed "s/^/[backend] /") & \
-		(cd frontend && npm run dev 2>&1 | sed "s/^/[frontend] /") & \
-		wait'
+	@bash -c "trap 'kill 0' EXIT INT TERM; \
+		(cd backend && uv run uvicorn app.main:app --reload --use-colors --host 127.0.0.1 --port 8000 2>&1 | perl -MPOSIX -ne 'BEGIN{\$$|=1} print POSIX::strftime(\"%H:%M:%S\", localtime), \" \e[1;36m[backend]\e[0m \", \$$_') & \
+		(cd frontend && FORCE_COLOR=1 npm run dev 2>&1 | perl -MPOSIX -ne 'BEGIN{\$$|=1} print POSIX::strftime(\"%H:%M:%S\", localtime), \" \e[1;35m[frontend]\e[0m \", \$$_') & \
+		wait"
 
 backend-dev:
 	cd backend && uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
