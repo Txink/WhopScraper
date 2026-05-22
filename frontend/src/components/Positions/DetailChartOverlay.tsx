@@ -34,7 +34,13 @@ export const OVERLAY_COLORS = [
 
 /** Build the canonical x-axis of "minutes from 04:00 ET". Covers 04:00
  *  → 20:00 ET (the chart's pre-market open through after-hours close —
- *  the user-requested 盘前 → 盘后 range), one tick per minute = 960 slots. */
+ *  the user-requested 盘前 → 盘后 range), one tick per minute = 960 slots.
+ *
+ *  Slots remain ET-anchored so bars from different dates align by US
+ *  market wall-clock (open/close land on the same slot regardless of
+ *  DST). Tick labels are rendered in BJT for readability, assuming EDT
+ *  (+12h). During EST the displayed BJT label runs 1h earlier than the
+ *  actual BJT at the time — slot alignment is still correct. */
 const X_AXIS_START_MIN = 4 * 60;   // 04:00 ET
 const X_AXIS_END_MIN = 20 * 60;    // 20:00 ET
 const X_AXIS_SLOTS = X_AXIS_END_MIN - X_AXIS_START_MIN; // 960
@@ -42,9 +48,10 @@ const X_AXIS_SLOTS = X_AXIS_END_MIN - X_AXIS_START_MIN; // 960
 const X_LABELS: string[] = (() => {
   const out: string[] = [];
   for (let i = 0; i < X_AXIS_SLOTS; i++) {
-    const m = X_AXIS_START_MIN + i;
-    const h = Math.floor(m / 60);
-    const mm = m % 60;
+    const etM = X_AXIS_START_MIN + i;
+    const bjtM = (etM + 12 * 60) % (24 * 60);
+    const h = Math.floor(bjtM / 60);
+    const mm = bjtM % 60;
     out.push(`${String(h).padStart(2, "0")}:${String(mm).padStart(2, "0")}`);
   }
   return out;
