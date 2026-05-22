@@ -14,20 +14,15 @@ import { useChildPagesStore } from "./stores/childPages";
 import { TopBar } from "./components/TopBar";
 import { PositionsPanel } from "./components/Positions/PositionsPanel";
 import { Login } from "./components/Login";
-import { WhopPanel } from "./components/WhopPanel/WhopPanel";
-import { PageTabs } from "./components/Dashboard/PageTabs";
 import { PageInfoBar } from "./components/Dashboard/PageInfoBar";
-import { PageWhitelistBar } from "./components/Dashboard/PageWhitelistBar";
 import { PageActionBar } from "./components/Dashboard/PageActionBar";
 import { PageSettingsModal } from "./components/Dashboard/PageSettingsModal";
-import { TaskStream } from "./components/Dashboard/TaskStream";
 import { WeekPaginator } from "./components/Dashboard/WeekPaginator";
 import { computeWeeks, weekKeyOf, currentIsoWeek } from "./components/Dashboard/weekUtils";
 import { ChatBoardPanel } from "./components/Chat/ChatBoardPanel";
 import { groupIntoCards } from "./components/Chat/chatCards";
 import { buildExportPayload, triggerJsonDownload } from "./components/Chat/chatExport";
 import { useChatStore } from "./stores/chatStore";
-import { OrphanCleanupBar } from "./components/Dashboard/OrphanCleanupBar";
 import { DatabaseRecordsPanel } from "./components/Dashboard/DatabaseRecordsPanel";
 import { EmptyState } from "./components/Dashboard/EmptyState";
 import { LongportSettingsModal } from "./components/Dashboard/LongportSettingsModal";
@@ -87,16 +82,11 @@ function handleLogout() {
 function Dashboard({ token }: { token: string }) {
   useStickyTop();
   const conn = useConnStore();
-  const autoTrade = useConnStore((s) => s.autoTrade);
   const tasks = useTasksStore((s) => s.tasks);
-  const pushEventsByTask = useTasksStore((s) => s.pushEventsByTask);
   const applyWs = useTasksStore((s) => s.applyWsEvent);
 
   const pages = usePageTabsStore((s) => s.pages);
-  const activeTabId = usePageTabsStore((s) => s.activeTabId);
   const setPages = usePageTabsStore((s) => s.setPages);
-  const setOrphanCount = usePageTabsStore((s) => s.setOrphanCount);
-  const orphanCount = usePageTabsStore((s) => s.orphanCount);
   const pagesLoaded = usePageTabsStore((s) => s.pagesLoaded);
 
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -252,49 +242,22 @@ function Dashboard({ token }: { token: string }) {
     };
   }, []);  // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Compute orphan count whenever tasks or pages change.
-  // Gate on pagesLoaded so we don't recompute orphans against a stale/empty
-  // page list during the first remount paint (which would falsely flag every
-  // task as orphan and trigger the orphan auto-select effect below).
+  // Dashboard now shows exactly one chat-source page (the first one the
+  // backend returns). Top-level stock/option pages still exist in storage
+  // but are managed via the chat page's settings modal (正股/期权 tabs).
   const childPagesMap = useChildPagesStore((s) => s.byParent);
   const pageUrls = useMemo(() => new Set(pages.map((p) => p.url)), [pages]);
-  // Merge top-level page URLs with sub-monitor (child) page URLs so that tasks
-  // whose url belongs to a child monitor are NOT counted as orphans.
-  const allMonitoredUrls = useMemo(
-    () =>
-      new Set([
-        ...pages.map((p) => p.url),
-        ...Object.values(childPagesMap).flat().map((p) => p.url),
-      ]),
-    [pages, childPagesMap],
+  const activePage = useMemo(
+    () => pages.find((p) => p.source === "chat") ?? null,
+    [pages],
   );
-  useEffect(() => {
-    if (!pagesLoaded) return;
-    const orphans = tasks.filter(
-      (t) => t.message?.url == null || !allMonitoredUrls.has(t.message.url),
-    );
-    setOrphanCount(orphans.length);
-  }, [tasks, allMonitoredUrls, setOrphanCount, pagesLoaded]);
-
-  // Auto-select orphan tab when no pages exist but orphans do (so user isn't stuck)
-  useEffect(() => {
-    if (!pagesLoaded) return;
-    if (pages.length === 0 && orphanCount > 0 && activeTabId !== "orphan") {
-      usePageTabsStore.getState().setActiveTab("orphan");
-    }
-  }, [pages.length, orphanCount, activeTabId, pagesLoaded]);
-
-  const isOrphanTab = activeTabId === "orphan";
-  const activePage =
-    isOrphanTab || activeTabId === null
-      ? null
-      : pages.find((p) => p.id === activeTabId) ?? null;
-  const filteredTasks =
-    isOrphanTab
-      ? selectTasksByUrl(tasks, null, allMonitoredUrls)
-      : activePage
-        ? selectTasksByUrl(tasks, activePage.url, pageUrls)
-        : [];
+  const filteredTasks = activePage
+    ? selectTasksByUrl(tasks, activePage.url, pageUrls)
+    : [];
+  // Silence unused-var warnings while keeping childPagesStore subscribed —
+  // its updates still need to trigger Dashboard re-renders so the chat
+  // panel's attached-monitor lists stay fresh.
+  void childPagesMap;
 
   const { groups, weeks } = useMemo(() => computeWeeks(filteredTasks), [filteredTasks]);
   const [currentWeekKey, setCurrentWeekKey] = useState<string | null>(null);
@@ -325,7 +288,7 @@ function Dashboard({ token }: { token: string }) {
   const newMessageCount =
     onPastWeek ? Math.max(0, realCurrentCount - seenCurrentRef.current) : 0;
 
-  if (pages.length === 0 && orphanCount === 0) {
+  if (pagesLoaded && !activePage) {
     return <EmptyState />;
   }
 
@@ -336,19 +299,13 @@ function Dashboard({ token }: { token: string }) {
   // scroll, re-subscribe quotes, etc.).
   return (
     <>
-      <PageTabs />
       <div className="page-meta-row">
         <div className="page-meta-stack">
           <PageInfoBar
             page={activePage}
-            orphanCount={orphanCount}
-            mode={isOrphanTab ? "orphan" : "page"}
-            newMessageCount={isOrphanTab ? 0 : newMessageCount}
+            newMessageCount={newMessageCount}
             onJumpToCurrent={() => setCurrentWeekKey(realCurrentWeekKey)}
           />
-          {!isOrphanTab && activePage && activePage.source === "stock" && (
-            <PageWhitelistBar page={activePage} />
-          )}
         </div>
         {weeks.length > 0 && currentWeekKey && (
           <WeekPaginator
@@ -359,10 +316,9 @@ function Dashboard({ token }: { token: string }) {
         )}
         <PageActionBar
           page={activePage}
-          mode={isOrphanTab ? "orphan" : "page"}
           onOpenSettings={() => setSettingsOpen(true)}
           onExport={
-            activePage && activePage.source === "chat"
+            activePage
               ? () => {
                   const week = currentIsoWeek();
                   const cache = useChatStore.getState().caches[`${activePage.id}|${week}`];
@@ -383,33 +339,7 @@ function Dashboard({ token }: { token: string }) {
           }
         />
       </div>
-      {isOrphanTab && <OrphanCleanupBar orphanTasks={filteredTasks} />}
-      {/* Chat-source pages render ChatBoardPanel (owns its own scroll
-          container) instead of the TaskStream message list. The panel
-          owns its own day-based date picker (see DayPicker.tsx); the
-          parent doesn't need to pass a week. */}
-      {activePage && activePage.source === "chat" ? (
-        <ChatBoardPanel page={activePage} />
-      ) : (
-        /* Scrollable wrapper for the message list — tabs and meta-row
-            above stay pinned (they're outside this div), only the day-
-            grouped Card stream scrolls. Without an explicit wrapper the
-            <TaskStream> fragment would render directly into .stream and
-            inherit its overflow:hidden, hiding overflow rows entirely. */
-        <div className="stream-scroll">
-          {filteredTasks.length === 0 ? (
-            <div className="empty-state"><p>该监听页暂无任务。</p></div>
-          ) : (
-            <TaskStream
-              pushEventsByTask={pushEventsByTask}
-              autoTrade={autoTrade}
-              groups={groups}
-              currentWeekKey={currentWeekKey}
-              tabKey={isOrphanTab ? "orphan" : (activeTabId ?? "orphan")}
-            />
-          )}
-        </div>
-      )}
+      {activePage && <ChatBoardPanel page={activePage} />}
       {/* PageSettingsModal is viewport-level (position:fixed); rendering
           it inside .stream is purely structural — it visually anchors to
           the viewport regardless. */}
@@ -448,11 +378,10 @@ function ContentRouter({ token }: { token: string }) {
   // right zone keeps its React identity (and thus all internal state:
   // selected symbol's detail pane, chart canvas, trade list scroll,
   // quote subscriptions) when the user switches the left view between
-  // monitor / database / whop. Only the .stream child swaps.
+  // dashboard / database. Only the .stream child swaps.
   const view = useViewStore((s) => s.view);
   let leftContent: ReactNode;
-  if (view === "whop") leftContent = <WhopPanel />;
-  else if (view === "database") leftContent = <DatabaseView />;
+  if (view === "database") leftContent = <DatabaseView />;
   else leftContent = <Dashboard token={token} />;
 
   return (

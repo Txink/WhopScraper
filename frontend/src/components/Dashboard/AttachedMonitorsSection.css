@@ -293,6 +293,64 @@
   border-top: 0;
 }
 
+/* ── Per-monitor settings (migrated from old per-page settings modal) ──── */
+.mon-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 4px;
+  border-top: 1px dashed var(--line);
+}
+
+.mon-setting-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--fg-1);
+  cursor: pointer;
+}
+
+.mon-setting-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mon-setting-label {
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+
+.mon-setting-input {
+  background: var(--bg-2);
+  border: 1px solid var(--line-strong);
+  color: var(--fg-1);
+  padding: 5px 8px;
+  border-radius: var(--radius-chip);
+  font: inherit;
+  font-size: 12px;
+  width: 120px;
+  outline: none;
+  transition: border-color var(--dur) var(--ease);
+}
+
+.mon-setting-input:focus {
+  border-color: var(--brand);
+}
+
+.mon-danger-zone {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 4px;
+  border-top: 1px dashed var(--line);
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
 /* ── Add-monitor sub-form ─────────────────────────────────────────────── */
 .mon-add-form {
   margin-top: 12px;

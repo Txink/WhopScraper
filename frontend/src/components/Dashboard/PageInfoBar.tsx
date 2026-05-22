@@ -2,8 +2,6 @@ import type { WhopPage } from "../../api/domain-types";
 
 interface Props {
   page: WhopPage | null;
-  mode: "page" | "orphan";
-  orphanCount?: number;
   newMessageCount?: number;
   onJumpToCurrent?: () => void;
 }
@@ -21,19 +19,9 @@ function formatRelative(iso: string | null): string {
 
 export function PageInfoBar({
   page,
-  mode,
-  orphanCount = 0,
   newMessageCount,
   onJumpToCurrent,
 }: Props) {
-  if (mode === "orphan") {
-    return (
-      <div className="page-info-bar orphan">
-        <span className="badge gray">已停用</span>
-        <span>共 {orphanCount} 条历史 task — 来源 page 已被移除</span>
-      </div>
-    );
-  }
   if (!page) return null;
 
   const showNewBadge = (newMessageCount ?? 0) > 0 && onJumpToCurrent != null;

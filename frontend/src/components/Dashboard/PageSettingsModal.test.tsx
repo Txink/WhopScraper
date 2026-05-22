@@ -5,39 +5,8 @@ import { PageSettingsModal } from "./PageSettingsModal";
 import type { WhopPage } from "../../api/domain-types";
 import { useChildPagesStore } from "../../stores/childPages";
 
-const stockPage: WhopPage = {
-  id: "a", url: "u", source: "stock", name: "S", added_at: "2026-04-25T00:00:00Z",
-  settings: {
-    dedupe_processed_messages: true,
-    price_deviation_tolerance: 1.0,
-    block_historical_messages: false,
-    launch_headless: false,
-    tickers: { TSLL: { trade_quantity: 2000 } },
-    option_buy_quantity_enabled: false,
-    option_buy_quantity: null,
-    option_total_price_limit_enabled: false,
-    option_total_price_limit: null,
-  },
-  running: true, started_at: null, last_poll_at: null, messages_published: 0, last_error: null,
-};
-
-const optionPage: WhopPage = {
-  ...stockPage, id: "b", source: "option",
-  settings: {
-    dedupe_processed_messages: true,
-    price_deviation_tolerance: 5.0,
-    block_historical_messages: false,
-    launch_headless: false,
-    tickers: null,
-    option_buy_quantity_enabled: false,
-    option_buy_quantity: null,
-    option_total_price_limit_enabled: false,
-    option_total_price_limit: null,
-  },
-};
-
 const chatPage: WhopPage = {
-  ...stockPage, id: "c", source: "chat", name: "Chat",
+  id: "c", url: "u", source: "chat", name: "Chat", added_at: "2026-04-25T00:00:00Z",
   settings: {
     dedupe_processed_messages: false,
     price_deviation_tolerance: 0,
@@ -49,200 +18,92 @@ const chatPage: WhopPage = {
     option_total_price_limit_enabled: false,
     option_total_price_limit: null,
   },
+  running: true, started_at: null, last_poll_at: null, messages_published: 0, last_error: null,
 };
 
 describe("<PageSettingsModal>", () => {
-  beforeEach(() => { vi.restoreAllMocks(); });
-
-  it("ticker whitelist editor is no longer in the settings modal (moved to PageWhitelistBar)", () => {
-    // Whitelist editing is now inline below the page header — see PageWhitelistBar.
-    // The settings modal should not surface 股票配置 or any ticker editing UI.
-    render(<PageSettingsModal page={stockPage} onClose={vi.fn()} />);
-    expect(screen.queryByText(/股票配置/)).not.toBeInTheDocument();
-    expect(screen.queryByPlaceholderText(/输入 ticker/)).not.toBeInTheDocument();
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    useChildPagesStore.getState().setByParent("c", []);
   });
 
-  it("save patch never sends tickers — backend's per-field merge keeps existing whitelist", async () => {
-    const spy = vi.spyOn(httpModule.api, "updateWhopPageSettings").mockResolvedValue(stockPage);
-    render(<PageSettingsModal page={stockPage} onClose={vi.fn()} />);
+  it("renders 3-tab nav (消息监听 / 正股监听 / 期权监听)", () => {
+    vi.spyOn(httpModule.api, "listWhopPages").mockResolvedValue({ pages: [] });
+    render(<PageSettingsModal page={chatPage} onClose={vi.fn()} />);
+    expect(screen.getByRole("tab", { name: /消息监听/ })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /正股监听/ })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /期权监听/ })).toBeInTheDocument();
+  });
+
+  it("default tab is 消息监听 — shows dedupe + headless + 清空消息", () => {
+    vi.spyOn(httpModule.api, "listWhopPages").mockResolvedValue({ pages: [] });
+    render(<PageSettingsModal page={chatPage} onClose={vi.fn()} />);
+    expect(screen.getByLabelText(/避免重复解析/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/无头模式启动网页/)).toBeInTheDocument();
+    expect(screen.getByText(/清空消息/)).toBeInTheDocument();
+    // Stock/option-only fields no longer surface in the chat settings modal
+    // — they've been migrated into the 正股/期权 tabs' MonRow expanded body.
+    expect(screen.queryByLabelText(/价格偏差容忍/)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/禁止下单历史消息/)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/parser v2/i)).not.toBeInTheDocument();
+  });
+
+  it("clicking 正股监听 tab renders the stock sub-monitor add form", () => {
+    vi.spyOn(httpModule.api, "listWhopPages").mockResolvedValue({ pages: [] });
+    render(<PageSettingsModal page={chatPage} onClose={vi.fn()} />);
+    fireEvent.click(screen.getByRole("tab", { name: /正股监听/ }));
+    expect(screen.getByRole("button", { name: /\+ 添加正股监听/ })).toBeInTheDocument();
+  });
+
+  it("clicking 期权监听 tab renders the option sub-monitor add form", () => {
+    vi.spyOn(httpModule.api, "listWhopPages").mockResolvedValue({ pages: [] });
+    render(<PageSettingsModal page={chatPage} onClose={vi.fn()} />);
+    fireEvent.click(screen.getByRole("tab", { name: /期权监听/ }));
+    expect(screen.getByRole("button", { name: /\+ 添加期权监听/ })).toBeInTheDocument();
+  });
+
+  it("fetches child pages on mount", async () => {
+    const listSpy = vi.spyOn(httpModule.api, "listWhopPages").mockResolvedValue({ pages: [] });
+    render(<PageSettingsModal page={chatPage} onClose={vi.fn()} />);
+    await waitFor(() => expect(listSpy).toHaveBeenCalledWith({ parentChatId: "c" }));
+  });
+
+  it("save patches only dedupe + launch_headless", async () => {
+    vi.spyOn(httpModule.api, "listWhopPages").mockResolvedValue({ pages: [] });
+    const spy = vi.spyOn(httpModule.api, "updateWhopPageSettings").mockResolvedValue(chatPage);
+    render(<PageSettingsModal page={chatPage} onClose={vi.fn()} />);
+    fireEvent.click(screen.getByLabelText(/无头模式启动网页/));
     fireEvent.click(screen.getByText(/^保存/));
     await waitFor(() => expect(spy).toHaveBeenCalled());
     const arg = spy.mock.calls[0][1];
-    expect(arg).not.toHaveProperty("tickers");
+    expect(arg.launch_headless).toBe(true);
+    expect(arg.dedupe_processed_messages).toBe(false);
+    // Fields not exposed to the chat-source modal must NOT be patched —
+    // backend's per-field merge then preserves their existing values.
+    expect("price_deviation_tolerance" in arg).toBe(false);
+    expect("block_historical_messages" in arg).toBe(false);
+    expect("parser_version" in arg).toBe(false);
   });
 
   it("toggling dedupe shows hint about restart", () => {
-    render(<PageSettingsModal page={stockPage} onClose={vi.fn()} />);
+    vi.spyOn(httpModule.api, "listWhopPages").mockResolvedValue({ pages: [] });
+    render(<PageSettingsModal page={chatPage} onClose={vi.fn()} />);
     const checkbox = screen.getByLabelText(/避免重复解析/);
     fireEvent.click(checkbox);
     expect(screen.getByText(/下次重启监听才生效/)).toBeInTheDocument();
   });
 
-  it("invalid tolerance (negative) blocks save", async () => {
-    const spy = vi.spyOn(httpModule.api, "updateWhopPageSettings").mockResolvedValue(stockPage);
-    render(<PageSettingsModal page={stockPage} onClose={vi.fn()} />);
-    const input = screen.getByLabelText(/价格偏差容忍/);
-    fireEvent.change(input, { target: { value: "-1" } });
-    fireEvent.click(screen.getByText(/^保存/));
-    await waitFor(() => expect(screen.getByText(/必须 ≥ 0/)).toBeInTheDocument());
-    expect(spy).not.toHaveBeenCalled();
+  it("renders Whop Cookie status card in 消息监听 tab", async () => {
+    vi.spyOn(httpModule.api, "listWhopPages").mockResolvedValue({ pages: [] });
+    vi.spyOn(httpModule.api, "whopCookieStatus").mockResolvedValue({
+      exists: true,
+      path: "/path/to/cookie.json",
+      last_modified: "2026-05-22T10:00:00Z",
+      age_seconds: 3600,
+    });
+    render(<PageSettingsModal page={chatPage} onClose={vi.fn()} />);
+    await waitFor(() => expect(screen.getByText(/Whop Cookie 状态/)).toBeInTheDocument());
+    expect(screen.getByText("有效")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /复制登录命令/ })).toBeInTheDocument();
   });
-
-  it("toggling block_historical_messages saves it", async () => {
-    const spy = vi.spyOn(httpModule.api, "updateWhopPageSettings").mockResolvedValue(stockPage);
-    render(<PageSettingsModal page={stockPage} onClose={vi.fn()} />);
-    const checkbox = screen.getByLabelText(/禁止下单历史消息/);
-    fireEvent.click(checkbox);
-    fireEvent.click(screen.getByText(/^保存/));
-    await waitFor(() => expect(spy).toHaveBeenCalled());
-    const arg = spy.mock.calls[0][1];
-    expect(arg.block_historical_messages).toBe(true);
-    expect("block_non_today_messages" in arg).toBe(false);
-  });
-
-  it("toggling launch_headless saves it", async () => {
-    const spy = vi.spyOn(httpModule.api, "updateWhopPageSettings").mockResolvedValue(stockPage);
-    render(<PageSettingsModal page={stockPage} onClose={vi.fn()} />);
-    const checkbox = screen.getByLabelText(/无头模式启动网页/);
-    fireEvent.click(checkbox);
-    fireEvent.click(screen.getByText(/^保存/));
-    await waitFor(() => expect(spy).toHaveBeenCalled());
-    const arg = spy.mock.calls[0][1];
-    expect(arg.launch_headless).toBe(true);
-  });
-
-  it("option modal shows local option controls", () => {
-    render(<PageSettingsModal page={optionPage} onClose={vi.fn()} />);
-    expect(screen.getByText(/期权购买数量配置/)).toBeInTheDocument();
-    expect(screen.getByLabelText(/启用期权购买张数/)).toBeInTheDocument();
-    expect(screen.getByLabelText(/启用期权总价上限/)).toBeInTheDocument();
-  });
-
-  it("option modal saves selected option rules", async () => {
-    const spy = vi.spyOn(httpModule.api, "updateWhopPageSettings").mockResolvedValue(optionPage);
-    render(<PageSettingsModal page={optionPage} onClose={vi.fn()} />);
-
-    fireEvent.click(screen.getByLabelText(/启用期权购买张数/));
-    fireEvent.change(screen.getByPlaceholderText(/期权购买张数/), { target: { value: "3" } });
-    fireEvent.click(screen.getByLabelText(/启用期权总价上限/));
-    fireEvent.change(screen.getByPlaceholderText(/期权总价上限/), { target: { value: "1200" } });
-
-    fireEvent.click(screen.getByText(/^保存/));
-    await waitFor(() => expect(spy).toHaveBeenCalled());
-    const arg = spy.mock.calls[0][1];
-    expect(arg.option_buy_quantity_enabled).toBe(true);
-    expect(arg.option_buy_quantity).toBe(3);
-    expect(arg.option_total_price_limit_enabled).toBe(true);
-    expect(arg.option_total_price_limit).toBe(1200);
-  });
-
-  it("toggling parser_version checkbox saves it as v2", async () => {
-    const spy = vi.spyOn(httpModule.api, "updateWhopPageSettings").mockResolvedValue(stockPage);
-    render(<PageSettingsModal page={stockPage} onClose={vi.fn()} />);
-    const checkbox = screen.getByLabelText(/parser v2/i);
-    fireEvent.click(checkbox);
-    fireEvent.click(screen.getByText(/^保存/));
-    await waitFor(() => expect(spy).toHaveBeenCalled());
-    const arg = spy.mock.calls[0][1];
-    expect(arg.parser_version).toBe("v2");
-  });
-
-  it("checkbox initial state reflects existing parser_version=v2", async () => {
-    const v2Page: WhopPage = {
-      ...stockPage,
-      settings: { ...stockPage.settings, parser_version: "v2" },
-    };
-    const spy = vi.spyOn(httpModule.api, "updateWhopPageSettings").mockResolvedValue(v2Page);
-    render(<PageSettingsModal page={v2Page} onClose={vi.fn()} />);
-    const checkbox = screen.getByLabelText(/parser v2/i) as HTMLInputElement;
-    expect(checkbox.checked).toBe(true);
-    fireEvent.click(checkbox); // unchecks
-    fireEvent.click(screen.getByText(/^保存/));
-    await waitFor(() => expect(spy).toHaveBeenCalled());
-    const arg = spy.mock.calls[0][1];
-    expect(arg.parser_version).toBe("v1");
-  });
-
-  describe("chat-source page", () => {
-    beforeEach(() => {
-      // Reset child pages store between tests
-      useChildPagesStore.getState().setByParent("c", []);
-    });
-
-    it("renders 3-tab nav (消息监听 / 正股监听 / 期权监听)", async () => {
-      vi.spyOn(httpModule.api, "listWhopPages").mockResolvedValue({ pages: [] });
-      render(<PageSettingsModal page={chatPage} onClose={vi.fn()} />);
-      expect(screen.getByRole("tab", { name: /消息监听/ })).toBeInTheDocument();
-      expect(screen.getByRole("tab", { name: /正股监听/ })).toBeInTheDocument();
-      expect(screen.getByRole("tab", { name: /期权监听/ })).toBeInTheDocument();
-    });
-
-    it("default tab is 消息监听 — shows dedupe + headless + 清空消息", async () => {
-      vi.spyOn(httpModule.api, "listWhopPages").mockResolvedValue({ pages: [] });
-      render(<PageSettingsModal page={chatPage} onClose={vi.fn()} />);
-      expect(screen.getByLabelText(/避免重复解析/)).toBeInTheDocument();
-      expect(screen.getByLabelText(/无头模式启动网页/)).toBeInTheDocument();
-      expect(screen.getByText(/清空消息/)).toBeInTheDocument();
-      // Tolerance, block_historical, parser_v2 should NOT be shown for chat
-      expect(screen.queryByLabelText(/价格偏差容忍/)).not.toBeInTheDocument();
-      expect(screen.queryByLabelText(/禁止下单历史消息/)).not.toBeInTheDocument();
-      expect(screen.queryByLabelText(/parser v2/i)).not.toBeInTheDocument();
-    });
-
-    it("clicking 正股监听 tab renders the stock sub-monitor add form", async () => {
-      vi.spyOn(httpModule.api, "listWhopPages").mockResolvedValue({ pages: [] });
-      render(<PageSettingsModal page={chatPage} onClose={vi.fn()} />);
-      fireEvent.click(screen.getByRole("tab", { name: /正股监听/ }));
-      // Add-form submit button is unique enough — title + button both contain
-      // "添加正股监听", so target the button role.
-      expect(screen.getByRole("button", { name: /\+ 添加正股监听/ })).toBeInTheDocument();
-    });
-
-    it("clicking 期权监听 tab renders the option sub-monitor add form", async () => {
-      vi.spyOn(httpModule.api, "listWhopPages").mockResolvedValue({ pages: [] });
-      render(<PageSettingsModal page={chatPage} onClose={vi.fn()} />);
-      fireEvent.click(screen.getByRole("tab", { name: /期权监听/ }));
-      expect(screen.getByRole("button", { name: /\+ 添加期权监听/ })).toBeInTheDocument();
-    });
-
-    it("fetches child pages on mount for chat-source pages", async () => {
-      const listSpy = vi.spyOn(httpModule.api, "listWhopPages").mockResolvedValue({ pages: [] });
-      render(<PageSettingsModal page={chatPage} onClose={vi.fn()} />);
-      await waitFor(() => expect(listSpy).toHaveBeenCalledWith({ parentChatId: "c" }));
-    });
-
-    it("chat-source save patches only dedupe + launch_headless", async () => {
-      vi.spyOn(httpModule.api, "listWhopPages").mockResolvedValue({ pages: [] });
-      const spy = vi.spyOn(httpModule.api, "updateWhopPageSettings").mockResolvedValue(chatPage);
-      render(<PageSettingsModal page={chatPage} onClose={vi.fn()} />);
-      fireEvent.click(screen.getByLabelText(/无头模式启动网页/));
-      fireEvent.click(screen.getByText(/^保存/));
-      await waitFor(() => expect(spy).toHaveBeenCalled());
-      const arg = spy.mock.calls[0][1];
-      expect(arg.launch_headless).toBe(true);
-      expect(arg.dedupe_processed_messages).toBe(false);
-      // Fields not exposed to chat-source modal must NOT be patched —
-      // backend's per-field merge then preserves their existing values.
-      expect("price_deviation_tolerance" in arg).toBe(false);
-      expect("block_historical_messages" in arg).toBe(false);
-      expect("parser_version" in arg).toBe(false);
-    });
-
-    it("does NOT render tab nav for stock-source pages", () => {
-      render(<PageSettingsModal page={stockPage} onClose={vi.fn()} />);
-      expect(screen.queryByRole("tab", { name: /消息监听/ })).not.toBeInTheDocument();
-    });
-
-    it("does NOT render tab nav for option-source pages", () => {
-      render(<PageSettingsModal page={optionPage} onClose={vi.fn()} />);
-      expect(screen.queryByRole("tab", { name: /消息监听/ })).not.toBeInTheDocument();
-    });
-
-    it("does NOT call listWhopPages for stock-source pages", () => {
-      const listSpy = vi.spyOn(httpModule.api, "listWhopPages").mockResolvedValue({ pages: [] });
-      render(<PageSettingsModal page={stockPage} onClose={vi.fn()} />);
-      expect(listSpy).not.toHaveBeenCalled();
-    });
-  });
-
 });

@@ -9,16 +9,15 @@ import {
 
 interface Props {
   page: WhopPage | null;
-  mode: "page" | "orphan";
   onOpenSettings: () => void;
   /** Optional export action — chat pages pass an exporter; others omit
    *  it and the export button isn't rendered. */
   onExport?: () => void;
 }
 
-export function PageActionBar({ page, mode, onOpenSettings, onExport }: Props) {
+export function PageActionBar({ page, onOpenSettings, onExport }: Props) {
   const [busy, setBusy] = useState(false);
-  const isReadonlyTab = mode !== "page" || page === null;
+  const isReadonlyTab = page === null;
 
   // Power toggle: stop if running, start otherwise. The backend start endpoint
   // is restart-style (stop existing + fresh start with skip_initial=False), so

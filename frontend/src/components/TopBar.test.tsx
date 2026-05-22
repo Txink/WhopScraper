@@ -34,21 +34,14 @@ describe("TopBar", () => {
   it("renders view-switcher buttons", () => {
     render(<TopBar connLongport="up" mode="paper" dryRun={true} />);
     expect(screen.getByRole("button", { name: "监控看板" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Whop 管理" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "数据库" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Whop 管理/ })).toBeNull();
   });
 
   it("hides whop status indicator on the right", () => {
     render(<TopBar connLongport="up" mode="paper" dryRun={true} />);
     expect(screen.queryByText(/^whop$/i)).toBeNull();
     expect(screen.getByText(/^longport$/i)).toBeInTheDocument();
-  });
-
-  it("clicking Whop 管理 updates view store", () => {
-    useViewStore.setState({ view: "dashboard" });
-    render(<TopBar connLongport="up" mode="paper" dryRun={true} />);
-    fireEvent.click(screen.getByRole("button", { name: "Whop 管理" }));
-    expect(useViewStore.getState().view).toBe("whop");
   });
 
   it("clicking 数据库 updates view store", () => {
@@ -63,17 +56,8 @@ describe("TopBar", () => {
     render(<TopBar connLongport="up" mode="paper" dryRun={true} />);
     const dashBtn = screen.getByRole("button", { name: "监控看板" });
     expect(dashBtn.className).toContain("active");
-    const whopBtn = screen.getByRole("button", { name: "Whop 管理" });
-    expect(whopBtn.className).not.toContain("active");
-  });
-
-  it("whop button has active class when view='whop'", () => {
-    useViewStore.setState({ view: "whop" });
-    render(<TopBar connLongport="up" mode="paper" dryRun={true} />);
-    const whopBtn = screen.getByRole("button", { name: "Whop 管理" });
-    expect(whopBtn.className).toContain("active");
-    const dashBtn = screen.getByRole("button", { name: "监控看板" });
-    expect(dashBtn.className).not.toContain("active");
+    const dbBtn = screen.getByRole("button", { name: "数据库" });
+    expect(dbBtn.className).not.toContain("active");
   });
 
   it("database button has active class when view='database'", () => {

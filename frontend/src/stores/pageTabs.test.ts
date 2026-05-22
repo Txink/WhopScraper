@@ -20,43 +20,18 @@ const makePage = (overrides: Partial<WhopPage> = {}): WhopPage => ({
 describe("pageTabs store", () => {
   beforeEach(() => {
     usePageTabsStore.getState().reset();
-    localStorage.clear();
   });
 
-  it("setPages stores list and auto-selects first when no last_active", () => {
+  it("setPages stores list and flips pagesLoaded", () => {
     usePageTabsStore.getState().setPages([makePage({ id: "a" }), makePage({ id: "b" })]);
     expect(usePageTabsStore.getState().pages).toHaveLength(2);
-    expect(usePageTabsStore.getState().activeTabId).toBe("a");
+    expect(usePageTabsStore.getState().pagesLoaded).toBe(true);
   });
 
-  it("setPages restores last_active from localStorage", () => {
-    localStorage.setItem("DASHBOARD_LAST_TAB", "b");
-    usePageTabsStore.getState().setPages([makePage({ id: "a" }), makePage({ id: "b" })]);
-    expect(usePageTabsStore.getState().activeTabId).toBe("b");
-  });
-
-  it("setPages falls back to first when last_active missing", () => {
-    localStorage.setItem("DASHBOARD_LAST_TAB", "nonexistent");
-    usePageTabsStore.getState().setPages([makePage({ id: "a" })]);
-    expect(usePageTabsStore.getState().activeTabId).toBe("a");
-  });
-
-  it("setPages with empty list sets activeTabId to null", () => {
+  it("setPages with empty list still flips pagesLoaded", () => {
     usePageTabsStore.getState().setPages([]);
-    expect(usePageTabsStore.getState().activeTabId).toBeNull();
-  });
-
-  it("setActiveTab persists to localStorage", () => {
-    usePageTabsStore.getState().setPages([makePage({ id: "a" }), makePage({ id: "b" })]);
-    usePageTabsStore.getState().setActiveTab("b");
-    expect(localStorage.getItem("DASHBOARD_LAST_TAB")).toBe("b");
-  });
-
-  it("setActiveTab(orphan) does not write localStorage", () => {
-    usePageTabsStore.getState().setPages([makePage({ id: "a" })]);
-    usePageTabsStore.getState().setActiveTab("orphan");
-    expect(usePageTabsStore.getState().activeTabId).toBe("orphan");
-    expect(localStorage.getItem("DASHBOARD_LAST_TAB")).toBeNull();
+    expect(usePageTabsStore.getState().pages).toHaveLength(0);
+    expect(usePageTabsStore.getState().pagesLoaded).toBe(true);
   });
 
   it("toggleExpandedTask: same id twice collapses; different id switches the open slot", () => {
@@ -123,17 +98,6 @@ describe("pageTabs store", () => {
     expect(usePageTabsStore.getState().pagesLoaded).toBe(false);
   });
 
-  it("setPages flips pagesLoaded to true", () => {
-    expect(usePageTabsStore.getState().pagesLoaded).toBe(false);
-    usePageTabsStore.getState().setPages([makePage({ id: "a" })]);
-    expect(usePageTabsStore.getState().pagesLoaded).toBe(true);
-  });
-
-  it("setPages with empty list still flips pagesLoaded to true", () => {
-    usePageTabsStore.getState().setPages([]);
-    expect(usePageTabsStore.getState().pagesLoaded).toBe(true);
-  });
-
   it("markPagesLoaded sets pagesLoaded to true", () => {
     usePageTabsStore.getState().markPagesLoaded();
     expect(usePageTabsStore.getState().pagesLoaded).toBe(true);
@@ -146,20 +110,9 @@ describe("pageTabs store", () => {
     expect(usePageTabsStore.getState().pagesLoaded).toBe(false);
   });
 
-  it("applyPageChanged removed-active falls back to first page", () => {
-    usePageTabsStore.getState().setPages([makePage({ id: "a" }), makePage({ id: "b" })]);
-    usePageTabsStore.getState().setActiveTab("a");
-    usePageTabsStore.getState().applyPageChanged({
-      type: "whop.page_changed",
-      event_id: 5,
-      payload: { action: "removed", page: makePage({ id: "a" }) },
-    });
-    expect(usePageTabsStore.getState().activeTabId).toBe("b");
-  });
-
   it("removePageIfPresent drops the page when present, no-op otherwise", () => {
     const p: WhopPage = makePage({ id: "p1" });
-    usePageTabsStore.setState({ pages: [p], activeTabId: "p1", expandedTaskIdByTab: {}, orphanCount: 0, pagesLoaded: true });
+    usePageTabsStore.setState({ pages: [p], expandedTaskIdByTab: {}, pagesLoaded: true });
     usePageTabsStore.getState().removePageIfPresent("missing");
     expect(usePageTabsStore.getState().pages).toEqual([p]);
     usePageTabsStore.getState().removePageIfPresent("p1");

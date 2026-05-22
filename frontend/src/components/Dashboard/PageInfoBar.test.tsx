@@ -11,7 +11,7 @@ const stockPage = {
 
 describe("<PageInfoBar>", () => {
   it("renders page with url link and basic info", () => {
-    render(<PageInfoBar page={stockPage} mode="page" />);
+    render(<PageInfoBar page={stockPage} />);
     expect(screen.getByText("正股")).toBeInTheDocument();
     expect(screen.getByText("Hello")).toBeInTheDocument();
     // Status moved to the power button — should be absent here.
@@ -22,16 +22,15 @@ describe("<PageInfoBar>", () => {
     expect(screen.getByText(/已发消息\s*42/)).toBeInTheDocument();
   });
 
-  it("renders orphan view", () => {
-    render(<PageInfoBar page={null} mode="orphan" orphanCount={5} />);
-    expect(screen.getByText("已停用")).toBeInTheDocument();
-    expect(screen.getByText(/5 条历史/)).toBeInTheDocument();
+  it("renders nothing when page is null", () => {
+    const { container } = render(<PageInfoBar page={null} />);
+    expect(container.firstChild).toBeNull();
   });
 });
 
 describe("<PageInfoBar> new-messages indicator", () => {
   it("renders 已发消息 count by default", () => {
-    render(<PageInfoBar page={stockPage} mode="page" />);
+    render(<PageInfoBar page={stockPage} />);
     expect(screen.getByText(/已发消息\s*42/)).toBeInTheDocument();
     expect(screen.queryByText(/新消息 \+/)).toBeNull();
   });
@@ -40,7 +39,6 @@ describe("<PageInfoBar> new-messages indicator", () => {
     render(
       <PageInfoBar
         page={stockPage}
-        mode="page"
         newMessageCount={3}
         onJumpToCurrent={vi.fn()}
       />,
@@ -56,7 +54,6 @@ describe("<PageInfoBar> new-messages indicator", () => {
     render(
       <PageInfoBar
         page={stockPage}
-        mode="page"
         newMessageCount={5}
         onJumpToCurrent={onJump}
       />,
@@ -65,25 +62,10 @@ describe("<PageInfoBar> new-messages indicator", () => {
     expect(onJump).toHaveBeenCalledTimes(1);
   });
 
-  it("ignores newMessageCount when mode is orphan", () => {
-    render(
-      <PageInfoBar
-        page={null}
-        mode="orphan"
-        orphanCount={2}
-        newMessageCount={9}
-        onJumpToCurrent={vi.fn()}
-      />,
-    );
-    expect(screen.queryByText(/新消息 \+/)).toBeNull();
-    expect(screen.getByText(/2 条历史/)).toBeInTheDocument();
-  });
-
   it("falls back to 已发消息 when newMessageCount is 0", () => {
     render(
       <PageInfoBar
         page={stockPage}
-        mode="page"
         newMessageCount={0}
         onJumpToCurrent={vi.fn()}
       />,

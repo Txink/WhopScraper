@@ -88,12 +88,6 @@ export function TopBar({
         >
           监控看板
         </button>
-        <button
-          className={view === "whop" ? "view-btn active" : "view-btn"}
-          onClick={() => setView("whop")}
-        >
-          Whop 管理
-        </button>
       </nav>
 
       {/* Right cluster: conn indicators + account pill */}

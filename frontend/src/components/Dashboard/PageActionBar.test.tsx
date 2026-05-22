@@ -13,14 +13,8 @@ const stockPage = {
 describe("<PageActionBar>", () => {
   beforeEach(() => { usePageTabsStore.getState().reset(); });
 
-  it("disables power/settings when orphan", () => {
-    render(<PageActionBar page={null} mode="orphan" onOpenSettings={vi.fn()} />);
-    expect(screen.getByLabelText("开机")).toBeDisabled();
-    expect(screen.getByLabelText("设置")).toBeDisabled();
-  });
-
-  it("does not crash when mode=page but page is null", () => {
-    render(<PageActionBar page={null} mode="page" onOpenSettings={vi.fn()} />);
+  it("disables power/settings when page is null", () => {
+    render(<PageActionBar page={null} onOpenSettings={vi.fn()} />);
     expect(screen.getByLabelText("开机")).toBeDisabled();
     expect(screen.getByLabelText("设置")).toBeDisabled();
   });
@@ -28,7 +22,7 @@ describe("<PageActionBar>", () => {
   it("clicks start when page is off", async () => {
     const stockPageOff = { ...stockPage, running: false, last_error: null };
     const startSpy = vi.spyOn(httpModule.api, "startWhopPage").mockResolvedValue(stockPageOff);
-    render(<PageActionBar page={stockPageOff} mode="page" onOpenSettings={vi.fn()} />);
+    render(<PageActionBar page={stockPageOff} onOpenSettings={vi.fn()} />);
     fireEvent.click(screen.getByLabelText("开机"));
     await waitFor(() => expect(startSpy).toHaveBeenCalledWith("a"));
   });
@@ -36,21 +30,21 @@ describe("<PageActionBar>", () => {
   it("clicks stop when page is on", async () => {
     const stockPageOn = { ...stockPage, running: true, last_error: null };
     const stopSpy = vi.spyOn(httpModule.api, "stopWhopPage").mockResolvedValue(stockPageOn);
-    render(<PageActionBar page={stockPageOn} mode="page" onOpenSettings={vi.fn()} />);
+    render(<PageActionBar page={stockPageOn} onOpenSettings={vi.fn()} />);
     fireEvent.click(screen.getByLabelText("关机"));
     await waitFor(() => expect(stopSpy).toHaveBeenCalledWith("a"));
   });
 
   it("error state shows red icon with last_error tooltip", () => {
     const errPage = { ...stockPage, running: false, last_error: "navigate failed" };
-    render(<PageActionBar page={errPage} mode="page" onOpenSettings={vi.fn()} />);
+    render(<PageActionBar page={errPage} onOpenSettings={vi.fn()} />);
     const btn = screen.getByLabelText("错误，点击重试");
     expect(btn).toHaveAttribute("title", "错误：navigate failed");
   });
 
   it("running listener with last_error shows red (last_error wins over running)", () => {
     const errPage = { ...stockPage, running: true, last_error: "scrape timeout" };
-    render(<PageActionBar page={errPage} mode="page" onOpenSettings={vi.fn()} />);
+    render(<PageActionBar page={errPage} onOpenSettings={vi.fn()} />);
     const btn = screen.getByLabelText("错误，点击关机");
     expect(btn).toHaveAttribute("title", "错误：scrape timeout");
     expect(btn.className).toContain("err");
@@ -60,7 +54,7 @@ describe("<PageActionBar>", () => {
   it("clicks stop when red button is clicked while running with error", async () => {
     const errPage = { ...stockPage, running: true, last_error: "scrape timeout" };
     const stopSpy = vi.spyOn(httpModule.api, "stopWhopPage").mockResolvedValue(errPage);
-    render(<PageActionBar page={errPage} mode="page" onOpenSettings={vi.fn()} />);
+    render(<PageActionBar page={errPage} onOpenSettings={vi.fn()} />);
     fireEvent.click(screen.getByLabelText("错误，点击关机"));
     await waitFor(() => expect(stopSpy).toHaveBeenCalledWith("a"));
   });
@@ -70,7 +64,7 @@ describe("<PageActionBar>", () => {
     // single-accordion behavior driven by TaskStream + pageTabsStore.
     // Action bar should only show 2 buttons now (power + settings).
     const { container } = render(
-      <PageActionBar page={stockPage} mode="page" onOpenSettings={vi.fn()} />,
+      <PageActionBar page={stockPage} onOpenSettings={vi.fn()} />,
     );
     expect(container.querySelectorAll(".page-action-bar button")).toHaveLength(2);
     expect(screen.queryByLabelText("智能展开")).not.toBeInTheDocument();

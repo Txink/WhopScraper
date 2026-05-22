@@ -10,11 +10,6 @@ describe("view store", () => {
     expect(useViewStore.getState().view).toBe("dashboard");
   });
 
-  it("can switch to whop", () => {
-    useViewStore.getState().setView("whop");
-    expect(useViewStore.getState().view).toBe("whop");
-  });
-
   it("can switch to database", () => {
     useViewStore.getState().setView("database");
     expect(useViewStore.getState().view).toBe("database");

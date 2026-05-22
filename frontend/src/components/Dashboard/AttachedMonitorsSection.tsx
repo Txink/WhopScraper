@@ -1,6 +1,12 @@
 import { useState } from "react";
-import type { WhopPage, WhopPageSettingsPatch, TickerConfig } from "../../api/domain-types";
+import type {
+  WhopPage,
+  WhopPageSettings,
+  WhopPageSettingsPatch,
+  TickerConfig,
+} from "../../api/domain-types";
 import { api, HttpError } from "../../api/http";
+import { useTasksStore } from "../../stores/tasks";
 import { TickerWhitelistEditor } from "../common/TickerWhitelistEditor";
 import { OptionQuantityEditor } from "../common/OptionQuantityEditor";
 import "./AttachedMonitorsSection.css";
@@ -301,8 +307,124 @@ function MonRow({ page, expanded, onToggle, onRefresh }: RowProps) {
               />
             </div>
           )}
+
+          <MonRowSettings page={page} onRefresh={onRefresh} />
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── MonRow inline settings (migrated from the old per-page settings modal) ──
+
+function MonRowSettings({ page, onRefresh }: { page: WhopPage; onRefresh(): void }) {
+  const s = page.settings;
+  const [tolerance, setTolerance] = useState<string>(String(s.price_deviation_tolerance ?? 0));
+  const [clearing, setClearing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const patch = async (p: WhopPageSettingsPatch) => {
+    setError(null);
+    try {
+      await api.updateWhopPageSettings(page.id, p as WhopPageSettings);
+      onRefresh();
+    } catch (e) {
+      setError(e instanceof HttpError ? e.message : (e instanceof Error ? e.message : String(e)));
+    }
+  };
+
+  const commitTolerance = () => {
+    if (tolerance === String(s.price_deviation_tolerance)) return;
+    const n = Number(tolerance);
+    if (Number.isNaN(n) || n < 0) {
+      setError("价格偏差必须 ≥ 0");
+      setTolerance(String(s.price_deviation_tolerance));
+      return;
+    }
+    patch({ price_deviation_tolerance: n });
+  };
+
+  const handleClearHistory = async () => {
+    if (!confirm(`确认从数据库删除 "${page.name}" 的所有历史 task？\n此操作不可逆，监听仍继续抓新消息。`)) return;
+    setClearing(true);
+    setError(null);
+    try {
+      const r = await api.cleanupPageHistory(page.url);
+      useTasksStore.getState().removeTasksByUrl(page.url);
+      alert(`已清理 ${r.deleted_count} 条历史 task`);
+      onRefresh();
+    } catch (e) {
+      setError(e instanceof HttpError ? e.message : (e instanceof Error ? e.message : String(e)));
+    } finally {
+      setClearing(false);
+    }
+  };
+
+  return (
+    <div className="mon-settings">
+      <label className="mon-setting-toggle">
+        <input
+          type="checkbox"
+          checked={s.dedupe_processed_messages}
+          onChange={(e) => patch({ dedupe_processed_messages: e.target.checked })}
+        />
+        <span>避免重复解析消息（启动 / 重启时跳过 DB 中已存在的 domID）</span>
+      </label>
+
+      <div className="mon-setting-field">
+        <span className="mon-setting-label">价格偏差容忍 (%)</span>
+        <input
+          type="number"
+          min={0}
+          step={0.1}
+          value={tolerance}
+          onChange={(e) => setTolerance(e.target.value)}
+          onBlur={commitTolerance}
+          className="mon-setting-input"
+        />
+        <p className="hint small">字段预留，目前不参与买入 / 卖出市价限价判断。</p>
+      </div>
+
+      <label className="mon-setting-toggle">
+        <input
+          type="checkbox"
+          checked={s.block_historical_messages}
+          onChange={(e) => patch({ block_historical_messages: e.target.checked })}
+        />
+        <span>禁止下单历史消息（消息发布时间早于本次监听启动）</span>
+      </label>
+
+      <label className="mon-setting-toggle">
+        <input
+          type="checkbox"
+          checked={Boolean(s.launch_headless)}
+          onChange={(e) => patch({ launch_headless: e.target.checked })}
+        />
+        <span>用无头模式启动网页（Headless）— 重启监听后生效</span>
+      </label>
+
+      <label className="mon-setting-toggle">
+        <input
+          type="checkbox"
+          checked={s.parser_version === "v2"}
+          onChange={(e) => patch({ parser_version: e.target.checked ? "v2" : "v1" })}
+        />
+        <span>使用 parser v2（实验）</span>
+      </label>
+
+      <div className="mon-danger-zone">
+        <button
+          type="button"
+          className="mon-btn danger"
+          disabled={clearing}
+          onClick={handleClearHistory}
+        >
+          {clearing ? "清空中…" : "🗑 清空本页历史"}
+        </button>
+        <span className="hint small">清空后监听不停，仍会继续抓新消息。</span>
+      </div>
+
+      {error && <div className="add-error">{error}</div>}
     </div>
   );
 }
