@@ -149,21 +149,34 @@ def _row_to_chat_out(row: ChatMessageRow) -> ChatMessageOut:
     ``QuotedRefOut`` when ``quoted_author`` is non-null, or ``None`` when
     the row has no quote. ``quoted_content`` may be empty string when the
     parent message had no body (image-only / sticker-only quote).
+
+    Re-attach ``tzinfo=UTC`` on naive datetimes coming back from SQLite —
+    ``DateTime(timezone=True)`` is honored at write time (we always insert
+    aware UTC) but SQLite stores the value as a plain string and SQLAlchemy
+    returns it naive on read. Without this, Pydantic emits ISO without a
+    ``+00:00`` suffix and the frontend's ``new Date(...)`` parses it as the
+    browser's local timezone, mis-binning messages by up to 8 hours.
     """
+    posted_at = row.posted_at
+    if posted_at.tzinfo is None:
+        posted_at = posted_at.replace(tzinfo=UTC)
     quoted: QuotedRefOut | None = None
     if row.quoted_author is not None:
+        q_posted = row.quoted_posted_at
+        if q_posted is not None and q_posted.tzinfo is None:
+            q_posted = q_posted.replace(tzinfo=UTC)
         quoted = QuotedRefOut(
             message_id=row.quoted_message_id,
             author=row.quoted_author,
             content=row.quoted_content or "",
-            posted_at=row.quoted_posted_at,
+            posted_at=q_posted,
         )
     return ChatMessageOut(
         id=row.id,
         page_id=row.page_id,
         author=row.author,
         content=row.content,
-        posted_at=row.posted_at,
+        posted_at=posted_at,
         quoted=quoted,
         image_url=f"/api/chat-images/{row.id}" if row.image_filename else None,
     )

@@ -13,11 +13,11 @@ import { useChildPagesStore } from "../../stores/childPages";
 import { useTasksStore } from "../../stores/tasks";
 import { useConnStore } from "../../stores/conn";
 import {
-  chatDayKeyOf,
-  chatTodayInShanghai,
+  dayKeyOf,
   isoWeekBounds,
   isoWeekOfDay,
   monthOf,
+  todayInShanghai,
   weeksCoveringMonth,
 } from "../Dashboard/weekUtils";
 import { groupIntoCards } from "./chatCards";
@@ -54,12 +54,12 @@ function persistMode(pageId: string, mode: SenderMode): void {
 export function ChatBoardPanel({ page }: Props) {
   // Currently-selected calendar day, drives both the visible-message
   // filter and the ISO-week that gets fetched into chatStore.
-  const [selectedDate, setSelectedDate] = useState<string>(chatTodayInShanghai());
+  const [selectedDate, setSelectedDate] = useState<string>(todayInShanghai());
   // Reset to today whenever the active page changes.
-  useEffect(() => { setSelectedDate(chatTodayInShanghai()); }, [page.id]);
+  useEffect(() => { setSelectedDate(todayInShanghai()); }, [page.id]);
 
   const selectedWeek = isoWeekOfDay(selectedDate);
-  const today = chatTodayInShanghai();
+  const today = todayInShanghai();
 
   const cache = useChatStore((s) => s.caches[`${page.id}|${selectedWeek}`]);
   const fetch = useChatStore((s) => s.fetch);
@@ -155,13 +155,13 @@ export function ChatBoardPanel({ page }: Props) {
   // every downstream consumer (groupIntoCards, buildTimeline, ...)
   // sees only that day's content.
   const messages = useMemo(
-    () => rawMessages.filter((m) => chatDayKeyOf(m.posted_at) === selectedDate),
+    () => rawMessages.filter((m) => dayKeyOf(m.posted_at) === selectedDate),
     [rawMessages, selectedDate],
   );
   const dayFilteredChildTasks = useMemo(
     () =>
       childTasks.filter(
-        (t) => chatDayKeyOf(t.message.posted_at) === selectedDate,
+        (t) => dayKeyOf(t.message.posted_at) === selectedDate,
       ),
     [childTasks, selectedDate],
   );
@@ -281,7 +281,7 @@ export function ChatBoardPanel({ page }: Props) {
       const week = isoWeekOfDay(dayKey);
       const c = allCaches[`${page.id}|${week}`];
       if (!c) return false;
-      return c.messages.some((m) => chatDayKeyOf(m.posted_at) === dayKey);
+      return c.messages.some((m) => dayKeyOf(m.posted_at) === dayKey);
     },
     [allCaches, page.id],
   );

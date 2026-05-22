@@ -461,6 +461,52 @@ def test_get_chat_messages_filters_by_sender(app_with_db) -> None:  # noqa: ANN0
     assert len(body["messages"]) == 2
 
 
+def test_get_chat_messages_posted_at_carries_utc_offset(app_with_db) -> None:  # noqa: ANN001
+    """``posted_at`` (and ``quoted.posted_at``) must serialize with a UTC
+    offset suffix even though SQLite drops ``tzinfo`` on roundtrip.
+
+    Without the offset, the frontend's ``new Date(iso)`` parses the value
+    as the browser's local timezone — a Beijing browser then mis-bins UTC
+    23:18 as local 23:18, shifting the day boundary by 8 hours.
+    """
+    client, factory, _registry, loop = app_with_db
+    page_id = _make_chat_page(client, url="https://whop.example/chat-t14-tz")
+
+    async def _seed() -> None:
+        async with factory() as s:
+            await repo.upsert_chat_message(
+                s,
+                ChatMessageRow(
+                    id="m-tz",
+                    page_id=page_id,
+                    author="alice",
+                    content="x",
+                    raw_content="x",
+                    posted_at=datetime(2026, 5, 20, 23, 18, tzinfo=UTC),
+                    received_at=datetime(2026, 5, 22, 12, 30, tzinfo=UTC),
+                    url="https://whop.example/chat-t14-tz",
+                    quoted_message_id="parent-id",
+                    quoted_author="bob",
+                    quoted_content="parent",
+                    quoted_posted_at=datetime(2026, 5, 20, 22, 0, tzinfo=UTC),
+                ),
+            )
+            await s.commit()
+
+    loop.run_until_complete(_seed())
+
+    resp = client.get(
+        f"/api/whop/pages/{page_id}/chat-messages",
+        params={"week": "2026-W21", "token": _TOKEN},
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    msg = next(m for m in body["messages"] if m["id"] == "m-tz")
+    # Must end with Z or ±HH:MM offset — never bare "YYYY-MM-DDTHH:MM:SS".
+    assert msg["posted_at"].endswith(("Z", "+00:00")), msg["posted_at"]
+    assert msg["quoted"]["posted_at"].endswith(("Z", "+00:00")), msg["quoted"]["posted_at"]
+
+
 def test_get_chat_messages_unknown_page_404(app_with_db) -> None:  # noqa: ANN001
     """Unknown page_id returns 404."""
     client, _factory, _registry, _loop = app_with_db

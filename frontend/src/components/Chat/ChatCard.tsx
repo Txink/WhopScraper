@@ -118,10 +118,7 @@ function renderBlock(b: Block, idx: number): JSX.Element {
 }
 
 function fmtTime(iso: string): string {
-  // Backend serializes UTC posted_at as naive ISO; force UTC parse before
-  // letting the browser apply its local offset. Mirrors MessageShell.fmtTime.
-  const normalized = /[Zz]|[+-]\d\d:?\d\d$/.test(iso) ? iso : `${iso}Z`;
-  const d = new Date(normalized);
+  const d = new Date(iso);
   return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 

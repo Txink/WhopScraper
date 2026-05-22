@@ -257,24 +257,6 @@ export function formatDayLabel(
     : `${y}年${mo}月${d}日 ${wd}`;
 }
 
-/** Boundary hour (Beijing) at which a new "chat day" starts. Messages
- *  posted before this hour belong to the prior chat-day. */
-export const CHAT_DAY_BOUNDARY_HOUR = 6;
-
-/** Beijing-calendar dayKey for a chat message, treating each "chat day"
- *  as starting at 06:00 Beijing. A message at 03:00 Beijing on May 22
- *  belongs to the May-21 chat day. */
-export function chatDayKeyOf(isoTs: string): string {
-  const shifted = new Date(
-    new Date(isoTs).getTime() - CHAT_DAY_BOUNDARY_HOUR * 3600 * 1000,
-  );
-  return dayKeyOf(shifted.toISOString());
-}
-
-export function chatTodayInShanghai(): string {
-  return chatDayKeyOf(new Date().toISOString());
-}
-
 export function computeWeeks(tasks: TaskSummary[]): ComputedWeeks {
   const sorted = [...tasks].sort((a, b) => taskTime(b).localeCompare(taskTime(a)));
   const groups = new Map<string, TaskSummary[]>();

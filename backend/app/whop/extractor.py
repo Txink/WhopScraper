@@ -124,6 +124,7 @@ _TIME_RE = r"(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)"
 _TODAY_RE = re.compile(rf"^Today(?:\s+at)?\s+{_TIME_RE}$", re.IGNORECASE)
 _YESTERDAY_RE = re.compile(rf"^Yesterday(?:\s+at)?\s+{_TIME_RE}$", re.IGNORECASE)
 _WEEKDAY_RE = re.compile(rf"^(\w+)(?:\s+at)?\s+{_TIME_RE}$", re.IGNORECASE)
+_TIME_ONLY_PARSE_RE = re.compile(rf"^{_TIME_RE}$", re.IGNORECASE)
 _FULL_DATE_RE = re.compile(
     rf"^(\w{{3}})\s+(\d{{1,2}})(?:,\s*(\d{{4}}))?\s+{_TIME_RE}$",
     re.IGNORECASE,
@@ -137,7 +138,15 @@ def parse_whop_timestamp(text: str, *, now: datetime | None = None) -> datetime 
     project runs against a Beijing-based feed, so the input is interpreted
     as ``Asia/Shanghai`` wall-clock and the result is converted to real UTC.
 
-    Handles all 6 formats shown in Whop chat:
+    Handles all formats shown in Whop chat:
+      - "2:30 PM"                  → today at that time (Beijing) — Whop's
+                                      bare-time format for messages posted
+                                      earlier on the current Beijing calendar
+                                      day. Returning ``None`` here would let
+                                      the caller fall back to ``received_at``
+                                      (scrape wall-clock), pulling messages
+                                      posted in the 00:00–05:59 Beijing
+                                      window into the wrong chat-day bucket.
       - "Today at 2:30 PM"         → today at that time (Beijing)
       - "Yesterday at 11:24 PM"    → yesterday at that time (Beijing)
       - "Thursday at 11:35 AM"     → most recent Thursday strictly before today (Beijing)
@@ -169,6 +178,10 @@ def parse_whop_timestamp(text: str, *, now: datetime | None = None) -> datetime 
 
     # Today at H:MM AM/PM
     if m := _TODAY_RE.match(text):
+        return _build(today_bj, int(m.group(1)), int(m.group(2)), m.group(3))
+
+    # Bare H:MM AM/PM — Whop's "today" shorthand (no prefix word).
+    if m := _TIME_ONLY_PARSE_RE.match(text):
         return _build(today_bj, int(m.group(1)), int(m.group(2)), m.group(3))
 
     # Yesterday at H:MM AM/PM

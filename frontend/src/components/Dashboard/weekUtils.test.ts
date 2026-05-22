@@ -13,8 +13,6 @@ import {
   isoWeekOfDay,
   weeksCoveringMonth,
   formatDayLabel,
-  chatDayKeyOf,
-  chatTodayInShanghai,
 } from "./weekUtils";
 import type { TaskSummary } from "../../api/domain-types";
 
@@ -321,45 +319,14 @@ describe("formatDayLabel", () => {
   });
 });
 
-describe("chatDayKeyOf", () => {
-  it("returns the previous calendar day for 03:00 Beijing", () => {
-    // 2026-05-22 03:00 Beijing = 2026-05-21T19:00:00Z UTC
-    expect(chatDayKeyOf("2026-05-21T19:00:00Z")).toBe("2026-05-21");
+describe("dayKeyOf at the Beijing midnight boundary", () => {
+  it("returns the previous calendar day at 23:59 Beijing", () => {
+    // 2026-05-21 23:59 Beijing = 2026-05-21T15:59:00Z UTC
+    expect(dayKeyOf("2026-05-21T15:59:00Z")).toBe("2026-05-21");
   });
 
-  it("returns the previous calendar day for 05:59 Beijing", () => {
-    // 2026-05-22 05:59 Beijing = 2026-05-21T21:59:00Z UTC
-    expect(chatDayKeyOf("2026-05-21T21:59:00Z")).toBe("2026-05-21");
-  });
-
-  it("returns the new calendar day starting at 06:00 Beijing", () => {
-    // 2026-05-22 06:00 Beijing = 2026-05-21T22:00:00Z UTC
-    expect(chatDayKeyOf("2026-05-21T22:00:00Z")).toBe("2026-05-22");
-  });
-
-  it("agrees with dayKeyOf for an afternoon timestamp", () => {
-    // 2026-05-21 14:00 Beijing — well past 06:00, so chat-day matches calendar.
-    expect(chatDayKeyOf("2026-05-21T06:00:00Z")).toBe(
-      dayKeyOf("2026-05-21T06:00:00Z"),
-    );
-  });
-});
-
-describe("chatTodayInShanghai", () => {
-  it("matches chatDayKeyOf(now)", () => {
-    expect(chatTodayInShanghai()).toBe(chatDayKeyOf(new Date().toISOString()));
-  });
-
-  it("is either today or yesterday relative to calendar today", () => {
-    // Between 00:00 and 06:00 Beijing, chatTodayInShanghai is the prior
-    // calendar day; otherwise the two agree. Both shapes are valid;
-    // the function MUST never drift further than one day.
-    const chatToday = chatTodayInShanghai();
-    const today = todayInShanghai();
-    if (chatToday !== today) {
-      expect(addDays(chatToday, 1)).toBe(today);
-    } else {
-      expect(chatToday).toBe(today);
-    }
+  it("flips to the new calendar day at 00:00 Beijing", () => {
+    // 2026-05-22 00:00 Beijing = 2026-05-21T16:00:00Z UTC
+    expect(dayKeyOf("2026-05-21T16:00:00Z")).toBe("2026-05-22");
   });
 });

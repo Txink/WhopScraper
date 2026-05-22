@@ -354,6 +354,31 @@ def test_parse_today_no_at() -> None:
     assert got == datetime(2026, 4, 25, 6, 30, 0, tzinfo=UTC)
 
 
+def test_parse_bare_time_pm_is_today() -> None:
+    # Whop's bare-time format ("2:30 PM") = today in Beijing.
+    got = parse_whop_timestamp("2:30 PM", now=_NOW)
+    assert got == datetime(2026, 4, 25, 6, 30, 0, tzinfo=UTC)
+
+
+def test_parse_bare_time_am_is_today() -> None:
+    # 01:04 Beijing Apr 25 → 17:04 UTC Apr 24
+    got = parse_whop_timestamp("1:04 AM", now=_NOW)
+    assert got == datetime(2026, 4, 24, 17, 4, 0, tzinfo=UTC)
+
+
+def test_parse_bare_time_when_utc_and_beijing_dates_differ() -> None:
+    """At Beijing Apr 28 03:02 (UTC Apr 27 19:02), bare ``2:30 AM`` is
+    Apr 28 02:30 Beijing — NOT Apr 27. This is the actual chat-day bug:
+    a message at 02:30 Beijing posted on Apr 28 belongs to the Apr 27
+    chat-day (boundary 06:00 Beijing). Without this branch it would have
+    fallen back to the scrape ``received_at`` and landed on the wrong day.
+    """
+    now = datetime(2026, 4, 27, 19, 2, 0, tzinfo=UTC)  # Beijing Apr 28 03:02
+    got = parse_whop_timestamp("2:30 AM", now=now)
+    # Beijing 02:30 Apr 28 → UTC 18:30 Apr 27
+    assert got == datetime(2026, 4, 27, 18, 30, 0, tzinfo=UTC)
+
+
 def test_parse_yesterday_at() -> None:
     # Beijing 23:24 Apr 24 → UTC 15:24 Apr 24
     got = parse_whop_timestamp("Yesterday at 11:24 PM", now=_NOW)

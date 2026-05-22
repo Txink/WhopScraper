@@ -18,8 +18,7 @@ export interface MessageShellProps {
 // Local-time HH:mm formatter. Duplicates same logic in ChatCard.tsx —
 // keep behavior in sync or extract to a shared util in a follow-up.
 function fmtTime(iso: string): string {
-  const normalized = /[Zz]|[+-]\d\d:?\d\d$/.test(iso) ? iso : `${iso}Z`;
-  const d = new Date(normalized);
+  const d = new Date(iso);
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
