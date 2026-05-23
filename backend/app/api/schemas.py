@@ -661,7 +661,9 @@ class ChatAuthorOut(BaseModel):
     count: int
 
 
-class ChatWeekWindowOut(BaseModel):
+class ChatDayWindowOut(BaseModel):
+    """北京日历日的半开 UTC 区间 ``[start, end)``。"""
+
     start: datetime
     end: datetime
 
@@ -669,7 +671,14 @@ class ChatWeekWindowOut(BaseModel):
 class ChatMessagesOut(BaseModel):
     messages: list[ChatMessageOut]
     authors: list[ChatAuthorOut]
-    week: ChatWeekWindowOut
+    day: ChatDayWindowOut
+
+
+class ChatMessageCountsOut(BaseModel):
+    """按北京日历日聚合的当月消息计数。``counts`` 仅包含 ``count > 0`` 的天。"""
+
+    month: str  # "YYYY-MM"
+    counts: dict[str, int]  # {"YYYY-MM-DD": count}
 
 
 # ---------------------------------------------------------------------------
