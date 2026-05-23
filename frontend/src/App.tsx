@@ -18,7 +18,7 @@ import { PageInfoBar } from "./components/Dashboard/PageInfoBar";
 import { PageActionBar } from "./components/Dashboard/PageActionBar";
 import { PageSettingsModal } from "./components/Dashboard/PageSettingsModal";
 import { WeekPaginator } from "./components/Dashboard/WeekPaginator";
-import { computeWeeks, weekKeyOf, currentIsoWeek } from "./components/Dashboard/weekUtils";
+import { computeWeeks, weekKeyOf, currentIsoWeek, monthOf, todayInShanghai } from "./components/Dashboard/weekUtils";
 import { ChatBoardPanel } from "./components/Chat/ChatBoardPanel";
 import { groupIntoCards } from "./components/Chat/chatCards";
 import { buildExportPayload, triggerJsonDownload } from "./components/Chat/chatExport";
@@ -206,21 +206,22 @@ function Dashboard({ token }: { token: string }) {
             }, 600);
           }
         } else if (evt.type === "chat.message_stored") {
-          // WS payload is just ``{page_id, message_id}`` (see
-          // backend/app/api/ws.py:_payload_to_dict). Re-fetch every cached
-          // ``(page_id, week)`` slice for that page so the new message is
-          // pulled in via the chat-messages endpoint — applyStoredMessage
-          // would need the full row we don't have here. Fire-and-forget;
-          // errors are not user-facing (mirrors other WS branches).
+          // WS payload is ``{page_id, message_id}`` only — we don't have the
+          // posted_at, so we can't route the update by day. Assume the event
+          // is for "now" (the scraper publishes events as messages arrive,
+          // see backend/app/whop/chat_writer.py), and refresh only the
+          // current Beijing-day slice + current-month counts for that page,
+          // if either is already cached. Fire-and-forget.
           const p = evt.payload as { page_id?: string; message_id?: number };
           if (p?.page_id) {
-            const caches = useChatStore.getState().caches;
-            const prefix = `${p.page_id}|`;
-            for (const key of Object.keys(caches)) {
-              if (key.startsWith(prefix)) {
-                const week = key.slice(prefix.length);
-                void useChatStore.getState().fetch(p.page_id, week, []);
-              }
+            const today = todayInShanghai();
+            const month = monthOf(today);
+            const store = useChatStore.getState();
+            if (store.caches[`${p.page_id}|${today}`]) {
+              void store.fetchDay(p.page_id, today, []);
+            }
+            if (store.counts[`${p.page_id}|${month}`]) {
+              void store.fetchCounts(p.page_id, month);
             }
           }
         } else {
