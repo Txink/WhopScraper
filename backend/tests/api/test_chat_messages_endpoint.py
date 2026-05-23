@@ -402,24 +402,49 @@ def _make_chat_page(client: TestClient, url: str = "https://whop.example/chat-t1
     return resp.json()["id"]
 
 
-def test_get_chat_messages_returns_shape(app_with_db) -> None:  # noqa: ANN001
-    """Endpoint returns messages, authors, week — all top-level keys present."""
+def test_get_chat_messages_returns_shape(app_with_db) -> None:
+    """Endpoint returns messages, authors, day — all top-level keys present."""
     client, _factory, _registry, _loop = app_with_db
     page_id = _make_chat_page(client)
 
     resp = client.get(
         f"/api/whop/pages/{page_id}/chat-messages",
-        params={"week": "2026-W21", "token": _TOKEN},
+        params={"day": "2026-05-23", "token": _TOKEN},
     )
     assert resp.status_code == 200, resp.text
     body = resp.json()
     assert "messages" in body
     assert "authors" in body
-    assert "week" in body
+    assert "day" in body
+    assert "week" not in body
     assert isinstance(body["messages"], list)
     assert isinstance(body["authors"], list)
-    assert "start" in body["week"]
-    assert "end" in body["week"]
+    assert "start" in body["day"]
+    assert "end" in body["day"]
+
+
+def test_get_chat_messages_requires_day(app_with_db) -> None:
+    """``day`` is required; missing → 422."""
+    client, _factory, _registry, _loop = app_with_db
+    page_id = _make_chat_page(client)
+
+    resp = client.get(
+        f"/api/whop/pages/{page_id}/chat-messages",
+        params={"token": _TOKEN},
+    )
+    assert resp.status_code == 422
+
+
+def test_get_chat_messages_rejects_invalid_day(app_with_db) -> None:
+    client, _factory, _registry, _loop = app_with_db
+    page_id = _make_chat_page(client)
+
+    resp = client.get(
+        f"/api/whop/pages/{page_id}/chat-messages",
+        params={"day": "not-a-date", "token": _TOKEN},
+    )
+    assert resp.status_code == 400
+    assert "invalid day" in resp.text
 
 
 def test_get_chat_messages_filters_by_sender(app_with_db) -> None:  # noqa: ANN001
@@ -453,7 +478,7 @@ def test_get_chat_messages_filters_by_sender(app_with_db) -> None:  # noqa: ANN0
 
     resp = client.get(
         f"/api/whop/pages/{page_id}/chat-messages",
-        params={"week": "2026-W21", "senders": "alice", "token": _TOKEN},
+        params={"day": "2026-05-20", "senders": "alice", "token": _TOKEN},
     )
     assert resp.status_code == 200, resp.text
     body = resp.json()
@@ -497,7 +522,7 @@ def test_get_chat_messages_posted_at_carries_utc_offset(app_with_db) -> None:  #
 
     resp = client.get(
         f"/api/whop/pages/{page_id}/chat-messages",
-        params={"week": "2026-W21", "token": _TOKEN},
+        params={"day": "2026-05-21", "token": _TOKEN},
     )
     assert resp.status_code == 200, resp.text
     body = resp.json()
@@ -512,24 +537,55 @@ def test_get_chat_messages_unknown_page_404(app_with_db) -> None:  # noqa: ANN00
     client, _factory, _registry, _loop = app_with_db
     resp = client.get(
         "/api/whop/pages/no-such-page/chat-messages",
-        params={"week": "2026-W21", "token": _TOKEN},
+        params={"day": "2026-05-23", "token": _TOKEN},
     )
     assert resp.status_code == 404, resp.text
 
 
-def test_get_chat_messages_defaults_to_current_week(app_with_db) -> None:  # noqa: ANN001
-    """Omitting ?week falls back to the current ISO week."""
-    client, _factory, _registry, _loop = app_with_db
-    page_id = _make_chat_page(client, url="https://whop.example/chat-t14-default")
+def test_get_chat_messages_beijing_day_boundary(app_with_db) -> None:  # noqa: ANN001
+    """A message at UTC 16:30 on day D belongs to Beijing day D+1, not D."""
+    client, factory, _registry, loop = app_with_db
+    page_id = _make_chat_page(client, url="https://whop.example/chat-bj-edge")
 
+    # UTC 2026-05-23 16:30 == Beijing 2026-05-24 00:30
+    async def _seed() -> None:
+        async with factory() as s:
+            await repo.upsert_chat_message(
+                s,
+                ChatMessageRow(
+                    id="m-edge",
+                    page_id=page_id,
+                    author="alice",
+                    content="x",
+                    raw_content="x",
+                    posted_at=datetime(2026, 5, 23, 16, 30, tzinfo=UTC),
+                    received_at=datetime(2026, 5, 23, 16, 30, tzinfo=UTC),
+                    url="https://whop.example/chat-bj-edge",
+                    quoted_message_id=None,
+                    quoted_author=None,
+                    quoted_content=None,
+                    quoted_posted_at=None,
+                ),
+            )
+            await s.commit()
+
+    loop.run_until_complete(_seed())
+
+    # day=2026-05-23 (Beijing) -> message NOT in window
     resp = client.get(
         f"/api/whop/pages/{page_id}/chat-messages",
-        params={"token": _TOKEN},
+        params={"day": "2026-05-23", "token": _TOKEN},
     )
-    assert resp.status_code == 200, resp.text
-    body = resp.json()
-    assert "start" in body["week"]
-    assert "end" in body["week"]
+    assert resp.status_code == 200
+    assert resp.json()["messages"] == []
+
+    # day=2026-05-24 (Beijing) -> message IS in window
+    resp = client.get(
+        f"/api/whop/pages/{page_id}/chat-messages",
+        params={"day": "2026-05-24", "token": _TOKEN},
+    )
+    assert resp.status_code == 200
+    assert [m["id"] for m in resp.json()["messages"]] == ["m-edge"]
 
 
 # ---------------------------------------------------------------------------
