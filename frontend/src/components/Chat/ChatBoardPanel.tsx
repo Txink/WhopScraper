@@ -13,12 +13,12 @@ import { useChildPagesStore } from "../../stores/childPages";
 import { useTasksStore } from "../../stores/tasks";
 import { useConnStore } from "../../stores/conn";
 import {
+  addDays,
   dayKeyOf,
   isoWeekBounds,
   isoWeekOfDay,
   monthOf,
   todayInShanghai,
-  weeksCoveringMonth,
 } from "../Dashboard/weekUtils";
 import { groupIntoCards } from "./chatCards";
 import { ChatCard } from "./ChatCard";
@@ -52,18 +52,19 @@ function persistMode(pageId: string, mode: SenderMode): void {
 }
 
 export function ChatBoardPanel({ page }: Props) {
-  // Currently-selected calendar day, drives both the visible-message
-  // filter and the ISO-week that gets fetched into chatStore.
+  // 选中的北京日历日，决定渲染哪一天的消息以及 chatStore 拉取哪一天。
   const [selectedDate, setSelectedDate] = useState<string>(todayInShanghai());
   // Reset to today whenever the active page changes.
   useEffect(() => { setSelectedDate(todayInShanghai()); }, [page.id]);
 
-  const selectedWeek = isoWeekOfDay(selectedDate);
   const today = todayInShanghai();
+  const selectedWeek = useMemo(() => isoWeekOfDay(selectedDate), [selectedDate]);
 
-  const cache = useChatStore((s) => s.caches[`${page.id}|${selectedWeek}`]);
-  const fetch = useChatStore((s) => s.fetch);
+  const cache = useChatStore((s) => s.caches[`${page.id}|${selectedDate}`]);
   const allCaches = useChatStore((s) => s.caches);
+  const allCounts = useChatStore((s) => s.counts);
+  const fetchDay = useChatStore((s) => s.fetchDay);
+  const fetchCounts = useChatStore((s) => s.fetchCounts);
 
   // Local state seeded from page settings; stays responsive to chip toggles
   // without waiting for parent re-fetch. Re-syncs if upstream settings change
@@ -84,12 +85,24 @@ export function ChatBoardPanel({ page }: Props) {
     persistMode(page.id, next);
   }
 
+  // 进入 page：并行拉「今天」+「昨天」+ 当月计数。
   useEffect(() => {
-    // Fetch full week's messages once per (page, selectedWeek). Senders
-    // and day filters are applied client-side — no need to re-fetch on
-    // toggles within the same week.
-    fetch(page.id, selectedWeek, []);
-  }, [page.id, selectedWeek, fetch]);
+    const t = todayInShanghai();
+    const y = addDays(t, -1);
+    fetchDay(page.id, t, []);
+    fetchDay(page.id, y, []);
+    fetchCounts(page.id, monthOf(t));
+  }, [page.id, fetchDay, fetchCounts]);
+
+  // selectedDate 变化：缺缓存就拉那一天；跨月就拉那月 counts。
+  // chatStore 内部 in-flight dedupe 保证今天的双触发只发一次。
+  useEffect(() => {
+    const dayKey = `${page.id}|${selectedDate}`;
+    if (!allCaches[dayKey]) fetchDay(page.id, selectedDate, []);
+    const m = monthOf(selectedDate);
+    const monthKey = `${page.id}|${m}`;
+    if (!allCounts[monthKey]) fetchCounts(page.id, m);
+  }, [page.id, selectedDate, allCaches, allCounts, fetchDay, fetchCounts]);
 
   // ── Child monitor pages + their tasks ────────────────────────────────
   const children = useChildPagesStore((s) => s.byParent[page.id] ?? EMPTY_PAGES);
@@ -111,7 +124,7 @@ export function ChatBoardPanel({ page }: Props) {
     [allTasks, childUrls],
   );
 
-  // Fetch children + their tasks on mount / page / week change.
+  // Fetch children + their tasks. The task-list query uses the ISO week containing selectedDate; dep is the week, so navigating within the same week reuses the cached fetch.
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -148,16 +161,8 @@ export function ChatBoardPanel({ page }: Props) {
   }, []);
 
   // ── Data ─────────────────────────────────────────────────────────────
-  const rawMessages = cache?.messages ?? [];
-  const authors = cache?.authors ?? [];
-
-  // Day-filter both messages and child-task signals to selectedDate so
-  // every downstream consumer (groupIntoCards, buildTimeline, ...)
-  // sees only that day's content.
-  const messages = useMemo(
-    () => rawMessages.filter((m) => dayKeyOf(m.posted_at) === selectedDate),
-    [rawMessages, selectedDate],
-  );
+  // 后端按北京日切片，cache 里的 messages 已经是当天的；不再做客户端过滤。
+  const messages = cache?.messages ?? [];
   const dayFilteredChildTasks = useMemo(
     () =>
       childTasks.filter(
@@ -166,27 +171,43 @@ export function ChatBoardPanel({ page }: Props) {
     [childTasks, selectedDate],
   );
 
-  /** Author chip counts for the selected day. Preserves the chip list
-   *  shape from the week-cache `authors` (so chips don't flicker when
-   *  switching days) but replaces each count with the count from today.
-   *  Authors not in the week cache but present in today's messages are
-   *  appended at the end. */
-  const dayScopedAuthors = useMemo(() => {
-    const dayCounts = new Map<string, number>();
-    for (const m of messages) {
-      dayCounts.set(m.author, (dayCounts.get(m.author) ?? 0) + 1);
-    }
+  /** chip 列表「形状」基于本 page 下所有已缓存天的作者并集；优先把当天的
+   *  作者排在最前，保持视觉上「今天看到的人」在前。 */
+  const allAuthorsForPage = useMemo(() => {
+    const order: string[] = [];
     const seen = new Set<string>();
-    const out: { name: string; count: number }[] = [];
-    for (const a of authors) {
-      out.push({ name: a.name, count: dayCounts.get(a.name) ?? 0 });
-      seen.add(a.name);
+    const prefix = `${page.id}|`;
+    // 先放当天的
+    const todayCache = allCaches[`${page.id}|${selectedDate}`];
+    if (todayCache) {
+      for (const a of todayCache.authors) {
+        if (!seen.has(a.name)) { order.push(a.name); seen.add(a.name); }
+      }
     }
-    for (const [name, count] of dayCounts) {
-      if (!seen.has(name)) out.push({ name, count });
+    // 再补其它已缓存天的
+    for (const key of Object.keys(allCaches)) {
+      if (!key.startsWith(prefix)) continue;
+      if (key === `${page.id}|${selectedDate}`) continue;
+      for (const a of allCaches[key].authors) {
+        if (!seen.has(a.name)) { order.push(a.name); seen.add(a.name); }
+      }
     }
-    return out;
-  }, [messages, authors]);
+    return order;
+  }, [allCaches, page.id, selectedDate]);
+
+  /** 当天的作者计数（用于 chip 上的 badge）。 */
+  const dayCountsByAuthor = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const msg of messages) m.set(msg.author, (m.get(msg.author) ?? 0) + 1);
+    return m;
+  }, [messages]);
+
+  const dayScopedAuthors = useMemo(
+    () => allAuthorsForPage.map((name) => ({
+      name, count: dayCountsByAuthor.get(name) ?? 0,
+    })),
+    [allAuthorsForPage, dayCountsByAuthor],
+  );
 
   /** name → "stock" | "option" for children whose source is known. */
   const monitorSources = useMemo<Record<string, "stock" | "option">>(
@@ -199,10 +220,7 @@ export function ChatBoardPanel({ page }: Props) {
     [children],
   );
 
-  /** Chip bar entries for ChatSenderBar. List shape is taken from the
-   *  week (chat authors + monitor pages) so the bar stays stable when
-   *  the selected day changes; counts are day-scoped so the badge on
-   *  each chip matches the messages and signals actually visible. */
+  /** chip 列表「形状」来自当前 page 已缓存所有天的作者并集 + 监控子页，保持稳定不随选中日切换重排；count 按 selectedDate 当日重算。 */
   const authorsWithMonitors = useMemo(() => {
     const seen = new Set<string>();
     const out: { name: string; count: number }[] = [];
@@ -261,29 +279,24 @@ export function ChatBoardPanel({ page }: Props) {
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState<string>(monthOf(selectedDate));
 
+  // 翻月时按需拉那月 counts。
   useEffect(() => {
     if (!calendarOpen) return;
-    for (const w of weeksCoveringMonth(calendarMonth)) {
-      const key = `${page.id}|${w}`;
-      if (!allCaches[key]) fetch(page.id, w, []);
-    }
-  }, [calendarOpen, calendarMonth, page.id, fetch, allCaches]);
+    const k = `${page.id}|${calendarMonth}`;
+    if (!allCounts[k]) fetchCounts(page.id, calendarMonth);
+  }, [calendarOpen, calendarMonth, page.id, fetchCounts, allCounts]);
 
   const prefetching = useMemo(() => {
     if (!calendarOpen) return false;
-    return weeksCoveringMonth(calendarMonth).some(
-      (w) => !allCaches[`${page.id}|${w}`],
-    );
-  }, [calendarOpen, calendarMonth, page.id, allCaches]);
+    return !allCounts[`${page.id}|${calendarMonth}`];
+  }, [calendarOpen, calendarMonth, page.id, allCounts]);
 
   const hasMessagesOnDay = useCallback(
-    (dayKey: string) => {
-      const week = isoWeekOfDay(dayKey);
-      const c = allCaches[`${page.id}|${week}`];
-      if (!c) return false;
-      return c.messages.some((m) => dayKeyOf(m.posted_at) === dayKey);
+    (d: string) => {
+      const c = allCounts[`${page.id}|${monthOf(d)}`];
+      return c ? (c.counts[d] ?? 0) > 0 : false;
     },
-    [allCaches, page.id],
+    [allCounts, page.id],
   );
 
   // ── Routing ───────────────────────────────────────────────────────────
