@@ -1613,6 +1613,39 @@ def build_http_router(
                 day=ChatDayWindowOut(start=day_start, end=day_end),
             )
 
+        @router.get(
+            "/api/whop/pages/{page_id}/chat-message-counts",
+            response_model=ChatMessageCountsOut,
+        )
+        async def get_chat_message_counts(
+            page_id: str,
+            month: str,
+        ) -> ChatMessageCountsOut:
+            """Return per-Beijing-day message counts for the given month.
+
+            Days with zero messages are omitted from ``counts``. The window
+            is ``[month-01 00:00 +08:00, (month+1)-01 00:00 +08:00)``
+            expressed in UTC.
+            """
+            page = None
+            for entry, _ll in whop_registry.list_pages(parent_chat_id=None):
+                if entry.id == page_id:
+                    page = entry
+                    break
+            if page is None:
+                raise HTTPException(404, detail="page not found")
+
+            start, end = _beijing_month_bounds(month)
+            async with session_scope(session_factory) as session:
+                pairs = await repo.count_chat_messages_per_day(
+                    session, page_id, start, end
+                )
+
+            return ChatMessageCountsOut(
+                month=month,
+                counts={day: count for day, count in pairs},
+            )
+
         @router.get("/api/chat-images/{message_id}")
         async def get_chat_image(message_id: str) -> FileResponse:
             """Serve a cached chat image from ``<data_dir>/chat-images/``.
