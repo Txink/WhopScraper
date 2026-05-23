@@ -53,9 +53,10 @@ from app.api.schemas import (
     CandlestickOut,
     CandlesticksOut,
     ChatAuthorOut,
+    ChatDayWindowOut,
+    ChatMessageCountsOut,
     ChatMessageOut,
     ChatMessagesOut,
-    ChatWeekWindowOut,
     ExecutionOut,
     ExecutionsOut,
     ExecutionsSyncOut,
@@ -122,24 +123,39 @@ if TYPE_CHECKING:
 # ---------------------------------------------------------------------------
 
 
-def _iso_week_bounds(week: str | None) -> tuple[datetime, datetime]:
-    """Return ``[start, end)`` for an ISO week label like ``"2026-W21"``.
-
-    ``week=None`` resolves to the current ISO week in UTC. Bounds are
-    Monday 00:00 UTC inclusive → next Monday 00:00 UTC exclusive, so a
-    7-day half-open window suitable for ``posted_at >= start AND < end``.
+def _beijing_day_bounds(day: str) -> tuple[datetime, datetime]:
+    """Return ``[start, end)`` in UTC for a Beijing calendar day like
+    ``"2026-05-23"``. The window is ``[day 00:00 +08:00, next 00:00 +08:00)``
+    expressed as UTC datetimes — suitable for ``posted_at >= start AND < end``.
     """
-    if week is None:
-        now = datetime.now(UTC)
-        iso_year, iso_week, _ = now.isocalendar()
+    try:
+        y, m, d = day.split("-")
+        year, month, dom = int(y), int(m), int(d)
+    except ValueError as e:
+        raise HTTPException(400, detail=f"invalid day: {day}") from e
+    # Beijing 00:00 of `day` == UTC `day-1 16:00`
+    start_utc = datetime(year, month, dom, tzinfo=UTC) - timedelta(hours=8)
+    end_utc = start_utc + timedelta(days=1)
+    return start_utc, end_utc
+
+
+def _beijing_month_bounds(month: str) -> tuple[datetime, datetime]:
+    """Return ``[start, end)`` in UTC for a Beijing calendar month like
+    ``"2026-05"``. End is the first instant of the next month, Beijing-local.
+    """
+    try:
+        y, m = month.split("-")
+        year, mon = int(y), int(m)
+    except ValueError as e:
+        raise HTTPException(400, detail=f"invalid month: {month}") from e
+    # Beijing month-start 00:00 == UTC (day-1) 16:00  (same +08:00 offset as _beijing_day_bounds)
+    start_utc = datetime(year, mon, 1, tzinfo=UTC) - timedelta(hours=8)
+    if mon == 12:
+        next_year, next_mon = year + 1, 1
     else:
-        try:
-            year_s, week_s = week.split("-W", 1)
-            iso_year, iso_week = int(year_s), int(week_s)
-        except (ValueError, IndexError) as e:
-            raise HTTPException(400, detail=f"invalid week: {week}") from e
-    monday = datetime.fromisocalendar(iso_year, iso_week, 1).replace(tzinfo=UTC)
-    return monday, monday + timedelta(days=7)
+        next_year, next_mon = year, mon + 1
+    end_utc = datetime(next_year, next_mon, 1, tzinfo=UTC) - timedelta(hours=8)
+    return start_utc, end_utc
 
 
 def _row_to_chat_out(row: ChatMessageRow) -> ChatMessageOut:
@@ -1555,15 +1571,17 @@ def build_http_router(
         )
         async def get_chat_messages(
             page_id: str,
-            week: str | None = None,
+            day: str,
             senders: str | None = None,
         ) -> ChatMessagesOut:
-            """Return one ISO-week's worth of chat messages for *page_id*.
+            """Return one Beijing-calendar-day's worth of chat messages
+            for *page_id*.
 
-            ``week`` defaults to the current ISO week (UTC). ``senders`` is a
+            ``day=YYYY-MM-DD`` is required; the window is ``[day 00:00 +08:00,
+            next 00:00 +08:00)`` expressed in UTC. ``senders`` is a
             comma-separated allow-list of authors; empty / absent → no filter.
             ``authors`` is the (author, count) breakdown for the *unfiltered*
-            week — the chip bar should show every author seen in the window
+            day — the chip bar should show every author seen in the window
             regardless of the active filter selection.
             """
             page = None
@@ -1574,7 +1592,7 @@ def build_http_router(
             if page is None:
                 raise HTTPException(404, detail="page not found")
 
-            week_start, week_end = _iso_week_bounds(week)
+            day_start, day_end = _beijing_day_bounds(day)
             sender_list = (
                 [s.strip() for s in senders.split(",") if s.strip()]
                 if senders
@@ -1583,16 +1601,16 @@ def build_http_router(
 
             async with session_scope(session_factory) as session:
                 rows = await repo.list_chat_messages(
-                    session, page_id, week_start, week_end, sender_list
+                    session, page_id, day_start, day_end, sender_list
                 )
                 authors = await repo.list_chat_authors(
-                    session, page_id, week_start, week_end
+                    session, page_id, day_start, day_end
                 )
 
             return ChatMessagesOut(
                 messages=[_row_to_chat_out(r) for r in rows],
                 authors=[ChatAuthorOut(name=a, count=c) for a, c in authors],
-                week=ChatWeekWindowOut(start=week_start, end=week_end),
+                day=ChatDayWindowOut(start=day_start, end=day_end),
             )
 
         @router.get("/api/chat-images/{message_id}")
