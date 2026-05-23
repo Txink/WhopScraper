@@ -151,3 +151,45 @@ async def test_delete_chat_messages_by_page(session_factory) -> None:
             None,
         )
         assert len(remaining) == 1
+
+
+async def test_count_chat_messages_per_day_groups_by_beijing_day(session_factory) -> None:
+    # 三条消息分别落在 5-19、5-20（两条）；5-21 没消息
+    msgs = [
+        _row("a", posted_at=datetime(2026, 5, 19, 3, 0, tzinfo=UTC)),   # 北京 5-19 11:00
+        _row("b", posted_at=datetime(2026, 5, 20, 1, 0, tzinfo=UTC)),   # 北京 5-20 09:00
+        _row("c", posted_at=datetime(2026, 5, 20, 15, 0, tzinfo=UTC)),  # 北京 5-20 23:00
+    ]
+    async with session_scope(session_factory) as s:
+        for r in msgs:
+            await repo.upsert_chat_message(s, r)
+
+    async with session_scope(session_factory) as s:
+        out = await repo.count_chat_messages_per_day(
+            s, "p1",
+            datetime(2026, 5, 18, 16, tzinfo=UTC),   # 北京 5-19 00:00
+            datetime(2026, 5, 25, 16, tzinfo=UTC),   # 北京 5-26 00:00
+        )
+
+    assert out == [("2026-05-19", 1), ("2026-05-20", 2)]
+
+
+async def test_count_chat_messages_per_day_respects_range(session_factory) -> None:
+    # 一条在 4 月最后一天，一条在 5 月第一天（都按北京日历）
+    async with session_scope(session_factory) as s:
+        await repo.upsert_chat_message(
+            s, _row("apr", posted_at=datetime(2026, 4, 30, 15, 0, tzinfo=UTC)),  # 北京 4-30 23:00
+        )
+        await repo.upsert_chat_message(
+            s, _row("may", posted_at=datetime(2026, 5, 1, 1, 0, tzinfo=UTC)),    # 北京 5-1 09:00
+        )
+
+    # 仅查 5 月（北京月）
+    async with session_scope(session_factory) as s:
+        out = await repo.count_chat_messages_per_day(
+            s, "p1",
+            datetime(2026, 4, 30, 16, tzinfo=UTC),   # 北京 5-1 00:00
+            datetime(2026, 5, 31, 16, tzinfo=UTC),   # 北京 6-1 00:00
+        )
+
+    assert out == [("2026-05-01", 1)]

@@ -1878,6 +1878,37 @@ async def list_chat_authors(
     return [(author, count) for author, count in result.all()]
 
 
+async def count_chat_messages_per_day(
+    session: AsyncSession,
+    page_id: str,
+    range_start_utc: datetime,
+    range_end_utc: datetime,
+) -> list[tuple[str, int]]:
+    """按北京日历日 (YYYY-MM-DD) 聚合返回 ``(day, count)``，仅 ``count > 0``，
+    按 day 升序。
+
+    SQLite 用 ``strftime("%Y-%m-%d", datetime(posted_at, "+8 hours"))`` 把
+    UTC 时间投影到 Asia/Shanghai 日历日。若未来换 Postgres，需要把这段
+    SQL 改成 ``to_char(posted_at AT TIME ZONE 'Asia/Shanghai', 'YYYY-MM-DD')``。
+
+    ``range_start_utc`` / ``range_end_utc`` 是半开 UTC 区间，调用方应传入
+    与 ``[北京月初 00:00, 次月初 00:00)`` 等价的 UTC 边界。
+    """
+    day_expr = func.strftime(
+        "%Y-%m-%d", func.datetime(ChatMessageRow.posted_at, "+8 hours")
+    )
+    stmt = (
+        select(day_expr.label("day"), func.count(ChatMessageRow.id))
+        .where(ChatMessageRow.page_id == page_id)
+        .where(ChatMessageRow.posted_at >= range_start_utc)
+        .where(ChatMessageRow.posted_at < range_end_utc)
+        .group_by(day_expr)
+        .order_by(day_expr.asc())
+    )
+    result = await session.execute(stmt)
+    return [(day, count) for day, count in result.all()]
+
+
 async def delete_chat_messages_by_page(session: AsyncSession, page_id: str) -> int:
     """Delete all chat messages for *page_id*; returns the count removed.
 
