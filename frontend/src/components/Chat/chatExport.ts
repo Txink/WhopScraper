@@ -8,7 +8,7 @@ import type { ChatCard, ChatMessageOut, QuotedRef } from "./chatCards";
 export interface ExportPayloadInput {
   page_id: string;
   page_name: string;
-  week: { start: string; end: string };
+  day: { start: string; end: string };
   watched_senders: string[];
   messages: ChatMessageOut[];
   cards: ChatCard[];
@@ -50,7 +50,7 @@ export interface ExportPayload {
   page_id: string;
   page_name: string;
   exported_at: string;
-  week: { start: string; end: string };
+  day: { start: string; end: string };
   watched_senders: string[];
   cards: ExportCard[];
   messages: ExportMessage[];
@@ -96,7 +96,7 @@ export function buildExportPayload(input: ExportPayloadInput): ExportPayload {
     page_id: input.page_id,
     page_name: input.page_name,
     exported_at: new Date().toISOString(),
-    week: input.week,
+    day: input.day,
     watched_senders: input.watched_senders,
     cards: cardsOut,
     messages: messagesOut,

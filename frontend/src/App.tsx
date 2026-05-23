@@ -18,7 +18,7 @@ import { PageInfoBar } from "./components/Dashboard/PageInfoBar";
 import { PageActionBar } from "./components/Dashboard/PageActionBar";
 import { PageSettingsModal } from "./components/Dashboard/PageSettingsModal";
 import { WeekPaginator } from "./components/Dashboard/WeekPaginator";
-import { computeWeeks, weekKeyOf, currentIsoWeek, monthOf, todayInShanghai } from "./components/Dashboard/weekUtils";
+import { computeWeeks, weekKeyOf, monthOf, todayInShanghai } from "./components/Dashboard/weekUtils";
 import { ChatBoardPanel } from "./components/Chat/ChatBoardPanel";
 import { groupIntoCards } from "./components/Chat/chatCards";
 import { buildExportPayload, triggerJsonDownload } from "./components/Chat/chatExport";
@@ -321,20 +321,20 @@ function Dashboard({ token }: { token: string }) {
           onExport={
             activePage
               ? () => {
-                  const week = currentIsoWeek();
-                  const cache = useChatStore.getState().caches[`${activePage.id}|${week}`];
+                  const day = todayInShanghai();
+                  const cache = useChatStore.getState().caches[`${activePage.id}|${day}`];
                   const messages = cache?.messages ?? [];
                   const watched = activePage.settings.watched_senders ?? [];
                   const cards = groupIntoCards(messages, new Set(watched));
                   const payload = buildExportPayload({
                     page_id: activePage.id,
                     page_name: activePage.name ?? activePage.url,
-                    week: cache?.week ?? { start: "", end: "" },
+                    day: cache?.day ?? { start: "", end: "" },
                     watched_senders: watched,
                     messages,
                     cards,
                   });
-                  triggerJsonDownload(`chat-${activePage.id}-${week}.json`, payload);
+                  triggerJsonDownload(`chat-${activePage.id}-${day}.json`, payload);
                 }
               : undefined
           }

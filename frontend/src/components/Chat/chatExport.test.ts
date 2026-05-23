@@ -37,7 +37,7 @@ describe("buildExportPayload", () => {
     const payload = buildExportPayload({
       page_id: "p1",
       page_name: "Test Page",
-      week: { start: "2026-05-18", end: "2026-05-25" },
+      day: { start: "2026-05-18", end: "2026-05-25" },
       watched_senders: ["alice"],
       messages,
       cards,
@@ -53,7 +53,7 @@ describe("buildExportPayload", () => {
     const payload = buildExportPayload({
       page_id: "p1",
       page_name: "Test",
-      week: { start: "x", end: "y" },
+      day: { start: "x", end: "y" },
       watched_senders: ["alice"],
       messages,
       cards,
@@ -76,7 +76,7 @@ describe("buildExportPayload", () => {
     const payload = buildExportPayload({
       page_id: "p1",
       page_name: "Test",
-      week: { start: "x", end: "y" },
+      day: { start: "x", end: "y" },
       watched_senders: ["alice"],
       messages,
       cards,
@@ -108,7 +108,7 @@ describe("buildExportPayload", () => {
     const payload = buildExportPayload({
       page_id: "p1",
       page_name: "Test",
-      week: { start: "x", end: "y" },
+      day: { start: "x", end: "y" },
       watched_senders: ["alice"],
       messages,
       cards,
