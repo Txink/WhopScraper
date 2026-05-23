@@ -1,12 +1,17 @@
 import type { ChatMessageOut } from "../components/Chat/chatCards";
 
-/** GET /api/whop/pages/{page_id}/chat-messages response envelope.
- *  Mirrors backend ``ChatMessagesOut`` (schemas.py) until we regenerate
- *  ``components.schemas`` via ``npm run gen:types`` (T19). */
+/** GET /api/whop/pages/{page_id}/chat-messages — single Beijing-day window. */
 export interface ChatMessagesResponse {
   messages: ChatMessageOut[];
   authors: { name: string; count: number }[];
-  week: { start: string; end: string };
+  day: { start: string; end: string };
+}
+
+/** GET /api/whop/pages/{page_id}/chat-message-counts — per-day counts for
+ *  one Beijing calendar month. Days with zero messages are omitted. */
+export interface ChatMessageCountsResponse {
+  month: string;
+  counts: Record<string, number>;
 }
 
 /** Auth is via ``?token=`` query param on every request — same surface
@@ -27,13 +32,12 @@ function authedUrl(path: string, params?: Record<string, string>): string {
   return url.toString();
 }
 
-export async function listChatMessages(
+export async function listChatMessagesForDay(
   pageId: string,
-  week: string | null,
+  day: string,
   senders: string[],
 ): Promise<ChatMessagesResponse> {
-  const params: Record<string, string> = {};
-  if (week) params.week = week;
+  const params: Record<string, string> = { day };
   if (senders.length) params.senders = senders.join(",");
   const url = authedUrl(
     `/api/whop/pages/${encodeURIComponent(pageId)}/chat-messages`,
@@ -41,7 +45,22 @@ export async function listChatMessages(
   );
   const resp = await fetch(url);
   if (!resp.ok) {
-    throw new Error(`listChatMessages ${pageId}: ${resp.status}`);
+    throw new Error(`listChatMessagesForDay ${pageId} ${day}: ${resp.status}`);
+  }
+  return resp.json();
+}
+
+export async function listChatMessageCounts(
+  pageId: string,
+  month: string,
+): Promise<ChatMessageCountsResponse> {
+  const url = authedUrl(
+    `/api/whop/pages/${encodeURIComponent(pageId)}/chat-message-counts`,
+    { month },
+  );
+  const resp = await fetch(url);
+  if (!resp.ok) {
+    throw new Error(`listChatMessageCounts ${pageId} ${month}: ${resp.status}`);
   }
   return resp.json();
 }
