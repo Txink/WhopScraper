@@ -165,7 +165,7 @@ def test_chat_message_out_includes_image_url(app_with_db) -> None:  # noqa: ANN0
 
     resp = client.get(
         f"/api/whop/pages/{page_id}/chat-messages",
-        params={"token": _TOKEN, "week": "2026-W21"},
+        params={"token": _TOKEN, "day": "2026-05-21"},
     )
     assert resp.status_code == 200, resp.text
     body = resp.json()
@@ -181,7 +181,7 @@ def test_chat_message_out_image_url_null_when_no_image(app_with_db) -> None:  # 
 
     resp = client.get(
         f"/api/whop/pages/{page_id}/chat-messages",
-        params={"token": _TOKEN, "week": "2026-W21"},
+        params={"token": _TOKEN, "day": "2026-05-21"},
     )
     assert resp.status_code == 200, resp.text
     msg = next(m for m in resp.json()["messages"] if m["id"] == "m_api_2")
