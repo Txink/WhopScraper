@@ -240,14 +240,15 @@ table.tbl .num { text-align: right; }
   font-weight: 500;
 }
 
-/* Submit — solid light-green fill regardless of buy/sell side. Uses
- * a mixed pastel of --up against the panel background so it reads as
- * a clearly distinct "go" affordance (vs the very subtle --up-soft
- * tint, which faded into the row). */
+/* Submit — solid light-green "confirm/go" affordance. Uses --ok
+ * (semantic success token, always green) rather than --up-color
+ * which is direction-bound and flips to red under CN red-up
+ * preference. The button is an action confirmation, not a price
+ * signal, so direction-flip would be wrong. */
 .qo-submit {
-  background: color-mix(in srgb, var(--up-color) 45%, var(--bg-2));
+  background: color-mix(in srgb, var(--ok) 45%, var(--bg-2));
   color: #fff;
-  border: 1px solid color-mix(in srgb, var(--up-color) 60%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ok) 60%, transparent);
   padding: 5px 22px;
   border-radius: var(--radius-chip);
   font-weight: 600;
@@ -258,7 +259,7 @@ table.tbl .num { text-align: right; }
   transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
 }
 .qo-submit:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--up-color) 65%, var(--bg-2));
+  background: color-mix(in srgb, var(--ok) 65%, var(--bg-2));
 }
 .qo-submit:disabled {
   opacity: 0.4;
