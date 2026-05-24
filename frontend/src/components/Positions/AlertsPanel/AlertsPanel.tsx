@@ -2,10 +2,22 @@ import { useEffect, useState } from "react";
 import { alertsApi } from "../../../api/alerts";
 import { useAlertsStore } from "../../../stores/alerts";
 import type { AlertCreate, AlertOut } from "../../../api/alerts";
+import { ConfirmModal } from "../ConfirmModal";
 import { AlertModal } from "./AlertModal";
 import "./AlertsPanel.css";
 
-interface Props { ticker: string; symbol: string }
+interface Props {
+  ticker: string;
+  symbol: string;
+  /** Optional hooks for callers (DetailPane) that want to host the
+   *  create/edit + delete-confirm modals themselves — so they render
+   *  at the .detail-pane level rather than inside the swipe-track's
+   *  transformed subtree (which mis-positions absolute/fixed children).
+   *  When omitted, AlertsPanel falls back to rendering both modals
+   *  itself. */
+  onRequestAddOrEdit?: (initial: AlertOut | null) => void;
+  onRequestDelete?: (alert: AlertOut) => void;
+}
 
 function fmtCond(a: AlertOut): string {
   const op = a.operator === ">=" ? "≥" : "≤";
@@ -23,24 +35,25 @@ function fmtState(a: AlertOut): { text: string; cls: "triggered" | "never" } {
   return { text: `触发 ${a.trigger_count} 次 · ${time}${a.enabled ? "" : " · 自动禁用"}`, cls: "triggered" };
 }
 
-export function AlertsPanel({ ticker, symbol }: Props) {
+export function AlertsPanel({ ticker, symbol, onRequestAddOrEdit, onRequestDelete }: Props) {
   const alerts = useAlertsStore((s) => s.byTicker[ticker]) ?? [];
   const setAlerts = useAlertsStore((s) => s.setAlerts);
   const upsertAlert = useAlertsStore((s) => s.upsertAlert);
   const removeAlert = useAlertsStore((s) => s.removeAlert);
-  const [modalFor, setModalFor] = useState<"new" | AlertOut | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<AlertOut | null>(null);
+  // Fallback modal state used only when the caller doesn't host them.
+  const [fallbackModalFor, setFallbackModalFor] = useState<"new" | AlertOut | null>(null);
+  const [fallbackConfirmDelete, setFallbackConfirmDelete] = useState<AlertOut | null>(null);
 
   useEffect(() => {
     alertsApi.list(ticker).then((r) => setAlerts(ticker, r.alerts))
       .catch((e) => console.warn("alerts fetch failed", e));
   }, [ticker, setAlerts]);
 
-  const create = async (req: AlertCreate) => {
+  const createOrUpdate = async (req: AlertCreate) => {
     try {
       const a = await alertsApi.create(req);
       upsertAlert(a);
-      setModalFor(null);
+      setFallbackModalFor(null);
     } catch (e) {
       console.error("create alert failed", e);
     }
@@ -59,10 +72,20 @@ export function AlertsPanel({ ticker, symbol }: Props) {
     try {
       await alertsApi.remove(a.id);
       removeAlert(a.id);
-      setConfirmDelete(null);
     } catch (e) {
       console.error("delete alert failed", e);
+    } finally {
+      setFallbackConfirmDelete(null);
     }
+  };
+
+  const openAddOrEdit = (initial: AlertOut | null) => {
+    if (onRequestAddOrEdit) onRequestAddOrEdit(initial);
+    else setFallbackModalFor(initial ?? "new");
+  };
+  const askDelete = (a: AlertOut) => {
+    if (onRequestDelete) onRequestDelete(a);
+    else setFallbackConfirmDelete(a);
   };
 
   const enabledCount = alerts.filter((a) => a.enabled).length;
@@ -71,7 +94,7 @@ export function AlertsPanel({ ticker, symbol }: Props) {
     <div className="panel alerts-panel">
       <div className="alerts-head">
         <div className="alerts-h">告警 · {ticker} · 共 {alerts.length} 条 · 启用 {enabledCount}</div>
-        <button className="alert-add-btn" onClick={() => setModalFor("new")}>+ 添加告警</button>
+        <button className="alert-add-btn" onClick={() => openAddOrEdit(null)}>+ 添加告警</button>
       </div>
 
       <div className="alerts-body">
@@ -92,8 +115,8 @@ export function AlertsPanel({ ticker, symbol }: Props) {
               </div>
               <div></div>
               <div className="alert-actions">
-                <button className="row-btn" onClick={() => setModalFor(a)}>编辑</button>
-                <button className="row-btn danger" onClick={() => setConfirmDelete(a)}>×</button>
+                <button className="row-btn" onClick={() => openAddOrEdit(a)}>编辑</button>
+                <button className="row-btn danger" onClick={() => askDelete(a)}>×</button>
               </div>
             </div>
           );
@@ -112,24 +135,26 @@ export function AlertsPanel({ ticker, symbol }: Props) {
         </span>
       </div>
 
-      {modalFor && (
+      {/* Fallback in-pane modals (only when caller doesn't host them).
+       *  These render inside the swipe-track's transformed subtree, so
+       *  positioning may be off — only safe in standalone tests. */}
+      {fallbackModalFor && (
         <AlertModal
           ticker={ticker} symbol={symbol}
-          initial={modalFor === "new" ? undefined : modalFor}
-          onSubmit={create} onClose={() => setModalFor(null)}
+          initial={fallbackModalFor === "new" ? undefined : fallbackModalFor}
+          onSubmit={createOrUpdate}
+          onClose={() => setFallbackModalFor(null)}
         />
       )}
-      {confirmDelete && (
-        <div className="modal-backdrop" onClick={() => setConfirmDelete(null)} role="presentation">
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h3>确认删除告警？</h3>
-            <p>{fmtCond(confirmDelete)} — 删除后无法恢复。</p>
-            <div className="modal-foot">
-              <button className="btn-secondary" onClick={() => setConfirmDelete(null)}>取消</button>
-              <button className="row-btn danger" onClick={() => remove(confirmDelete)}>删除</button>
-            </div>
-          </div>
-        </div>
+      {fallbackConfirmDelete && (
+        <ConfirmModal
+          title="确认删除告警？"
+          description={`${fmtCond(fallbackConfirmDelete)} — 删除后无法恢复。`}
+          confirmLabel="删除"
+          danger
+          onCancel={() => setFallbackConfirmDelete(null)}
+          onConfirm={() => remove(fallbackConfirmDelete)}
+        />
       )}
     </div>
   );

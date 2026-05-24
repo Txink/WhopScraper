@@ -19,9 +19,13 @@ import { PairDetailModal } from "./PairDetailModal";
 import { TradeList, type TradeListFilter } from "./TradeList";
 import { ConfirmModal } from "./ConfirmModal";
 import { FullOrderModal } from "./TradingPanel/FullOrderModal";
+import { AlertModal } from "./AlertsPanel/AlertModal";
 import { cancelOrder, submitOrder } from "../../api/orders";
+import { alertsApi } from "../../api/alerts";
 import { useOrdersStore } from "../../stores/orders";
+import { useAlertsStore } from "../../stores/alerts";
 import type { OrderOut, SubmitOrderRequest } from "../../api/orders";
+import type { AlertCreate, AlertOut } from "../../api/alerts";
 import { DetailTabSwipe, type TabDef } from "./DetailTabSwipe";
 import { TradingPanel } from "./TradingPanel/TradingPanel";
 import { AlertsPanel } from "./AlertsPanel/AlertsPanel";
@@ -704,6 +708,46 @@ export function DetailPane({ position, onBack }: Props) {
     }
   }, []);
 
+  // Alerts-panel modals hosted at detail-pane level (same reason as
+  // trading modals above — avoids the swipe-track transform).
+  // ``alertModalFor`` is "new" for a fresh alert, an AlertOut for edit,
+  // and null when closed.
+  const [alertModalFor, setAlertModalFor] = useState<"new" | AlertOut | null>(null);
+  const [alertDeleteConfirm, setAlertDeleteConfirm] = useState<AlertOut | null>(null);
+
+  const onAlertCreateOrUpdate = useCallback(async (req: AlertCreate) => {
+    try {
+      const a = await alertsApi.create(req);
+      useAlertsStore.getState().upsertAlert(a);
+    } catch (e) {
+      console.error("create alert failed", e);
+    } finally {
+      setAlertModalFor(null);
+    }
+  }, []);
+
+  const onAlertDeleteConfirm = useCallback(async () => {
+    if (!alertDeleteConfirm) return;
+    try {
+      await alertsApi.remove(alertDeleteConfirm.id);
+      useAlertsStore.getState().removeAlert(alertDeleteConfirm.id);
+    } catch (e) {
+      console.error("delete alert failed", e);
+    } finally {
+      setAlertDeleteConfirm(null);
+    }
+  }, [alertDeleteConfirm]);
+
+  const fmtAlertCond = (a: AlertOut): string => {
+    const op = a.operator === ">=" ? "≥" : "≤";
+    if (a.condition_type === "price") return `价格 ${op} $${a.threshold.toFixed(2)}`;
+    if (a.condition_type === "pct_change") {
+      const base = a.pct_change_baseline === "today_open" ? "今开" : "昨收";
+      return `${a.threshold > 0 ? "涨幅" : "跌幅"} ${op} ${Math.abs(a.threshold).toFixed(2)}% vs ${base}`;
+    }
+    return `${a.volume_window ?? "1min"} 成交量 ${op} ${a.threshold.toLocaleString("en-US")} 股`;
+  };
+
   const onClearAllPairs = useCallback(() => {
     setPendingConfirm({
       title: `清除 ${ticker} 的所有做T 绑定`,
@@ -987,7 +1031,18 @@ export function DetailPane({ position, onBack }: Props) {
               />
             ),
           },
-          { id: "alerts",  label: "告警",     content: <AlertsPanel ticker={ticker} symbol={symbol} /> },
+          {
+            id: "alerts",
+            label: "告警",
+            content: (
+              <AlertsPanel
+                ticker={ticker}
+                symbol={symbol}
+                onRequestAddOrEdit={(initial) => setAlertModalFor(initial ?? "new")}
+                onRequestDelete={setAlertDeleteConfirm}
+              />
+            ),
+          },
         ] satisfies TabDef[]}
         index={tabIndex}
         onIndexChange={(i) => setTabIndex(i as 0 | 1 | 2)}
@@ -1052,6 +1107,27 @@ export function DetailPane({ position, onBack }: Props) {
           placement="bottom"
           onSubmit={onTradingMoreSubmit}
           onClose={() => setTradingMoreFor(null)}
+        />
+      )}
+      {alertModalFor && (
+        <AlertModal
+          ticker={ticker}
+          symbol={symbol}
+          initial={alertModalFor === "new" ? undefined : alertModalFor}
+          placement="bottom"
+          onSubmit={onAlertCreateOrUpdate}
+          onClose={() => setAlertModalFor(null)}
+        />
+      )}
+      {alertDeleteConfirm && (
+        <ConfirmModal
+          title="确认删除告警？"
+          description={`${fmtAlertCond(alertDeleteConfirm)} — 删除后无法恢复。`}
+          confirmLabel="删除"
+          danger
+          placement="bottom"
+          onCancel={() => setAlertDeleteConfirm(null)}
+          onConfirm={onAlertDeleteConfirm}
         />
       )}
     </div>

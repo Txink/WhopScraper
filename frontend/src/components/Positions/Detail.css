@@ -998,7 +998,7 @@ input[type="checkbox"].sel-sell:checked {
 .confirm-modal-backdrop.placement-bottom,
 .pair-modal-backdrop.placement-bottom {
   align-items: flex-end;
-  padding-bottom: 180px;
+  padding-bottom: 260px;
   padding-top: 0;
 }
 .confirm-modal-card {
