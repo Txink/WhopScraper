@@ -106,4 +106,21 @@ describe("DetailTabSwipe", () => {
     fireEvent.wheel(container, { deltaX: 5, deltaY: 100 });
     expect(onIndex).not.toHaveBeenCalled();
   });
+
+  it("a single trackpad gesture commits at most one tab change", () => {
+    // Without lock-on-commit, a long horizontal burst (e.g. one
+    // forceful two-finger swipe + macOS inertia) would re-accumulate
+    // past the threshold multiple times and chain-skip multiple tabs.
+    // The wheelRef lock + idle reset keeps it to one per gesture.
+    const onIndex = vi.fn();
+    render(<DetailTabSwipe tabs={tabs} index={0} onIndexChange={onIndex} />);
+    const container = screen.getByTestId("detail-tab-swipe");
+    // 10 contiguous wheel ticks summing to 500px — way past 60px commit
+    // threshold, but the post-commit lock should swallow the rest.
+    for (let i = 0; i < 10; i++) {
+      fireEvent.wheel(container, { deltaX: 50, deltaY: 0 });
+    }
+    expect(onIndex).toHaveBeenCalledTimes(1);
+    expect(onIndex).toHaveBeenCalledWith(1);
+  });
 });

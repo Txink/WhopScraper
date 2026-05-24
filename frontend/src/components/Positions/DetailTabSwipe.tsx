@@ -56,8 +56,16 @@ export function DetailTabSwipe({ tabs, index, onIndexChange }: Props) {
    *  the pointer (e.g. user drags out of the swipe div) without
    *  stranding the state. */
   const dragRef = useRef<{ x: number; t: number } | null>(null);
-  /** Wheel-accumulator state for trackpad horizontal swipes. */
-  const wheelRef = useRef<{ accum: number; lastTs: number }>({ accum: 0, lastTs: 0 });
+  /** Wheel-accumulator state for trackpad horizontal swipes.
+   *  ``locked`` flips true on commit and only clears when the wheel
+   *  stream goes idle for ``WHEEL_RESET_MS`` — that's how we make
+   *  one continuous trackpad gesture move at most one tab, even when
+   *  the OS emits inertial wheel events well past the commit point. */
+  const wheelRef = useRef<{ accum: number; lastTs: number; locked: boolean }>({
+    accum: 0,
+    lastTs: 0,
+    locked: false,
+  });
   /** Set true on a successful swipe (drag or wheel) commit and reset
    *  shortly after, so the click event that fires post-mouseup is
    *  suppressed (so swiping across a clickable row doesn't also toggle
@@ -163,10 +171,16 @@ export function DetailTabSwipe({ tabs, index, onIndexChange }: Props) {
   };
 
   /** Trackpad two-finger horizontal swipe. Browser fires wheel events
-   *  with deltaX (Mac trackpads, Windows precision touchpads). We
-   *  accumulate signed deltaX; when it crosses ±WHEEL_COMMIT_PX we
-   *  switch tabs and zero the accumulator. The accumulator self-resets
-   *  after WHEEL_RESET_MS of idle so consecutive swipes don't merge.
+   *  with deltaX (Mac trackpads, Windows precision touchpads). One
+   *  user gesture produces a long burst of wheel events (with inertia
+   *  tail). We commit AT MOST one tab change per burst:
+   *
+   *  - Accumulate signed deltaX while idle gap < WHEEL_RESET_MS.
+   *  - On crossing ±WHEEL_COMMIT_PX, switch tabs and LOCK; further
+   *    wheel events are still swallowed (preventDefault) but ignored
+   *    for commit purposes until the burst goes idle.
+   *  - After WHEEL_RESET_MS of no wheel events, unlock + reset
+   *    accumulator so the next gesture starts fresh.
    *
    *  Vertical-dominant wheels (text scroll) are ignored. */
   const onWheel = (e: React.WheelEvent<HTMLDivElement>) => {
@@ -177,12 +191,15 @@ export function DetailTabSwipe({ tabs, index, onIndexChange }: Props) {
     const state = wheelRef.current;
     if (now - state.lastTs > WHEEL_RESET_MS) {
       state.accum = 0;
+      state.locked = false;
     }
-    state.accum += e.deltaX;
     state.lastTs = now;
+    if (state.locked) return;
+    state.accum += e.deltaX;
     if (Math.abs(state.accum) >= WHEEL_COMMIT_PX) {
       const dir: 1 | -1 = state.accum > 0 ? 1 : -1;
       state.accum = 0;
+      state.locked = true;
       commitSwipe(dir);
     }
   };
