@@ -127,11 +127,12 @@ export function QuickOrderRow({ symbol, presets, lastDone, onSubmit, onMore }: P
         </div>
       </div>
 
+      <span className="qo-total">
+        <span className="qo-total-k">总价</span>
+        <span className="qo-total-v">{totalStr}</span>
+      </span>
+
       <div className="qo-actions">
-        <span className="qo-total">
-          <span className="qo-total-k">总价</span>
-          <span className="qo-total-v">{totalStr}</span>
-        </span>
         <button
           type="button"
           className="qo-submit"

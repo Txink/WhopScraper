@@ -82,8 +82,8 @@ table.tbl .num { text-align: right; }
   font-weight: 600;
   letter-spacing: 0.04em;
 }
-.side-pill.buy { color: var(--up); background: var(--up-soft); }
-.side-pill.sell { color: var(--down); background: var(--down-soft); }
+.side-pill.buy { color: var(--up-color); background: var(--up-soft); }
+.side-pill.sell { color: var(--down-color); background: var(--down-soft); }
 
 .row-actions { display: inline-flex; gap: 4px; }
 .row-btn {
@@ -245,9 +245,9 @@ table.tbl .num { text-align: right; }
  * a clearly distinct "go" affordance (vs the very subtle --up-soft
  * tint, which faded into the row). */
 .qo-submit {
-  background: color-mix(in srgb, var(--up) 45%, var(--bg-2));
+  background: color-mix(in srgb, var(--up-color) 45%, var(--bg-2));
   color: #062a17;
-  border: 1px solid color-mix(in srgb, var(--up) 60%, transparent);
+  border: 1px solid color-mix(in srgb, var(--up-color) 60%, transparent);
   padding: 5px 22px;
   border-radius: var(--radius-chip);
   font-weight: 600;
@@ -258,7 +258,7 @@ table.tbl .num { text-align: right; }
   transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
 }
 .qo-submit:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--up) 65%, var(--bg-2));
+  background: color-mix(in srgb, var(--up-color) 65%, var(--bg-2));
 }
 .qo-submit:disabled {
   opacity: 0.4;
