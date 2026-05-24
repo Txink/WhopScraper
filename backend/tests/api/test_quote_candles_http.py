@@ -152,10 +152,13 @@ def test_candlesticks_today_default_5min_regular(
         ("5min", "regular",  78),
         ("3min", "regular", 130),
         ("2min", "regular", 195),
-        # All sessions (pre + regular + post ≈ 16h)
-        ("5min", "all", 192),
-        ("3min", "all", 320),
-        ("2min", "all", 480),
+        # All sessions = full 24h trading day (pre + regular + post +
+        # overnight = 5.5 + 6.5 + 4 + 8). The endpoint caps min_1 at the
+        # LongBridge per-call limit (1000), but min_2/3/5 carry the
+        # exact 24h bar count: 1440/2, 1440/3, 1440/5 = 720/480/288.
+        ("5min", "all", 288),
+        ("3min", "all", 480),
+        ("2min", "all", 720),
     ],
 )
 def test_candlesticks_today_granularity_and_sessions(
@@ -190,7 +193,9 @@ def test_candlesticks_today_invalid_granularity(
 def test_candlesticks_today_minute_line_granularity(
     client_and_broker: tuple[TestClient, FakeBrokerClient],
 ) -> None:
-    """分时 = Min_1 → 390 bars regular session, 960 bars all sessions."""
+    """分时 = Min_1 → 390 bars regular session, 1000 bars all sessions
+    (capped at the LongBridge per-call limit, since a full 24h would be
+    1440 bars)."""
     client, _ = client_and_broker
     reg = client.get(
         "/api/candlesticks",
@@ -203,7 +208,7 @@ def test_candlesticks_today_minute_line_granularity(
                 "granularity": "分时", "sessions": "all"},
     ).json()
     assert len(reg["bars"]) == 390
-    assert len(all_["bars"]) == 960
+    assert len(all_["bars"]) == 1000
 
 
 @pytest.mark.parametrize("sess", ["pre", "post", "overnight"])
@@ -211,9 +216,10 @@ def test_candlesticks_today_individual_sessions_fetch_all(
     client_and_broker: tuple[TestClient, FakeBrokerClient],
     sess: str,
 ) -> None:
-    """For session=pre/post/overnight backend fetches ALL bars (16h) and
-    lets the client filter by ET time. We assert it returns the All-count
-    rather than 400 / empty."""
+    """For session=pre/post/overnight backend fetches ALL bars (24h, capped
+    at the LongBridge per-call limit of 1000 for min_1) and lets the client
+    filter by ET time. We assert it returns the All-count rather than 400
+    / empty."""
     client, _ = client_and_broker
     resp = client.get(
         "/api/candlesticks",
@@ -221,7 +227,7 @@ def test_candlesticks_today_individual_sessions_fetch_all(
                 "granularity": "分时", "sessions": sess},
     )
     assert resp.status_code == 200
-    assert len(resp.json()["bars"]) == 960  # All-session count
+    assert len(resp.json()["bars"]) == 1000  # All-session count (min_1 cap)
 
 
 @pytest.mark.parametrize(
