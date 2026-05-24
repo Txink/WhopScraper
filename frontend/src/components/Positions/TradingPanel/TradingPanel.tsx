@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { listOrders, submitOrder, replaceOrder, cancelOrder } from "../../../api/orders";
 import { useOrdersStore } from "../../../stores/orders";
 import { useQuotesStore } from "../../../stores/quotes";
+import { ConfirmModal } from "../ConfirmModal";
 import { ActiveOrdersTable } from "./ActiveOrdersTable";
 import { QuickOrderRow } from "./QuickOrderRow";
 import { ReplaceOrderPopover } from "./ReplaceOrderPopover";
@@ -9,9 +10,20 @@ import { FullOrderModal } from "./FullOrderModal";
 import type { OrderOut, SubmitOrderRequest, ReplaceOrderRequest } from "../../../api/orders";
 import "./TradingPanel.css";
 
-interface Props { ticker: string; symbol: string }
+interface Props {
+  ticker: string;
+  symbol: string;
+  /** Optional hook for callers (DetailPane) that want to host the
+   *  cancel-confirm + full-order-modal themselves — so they render at
+   *  the detail-pane level rather than inside the swipe-track's
+   *  transformed subtree (which mis-positions absolute / fixed children).
+   *  When omitted (e.g. standalone tests), TradingPanel falls back to
+   *  rendering both modals itself. */
+  onRequestCancel?: (order: OrderOut) => void;
+  onRequestMore?: (defaults: { symbol: string; ticker: string; lastDone: number | null }) => void;
+}
 
-export function TradingPanel({ ticker, symbol }: Props) {
+export function TradingPanel({ ticker, symbol, onRequestCancel, onRequestMore }: Props) {
   const orders = useOrdersStore((s) => s.byTicker[ticker]) ?? [];
   const setOrders = useOrdersStore((s) => s.setOrders);
   const removeOrder = useOrdersStore((s) => s.removeOrder);
@@ -19,8 +31,8 @@ export function TradingPanel({ ticker, symbol }: Props) {
   const lastDone = quote?.last_done ?? null;
   const [activeOnly, setActiveOnly] = useState(false);
   const [replaceFor, setReplaceFor] = useState<OrderOut | null>(null);
-  const [moreOpen, setMoreOpen] = useState(false);
-  const [confirmCancel, setConfirmCancel] = useState<OrderOut | null>(null);
+  const [fallbackMoreOpen, setFallbackMoreOpen] = useState(false);
+  const [fallbackCancel, setFallbackCancel] = useState<OrderOut | null>(null);
 
   // TODO: source presets from page settings; fallback for now.
   const presets = { regular: 200, half: 100, third: 67 };
@@ -51,17 +63,25 @@ export function TradingPanel({ ticker, symbol }: Props) {
     }
   };
 
-  const onCancel = (o: OrderOut) => setConfirmCancel(o);
-
-  const confirmCancelFire = async () => {
-    if (!confirmCancel) return;
+  const onCancel = (o: OrderOut) => {
+    if (onRequestCancel) onRequestCancel(o);
+    else setFallbackCancel(o);
+  };
+  const fallbackCancelFire = async () => {
+    if (!fallbackCancel) return;
     try {
-      await cancelOrder(confirmCancel.order_id);
-      removeOrder(ticker, confirmCancel.order_id);
-      setConfirmCancel(null);
+      await cancelOrder(fallbackCancel.order_id);
+      removeOrder(ticker, fallbackCancel.order_id);
     } catch (e) {
       console.error("cancel failed", e);
+    } finally {
+      setFallbackCancel(null);
     }
+  };
+
+  const onMore = () => {
+    if (onRequestMore) onRequestMore({ symbol, ticker, lastDone });
+    else setFallbackMoreOpen(true);
   };
 
   const activeCount = orders.filter(
@@ -79,7 +99,14 @@ export function TradingPanel({ ticker, symbol }: Props) {
       <div className="trading-panel-body">
         <ActiveOrdersTable orders={orders} activeOnly={activeOnly} onReplace={onReplace} onCancel={onCancel} />
       </div>
-      <QuickOrderRow symbol={symbol} ticker={ticker} presets={presets} lastDone={lastDone} onSubmit={onSubmit} onMore={() => setMoreOpen(true)} />
+      <QuickOrderRow
+        symbol={symbol}
+        ticker={ticker}
+        presets={presets}
+        lastDone={lastDone}
+        onSubmit={onSubmit}
+        onMore={onMore}
+      />
       <div className="tab-foot">
         <span className="tab-foot-left">
           <button type="button" className="trade-menu-btn" aria-label="交易面板设置" title="交易面板设置（暂未启用）">
@@ -91,19 +118,31 @@ export function TradingPanel({ ticker, symbol }: Props) {
           <span>交易面板 · 活跃 {activeCount} / 共 {orders.length}</span>
         </span>
       </div>
-      {replaceFor && <ReplaceOrderPopover order={replaceFor} onSubmit={submitReplace} onClose={() => setReplaceFor(null)} />}
-      {moreOpen && <FullOrderModal symbol={symbol} ticker={ticker} lastDone={lastDone} onSubmit={(r) => { void onSubmit(r); setMoreOpen(false); }} onClose={() => setMoreOpen(false)} />}
-      {confirmCancel && (
-        <div className="modal-backdrop" onClick={() => setConfirmCancel(null)} role="presentation">
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h3>撤销订单</h3>
-            <p>确认撤销 {confirmCancel.side} {confirmCancel.qty} {confirmCancel.ticker} @ {confirmCancel.price}？</p>
-            <div className="modal-foot">
-              <button onClick={() => setConfirmCancel(null)}>取消</button>
-              <button className="row-btn danger" onClick={() => { void confirmCancelFire(); }}>确认撤单</button>
-            </div>
-          </div>
-        </div>
+      {replaceFor && (
+        <ReplaceOrderPopover order={replaceFor} onSubmit={submitReplace} onClose={() => setReplaceFor(null)} />
+      )}
+      {/* Fallback in-pane modals used only when caller doesn't host them.
+       *  These render inside the swipe-track's transformed subtree, which
+       *  will mis-position fixed/absolute children — only safe when
+       *  TradingPanel is mounted standalone (tests, future ad-hoc use). */}
+      {fallbackMoreOpen && (
+        <FullOrderModal
+          symbol={symbol}
+          ticker={ticker}
+          lastDone={lastDone}
+          onSubmit={(r) => { void onSubmit(r); setFallbackMoreOpen(false); }}
+          onClose={() => setFallbackMoreOpen(false)}
+        />
+      )}
+      {fallbackCancel && (
+        <ConfirmModal
+          title="撤销订单"
+          description={`确认撤销 ${fallbackCancel.side} ${fallbackCancel.qty} ${fallbackCancel.ticker} @ ${fallbackCancel.price ?? "市价"}？`}
+          confirmLabel="确认撤单"
+          danger
+          onConfirm={fallbackCancelFire}
+          onCancel={() => setFallbackCancel(null)}
+        />
       )}
     </div>
   );

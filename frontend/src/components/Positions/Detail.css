@@ -989,6 +989,18 @@ input[type="checkbox"].sel-sell:checked {
    * just darkened — feels less like a hard overlay. */
   backdrop-filter: blur(2px);
 }
+/* Bottom-anchored placement — used when the trigger (e.g. trading
+ * panel's quick-order row) lives at the bottom of the pane, so the
+ * card pops up close to where the click happened rather than at the
+ * vertical center. The 180px bottom inset clears the QuickOrderRow
+ * (≈90px) + tab-foot (≈28px) with breathing room so the card sits
+ * comfortably above the sticky form area. */
+.confirm-modal-backdrop.placement-bottom,
+.pair-modal-backdrop.placement-bottom {
+  align-items: flex-end;
+  padding-bottom: 180px;
+  padding-top: 0;
+}
 .confirm-modal-card {
   background: var(--bg-2);
   border: 1px solid var(--line-strong);

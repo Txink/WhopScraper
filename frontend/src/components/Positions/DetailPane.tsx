@@ -18,6 +18,10 @@ import {
 import { PairDetailModal } from "./PairDetailModal";
 import { TradeList, type TradeListFilter } from "./TradeList";
 import { ConfirmModal } from "./ConfirmModal";
+import { FullOrderModal } from "./TradingPanel/FullOrderModal";
+import { cancelOrder, submitOrder } from "../../api/orders";
+import { useOrdersStore } from "../../stores/orders";
+import type { OrderOut, SubmitOrderRequest } from "../../api/orders";
 import { DetailTabSwipe, type TabDef } from "./DetailTabSwipe";
 import { TradingPanel } from "./TradingPanel/TradingPanel";
 import { AlertsPanel } from "./AlertsPanel/AlertsPanel";
@@ -669,6 +673,37 @@ export function DetailPane({ position, onBack }: Props) {
   // ConfirmModal renders it inside the detail-pane (NOT the viewport).
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
 
+  // Trading-panel modals hosted here (NOT inside TradingPanel itself)
+  // so they render at the .detail-pane level and escape the swipe-track
+  // transform that would otherwise mis-position absolute/fixed children.
+  const [tradingCancel, setTradingCancel] = useState<OrderOut | null>(null);
+  const [tradingMoreFor, setTradingMoreFor] = useState<{
+    symbol: string; ticker: string; lastDone: number | null;
+  } | null>(null);
+
+  const onTradingCancelConfirm = useCallback(async () => {
+    if (!tradingCancel) return;
+    try {
+      await cancelOrder(tradingCancel.order_id);
+      useOrdersStore.getState().removeOrder(tradingCancel.ticker, tradingCancel.order_id);
+    } catch (e) {
+      console.error("cancel failed", e);
+    } finally {
+      setTradingCancel(null);
+    }
+  }, [tradingCancel]);
+
+  const onTradingMoreSubmit = useCallback(async (req: SubmitOrderRequest) => {
+    try {
+      const o = await submitOrder(req);
+      useOrdersStore.getState().upsertOrder(o.ticker, o);
+    } catch (e) {
+      console.error("submit failed", e);
+    } finally {
+      setTradingMoreFor(null);
+    }
+  }, []);
+
   const onClearAllPairs = useCallback(() => {
     setPendingConfirm({
       title: `清除 ${ticker} 的所有做T 绑定`,
@@ -940,7 +975,18 @@ export function DetailPane({ position, onBack }: Props) {
               />
             ),
           },
-          { id: "trading", label: "交易面板", content: <TradingPanel ticker={ticker} symbol={symbol} /> },
+          {
+            id: "trading",
+            label: "交易面板",
+            content: (
+              <TradingPanel
+                ticker={ticker}
+                symbol={symbol}
+                onRequestCancel={setTradingCancel}
+                onRequestMore={setTradingMoreFor}
+              />
+            ),
+          },
           { id: "alerts",  label: "告警",     content: <AlertsPanel ticker={ticker} symbol={symbol} /> },
         ] satisfies TabDef[]}
         index={tabIndex}
@@ -982,6 +1028,30 @@ export function DetailPane({ position, onBack }: Props) {
             setPendingConfirm(null);
             await action();
           }}
+        />
+      )}
+
+      {/* Trading-panel modals hosted at detail-pane level so they
+         render at the right place regardless of swipe transform. */}
+      {tradingCancel && (
+        <ConfirmModal
+          title="撤销订单"
+          description={`确认撤销 ${tradingCancel.side} ${tradingCancel.qty} ${tradingCancel.ticker} @ ${tradingCancel.price == null ? "市价" : `$${tradingCancel.price.toFixed(2)}`}？`}
+          confirmLabel="确认撤单"
+          danger
+          placement="bottom"
+          onCancel={() => setTradingCancel(null)}
+          onConfirm={onTradingCancelConfirm}
+        />
+      )}
+      {tradingMoreFor && (
+        <FullOrderModal
+          symbol={tradingMoreFor.symbol}
+          ticker={tradingMoreFor.ticker}
+          lastDone={tradingMoreFor.lastDone}
+          placement="bottom"
+          onSubmit={onTradingMoreSubmit}
+          onClose={() => setTradingMoreFor(null)}
         />
       )}
     </div>

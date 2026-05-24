@@ -1,0 +1,85 @@
+/* FullOrderModal — reuses the project's .pair-modal-backdrop +
+ * .modal-card shells; only the inner form layout is local. Stays
+ * panel-scoped (anchors to ``.detail-pane``) so the overlay never
+ * spans the whole viewport. */
+.full-order-modal {
+  /* The shared .modal-card defines min/max width and padding; our only
+   * tweak is to drop the colored top border which doesn't apply to
+   * order entry. */
+  border-top-color: var(--brand);
+  min-width: 420px;
+  max-width: 520px;
+}
+
+.fom-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 16px;
+  margin-bottom: 16px;
+}
+
+.fom-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.fom-note-field {
+  margin-bottom: 4px;
+}
+
+.fom-label {
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+
+.fom-input {
+  background: var(--bg-1);
+  border: 1px solid var(--line-strong);
+  color: var(--fg-1);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 5px 8px;
+  border-radius: var(--radius-chip);
+}
+.fom-input:focus { outline: 1px solid var(--brand); border-color: var(--brand); }
+.fom-input:disabled { color: var(--fg-3); background: var(--bg-2); }
+
+.fom-seg {
+  display: inline-flex;
+  background: var(--bg-1);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-chip);
+  padding: 2px;
+  align-self: flex-start;
+}
+.fom-seg-btn {
+  background: transparent;
+  border: 0;
+  color: var(--fg-2);
+  padding: 4px 12px;
+  border-radius: 2px;
+  font-size: 11px;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: color var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+.fom-seg-btn.active {
+  color: #00131a;
+  background: var(--brand);
+}
+
+.fom-total {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--fg-1);
+  font-weight: 500;
+  padding: 5px 0;
+}
+
+.fom-foot {
+  gap: 8px;
+}

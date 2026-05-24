@@ -101,93 +101,195 @@ table.tbl .num { text-align: right; }
 .row-btn.danger:hover { color: var(--err); border-color: var(--err); }
 .row-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
-/* ─── Quick order row ─── */
+/* ─── Quick order — 2-row × 3-col grid ───
+ *   col 1: stacked toggles (BUY/SELL, LIMIT/MARKET)
+ *   col 2: 价 input (row 1), 数 input + ▾ (row 2)
+ *   col 3: action group (总价 + 提交 + 更多), centered, only on row 2
+ */
 .quick-order {
   background: var(--bg-3);
   border-top: 1px solid var(--line);
-  padding: 10px 14px;
-  display: flex;
+  padding: 8px 14px;
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  grid-template-rows: auto auto;
   align-items: center;
-  gap: 8px;
+  column-gap: 18px;
+  row-gap: 6px;
   flex-shrink: 0;
 }
 
-.toggle-group {
+.qo-toggles {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.qo-seg {
   display: inline-flex;
   background: var(--bg-1);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-chip);
   padding: 2px;
 }
-
-.toggle-btn {
+.qo-seg-btn {
   background: transparent;
   border: 0;
   color: var(--fg-2);
-  padding: 3px 10px;
+  padding: 3px 12px;
   border-radius: 2px;
   font-size: 11px;
+  font-family: var(--font-sans);
   font-weight: 500;
-  transition: all var(--dur);
   cursor: pointer;
+  transition: color var(--dur) var(--ease), background var(--dur) var(--ease);
+  white-space: nowrap;
 }
-.toggle-btn.active.buy { color: #061b10; background: var(--up); }
-.toggle-btn.active.sell { color: #1b0606; background: var(--down); }
-.toggle-btn.active.neutral { color: var(--fg-1); background: var(--bg-hover); }
+.qo-seg-btn:hover:not(.active) { color: var(--fg-1); }
+.qo-seg-btn.active {
+  color: #00131a;
+  background: var(--brand);
+}
 
-.field {
+.qo-fields {
+  grid-column: 2;
+  grid-row: 1 / span 2;
   display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.qo-field {
+  display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
-.field .k {
-  font-size: 9px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+.qo-k {
+  font-size: 11px;
   color: var(--fg-3);
+  min-width: 14px;
 }
-
-.num-input {
+.qo-input {
   background: var(--bg-1);
   border: 1px solid var(--line-strong);
   color: var(--fg-1);
   font-family: var(--font-mono);
   font-size: 12px;
-  padding: 3px 6px;
+  padding: 4px 8px;
   border-radius: var(--radius-chip);
-  width: 84px;
+  width: 100px;
 }
-.num-input:focus { outline: 1px solid var(--brand); border-color: var(--brand); }
-.num-input:disabled { color: var(--fg-3); background: var(--bg-2); }
-.qty-input { width: 70px; }
+.qo-input:focus { outline: 1px solid var(--brand); border-color: var(--brand); }
+.qo-input:disabled { color: var(--fg-3); background: var(--bg-2); }
+.qo-input-qty { width: 80px; }
 
-.submit-btn {
-  background: var(--brand);
-  color: #061b1f;
+.qo-qty-menu-wrap { position: relative; display: inline-flex; }
+.qo-qty-caret {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 22px;
+  padding: 0;
+  background: var(--bg-1);
+  border: 1px solid var(--line-strong);
+  color: var(--fg-3);
+  border-radius: var(--radius-chip);
+  cursor: pointer;
+  transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+.qo-qty-caret:hover { color: var(--fg-1); border-color: var(--brand); }
+.qo-qty-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: var(--bg-2);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-card);
+  padding: 4px 0;
+  min-width: 110px;
+  z-index: 5;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+}
+.qo-qty-menu button {
+  background: transparent;
   border: 0;
-  padding: 5px 16px;
+  color: var(--fg-2);
+  padding: 6px 12px;
+  font-size: 11px;
+  text-align: left;
+  cursor: pointer;
+  font-family: var(--font-sans);
+}
+.qo-qty-menu button:hover { background: var(--bg-hover); color: var(--fg-1); }
+
+/* Centered action group sits on row 2, column 3. */
+.qo-actions {
+  grid-column: 3;
+  grid-row: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-self: center;
+  gap: 14px;
+}
+
+.qo-total {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  white-space: nowrap;
+}
+.qo-total-k {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--fg-3);
+}
+.qo-total-v {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--fg-1);
+  font-weight: 500;
+}
+
+.qo-submit {
+  background: var(--up-soft);
+  color: var(--up);
+  border: 1px solid color-mix(in srgb, var(--up) 35%, transparent);
+  padding: 5px 18px;
   border-radius: var(--radius-chip);
   font-weight: 600;
   font-size: 12px;
+  font-family: var(--font-sans);
+  white-space: nowrap;
   cursor: pointer;
-  transition: filter var(--dur) var(--ease);
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
 }
-.submit-btn:hover { filter: brightness(1.1); }
-.submit-btn.sell { background: var(--down); color: #fff; }
+.qo-submit:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--up) 28%, transparent);
+}
+.qo-submit:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
 
-.more-btn {
+.qo-more {
   background: transparent;
   border: 1px solid var(--line-strong);
   color: var(--fg-2);
   padding: 4px 10px;
   border-radius: var(--radius-chip);
   font-size: 11px;
+  font-family: var(--font-sans);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  white-space: nowrap;
 }
-.more-btn:hover { color: var(--fg-1); border-color: var(--brand); }
+.qo-more:hover { color: var(--fg-1); border-color: var(--brand); }
 
 .quick-summary {
   margin-left: auto;

@@ -10,6 +10,11 @@ interface Props {
   /** Render the confirm button in danger styling (red) for destructive
    *  actions. Cancel button always stays neutral. */
   danger?: boolean;
+  /** Where to anchor the modal card inside the panel. ``center``
+   *  (default) vertically centers; ``bottom`` pins it near the bottom
+   *  edge so it appears close to the triggering control (e.g. just
+   *  above a sticky form row) rather than floating in the middle. */
+  placement?: "center" | "bottom";
   onConfirm(): void | Promise<void>;
   onCancel(): void;
 }
@@ -24,6 +29,7 @@ export function ConfirmModal({
   description,
   confirmLabel = "确认",
   danger = false,
+  placement = "center",
   onConfirm,
   onCancel,
 }: Props) {
@@ -42,7 +48,7 @@ export function ConfirmModal({
 
   return (
     <div
-      className="confirm-modal-backdrop"
+      className={`confirm-modal-backdrop ${placement === "bottom" ? "placement-bottom" : ""}`}
       role="dialog"
       aria-modal="true"
       aria-labelledby="confirm-modal-title"
