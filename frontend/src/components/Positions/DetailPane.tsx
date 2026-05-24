@@ -692,6 +692,7 @@ export function DetailPane({ position, onBack }: Props) {
       useOrdersStore.getState().removeOrder(tradingCancel.ticker, tradingCancel.order_id);
     } catch (e) {
       console.error("cancel failed", e);
+      alert(`撤单失败：${e instanceof Error ? e.message : String(e)}`);
     } finally {
       setTradingCancel(null);
     }
@@ -703,6 +704,7 @@ export function DetailPane({ position, onBack }: Props) {
       useOrdersStore.getState().upsertOrder(o.ticker, o);
     } catch (e) {
       console.error("submit failed", e);
+      alert(`下单失败：${e instanceof Error ? e.message : String(e)}`);
     } finally {
       setTradingMoreFor(null);
     }
@@ -721,6 +723,7 @@ export function DetailPane({ position, onBack }: Props) {
       useAlertsStore.getState().upsertAlert(a);
     } catch (e) {
       console.error("create alert failed", e);
+      alert(`告警保存失败：${e instanceof Error ? e.message : String(e)}`);
     } finally {
       setAlertModalFor(null);
     }
@@ -733,6 +736,7 @@ export function DetailPane({ position, onBack }: Props) {
       useAlertsStore.getState().removeAlert(alertDeleteConfirm.id);
     } catch (e) {
       console.error("delete alert failed", e);
+      alert(`告警删除失败：${e instanceof Error ? e.message : String(e)}`);
     } finally {
       setAlertDeleteConfirm(null);
     }

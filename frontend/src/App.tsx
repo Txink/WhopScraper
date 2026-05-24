@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { configureHttp, api, HttpError } from "./api/http";
+import { configureRequest } from "./api/_request";
 import { createWsClient } from "./api/ws";
 import { handleOrderChanged, handleAlertChanged, handleAlertTriggered } from "./api/wsHandlers";
 import { useConnStore } from "./stores/conn";
@@ -420,6 +421,7 @@ export default function App() {
     }
     setToken(stored);
     configureHttp({ baseUrl: BASE_URL, token: stored });
+    configureRequest({ baseUrl: BASE_URL, token: stored });
     api.health()
       .then((h) => {
         conn.setHealth(h);

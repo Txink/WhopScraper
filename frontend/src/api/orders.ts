@@ -1,5 +1,5 @@
 import type { components } from "./types";
-import { request } from "./_request";
+import { request, del } from "./_request";
 
 export type OrderOut = components["schemas"]["OrderOut"];
 export type OrderListOut = components["schemas"]["OrderListOut"];
@@ -31,10 +31,7 @@ export async function replaceOrder(
   });
 }
 
-/** Cancel an order. */
-export async function cancelOrder(orderId: string): Promise<{ ok: boolean }> {
-  return request<{ ok: boolean }>(
-    `/api/orders/${encodeURIComponent(orderId)}/cancel`,
-    { method: "POST" },
-  );
+/** Cancel an order. Backend uses DELETE /api/orders/{id}. */
+export async function cancelOrder(orderId: string): Promise<void> {
+  return del(`/api/orders/${encodeURIComponent(orderId)}`);
 }

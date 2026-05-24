@@ -48,6 +48,7 @@ export function TradingPanel({ ticker, symbol, onRequestCancel, onRequestMore }:
       useOrdersStore.getState().upsertOrder(o.ticker, o);
     } catch (e) {
       console.error("submit failed", e);
+      alert(`下单失败：${e instanceof Error ? e.message : String(e)}`);
     }
   };
 
@@ -60,6 +61,7 @@ export function TradingPanel({ ticker, symbol, onRequestCancel, onRequestMore }:
       setReplaceFor(null);
     } catch (e) {
       console.error("replace failed", e);
+      alert(`改单失败：${e instanceof Error ? e.message : String(e)}`);
     }
   };
 
@@ -74,6 +76,7 @@ export function TradingPanel({ ticker, symbol, onRequestCancel, onRequestMore }:
       removeOrder(ticker, fallbackCancel.order_id);
     } catch (e) {
       console.error("cancel failed", e);
+      alert(`撤单失败：${e instanceof Error ? e.message : String(e)}`);
     } finally {
       setFallbackCancel(null);
     }
