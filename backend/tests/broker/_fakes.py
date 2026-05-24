@@ -192,6 +192,9 @@ class FakeBrokerClient:
     def fetch_trading_days(self, *, days_back: int = 3) -> dict[str, list[Any]]:
         return dict(getattr(self, "trading_days_map", {}))
 
+    def is_noop(self) -> bool:
+        return False
+
     def close(self) -> None:
         pass
 

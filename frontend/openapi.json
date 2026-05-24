@@ -3155,6 +3155,298 @@
         }
       }
     },
+    "/api/alerts": {
+      "get": {
+        "summary": "Get Alerts",
+        "operationId": "get_alerts_api_alerts_get",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlertListOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Post Alert",
+        "operationId": "post_alert_api_alerts_post",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlertCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlertOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/alerts/{alert_id}": {
+      "patch": {
+        "summary": "Patch Alert",
+        "operationId": "patch_alert_api_alerts__alert_id__patch",
+        "parameters": [
+          {
+            "name": "alert_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Alert Id"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlertUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlertOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete Alert",
+        "operationId": "delete_alert_api_alerts__alert_id__delete",
+        "parameters": [
+          {
+            "name": "alert_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Alert Id"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/alerts/events": {
+      "get": {
+        "summary": "Get Alert Events",
+        "operationId": "get_alert_events_api_alerts_events_get",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ticker"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlertEventListOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/sim/scenarios": {
       "get": {
         "summary": "Get Scenarios",
@@ -3259,6 +3551,451 @@
   },
   "components": {
     "schemas": {
+      "AlertCreate": {
+        "properties": {
+          "ticker": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Ticker"
+          },
+          "symbol": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Symbol"
+          },
+          "condition_type": {
+            "type": "string",
+            "enum": [
+              "price",
+              "pct_change",
+              "volume"
+            ],
+            "title": "Condition Type"
+          },
+          "operator": {
+            "type": "string",
+            "enum": [
+              ">=",
+              "<="
+            ],
+            "title": "Operator"
+          },
+          "threshold": {
+            "type": "number",
+            "title": "Threshold"
+          },
+          "pct_change_baseline": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "today_open",
+                  "prev_close"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pct Change Baseline"
+          },
+          "volume_window": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "1min",
+                  "5min"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Volume Window"
+          },
+          "repeat_mode": {
+            "type": "string",
+            "enum": [
+              "one_shot",
+              "recurring"
+            ],
+            "title": "Repeat Mode",
+            "default": "one_shot"
+          },
+          "cooldown_seconds": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Cooldown Seconds",
+            "default": 300
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ticker",
+          "symbol",
+          "condition_type",
+          "operator",
+          "threshold"
+        ],
+        "title": "AlertCreate"
+      },
+      "AlertEventListOut": {
+        "properties": {
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/AlertEventOut"
+            },
+            "type": "array",
+            "title": "Events"
+          }
+        },
+        "type": "object",
+        "required": [
+          "events"
+        ],
+        "title": "AlertEventListOut"
+      },
+      "AlertEventOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "alert_id": {
+            "type": "integer",
+            "title": "Alert Id"
+          },
+          "triggered_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Triggered At"
+          },
+          "ticker": {
+            "type": "string",
+            "title": "Ticker"
+          },
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "snapshot_price": {
+            "type": "number",
+            "title": "Snapshot Price"
+          },
+          "snapshot_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Pct"
+          },
+          "snapshot_volume": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Volume"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "alert_id",
+          "triggered_at",
+          "ticker",
+          "symbol",
+          "snapshot_price",
+          "snapshot_pct",
+          "snapshot_volume",
+          "message"
+        ],
+        "title": "AlertEventOut"
+      },
+      "AlertListOut": {
+        "properties": {
+          "alerts": {
+            "items": {
+              "$ref": "#/components/schemas/AlertOut"
+            },
+            "type": "array",
+            "title": "Alerts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "alerts"
+        ],
+        "title": "AlertListOut"
+      },
+      "AlertOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "ticker": {
+            "type": "string",
+            "title": "Ticker"
+          },
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "condition_type": {
+            "type": "string",
+            "enum": [
+              "price",
+              "pct_change",
+              "volume"
+            ],
+            "title": "Condition Type"
+          },
+          "operator": {
+            "type": "string",
+            "enum": [
+              ">=",
+              "<="
+            ],
+            "title": "Operator"
+          },
+          "threshold": {
+            "type": "number",
+            "title": "Threshold"
+          },
+          "pct_change_baseline": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "today_open",
+                  "prev_close"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pct Change Baseline"
+          },
+          "volume_window": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "1min",
+                  "5min"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Volume Window"
+          },
+          "repeat_mode": {
+            "type": "string",
+            "enum": [
+              "one_shot",
+              "recurring"
+            ],
+            "title": "Repeat Mode"
+          },
+          "cooldown_seconds": {
+            "type": "integer",
+            "title": "Cooldown Seconds"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "last_triggered_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Triggered At"
+          },
+          "trigger_count": {
+            "type": "integer",
+            "title": "Trigger Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "ticker",
+          "symbol",
+          "condition_type",
+          "operator",
+          "threshold",
+          "pct_change_baseline",
+          "volume_window",
+          "repeat_mode",
+          "cooldown_seconds",
+          "enabled",
+          "note",
+          "created_at",
+          "last_triggered_at",
+          "trigger_count"
+        ],
+        "title": "AlertOut"
+      },
+      "AlertUpdate": {
+        "properties": {
+          "operator": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  ">=",
+                  "<="
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Operator"
+          },
+          "threshold": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Threshold"
+          },
+          "pct_change_baseline": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "today_open",
+                  "prev_close"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pct Change Baseline"
+          },
+          "volume_window": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "1min",
+                  "5min"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Volume Window"
+          },
+          "repeat_mode": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "one_shot",
+                  "recurring"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Repeat Mode"
+          },
+          "cooldown_seconds": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cooldown Seconds"
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "title": "AlertUpdate"
+      },
       "BrokerStatusOut": {
         "properties": {
           "is_real": {

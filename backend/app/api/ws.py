@@ -86,6 +86,8 @@ class WebSocketHub:
             Topics.QUOTE_SNAPSHOT,
             Topics.EXECUTION_UPDATE,
             Topics.ORDER_CHANGED,
+            Topics.ALERT_TRIGGERED,
+            Topics.ALERT_CHANGED,
         ]
         for t in topics_to_bridge:
             unsub = self._bus.subscribe(t, self._on_bus_event)

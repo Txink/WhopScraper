@@ -1026,6 +1026,59 @@ export interface paths {
         patch: operations["patch_order_api_orders__order_id__patch"];
         trace?: never;
     };
+    "/api/alerts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Alerts */
+        get: operations["get_alerts_api_alerts_get"];
+        put?: never;
+        /** Post Alert */
+        post: operations["post_alert_api_alerts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/alerts/{alert_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Alert */
+        delete: operations["delete_alert_api_alerts__alert_id__delete"];
+        options?: never;
+        head?: never;
+        /** Patch Alert */
+        patch: operations["patch_alert_api_alerts__alert_id__patch"];
+        trace?: never;
+    };
+    "/api/alerts/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Alert Events */
+        get: operations["get_alert_events_api_alerts_events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sim/scenarios": {
         parameters: {
             query?: never;
@@ -1064,6 +1117,140 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AlertCreate */
+        AlertCreate: {
+            /** Ticker */
+            ticker: string;
+            /** Symbol */
+            symbol: string;
+            /**
+             * Condition Type
+             * @enum {string}
+             */
+            condition_type: "price" | "pct_change" | "volume";
+            /**
+             * Operator
+             * @enum {string}
+             */
+            operator: ">=" | "<=";
+            /** Threshold */
+            threshold: number;
+            /** Pct Change Baseline */
+            pct_change_baseline?: ("today_open" | "prev_close") | null;
+            /** Volume Window */
+            volume_window?: ("1min" | "5min") | null;
+            /**
+             * Repeat Mode
+             * @default one_shot
+             * @enum {string}
+             */
+            repeat_mode: "one_shot" | "recurring";
+            /**
+             * Cooldown Seconds
+             * @default 300
+             */
+            cooldown_seconds: number;
+            /** Note */
+            note?: string | null;
+        };
+        /** AlertEventListOut */
+        AlertEventListOut: {
+            /** Events */
+            events: components["schemas"]["AlertEventOut"][];
+        };
+        /** AlertEventOut */
+        AlertEventOut: {
+            /** Id */
+            id: number;
+            /** Alert Id */
+            alert_id: number;
+            /**
+             * Triggered At
+             * Format: date-time
+             */
+            triggered_at: string;
+            /** Ticker */
+            ticker: string;
+            /** Symbol */
+            symbol: string;
+            /** Snapshot Price */
+            snapshot_price: number;
+            /** Snapshot Pct */
+            snapshot_pct: number | null;
+            /** Snapshot Volume */
+            snapshot_volume: number | null;
+            /** Message */
+            message: string;
+        };
+        /** AlertListOut */
+        AlertListOut: {
+            /** Alerts */
+            alerts: components["schemas"]["AlertOut"][];
+        };
+        /** AlertOut */
+        AlertOut: {
+            /** Id */
+            id: number;
+            /** Ticker */
+            ticker: string;
+            /** Symbol */
+            symbol: string;
+            /**
+             * Condition Type
+             * @enum {string}
+             */
+            condition_type: "price" | "pct_change" | "volume";
+            /**
+             * Operator
+             * @enum {string}
+             */
+            operator: ">=" | "<=";
+            /** Threshold */
+            threshold: number;
+            /** Pct Change Baseline */
+            pct_change_baseline: ("today_open" | "prev_close") | null;
+            /** Volume Window */
+            volume_window: ("1min" | "5min") | null;
+            /**
+             * Repeat Mode
+             * @enum {string}
+             */
+            repeat_mode: "one_shot" | "recurring";
+            /** Cooldown Seconds */
+            cooldown_seconds: number;
+            /** Enabled */
+            enabled: boolean;
+            /** Note */
+            note: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Last Triggered At */
+            last_triggered_at: string | null;
+            /** Trigger Count */
+            trigger_count: number;
+        };
+        /** AlertUpdate */
+        AlertUpdate: {
+            /** Operator */
+            operator?: (">=" | "<=") | null;
+            /** Threshold */
+            threshold?: number | null;
+            /** Pct Change Baseline */
+            pct_change_baseline?: ("today_open" | "prev_close") | null;
+            /** Volume Window */
+            volume_window?: ("1min" | "5min") | null;
+            /** Repeat Mode */
+            repeat_mode?: ("one_shot" | "recurring") | null;
+            /** Cooldown Seconds */
+            cooldown_seconds?: number | null;
+            /** Enabled */
+            enabled?: boolean | null;
+            /** Note */
+            note?: string | null;
+        };
         /**
          * BrokerStatusOut
          * @description Snapshot of the running broker — whether it's a live LongPortClient
@@ -3843,6 +4030,174 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_alerts_api_alerts_get: {
+        parameters: {
+            query: {
+                ticker: string;
+                token?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AlertListOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_alert_api_alerts_post: {
+        parameters: {
+            query?: {
+                token?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AlertCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AlertOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_alert_api_alerts__alert_id__delete: {
+        parameters: {
+            query?: {
+                token?: string | null;
+            };
+            header?: never;
+            path: {
+                alert_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_alert_api_alerts__alert_id__patch: {
+        parameters: {
+            query?: {
+                token?: string | null;
+            };
+            header?: never;
+            path: {
+                alert_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AlertUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AlertOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_alert_events_api_alerts_events_get: {
+        parameters: {
+            query?: {
+                ticker?: string | null;
+                limit?: number;
+                token?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AlertEventListOut"];
+                };
             };
             /** @description Validation Error */
             422: {

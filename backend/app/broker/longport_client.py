@@ -1137,6 +1137,9 @@ class LongPortClient:
             except Exception:
                 logger.exception("Order push handler raised an exception; continuing")
 
+    def is_noop(self) -> bool:
+        return False
+
     # ------------------------------------------------------------------ #
     # Lifecycle                                                            #
     # ------------------------------------------------------------------ #

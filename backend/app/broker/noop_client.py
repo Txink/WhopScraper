@@ -147,5 +147,8 @@ class NoopBrokerClient:
     ) -> list[dict[str, Any]]:
         return []
 
+    def is_noop(self) -> bool:
+        return True
+
     def close(self) -> None:
         pass

@@ -110,6 +110,14 @@ from app.core.config import Settings
 from app.core.event_bus import Event
 from app.core.events import TaskPayload, Topics
 from app.domain.status import Status
+from app.alerts.schemas import (
+    AlertCreate,
+    AlertEventListOut,
+    AlertListOut,
+    AlertOut,
+    AlertUpdate,
+)
+from app.alerts.service import AlertsService, SymbolUnknown
 from app.orders.schemas import OrderListOut, OrderOut, ReplaceOrderRequest, SubmitOrderRequest
 from app.orders.service import OrdersService
 from app.storage import repo
@@ -224,6 +232,7 @@ def build_http_router(
     broker_status_fn: Callable[[], dict[str, Any]] | None = None,
     broker_reload_fn: Callable[[], Awaitable[dict[str, Any]]] | None = None,
     subscription_manager_getter: Callable[[], Any] | None = None,
+    alerts_engine_getter: Callable[[], Any] | None = None,
 ) -> APIRouter:
     """Factory — injects session_factory, broker, and settings at app assembly.
 
@@ -1877,5 +1886,50 @@ def build_http_router(
     @router.get("/api/orders", response_model=OrderListOut)
     async def get_orders(ticker: str) -> OrderListOut:
         return OrderListOut(orders=await orders_svc.list_today(ticker))
+
+    # ------------------------------------------------------------------ #
+    # /api/alerts — price / volume / pct-change alert CRUD               #
+    # ------------------------------------------------------------------ #
+
+    from app.alerts.repo import AlertRepo
+
+    alerts_repo = AlertRepo(session_factory)
+
+    def _alerts_service() -> AlertsService:
+        engine = alerts_engine_getter() if alerts_engine_getter is not None else None
+        if engine is None:
+            raise HTTPException(503, "AlertEngine not available")
+        return AlertsService(
+            repo=alerts_repo, engine=engine, broker=broker, event_bus=bus
+        )
+
+    @router.get("/api/alerts", response_model=AlertListOut)
+    async def get_alerts(ticker: str) -> AlertListOut:
+        return AlertListOut(alerts=await alerts_repo.list_by_ticker(ticker))
+
+    @router.post("/api/alerts", response_model=AlertOut, status_code=201)
+    async def post_alert(req: AlertCreate) -> AlertOut:
+        try:
+            return await _alerts_service().create(req)
+        except SymbolUnknown as e:
+            raise HTTPException(422, str(e)) from e
+
+    @router.patch("/api/alerts/{alert_id}", response_model=AlertOut)
+    async def patch_alert(alert_id: int, req: AlertUpdate) -> AlertOut:
+        try:
+            return await _alerts_service().update(alert_id, req)
+        except KeyError:
+            raise HTTPException(404, f"alert {alert_id} not found") from None
+
+    @router.delete("/api/alerts/{alert_id}", status_code=204)
+    async def delete_alert(alert_id: int) -> Response:
+        await _alerts_service().delete(alert_id)
+        return Response(status_code=204)
+
+    @router.get("/api/alerts/events", response_model=AlertEventListOut)
+    async def get_alert_events(
+        ticker: str | None = None, limit: int = 50,
+    ) -> AlertEventListOut:
+        return AlertEventListOut(events=await alerts_repo.list_events(ticker=ticker, limit=limit))
 
     return router

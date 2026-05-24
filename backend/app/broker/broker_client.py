@@ -27,6 +27,14 @@ class BrokerClient(Protocol):
     @property
     def dry_run(self) -> bool: ...
 
+    def is_noop(self) -> bool:
+        """Whether this is a NoopBrokerClient placeholder (broker not authorized).
+
+        Used by callers (e.g. AlertEngine) that must avoid live SDK
+        operations when no broker is configured.
+        """
+        ...
+
     def submit_option_order(
         self,
         *,

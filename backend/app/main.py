@@ -320,6 +320,15 @@ def create_app(
         _register_trader_and_push()
         _build_subscription_manager()
 
+        # AlertEngine — evaluates enabled alerts against live quote pushes.
+        from app.alerts.engine import AlertEngine
+        from app.alerts.repo import AlertRepo as _AlertRepo
+
+        _alerts_repo = _AlertRepo(session_factory)
+        alerts_engine = AlertEngine(repo=_alerts_repo, broker=state.broker, event_bus=bus)
+        await alerts_engine.start()
+        app.state.alerts_engine = alerts_engine
+
         # Broker status / reload — surfaced via /api/longport/broker/* so the
         # UI can show "real / noop / error" and let the user retry init after
         # filling in credentials, without restarting the backend process.
@@ -475,6 +484,7 @@ def create_app(
                 broker_status_fn=_broker_status,
                 broker_reload_fn=_broker_reload,
                 subscription_manager_getter=lambda: state.subscription_manager,
+                alerts_engine_getter=lambda: app.state.alerts_engine,
             )
         )
         app.include_router(build_ws_router(state.hub, state.settings))
@@ -531,6 +541,12 @@ def create_app(
         # Shutdown                                                             #
         # ------------------------------------------------------------------ #
         logger.info("shutting down signal-station backend...")
+
+        if hasattr(app.state, "alerts_engine"):
+            try:
+                await app.state.alerts_engine.stop()
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("alerts_engine stop error: %s", exc)
 
         if hasattr(state, "whop_registry"):
             try:
