@@ -46,3 +46,9 @@ async def in_memory_engine() -> AsyncEngine:
 @pytest_asyncio.fixture
 async def session_factory(in_memory_engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
     return async_sessionmaker(in_memory_engine, expire_on_commit=False)
+
+
+@pytest_asyncio.fixture
+async def engine(in_memory_engine: AsyncEngine) -> AsyncEngine:
+    """Alias for in_memory_engine — used by schema smoke tests."""
+    return in_memory_engine

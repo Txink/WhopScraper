@@ -81,6 +81,16 @@ class TaskRow(Base):
     # Active OAuth account at submission time. Nullable for backwards
     # compat — pre-multi-account tasks have NULL.
     account_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    # Origin of the order. "signal" = whop-driven via parser/trader pipeline;
+    # "manual" = submitted by user via the trading panel (no Message /
+    # Instruction rows). NULL for legacy rows (pre-migration); treated as
+    # "signal" by code paths that branch on this.
+    source: Mapped[str | None] = mapped_column(String, nullable=True)
+    # Most recent successful replace_order time. NULL until the order has
+    # been modified at least once via PATCH /api/orders/{id}.
+    last_replaced_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -376,3 +386,61 @@ class BrokerExecutionRow(Base):
         default=list,
         server_default=text("'[]'"),
     )
+
+
+# ---------------------------------------------------------------------------
+# alerts — per-ticker user-defined price / pct_change / volume watchers
+# evaluated by AlertEngine against LongPort quote pushes.
+# ---------------------------------------------------------------------------
+
+
+class AlertRow(Base):
+    __tablename__ = "alerts"
+    __table_args__ = (
+        Index("idx_alerts_ticker_enabled", "ticker", "enabled"),
+        Index("idx_alerts_symbol_enabled", "symbol", "enabled"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    ticker: Mapped[str] = mapped_column(String, nullable=False)
+    symbol: Mapped[str] = mapped_column(String, nullable=False)
+    condition_type: Mapped[str] = mapped_column(String, nullable=False)
+    operator: Mapped[str] = mapped_column(String, nullable=False)
+    threshold: Mapped[float] = mapped_column(nullable=False)
+    pct_change_baseline: Mapped[str | None] = mapped_column(String, nullable=True)
+    volume_window: Mapped[str | None] = mapped_column(String, nullable=True)
+    repeat_mode: Mapped[str] = mapped_column(String, nullable=False)
+    cooldown_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=300)
+    enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("1")
+    )
+    note: Mapped[str | None] = mapped_column(String, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    last_triggered_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    trigger_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+
+class AlertEventRow(Base):
+    __tablename__ = "alert_events"
+    __table_args__ = (
+        Index("idx_alert_events_alert_ts", "alert_id", "triggered_at"),
+        Index("idx_alert_events_ticker_ts", "ticker", "triggered_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    alert_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("alerts.id", ondelete="CASCADE"), nullable=False
+    )
+    triggered_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    ticker: Mapped[str] = mapped_column(String, nullable=False)
+    symbol: Mapped[str] = mapped_column(String, nullable=False)
+    snapshot_price: Mapped[float] = mapped_column(nullable=False)
+    snapshot_pct: Mapped[float | None] = mapped_column(nullable=True)
+    snapshot_volume: Mapped[float | None] = mapped_column(nullable=True)
+    message: Mapped[str] = mapped_column(String, nullable=False)
