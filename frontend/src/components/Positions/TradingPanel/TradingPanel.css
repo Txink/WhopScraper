@@ -164,7 +164,13 @@ table.tbl .num { text-align: right; }
 .qo-input:disabled { color: var(--fg-3); background: var(--bg-2); }
 .qo-input-qty { width: 80px; }
 
-.qo-qty-menu-wrap { position: relative; display: inline-flex; }
+.qo-qty-menu-wrap {
+  position: relative;
+  display: inline-flex;
+  /* Pull caret closer to the qty input — the parent .qo-field's
+   * 6px gap is right for label↔input but too airy for input↔caret. */
+  margin-left: -4px;
+}
 .qo-qty-caret {
   display: inline-flex;
   align-items: center;
