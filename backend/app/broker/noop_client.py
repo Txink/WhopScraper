@@ -130,5 +130,22 @@ class NoopBrokerClient:
     def fetch_trading_days(self, *, days_back: int = 3) -> dict[str, list[Any]]:
         return {}
 
+    def replace_order(
+        self,
+        order_id: str,
+        *,
+        quantity: int | None = None,
+        price: float | None = None,
+    ) -> None:
+        logger.info(
+            "[NOOP] replace_order order_id=%s qty=%s price=%s",
+            order_id, quantity, price,
+        )
+
+    def today_orders(
+        self, *, ticker: str | None = None
+    ) -> list[dict[str, Any]]:
+        return []
+
     def close(self) -> None:
         pass

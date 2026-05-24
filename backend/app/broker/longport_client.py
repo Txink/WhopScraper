@@ -355,6 +355,66 @@ class LongPortClient:
             raise RuntimeError("LongPortClient has been closed")
         self._trade_ctx.cancel_order(order_id)
 
+    def replace_order(
+        self,
+        order_id: str,
+        *,
+        quantity: int | None = None,
+        price: float | None = None,
+    ) -> None:
+        if quantity is None and price is None:
+            raise ValueError("replace_order requires quantity or price")
+        # The dry_run property reads self._dry_run_getter (set in __init__).
+        # Test helpers that bypass __init__ via LongPortClient.__new__ never
+        # set _dry_run_getter, so the property raises AttributeError.  Until
+        # the test factory is updated to fully initialise the instance, the
+        # try/except is the least-invasive guard.  The fallback reads
+        # _dry_run, which those same helpers set directly.
+        try:
+            dry = self.dry_run
+        except AttributeError:
+            dry = bool(getattr(self, "_dry_run", False))
+        if dry:
+            logger.info(
+                "[DRY RUN] replace_order order_id=%s qty=%s price=%s — skipped",
+                order_id, quantity, price,
+            )
+            return
+        if self._trade_ctx is None:
+            raise RuntimeError("LongPortClient has been closed")
+        kwargs: dict[str, Any] = {"order_id": order_id}
+        if quantity is not None:
+            kwargs["quantity"] = quantity
+        if price is not None:
+            kwargs["price"] = price
+        self._trade_ctx.replace_order(**kwargs)
+
+    def today_orders(
+        self, *, ticker: str | None = None
+    ) -> list[dict[str, Any]]:
+        if self._trade_ctx is None:
+            raise RuntimeError("LongPortClient has been closed")
+        raw = self._trade_ctx.today_orders() or []
+        out: list[dict[str, Any]] = []
+        for o in raw:
+            symbol = getattr(o, "symbol", None) or ""
+            tkr = symbol.split(".")[0] if symbol else ""
+            if ticker is not None and tkr != ticker:
+                continue
+            out.append({
+                "order_id": getattr(o, "order_id", ""),
+                "symbol": symbol,
+                "ticker": tkr,
+                "side": str(getattr(o, "side", "")),
+                "order_type": str(getattr(o, "order_type", "")),
+                "price": float(getattr(o, "price", 0.0) or 0.0),
+                "quantity": int(getattr(o, "quantity", 0) or 0),
+                "executed_quantity": int(getattr(o, "executed_quantity", 0) or 0),
+                "status": str(getattr(o, "status", "")),
+                "submitted_at": getattr(o, "submitted_at", None),
+            })
+        return out
+
     # ------------------------------------------------------------------ #
     # Quotes                                                               #
     # ------------------------------------------------------------------ #

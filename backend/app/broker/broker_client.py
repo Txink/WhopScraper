@@ -192,5 +192,30 @@ class BrokerClient(Protocol):
         making a network call.  Raises on failure.
         """
 
+    def replace_order(
+        self,
+        order_id: str,
+        *,
+        quantity: int | None = None,
+        price: float | None = None,
+    ) -> None:
+        """Modify an existing live order; preserves queue priority.
+
+        At least one of quantity or price must be supplied. Raises
+        ValueError if neither is given; lets SDK exceptions propagate
+        for caller-side translation to HTTP 409/502.
+        """
+        ...
+
+    def today_orders(
+        self, *, ticker: str | None = None
+    ) -> list[dict[str, Any]]:
+        """Return today's orders across all states (pending, partial,
+        filled, cancelled, rejected). Optional client-side ticker filter.
+        Schema: ``{order_id, symbol, ticker, side, order_type, price,
+        quantity, executed_quantity, status, submitted_at}``.
+        """
+        ...
+
     def close(self) -> None:
         """Release SDK resources.  Safe to call multiple times."""
