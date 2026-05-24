@@ -122,7 +122,7 @@ These rules apply to every task; do not relax without spec amendment:
 
 1. **TDD only**: red → green → commit. No "I'll add tests later".
 2. **One commit per Step 5** in each task; conventional commit prefix matching repo style (`feat(...)`, `refactor(...)`, `test(...)`, etc.).
-3. **`mypy --strict` and `ruff` must stay green** after every backend commit.
+3. **No new `mypy --strict` or `ruff` errors** beyond the existing baseline (37 mypy / 218 ruff pre-existing on main as of 2026-05-25). Each task adds zero new violations in the files it touches.
 4. **`tsc --noEmit` and `vitest` must stay green** after every frontend commit.
 5. **No new dependencies** without explicit user approval. Reuse existing libraries (SQLAlchemy 2.x, Pydantic v2, Zustand, Chart.js).
 6. **Manual orders never write rows to `messages` or `instructions`** — only `tasks`. Frontend gates instruction-only UI off `tasks.source != 'manual'`.
