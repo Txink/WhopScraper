@@ -124,6 +124,10 @@ table.tbl .num { text-align: right; }
   grid-row: 1 / span 2;
   display: flex;
   flex-direction: column;
+  /* Keep each row at its content width — without this the flex
+   * default ``stretch`` would size the BUY/SELL row to match the
+   * wider LIMIT/MARKET row, padding extra whitespace after SELL. */
+  align-items: flex-start;
   gap: 4px;
 }
 
