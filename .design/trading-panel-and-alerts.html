@@ -1,0 +1,1261 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Signal Station — 交易面板 & 告警 mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg-0: #0b0f14;
+    --bg-1: #121821;
+    --bg-2: #171f2a;
+    --bg-3: #1c2635;
+    --bg-hover: #202b3d;
+    --line: rgba(255, 255, 255, 0.06);
+    --line-strong: rgba(255, 255, 255, 0.10);
+    --fg-1: #e4e8ef;
+    --fg-2: #8a93a1;
+    --fg-3: #566071;
+    --brand: #3fb5c5;
+    --ok: #3dd68c;
+    --err: #ef5b5b;
+    --warn: #e7a73d;
+    --info: #5aa0ff;
+    --up: #3dd68c;
+    --up-soft: rgba(61, 214, 140, 0.14);
+    --down: #ef5b5b;
+    --down-soft: rgba(239, 91, 91, 0.14);
+    --type-stock-fg: #6cd5e3;
+    --type-stock-bg: rgba(63, 181, 197, 0.14);
+    --font-sans: "IBM Plex Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+    --radius-chip: 3px;
+    --radius-card: 6px;
+    --ease: cubic-bezier(0.2, 0.6, 0.2, 1);
+    --dur: 150ms;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg-0);
+    color: var(--fg-1);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    line-height: 1.5;
+    font-feature-settings: "tnum" on, "lnum" on;
+    height: 100vh;
+    overflow: hidden;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; }
+
+  /* ─── Top bar ─── */
+  .topbar {
+    height: 48px;
+    background: var(--bg-1);
+    border-bottom: 1px solid var(--line);
+    display: flex; align-items: center;
+    padding: 0 16px; gap: 24px;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--brand); }
+  .brand-name { font-weight: 600; font-size: 14px; }
+  .views { display: flex; gap: 6px; }
+  .view-btn {
+    background: transparent;
+    border: 1px solid var(--line-strong);
+    color: var(--fg-2);
+    padding: 4px 14px;
+    border-radius: var(--radius-chip);
+    font-size: 12px;
+  }
+  .view-btn.active { color: var(--fg-1); border-color: var(--brand); background: rgba(63, 181, 197, 0.08); }
+  .topbar-spacer { flex: 1; }
+  .topbar-right { display: flex; align-items: center; gap: 12px; }
+  .bell {
+    position: relative;
+    background: transparent;
+    border: 1px solid var(--line-strong);
+    color: var(--fg-2);
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease);
+  }
+  .bell:hover { color: var(--fg-1); border-color: var(--brand); }
+  .bell svg { width: 14px; height: 14px; }
+  .bell.has-unread { color: var(--fg-1); }
+  .bell-badge {
+    position: absolute;
+    top: -3px; right: -3px;
+    min-width: 16px; height: 16px;
+    padding: 0 4px;
+    border-radius: 8px;
+    background: var(--err);
+    color: #fff;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 16px;
+    text-align: center;
+    border: 1.5px solid var(--bg-1);
+  }
+  .conn { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--fg-3); }
+  .conn-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 4px var(--ok); }
+  .acct {
+    border: 1px solid var(--line-strong);
+    color: var(--fg-2);
+    padding: 4px 10px;
+    border-radius: var(--radius-chip);
+    font-size: 11px;
+    background: var(--bg-2);
+  }
+  .acct .lbl { color: var(--fg-3); text-transform: uppercase; letter-spacing: 0.08em; font-size: 9px; margin-right: 6px; }
+
+  /* ─── Layout ─── */
+  .page {
+    display: grid;
+    grid-template-columns: 280px 1fr 320px;
+    height: calc(100vh - 48px);
+  }
+  .left, .right { background: var(--bg-1); border-right: 1px solid var(--line); }
+  .right { border-right: none; border-left: 1px solid var(--line); }
+  .center { display: flex; flex-direction: column; padding: 12px; gap: 8px; min-height: 0; }
+  .panel-title {
+    font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--fg-3); padding: 16px 16px 8px;
+  }
+  .left-item, .right-item {
+    padding: 10px 16px;
+    display: flex; flex-direction: column; gap: 4px;
+    border-left: 2px solid transparent;
+  }
+  .left-item.active { border-left-color: var(--brand); background: rgba(63, 181, 197, 0.06); }
+  .left-row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .left-ticker { font-family: var(--font-mono); font-weight: 600; font-size: 13px; }
+  .left-price { font-family: var(--font-mono); font-size: 12px; color: var(--fg-2); }
+  .left-meta { font-size: 10px; color: var(--fg-3); display: flex; justify-content: space-between; }
+  .left-meta .pos { color: var(--up); }
+  .left-meta .neg { color: var(--down); }
+
+  /* ─── Summary card ─── */
+  .summary {
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    padding: 6px 16px 6px 4px;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px;
+  }
+  .summary-left { display: flex; align-items: baseline; gap: 6px; padding-left: 8px; }
+  .ds-back {
+    background: transparent; border: 0; color: var(--fg-3); padding: 4px;
+    display: inline-flex; transition: color var(--dur);
+  }
+  .ds-back:hover { color: var(--fg-1); }
+  .ticker { font-family: var(--font-mono); font-size: 20px; font-weight: 600; }
+  .sym { font-size: 11px; color: var(--fg-3); font-family: var(--font-mono); }
+  .price { font-family: var(--font-mono); font-size: 18px; font-weight: 600; margin-left: 8px; color: var(--up); }
+  .change {
+    font-family: var(--font-mono); font-size: 10px; padding: 2px 5px;
+    border-radius: var(--radius-chip); color: var(--up); background: var(--up-soft);
+  }
+  .summary-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+  .stats-line { display: flex; gap: 14px; align-items: baseline; }
+  .stat { display: inline-flex; align-items: baseline; gap: 5px; }
+  .stat .lbl { font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-3); }
+  .stat .val { font-family: var(--font-mono); font-size: 12px; font-weight: 500; }
+  .stat .val.pos { color: var(--up); }
+  .stat .val.neg { color: var(--down); }
+
+  /* ─── Chart card ─── */
+  .chart-card {
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    padding: 8px 14px 10px;
+    flex-shrink: 0;
+  }
+  .chart-head {
+    display: flex; gap: 8px; align-items: center;
+    margin-bottom: 6px;
+  }
+  .chart-tab {
+    background: transparent; border: 0;
+    color: var(--fg-2); padding: 4px 10px;
+    border-radius: var(--radius-chip);
+    font-size: 11px; display: inline-flex; align-items: baseline; gap: 4px;
+  }
+  .chart-tab.active { color: var(--fg-1); background: var(--bg-3); }
+  .chart-tab .sub { color: var(--fg-3); font-size: 10px; }
+  .chart-canvas {
+    height: 220px;
+    background: linear-gradient(180deg, rgba(61, 214, 140, 0.04) 0%, transparent 100%);
+    border-top: 1px dashed var(--line);
+    position: relative;
+    overflow: hidden;
+  }
+  .chart-canvas svg { width: 100%; height: 100%; }
+
+  /* ─── Bottom tab panel ─── */
+  .bottom-card {
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex; flex-direction: column;
+    position: relative;
+    overflow: hidden;
+  }
+  .bottom-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    padding: 12px 14px;
+  }
+  .bottom-footer {
+    height: 36px;
+    border-top: 1px solid var(--line);
+    display: flex; align-items: center;
+    padding: 0 12px;
+    position: relative;
+    background: var(--bg-2);
+  }
+  .footer-settings {
+    display: inline-flex; align-items: center; gap: 6px;
+    color: var(--fg-3); font-size: 11px;
+    background: transparent; border: 0; padding: 4px;
+    border-radius: var(--radius-chip);
+    transition: color var(--dur);
+  }
+  .footer-settings:hover { color: var(--fg-1); }
+  .footer-settings svg { width: 12px; height: 12px; }
+  .tab-indicator {
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    display: flex; gap: 6px; align-items: center;
+  }
+  .tab-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--fg-3);
+    transition: all var(--dur) var(--ease);
+    cursor: pointer; border: 0; padding: 0;
+  }
+  .tab-dot.active {
+    width: 16px;
+    border-radius: 3px;
+    background: var(--brand);
+  }
+  .tab-dot:hover:not(.active) { background: var(--fg-2); }
+
+  /* ─── Tables ─── */
+  table.tbl {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  table.tbl thead th {
+    font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--fg-3); font-weight: 500;
+    text-align: left; padding: 6px 8px;
+    border-bottom: 1px solid var(--line);
+    background: var(--bg-2); position: sticky; top: 0;
+  }
+  table.tbl tbody td {
+    padding: 7px 8px;
+    border-bottom: 1px solid var(--line);
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+  table.tbl tbody tr:hover td { background: var(--bg-hover); }
+  table.tbl .num { text-align: right; }
+  .side-pill {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: var(--radius-chip);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+  .side-pill.buy { color: var(--up); background: var(--up-soft); }
+  .side-pill.sell { color: var(--down); background: var(--down-soft); }
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 1px 7px;
+    border-radius: var(--radius-chip);
+    font-size: 10px;
+    font-family: var(--font-sans);
+  }
+  .status-pill::before {
+    content: ""; width: 5px; height: 5px; border-radius: 50%;
+  }
+  .status-pill.pending { color: var(--info); background: rgba(90, 160, 255, 0.12); }
+  .status-pill.pending::before { background: var(--info); animation: pulse 1.6s infinite; }
+  .status-pill.partial { color: var(--warn); background: rgba(231, 167, 61, 0.12); }
+  .status-pill.partial::before { background: var(--warn); }
+  .status-pill.filled { color: var(--up); background: var(--up-soft); }
+  .status-pill.filled::before { background: var(--up); }
+  .status-pill.cancelled { color: var(--fg-3); background: rgba(138, 147, 161, 0.10); }
+  .status-pill.cancelled::before { background: var(--fg-3); }
+  @keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+  .row-actions { display: inline-flex; gap: 4px; }
+  .row-btn {
+    background: transparent; border: 1px solid var(--line-strong);
+    color: var(--fg-2); padding: 2px 8px;
+    border-radius: var(--radius-chip);
+    font-size: 11px; font-family: var(--font-sans);
+    transition: all var(--dur) var(--ease);
+  }
+  .row-btn:hover { color: var(--fg-1); border-color: var(--brand); }
+  .row-btn.danger:hover { color: var(--err); border-color: var(--err); }
+  .row-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .row-muted { color: var(--fg-3); font-family: var(--font-mono); font-size: 12px; }
+
+  /* ─── Quick order row ─── */
+  .quick-order {
+    background: var(--bg-3);
+    border-top: 1px solid var(--line);
+    padding: 10px 14px;
+    display: flex; align-items: center; gap: 8px;
+    flex-shrink: 0;
+  }
+  .toggle-group {
+    display: inline-flex;
+    background: var(--bg-1);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-chip);
+    padding: 2px;
+  }
+  .toggle-btn {
+    background: transparent; border: 0;
+    color: var(--fg-2);
+    padding: 3px 10px;
+    border-radius: 2px;
+    font-size: 11px;
+    font-weight: 500;
+    transition: all var(--dur);
+  }
+  .toggle-btn.active.buy { color: #061b10; background: var(--up); }
+  .toggle-btn.active.sell { color: #1b0606; background: var(--down); }
+  .toggle-btn.active.neutral { color: var(--fg-1); background: var(--bg-hover); }
+  .field {
+    display: flex; align-items: center; gap: 4px;
+  }
+  .field .k {
+    font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--fg-3);
+  }
+  .num-input {
+    background: var(--bg-1);
+    border: 1px solid var(--line-strong);
+    color: var(--fg-1);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    padding: 3px 6px;
+    border-radius: var(--radius-chip);
+    width: 84px;
+  }
+  .num-input:focus { outline: 1px solid var(--brand); border-color: var(--brand); }
+  .num-input:disabled { color: var(--fg-3); background: var(--bg-2); }
+  .qty-input { width: 70px; }
+  .qty-presets {
+    position: absolute;
+    display: none;
+  }
+  .submit-btn {
+    background: var(--brand);
+    color: #061b1f;
+    border: 0;
+    padding: 5px 16px;
+    border-radius: var(--radius-chip);
+    font-weight: 600;
+    font-size: 12px;
+    transition: filter var(--dur) var(--ease);
+  }
+  .submit-btn:hover { filter: brightness(1.1); }
+  .submit-btn.sell { background: var(--down); color: #fff; }
+  .more-btn {
+    background: transparent;
+    border: 1px solid var(--line-strong);
+    color: var(--fg-2);
+    padding: 4px 10px;
+    border-radius: var(--radius-chip);
+    font-size: 11px;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .more-btn:hover { color: var(--fg-1); border-color: var(--brand); }
+  .quick-summary { margin-left: auto; font-size: 10px; color: var(--fg-3); font-family: var(--font-mono); }
+  .quick-summary b { color: var(--fg-1); font-weight: 500; }
+
+  /* ─── Alerts list ─── */
+  .alerts-head {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 10px;
+  }
+  .alerts-h {
+    font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--fg-3);
+  }
+  .alert-add-btn {
+    background: var(--brand);
+    color: #061b1f;
+    border: 0;
+    padding: 4px 12px;
+    border-radius: var(--radius-chip);
+    font-size: 11px; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .alert-add-btn:hover { filter: brightness(1.1); }
+  .alert-row {
+    display: grid;
+    grid-template-columns: 22px 1fr auto auto;
+    align-items: center;
+    gap: 12px;
+    padding: 9px 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--bg-1);
+    margin-bottom: 6px;
+    transition: border-color var(--dur);
+  }
+  .alert-row:hover { border-color: var(--line-strong); }
+  .alert-row.disabled { opacity: 0.5; }
+  .alert-cond {
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+  .alert-cond .op { color: var(--brand); }
+  .alert-meta {
+    font-size: 10px; color: var(--fg-3);
+    display: flex; gap: 10px; align-items: center;
+  }
+  .alert-mode {
+    font-size: 9px; letter-spacing: 0.06em; text-transform: uppercase;
+    padding: 1px 6px; border-radius: var(--radius-chip);
+    color: var(--fg-2); background: var(--bg-3);
+  }
+  .alert-mode.recurring { color: var(--warn); background: rgba(231, 167, 61, 0.12); }
+  .alert-state.triggered { color: var(--warn); }
+  .alert-state.never { color: var(--fg-3); }
+  .alert-actions { display: inline-flex; gap: 4px; }
+
+  /* ─── Modal ─── */
+  .modal-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 200;
+    backdrop-filter: blur(2px);
+  }
+  .modal {
+    background: var(--bg-2);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-card);
+    padding: 18px 20px;
+    width: 440px;
+    box-shadow: 0 16px 40px rgba(0,0,0,.4);
+  }
+  .modal h3 {
+    margin: 0 0 14px;
+    font-size: 13px;
+    font-weight: 600;
+    display: flex; justify-content: space-between;
+  }
+  .modal-close {
+    background: transparent; border: 0; color: var(--fg-3);
+    font-size: 18px; line-height: 1;
+  }
+  .modal-close:hover { color: var(--fg-1); }
+  .modal-field {
+    display: flex; flex-direction: column; gap: 4px;
+    margin-bottom: 12px;
+  }
+  .modal-field-label {
+    font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--fg-3);
+  }
+  .seg {
+    display: inline-flex;
+    background: var(--bg-1);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-chip);
+    padding: 2px;
+  }
+  .seg-btn {
+    background: transparent; border: 0;
+    color: var(--fg-2); padding: 4px 12px;
+    font-size: 11px;
+    border-radius: 2px;
+  }
+  .seg-btn.active { color: var(--fg-1); background: var(--bg-hover); }
+  .text-input, .modal-field input[type="number"], .modal-field input[type="text"] {
+    background: var(--bg-1);
+    border: 1px solid var(--line-strong);
+    color: var(--fg-1);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    padding: 5px 8px;
+    border-radius: var(--radius-chip);
+    width: 100%;
+  }
+  .text-input:focus { outline: 1px solid var(--brand); border-color: var(--brand); }
+  .modal-foot {
+    display: flex; gap: 8px; justify-content: flex-end;
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+  }
+  .btn-secondary {
+    background: transparent;
+    border: 1px solid var(--line-strong);
+    color: var(--fg-2);
+    padding: 5px 14px;
+    border-radius: var(--radius-chip);
+    font-size: 12px;
+  }
+  .btn-primary {
+    background: var(--brand);
+    color: #061b1f;
+    border: 0;
+    padding: 5px 16px;
+    border-radius: var(--radius-chip);
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .modal-row { display: flex; gap: 12px; }
+  .modal-row .modal-field { flex: 1; }
+
+  /* ─── Bell popover ─── */
+  .bell-popover {
+    position: absolute;
+    top: 42px;
+    right: 0;
+    width: 340px;
+    max-height: 420px;
+    background: var(--bg-2);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-card);
+    box-shadow: 0 16px 40px rgba(0,0,0,.4);
+    z-index: 200;
+    display: flex; flex-direction: column;
+  }
+  .bell-popover-head {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--fg-3);
+  }
+  .bell-popover-actions { display: inline-flex; gap: 4px; }
+  .bell-popover-body { padding: 6px; overflow: auto; }
+  .bell-event {
+    display: grid;
+    grid-template-columns: 20px 1fr auto;
+    gap: 10px;
+    padding: 8px;
+    border-radius: var(--radius-chip);
+    align-items: start;
+    cursor: pointer;
+    transition: background var(--dur);
+  }
+  .bell-event:hover { background: var(--bg-hover); }
+  .bell-event-icon { width: 8px; height: 8px; border-radius: 50%; margin-top: 6px; }
+  .bell-event-icon.oneshot { background: var(--err); }
+  .bell-event-icon.recurring { background: var(--warn); }
+  .bell-event-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .bell-event-cond { font-family: var(--font-mono); font-size: 12px; }
+  .bell-event-snap { font-family: var(--font-mono); font-size: 10px; color: var(--fg-3); }
+  .bell-event-time { font-family: var(--font-mono); font-size: 10px; color: var(--fg-3); white-space: nowrap; }
+
+  /* ─── Toast stack ─── */
+  .toast-stack {
+    position: fixed;
+    top: 60px;
+    right: 16px;
+    display: flex; flex-direction: column;
+    gap: 8px;
+    z-index: 150;
+  }
+  .toast {
+    width: 320px;
+    background: var(--bg-2);
+    border: 1px solid var(--line-strong);
+    border-left: 3px solid var(--err);
+    border-radius: var(--radius-card);
+    padding: 10px 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.4);
+    display: flex; flex-direction: column;
+    gap: 4px;
+    animation: toast-in 220ms var(--ease);
+  }
+  .toast.recurring { border-left-color: var(--warn); }
+  .toast-head {
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+  .toast-ticker { font-weight: 600; }
+  .toast-cond { color: var(--fg-2); }
+  .toast-close { background: transparent; border: 0; color: var(--fg-3); font-size: 14px; }
+  .toast-snap {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--fg-3);
+    display: flex; justify-content: space-between;
+  }
+  .toast-snap .v { color: var(--fg-1); }
+  .toast-actions {
+    display: flex; gap: 6px; margin-top: 4px;
+  }
+  .toast-btn {
+    background: transparent;
+    border: 1px solid var(--line-strong);
+    color: var(--fg-2);
+    padding: 2px 10px;
+    border-radius: var(--radius-chip);
+    font-size: 11px;
+  }
+  .toast-btn:hover { color: var(--fg-1); border-color: var(--brand); }
+  .toast-btn.primary { color: var(--brand); border-color: var(--brand); }
+  @keyframes toast-in {
+    from { opacity: 0; transform: translateX(20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  /* ─── Tweaks panel ─── */
+  .tweaks {
+    position: fixed;
+    bottom: 16px; right: 16px;
+    background: var(--bg-2);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-card);
+    padding: 10px 12px;
+    width: 240px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.4);
+    z-index: 1000;
+    font-size: 11px;
+  }
+  .tweaks h4 {
+    margin: 0 0 8px;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--fg-3);
+    display: flex; justify-content: space-between;
+  }
+  .tweaks-row {
+    display: flex; flex-direction: column;
+    gap: 4px; margin-bottom: 8px;
+  }
+  .tweaks-row > label {
+    font-size: 10px; color: var(--fg-3);
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .tweaks-buttons { display: flex; flex-wrap: wrap; gap: 4px; }
+  .tweaks-btn {
+    background: transparent;
+    border: 1px solid var(--line-strong);
+    color: var(--fg-2);
+    padding: 3px 8px;
+    font-size: 11px;
+    border-radius: var(--radius-chip);
+  }
+  .tweaks-btn.active { color: var(--fg-1); border-color: var(--brand); background: rgba(63, 181, 197, 0.08); }
+  .tweaks-toggle {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; color: var(--fg-2);
+  }
+  .tweaks-toggle input { margin: 0; }
+  .tweaks-collapse {
+    background: transparent; border: 0; color: var(--fg-3); padding: 0;
+  }
+</style>
+</head>
+<body>
+
+<!-- ───── Top bar ───── -->
+<div class="topbar">
+  <div class="brand"><span class="brand-dot"></span><span class="brand-name">Signal Station</span></div>
+  <div class="views">
+    <button class="view-btn active">监控看板</button>
+    <button class="view-btn">Whop 管理</button>
+  </div>
+  <div class="topbar-spacer"></div>
+  <div class="topbar-right">
+    <div style="position: relative;">
+      <button class="bell" id="bell">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+          <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+        </svg>
+        <span class="bell-badge" id="bellBadge" style="display:none;">3</span>
+      </button>
+      <div class="bell-popover" id="bellPopover" style="display:none;">
+        <div class="bell-popover-head">
+          <span>告警历史</span>
+          <div class="bell-popover-actions">
+            <button class="row-btn">清空</button>
+          </div>
+        </div>
+        <div class="bell-popover-body">
+          <div class="bell-event">
+            <span class="bell-event-icon oneshot"></span>
+            <div class="bell-event-main">
+              <span class="bell-event-cond">AAPL 价格 ≥ $200.00</span>
+              <span class="bell-event-snap">触发价 $200.15</span>
+            </div>
+            <span class="bell-event-time">14:23:08</span>
+          </div>
+          <div class="bell-event">
+            <span class="bell-event-icon recurring"></span>
+            <div class="bell-event-main">
+              <span class="bell-event-cond">NVDA 跌幅 ≥ 3.00%</span>
+              <span class="bell-event-snap">−3.21% / $480.10</span>
+            </div>
+            <span class="bell-event-time">13:45:22</span>
+          </div>
+          <div class="bell-event">
+            <span class="bell-event-icon oneshot"></span>
+            <div class="bell-event-main">
+              <span class="bell-event-cond">TSLA 价格 ≤ $180.00</span>
+              <span class="bell-event-snap">触发价 $179.50</span>
+            </div>
+            <span class="bell-event-time">12:01:55</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="conn"><span class="conn-dot"></span><span>连接</span></div>
+    <div class="acct"><span class="lbl">长桥</span>Paper · ⟳</div>
+  </div>
+</div>
+
+<!-- ───── Page layout ───── -->
+<div class="page">
+
+  <!-- Left rail: positions list -->
+  <div class="left">
+    <div class="panel-title">持仓</div>
+    <div class="left-item active">
+      <div class="left-row"><span class="left-ticker">AAPL</span><span class="left-price">$199.85</span></div>
+      <div class="left-meta"><span>200 股 · 均 $186.20</span><span class="pos">+7.32%</span></div>
+    </div>
+    <div class="left-item">
+      <div class="left-row"><span class="left-ticker">NVDA</span><span class="left-price">$496.12</span></div>
+      <div class="left-meta"><span>40 股 · 均 $512.00</span><span class="neg">−3.10%</span></div>
+    </div>
+    <div class="left-item">
+      <div class="left-row"><span class="left-ticker">TSLA</span><span class="left-price">$182.40</span></div>
+      <div class="left-meta"><span>0 股</span><span style="color:var(--fg-3)">—</span></div>
+    </div>
+    <div class="left-item">
+      <div class="left-row"><span class="left-ticker">MSFT</span><span class="left-price">$420.15</span></div>
+      <div class="left-meta"><span>50 股 · 均 $390.00</span><span class="pos">+7.73%</span></div>
+    </div>
+  </div>
+
+  <!-- Center: Detail pane -->
+  <div class="center">
+
+    <!-- Summary -->
+    <div class="summary">
+      <div class="summary-left">
+        <button class="ds-back" title="返回">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <span class="ticker">AAPL</span>
+        <span class="sym">AAPL.US</span>
+        <span class="price">$199.85</span>
+        <span class="change">+$1.46 · +0.74%</span>
+      </div>
+      <div class="summary-right">
+        <div class="stats-line">
+          <div class="stat"><span class="lbl">持仓</span><span class="val">200</span></div>
+          <div class="stat"><span class="lbl">均价</span><span class="val">$186.20</span></div>
+          <div class="stat"><span class="lbl">浮盈</span><span class="val pos">+$2,730 <span style="color:var(--fg-3); font-size:10px;">+7.32%</span></span></div>
+          <div class="stat"><span class="lbl">日内</span><span class="val pos">+$292</span></div>
+        </div>
+        <div class="stats-line">
+          <div class="stat"><span class="lbl">做T</span><span class="val">3</span></div>
+          <div class="stat"><span class="lbl">实现</span><span class="val pos">+$418</span></div>
+          <div class="stat"><span class="lbl">今日成交</span><span class="val">5</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chart card -->
+    <div class="chart-card">
+      <div class="chart-head">
+        <button class="chart-tab active"><span>日内</span><span class="sub">盘中</span></button>
+        <button class="chart-tab"><span>多日</span><span class="sub">5日</span></button>
+        <button class="chart-tab"><span>多日重叠</span><span class="sub">选择</span></button>
+        <button class="chart-tab"><span>分钟</span><span class="sub">5min</span></button>
+        <button class="chart-tab"><span>日K</span><span class="sub">7日</span></button>
+        <div style="flex:1"></div>
+        <div style="font-family:var(--font-mono); font-size:11px; color:var(--fg-3);">10:42  开 $198.20  收 $199.85  高 $200.30  低 $197.80</div>
+      </div>
+      <div class="chart-canvas">
+        <svg viewBox="0 0 800 220" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="ga" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stop-color="#3dd68c" stop-opacity="0.25"/>
+              <stop offset="100%" stop-color="#3dd68c" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <path d="M0,140 L40,135 80,142 120,128 160,130 200,118 240,124 280,108 320,98 360,104 400,90 440,82 480,76 520,84 560,68 600,72 640,62 680,58 720,64 760,52 800,46 L800,220 L0,220 Z" fill="url(#ga)"/>
+          <path d="M0,140 L40,135 80,142 120,128 160,130 200,118 240,124 280,108 320,98 360,104 400,90 440,82 480,76 520,84 560,68 600,72 640,62 680,58 720,64 760,52 800,46" stroke="#3dd68c" stroke-width="1.5" fill="none"/>
+          <!-- buy bubble -->
+          <circle cx="220" cy="122" r="8" fill="#3dd68c" fill-opacity="0.18" stroke="#3dd68c" stroke-width="1"/>
+          <text x="220" y="125" text-anchor="middle" font-size="9" font-weight="700" fill="#3dd68c" font-family="IBM Plex Mono">B</text>
+          <!-- sell bubble -->
+          <circle cx="560" cy="64" r="8" fill="#ef5b5b" fill-opacity="0.18" stroke="#ef5b5b" stroke-width="1"/>
+          <text x="560" y="67" text-anchor="middle" font-size="9" font-weight="700" fill="#ef5b5b" font-family="IBM Plex Mono">S</text>
+        </svg>
+      </div>
+    </div>
+
+    <!-- ─── Bottom card with 3 tabs ─── -->
+    <div class="bottom-card">
+
+      <!-- TAB 1: Trade record (existing) -->
+      <div class="bottom-body" id="tab-records" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <div class="alerts-h">交易记录 · AAPL · 上次同步 2 分钟前</div>
+          <div class="row-actions">
+            <button class="row-btn">⟳ 同步</button>
+          </div>
+        </div>
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>时间</th><th>方向</th><th class="num">数量</th><th class="num">成交价</th><th>做T</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>10:32:15</td><td><span class="side-pill sell">SELL</span></td><td class="num">100</td><td class="num">$199.80</td><td><span class="status-pill cancelled">T-3</span></td></tr>
+            <tr><td>10:18:02</td><td><span class="side-pill buy">BUY</span></td><td class="num">100</td><td class="num">$198.45</td><td><span class="status-pill cancelled">T-3</span></td></tr>
+            <tr><td>09:51:33</td><td><span class="side-pill buy">BUY</span></td><td class="num">200</td><td class="num">$197.20</td><td class="row-muted">—</td></tr>
+            <tr><td>昨 15:55</td><td><span class="side-pill sell">SELL</span></td><td class="num">50</td><td class="num">$197.40</td><td><span class="status-pill cancelled">T-2</span></td></tr>
+            <tr><td>昨 14:08</td><td><span class="side-pill buy">BUY</span></td><td class="num">50</td><td class="num">$196.10</td><td><span class="status-pill cancelled">T-2</span></td></tr>
+            <tr><td>昨 11:21</td><td><span class="side-pill sell">SELL</span></td><td class="num">100</td><td class="num">$195.80</td><td><span class="status-pill cancelled">T-1</span></td></tr>
+            <tr><td>昨 10:02</td><td><span class="side-pill buy">BUY</span></td><td class="num">100</td><td class="num">$194.20</td><td><span class="status-pill cancelled">T-1</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- TAB 2: Trading panel -->
+      <div class="bottom-body" id="tab-trading" style="display:block;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <div class="alerts-h">活跃订单 · AAPL · 今日</div>
+          <div class="row-actions">
+            <button class="row-btn">仅活跃</button>
+          </div>
+        </div>
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>时间</th><th>方向</th><th>类型</th><th class="num">价格</th><th class="num">数量</th><th class="num">已成</th><th>状态</th><th>来源</th><th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>10:45:12</td><td><span class="side-pill buy">BUY</span></td><td>LIMIT</td>
+              <td class="num">$198.50</td><td class="num">200</td><td class="num">0</td>
+              <td><span class="status-pill pending">Pending</span></td>
+              <td><span style="font-size:10px; color:var(--fg-3)">手动</span></td>
+              <td><div class="row-actions"><button class="row-btn">改</button><button class="row-btn danger">撤</button></div></td>
+            </tr>
+            <tr>
+              <td>10:32:15</td><td><span class="side-pill sell">SELL</span></td><td>LIMIT</td>
+              <td class="num">$199.80</td><td class="num">100</td><td class="num">80</td>
+              <td><span class="status-pill partial">Partial</span></td>
+              <td><span style="font-size:10px; color:var(--fg-3)">信号</span></td>
+              <td><div class="row-actions"><button class="row-btn">改</button><button class="row-btn danger">撤</button></div></td>
+            </tr>
+            <tr>
+              <td>10:18:02</td><td><span class="side-pill buy">BUY</span></td><td>MKT</td>
+              <td class="num row-muted">—</td><td class="num">100</td><td class="num">100</td>
+              <td><span class="status-pill filled">Filled</span></td>
+              <td><span style="font-size:10px; color:var(--fg-3)">信号</span></td>
+              <td><div class="row-actions"><button class="row-btn" disabled>改</button><button class="row-btn" disabled>撤</button></div></td>
+            </tr>
+            <tr>
+              <td>09:51:33</td><td><span class="side-pill buy">BUY</span></td><td>LIMIT</td>
+              <td class="num">$197.20</td><td class="num">200</td><td class="num">200</td>
+              <td><span class="status-pill filled">Filled</span></td>
+              <td><span style="font-size:10px; color:var(--fg-3)">手动</span></td>
+              <td><div class="row-actions"><button class="row-btn" disabled>改</button><button class="row-btn" disabled>撤</button></div></td>
+            </tr>
+            <tr>
+              <td>09:42:10</td><td><span class="side-pill sell">SELL</span></td><td>LIMIT</td>
+              <td class="num">$200.00</td><td class="num">100</td><td class="num">0</td>
+              <td><span class="status-pill cancelled">Cancelled</span></td>
+              <td><span style="font-size:10px; color:var(--fg-3)">长桥app</span></td>
+              <td><div class="row-actions"><button class="row-btn" disabled>改</button><button class="row-btn" disabled>撤</button></div></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- TAB 3: Alerts panel -->
+      <div class="bottom-body" id="tab-alerts" style="display:none;">
+        <div class="alerts-head">
+          <div class="alerts-h">告警 · AAPL · 共 4 条 · 启用 3</div>
+          <button class="alert-add-btn" id="openAlertModal">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            添加告警
+          </button>
+        </div>
+
+        <div class="alert-row">
+          <input type="checkbox" checked />
+          <div>
+            <div class="alert-cond">价格 <span class="op">≥</span> $200.00</div>
+            <div class="alert-meta">
+              <span class="alert-mode">ONE-SHOT</span>
+              <span class="alert-state never">未触发</span>
+              <span style="color:var(--fg-3); font-style: italic;">— 突破前高</span>
+            </div>
+          </div>
+          <div></div>
+          <div class="alert-actions"><button class="row-btn">编辑</button><button class="row-btn danger">×</button></div>
+        </div>
+
+        <div class="alert-row">
+          <input type="checkbox" checked />
+          <div>
+            <div class="alert-cond">跌幅 <span class="op">≥</span> 3.00%  <span style="color:var(--fg-3); font-size:10px;">vs 今开</span></div>
+            <div class="alert-meta">
+              <span class="alert-mode recurring">RECURRING · 5 分钟节流</span>
+              <span class="alert-state triggered">触发 2 次 · 最近 14:23</span>
+            </div>
+          </div>
+          <div></div>
+          <div class="alert-actions"><button class="row-btn">编辑</button><button class="row-btn danger">×</button></div>
+        </div>
+
+        <div class="alert-row">
+          <input type="checkbox" checked />
+          <div>
+            <div class="alert-cond">1 分钟成交量 <span class="op">≥</span> 50,000 股</div>
+            <div class="alert-meta">
+              <span class="alert-mode recurring">RECURRING · 5 分钟节流</span>
+              <span class="alert-state never">未触发</span>
+            </div>
+          </div>
+          <div></div>
+          <div class="alert-actions"><button class="row-btn">编辑</button><button class="row-btn danger">×</button></div>
+        </div>
+
+        <div class="alert-row disabled">
+          <input type="checkbox" />
+          <div>
+            <div class="alert-cond">价格 <span class="op">≤</span> $180.00</div>
+            <div class="alert-meta">
+              <span class="alert-mode">ONE-SHOT</span>
+              <span class="alert-state triggered">触发 1 次 · 09:45 · 自动禁用</span>
+            </div>
+          </div>
+          <div></div>
+          <div class="alert-actions"><button class="row-btn">启用</button><button class="row-btn danger">×</button></div>
+        </div>
+      </div>
+
+      <!-- Quick order row — only when trading tab active -->
+      <div class="quick-order" id="quickOrder" style="display:flex;">
+        <div class="toggle-group">
+          <button class="toggle-btn buy active" id="sideBuy">BUY</button>
+          <button class="toggle-btn sell" id="sideSell">SELL</button>
+        </div>
+        <div class="toggle-group">
+          <button class="toggle-btn neutral active" id="typeLimit">LIMIT</button>
+          <button class="toggle-btn neutral" id="typeMkt">MKT</button>
+        </div>
+        <div class="field">
+          <span class="k">价</span>
+          <input class="num-input" type="text" value="199.50" id="priceInput" />
+        </div>
+        <div class="field">
+          <span class="k">数</span>
+          <input class="num-input qty-input" type="text" value="200" />
+          <button class="row-btn" style="padding: 2px 6px; font-size:10px;">▾</button>
+        </div>
+        <button class="submit-btn" id="submitBtn">提交</button>
+        <button class="more-btn">
+          更多
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="quick-summary">SIDE <b>BUY</b> · 总额 <b>$39,900.00</b></div>
+      </div>
+
+      <!-- Bottom footer with ⚙ + indicator -->
+      <div class="bottom-footer">
+        <button class="footer-settings" id="footerSettings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          <span id="footerLabel">交易面板</span>
+        </button>
+        <div class="tab-indicator">
+          <button class="tab-dot" data-tab="0"></button>
+          <button class="tab-dot active" data-tab="1"></button>
+          <button class="tab-dot" data-tab="2"></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right rail: today stats / quick info -->
+  <div class="right">
+    <div class="panel-title">今日</div>
+    <div style="padding: 0 16px 16px;">
+      <div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom: 1px solid var(--line);">
+        <span style="color:var(--fg-3); font-size:11px;">已提交</span><span style="font-family:var(--font-mono);">12</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom: 1px solid var(--line);">
+        <span style="color:var(--fg-3); font-size:11px;">已成交</span><span style="font-family:var(--font-mono);">9</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom: 1px solid var(--line);">
+        <span style="color:var(--fg-3); font-size:11px;">实现盈亏</span><span style="font-family:var(--font-mono); color:var(--up);">+$418.20</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; padding:4px 0;">
+        <span style="color:var(--fg-3); font-size:11px;">手续费</span><span style="font-family:var(--font-mono); color:var(--fg-2);">$3.12</span>
+      </div>
+    </div>
+    <div class="panel-title">告警 · 今日</div>
+    <div style="padding: 0 16px 16px;">
+      <div style="display:flex; justify-content:space-between; padding:4px 0;">
+        <span style="color:var(--fg-3); font-size:11px;">触发数</span><span style="font-family:var(--font-mono); color:var(--warn);">3</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; padding:4px 0;">
+        <span style="color:var(--fg-3); font-size:11px;">监听条目</span><span style="font-family:var(--font-mono);">12</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ───── Toast stack (right-top) ───── -->
+<div class="toast-stack" id="toastStack" style="display:none;">
+  <div class="toast">
+    <div class="toast-head">
+      <span><span class="toast-ticker">AAPL</span> &nbsp;<span class="toast-cond">价格 ≥ $200.00</span></span>
+      <button class="toast-close">×</button>
+    </div>
+    <div class="toast-snap">
+      <span>触发价</span><span class="v">$200.15  ·  14:23:08</span>
+    </div>
+    <div class="toast-actions">
+      <button class="toast-btn primary">查看</button>
+    </div>
+  </div>
+  <div class="toast recurring">
+    <div class="toast-head">
+      <span><span class="toast-ticker">NVDA</span> &nbsp;<span class="toast-cond">跌幅 ≥ 3.00%</span></span>
+      <button class="toast-close">×</button>
+    </div>
+    <div class="toast-snap">
+      <span>当前</span><span class="v">−3.21%  ·  $480.10</span>
+    </div>
+  </div>
+</div>
+
+<!-- ───── Alert modal ───── -->
+<div class="modal-backdrop" id="alertModal" style="display:none;">
+  <div class="modal">
+    <h3>
+      新建告警 · AAPL
+      <button class="modal-close" data-close>×</button>
+    </h3>
+
+    <div class="modal-field">
+      <span class="modal-field-label">条件类型</span>
+      <div class="seg">
+        <button class="seg-btn active">价格阈值</button>
+        <button class="seg-btn">涨跌幅</button>
+        <button class="seg-btn">成交量</button>
+      </div>
+    </div>
+
+    <div class="modal-row">
+      <div class="modal-field">
+        <span class="modal-field-label">方向</span>
+        <div class="seg">
+          <button class="seg-btn active">≥</button>
+          <button class="seg-btn">≤</button>
+        </div>
+      </div>
+      <div class="modal-field" style="flex:2;">
+        <span class="modal-field-label">阈值 (USD)</span>
+        <input type="text" class="text-input" value="200.00" />
+      </div>
+    </div>
+
+    <div class="modal-field">
+      <span class="modal-field-label">触发模式</span>
+      <div class="seg">
+        <button class="seg-btn active">ONE-SHOT</button>
+        <button class="seg-btn">RECURRING</button>
+      </div>
+      <div style="font-size:10px; color:var(--fg-3); margin-top:4px;">触发后自动禁用；可手动重新启用。</div>
+    </div>
+
+    <div class="modal-field">
+      <span class="modal-field-label">备注（可选）</span>
+      <input type="text" class="text-input" placeholder="例：突破前高" />
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn-secondary" data-close>取消</button>
+      <button class="btn-primary">创建告警</button>
+    </div>
+  </div>
+</div>
+
+<!-- ───── Tweaks panel ───── -->
+<div class="tweaks" id="tweaks">
+  <h4>Tweaks <button class="tweaks-collapse" id="tweaksCollapse">−</button></h4>
+  <div class="tweaks-row">
+    <label>当前 tab</label>
+    <div class="tweaks-buttons">
+      <button class="tweaks-btn" data-tab="0">交易记录</button>
+      <button class="tweaks-btn active" data-tab="1">交易面板</button>
+      <button class="tweaks-btn" data-tab="2">告警</button>
+    </div>
+  </div>
+  <div class="tweaks-row">
+    <label>覆盖层</label>
+    <div class="tweaks-buttons">
+      <button class="tweaks-btn" id="toggleToast">Toast 堆叠</button>
+      <button class="tweaks-btn" id="toggleBell">铃铛 popover</button>
+      <button class="tweaks-btn" id="toggleModal">新建告警</button>
+    </div>
+  </div>
+  <div class="tweaks-row">
+    <label>顶栏告警态</label>
+    <div class="tweaks-buttons">
+      <button class="tweaks-btn active" id="bellOff">无未读</button>
+      <button class="tweaks-btn" id="bellOn">3 条未读</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const tabs = ["tab-records", "tab-trading", "tab-alerts"];
+  const labels = ["交易记录", "交易面板", "告警"];
+
+  function showTab(index) {
+    tabs.forEach((id, i) => {
+      document.getElementById(id).style.display = i === index ? "block" : "none";
+    });
+    document.querySelectorAll(".tab-dot").forEach((d, i) => {
+      d.classList.toggle("active", i === index);
+    });
+    document.querySelectorAll(".tweaks-btn[data-tab]").forEach((b, i) => {
+      b.classList.toggle("active", parseInt(b.dataset.tab) === index);
+    });
+    document.getElementById("footerLabel").textContent = labels[index];
+    document.getElementById("quickOrder").style.display = index === 1 ? "flex" : "none";
+  }
+
+  document.querySelectorAll("[data-tab]").forEach((el) => {
+    el.addEventListener("click", () => showTab(parseInt(el.dataset.tab)));
+  });
+
+  // BUY / SELL toggle
+  const sideBuy = document.getElementById("sideBuy");
+  const sideSell = document.getElementById("sideSell");
+  const submit = document.getElementById("submitBtn");
+  sideBuy.onclick = () => {
+    sideBuy.classList.add("active");
+    sideSell.classList.remove("active");
+    submit.classList.remove("sell");
+  };
+  sideSell.onclick = () => {
+    sideSell.classList.add("active");
+    sideBuy.classList.remove("active");
+    submit.classList.add("sell");
+  };
+
+  // LIMIT / MKT toggle
+  const tL = document.getElementById("typeLimit");
+  const tM = document.getElementById("typeMkt");
+  const priceInput = document.getElementById("priceInput");
+  tL.onclick = () => { tL.classList.add("active"); tM.classList.remove("active"); priceInput.disabled = false; };
+  tM.onclick = () => { tM.classList.add("active"); tL.classList.remove("active"); priceInput.disabled = true; priceInput.value = ""; };
+
+  // Tweaks overlays
+  function bind(id, target) {
+    const btn = document.getElementById(id);
+    btn.onclick = () => {
+      const el = document.getElementById(target);
+      const show = el.style.display === "none";
+      el.style.display = show ? (target === "toastStack" ? "flex" : "flex") : "none";
+      btn.classList.toggle("active", show);
+    };
+  }
+  bind("toggleToast", "toastStack");
+
+  document.getElementById("toggleBell").onclick = () => {
+    const el = document.getElementById("bellPopover");
+    const show = el.style.display === "none";
+    el.style.display = show ? "flex" : "none";
+    document.getElementById("toggleBell").classList.toggle("active", show);
+  };
+  document.getElementById("bell").onclick = () => {
+    const el = document.getElementById("bellPopover");
+    el.style.display = el.style.display === "none" ? "flex" : "none";
+  };
+
+  document.getElementById("toggleModal").onclick = () => {
+    const el = document.getElementById("alertModal");
+    const show = el.style.display === "none";
+    el.style.display = show ? "flex" : "none";
+    document.getElementById("toggleModal").classList.toggle("active", show);
+  };
+  document.getElementById("openAlertModal").onclick = () => {
+    document.getElementById("alertModal").style.display = "flex";
+    document.getElementById("toggleModal").classList.add("active");
+  };
+  document.querySelectorAll("[data-close]").forEach((b) => {
+    b.onclick = () => {
+      document.getElementById("alertModal").style.display = "none";
+      document.getElementById("toggleModal").classList.remove("active");
+    };
+  });
+
+  // Bell state
+  const bellBadge = document.getElementById("bellBadge");
+  const bell = document.getElementById("bell");
+  document.getElementById("bellOff").onclick = () => {
+    bellBadge.style.display = "none";
+    bell.classList.remove("has-unread");
+    document.getElementById("bellOff").classList.add("active");
+    document.getElementById("bellOn").classList.remove("active");
+  };
+  document.getElementById("bellOn").onclick = () => {
+    bellBadge.style.display = "block";
+    bell.classList.add("has-unread");
+    document.getElementById("bellOn").classList.add("active");
+    document.getElementById("bellOff").classList.remove("active");
+  };
+
+  // Tweaks collapse
+  let collapsed = false;
+  document.getElementById("tweaksCollapse").onclick = (e) => {
+    collapsed = !collapsed;
+    document.querySelectorAll("#tweaks .tweaks-row").forEach((r) => {
+      r.style.display = collapsed ? "none" : "flex";
+    });
+    e.target.textContent = collapsed ? "+" : "−";
+  };
+
+  showTab(1);
+</script>
+</body>
+</html>
