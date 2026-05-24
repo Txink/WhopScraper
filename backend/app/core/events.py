@@ -59,6 +59,7 @@ class Topics:
     # frontend ChatBoardPanel.
     CHAT_MESSAGE_RECEIVED = "chat.message_received"
     CHAT_MESSAGE_STORED = "chat.message_stored"
+    ORDER_CHANGED = "order.changed"
 
 
 @dataclass(frozen=True)

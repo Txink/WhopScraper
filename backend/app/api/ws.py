@@ -85,6 +85,7 @@ class WebSocketHub:
             Topics.CHAT_MESSAGE_STORED,
             Topics.QUOTE_SNAPSHOT,
             Topics.EXECUTION_UPDATE,
+            Topics.ORDER_CHANGED,
         ]
         for t in topics_to_bridge:
             unsub = self._bus.subscribe(t, self._on_bus_event)

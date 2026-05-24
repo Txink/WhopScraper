@@ -39,10 +39,10 @@ from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from fastapi.responses import FileResponse
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy import desc, func, select
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 logger = logging.getLogger(__name__)
 
@@ -104,11 +104,14 @@ from app.api.schemas import (
     whop_page_to_out,
 )
 from app.broker.broker_client import BrokerClient
+from app.broker.noop_client import NoopBrokerClient
 from app.broker.runtime_settings import LongPortRuntimeStore
 from app.core.config import Settings
-from app.domain.status import Status
 from app.core.event_bus import Event
 from app.core.events import TaskPayload, Topics
+from app.domain.status import Status
+from app.orders.schemas import OrderListOut, OrderOut, ReplaceOrderRequest, SubmitOrderRequest
+from app.orders.service import OrdersService
 from app.storage import repo
 from app.storage.db import Base, session_scope
 from app.storage.schema import ChatMessageRow, TPairRow
@@ -1831,5 +1834,48 @@ def build_http_router(
                 last_modified=mtime,
                 age_seconds=age,
             )
+
+    # ------------------------------------------------------------------ #
+    # /api/orders — manual order submission (trading panel)               #
+    # ------------------------------------------------------------------ #
+
+    orders_svc = OrdersService(broker=broker, event_bus=bus, session_factory=session_factory)
+
+    @router.post("/api/orders", response_model=OrderOut, status_code=201)
+    async def post_order(req: SubmitOrderRequest) -> OrderOut:
+        if isinstance(broker, NoopBrokerClient):
+            raise HTTPException(503, "No authorized broker; cannot submit order")
+        try:
+            return await orders_svc.submit(req)
+        except ValueError as e:
+            raise HTTPException(422, str(e)) from e
+        except Exception as e:
+            raise HTTPException(502, f"broker error: {e}") from e
+
+    @router.patch("/api/orders/{order_id}", status_code=204)
+    async def patch_order(order_id: str, req: ReplaceOrderRequest) -> Response:
+        if isinstance(broker, NoopBrokerClient):
+            raise HTTPException(503, "No authorized broker; cannot replace order")
+        try:
+            await orders_svc.replace(order_id, req)
+            return Response(status_code=204)
+        except ValueError as e:
+            raise HTTPException(422, str(e)) from e
+        except Exception as e:
+            raise HTTPException(502, f"broker error: {e}") from e
+
+    @router.delete("/api/orders/{order_id}", status_code=204)
+    async def delete_order(order_id: str) -> Response:
+        if isinstance(broker, NoopBrokerClient):
+            raise HTTPException(503, "No authorized broker; cannot cancel order")
+        try:
+            await orders_svc.cancel(order_id)
+            return Response(status_code=204)
+        except Exception as e:
+            raise HTTPException(502, f"broker error: {e}") from e
+
+    @router.get("/api/orders", response_model=OrderListOut)
+    async def get_orders(ticker: str) -> OrderListOut:
+        return OrderListOut(orders=await orders_svc.list_today(ticker))
 
     return router

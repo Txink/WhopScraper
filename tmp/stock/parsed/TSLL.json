@@ -1,0 +1,5221 @@
+[
+  {
+    "origin": {
+      "domID": "post_1CTrViPyRCHCgxu6UeExoz",
+      "content": "21.7也减仓点tsll 剩下原始持仓的一半博弈下发布会 发布会边拉升边出 跌破21.3都出",
+      "original_content": "21.7也减仓点tsll 剩下原始持仓的一半博弈下发布会 发布会边拉升边出 跌破21.3都出",
+      "timestamp": "2025-10-07 03:27:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-07 03:27:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 21.7,
+      "sell_quantity": "1/2",
+      "quantity": 400
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CTsY2ydP8GmdFSeDx6TsG",
+      "content": "tsll盘前有点抢跑的资金 剩下仓位可以21.5-21.7之间再减持点",
+      "original_content": "tsll盘前有点抢跑的资金 剩下仓位可以21.5-21.7之间再减持点",
+      "timestamp": "2025-10-07 16:38:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-07 16:38:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 21.6,
+      "price_range": [
+        21.5,
+        21.7
+      ],
+      "sell_quantity": "全部",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CTss45kNEadw5wnY5BTpz",
+      "content": "Tsll 剩下仓位要注意发布会目前正在进行 资金偏向于兑现 边开发布会 边撤退",
+      "original_content": "Tsll 剩下仓位要注意发布会目前正在进行 资金偏向于兑现 边开发布会 边撤退",
+      "timestamp": "2025-10-07 20:47:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CTupVFfGCrjXuncDvLWRv",
+      "content": "tsll 注意 回调 18.8-18.7 和17.9-17.8附近支撑分批回吸 第三次 计算了磨损值 18.8相当于第一轮的19.2",
+      "original_content": "tsll 注意 回调 18.8-18.7 和17.9-17.8附近支撑分批回吸 第三次 计算了磨损值 18.8相当于第一轮的19.2",
+      "timestamp": "2025-10-08 21:35:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-08 21:35:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 18.75,
+      "price_range": [
+        18.7,
+        18.8
+      ],
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CTupjaYzAbxnhcZR46Pks",
+      "content": "19.1-19.15建了点这轮tsll底仓 主要机会放18元附近",
+      "original_content": "19.1-19.15建了点这轮tsll底仓 主要机会放18元附近",
+      "timestamp": "2025-10-08 21:38:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-08 21:38:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 19.13,
+      "price_range": [
+        19.1,
+        19.15
+      ],
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CTuqBJbW4w8zQ6S4FhR2w",
+      "content": "19.7到19.8出 tsll做个日内小波段 在到19.1附近在小仓位吸",
+      "original_content": "19.7到19.8出 tsll做个日内小波段 在到19.1附近在小仓位吸",
+      "timestamp": "2025-10-08 21:42:00.020",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "32.7可以出一半 labx 两倍杠杆",
+        "215.7出一半alab"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-10-08 21:42:00.020",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 19.75,
+      "price_range": [
+        19.7,
+        19.8
+      ],
+      "sell_quantity": "小仓位",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CTwh65JPDXXV6MiUSp9so",
+      "content": "tsll今天还是关注开盘的回调做短线做多日内为主 19.1小仓位的日内短线和18附近的拿几天的短线",
+      "original_content": "tsll今天还是关注开盘的回调做短线做多日内为主 19.1小仓位的日内短线和18附近的拿几天的短线",
+      "timestamp": "2025-10-09 21:19:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CTwoYp3ScLZihCQNpvJFo",
+      "content": "tsll在19.1附近建小仓位底仓",
+      "original_content": "tsll在19.1附近建小仓位底仓",
+      "timestamp": "2025-10-09 22:44:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-09 22:44:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 19.1,
+      "position_size": "小仓位",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CTwpKAJrhvTjtUU6udWSw",
+      "content": "tsll 19.5-19.7分批出和昨天一样 小仓位做日内 没有大跳水不拿隔天",
+      "original_content": "tsll 19.5-19.7分批出和昨天一样 小仓位做日内 没有大跳水不拿隔天",
+      "timestamp": "2025-10-09 22:54:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-09 22:54:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 19.6,
+      "price_range": [
+        19.5,
+        19.7
+      ],
+      "sell_quantity": "1/2",
+      "quantity": 400
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CTwr5Uy1ZBE5YCVPmscTz",
+      "content": "tsll达到了 预期的中间值19.6 可以19.6出一半 后面再有回调到19.2附近再看",
+      "original_content": "tsll达到了 预期的中间值19.6 可以19.6出一半 后面再有回调到19.2附近再看",
+      "timestamp": "2025-10-09 23:17:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-09 23:17:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 19.6,
+      "sell_quantity": "1/2",
+      "quantity": 400
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CTwx6H6gGBkMMJiiEFkMb",
+      "content": "tsll 19.8-19.9附近出掉剩下一半",
+      "original_content": "tsll 19.8-19.9附近出掉剩下一半",
+      "timestamp": "2025-10-10 00:36:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-10 00:36:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 19.85,
+      "price_range": [
+        19.8,
+        19.9
+      ],
+      "sell_quantity": "1/2",
+      "quantity": 400
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CTx2CZhUgYoUQeP3X9UJe",
+      "content": "tsll也是注意3点半到4点附近有没有突然跳水的19.1第一笔的低吸机会",
+      "original_content": "tsll也是注意3点半到4点附近有没有突然跳水的19.1第一笔的低吸机会",
+      "timestamp": "2025-10-10 01:28:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "rddt 208附近出剩下一半 今天尾盘附近在看看低点"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-10-10 01:28:00.010",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 4.0,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CTx2i9sUN2xCz9eFmXPrA",
+      "content": "19.2附近在小仓位开仓tsll",
+      "original_content": "19.2附近在小仓位开仓tsll",
+      "timestamp": "2025-10-10 01:36:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-10 01:36:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 19.2,
+      "position_size": "小仓位",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CTx35qkk5vD6Wz9T36baA",
+      "content": "tsll 还是19.6附近出一半",
+      "original_content": "tsll 还是19.6附近出一半",
+      "timestamp": "2025-10-10 01:41:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-10 01:41:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 19.6,
+      "sell_quantity": "1/2",
+      "quantity": 400
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CTx3HTB8TpXX2NLNcZsQy",
+      "content": "tsll 可以挂小仓位单在19.2这里 今天几轮都是到这里被吸筹的单子抢上去了",
+      "original_content": "tsll 可以挂小仓位单在19.2这里 今天几轮都是到这里被吸筹的单子抢上去了",
+      "timestamp": "2025-10-10 01:44:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-10 01:44:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 19.2,
+      "position_size": "小仓位",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CTx4WVLMLcDYPmrNLxut3",
+      "content": "tsll 目前正好到19.6 出掉一半 剩下一半还是19.8-19.9附近看再出",
+      "original_content": "tsll 目前正好到19.6 出掉一半 剩下一半还是19.8-19.9附近看再出",
+      "timestamp": "2025-10-10 02:00:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-10 02:00:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 19.6,
+      "sell_quantity": "1/2",
+      "quantity": 400
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CTx5sJboAmQvGEAHeDjXM",
+      "content": "最近行情走势总方向是 盘中时间9点半到2点 震荡走低 到3点半-4点买些支撑位的 夜盘和盘前冲高走 在等3点半到4点 有时候盘中如果遇到个股突然急跌会慢慢震荡上去 买股最佳时间在3点半-4点不跌破当天的低点 震荡行情也可以做做 tsll的日内支撑和阻力交易",
+      "original_content": "最近行情走势总方向是 盘中时间9点半到2点 震荡走低 到3点半-4点买些支撑位的 夜盘和盘前冲高走 在等3点半到4点 有时候盘中如果遇到个股突然急跌会慢慢震荡上去 买股最佳时间在3点半-4点不跌破当天的低点 震荡行情也可以做做 tsll的日内支撑和阻力交易",
+      "timestamp": "2025-10-10 02:18:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CTx7USeEW46LGJEX3G1ST",
+      "content": "tsll 目前也接近 19.8 注意剩下的一半在19.8-19.9 没突破19.9的情况下出掉",
+      "original_content": "tsll 目前也接近 19.8 注意剩下的一半在19.8-19.9 没突破19.9的情况下出掉",
+      "timestamp": "2025-10-10 02:39:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-10 02:39:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 19.85,
+      "price_range": [
+        19.8,
+        19.9
+      ],
+      "sell_quantity": "全部",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CTycKB14WH34bmWjXgkxi",
+      "content": "tsll震荡走高可以昨天剩下的在20.7-20.6附近做T",
+      "original_content": "tsll震荡走高可以昨天剩下的在20.7-20.6附近做T",
+      "timestamp": "2025-10-10 21:38:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CTyjMSyc5EhBQUEoyF3x6",
+      "content": "tsll 19.3-19.2 注意下刚打压到支撑了 也是小仓位日内",
+      "original_content": "tsll 19.3-19.2 注意下刚打压到支撑了 也是小仓位日内",
+      "timestamp": "2025-10-10 23:09:00.010",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "微牛bull也是在11.95-12区间 加仓 等市场反应情况再加"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-10-10 23:09:00.010",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 19.25,
+      "price_range": [
+        19.2,
+        19.3
+      ],
+      "position_size": "小仓位",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CTyk4v7qbEMdCufq6d7jW",
+      "content": "tsll 在18.99附近入了仓位 预留点18入",
+      "original_content": "tsll 在18.99附近入了仓位 预留点18入",
+      "timestamp": "2025-10-10 23:19:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-10 23:19:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 18.99,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CTymHvzYFh4n9Cgc8nwhX",
+      "content": "18.3附近加了笔tsll",
+      "original_content": "18.3附近加了笔tsll",
+      "timestamp": "2025-10-10 23:35:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-10 23:35:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 18.3,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CTymwpAfNBYyKtjiYi8wS",
+      "content": "tsll 19时候减掉 18.3加仓的",
+      "original_content": "tsll 19时候减掉 18.3加仓的",
+      "timestamp": "2025-10-10 23:43:00.010",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "40.4 FBL 34.4 amzu 进了2个杠杆"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-10-10 23:43:00.010",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 19.0,
+      "sell_quantity": "全部",
+      "quantity": 800,
+      "sell_reference_price": 18.3,
+      "sell_reference_label": "18.3加仓的"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CTzHcN5s9XDgMvnUiNkEu",
+      "content": "tsll目前记者问及再谈和马斯克关系 有所上涨 18.3仓位买的重的可以18减点仓位 给周一留余地",
+      "original_content": "tsll目前记者问及再谈和马斯克关系 有所上涨 18.3仓位买的重的可以18减点仓位 给周一留余地",
+      "timestamp": "2025-10-11 06:13:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-11 06:13:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 18.3,
+      "sell_quantity": "小仓位",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CTzMpfmdKaGUkowS5DTtF",
+      "content": "收盘在更新收盘价看是不是V nvdl 英伟达双倍 盘后最低价跳到 85.6 周一跳空在跌到78-80附近可以买了长拿 最近有中东订单（比较推荐） CRWV 没跳到128支撑 周一跳空在127-128可以买了博短线反弹 NBIS 没跳到118支撑 周一跳空在117-188附近可以博短线反弹 RKLB 盘后最低子啊58.5 周一跳空在57-58可以博短线反弹 tsll 特斯拉双倍 盘后最低价跳到16.88 周一如果跳空到16.1-16.88附近可以加仓买了长拿 马斯克增持价格在正股370--390区间 （比较推荐） MSTR btc囤币类 盘后最低价跳到286 周一如果跳空到 280-286区间可以加仓买了长拿(股性比较慢速) BMNR ETH囤币类 盘后最低价跳到47.3 周一如果跳空到46-47可以加仓买了拿61附近（波动大，比较推荐） CONL coin的双倍做多 稳定币和虚拟货币交易所类别 盘后最低跳到36.7 周一如果跳空到35-36.7区间可以加仓买了拿段时间（波动大，比较推荐） mara btc旷工类 盘后最低到17.55 周一如果在跳空到17.55附近可以加仓拿段时间（中等速度 有利好时候涨幅多，比较推荐） SBET eth龙二套利类 盘后最低到14.2 周一如果跳空到13-14可以加仓拿段时间（属于超跌套利） RDDT 美国版的百度贴吧 盘后最低到191.5 如果周一跳空在190-191附近可以买了长拿（股性中等速度） RDTL RDDT的双倍 盘后最低到39.2 如果周一跳空到 38-39可以买了长拿（波动大） ZETA 电商消费者数据统计 盘后最低到17.6 如果周一跳空在16.5-17.5附近可以买了长拿（股性中等，有利好时候涨幅多） GRAB 电商应用 盘后最低到5.5 如果周一跳空到5-5.5附近可以买了长拿（股性中等） HIMS 减肥药 盘后最低到50.5 如果周一跳空的话可以在49-50.5附近买了长拿（股性中等） NVO 减肥药 盘后最低到了55 如果周一跳空在54-55附近可以买了长拿 OSCR 医疗保险 盘后最低到17.6 如果周一跳空的话可以在16-17.5附近买了长拿（股性中等） JOBY 无人机 盘后最低到15 周一如果跳空到14-15附近可以买了长拿 微牛bull 盘后最低价跳到10.5 中概券商 周一跳空在跌到10-10.5附近可以买了长拿（股性慢 周期到12月6日前） sofi 贷款类(学贷 房贷) 盘后最低到25附近 如果周一跳空到24-25也可以买了拿段时间（股性中等） upst 贷款类 （车贷 房贷）盘后最低到46 如果周一跳空到 45-46附近也可以买了长拿(股性慢) FBL meta的双倍 盘后最低到38.4 如果周一跳空到37-38附近可以加仓买了长拿（股性慢） AMZU 亚马逊的双倍 盘后最低到了31.7 如果周一跳空到 30-31附近可以加仓长拿(股性慢）",
+      "original_content": "收盘在更新收盘价看是不是V nvdl 英伟达双倍 盘后最低价跳到 85.6 周一跳空在跌到78-80附近可以买了长拿 最近有中东订单（比较推荐） CRWV 没跳到128支撑 周一跳空在127-128可以买了博短线反弹 NBIS 没跳到118支撑 周一跳空在117-188附近可以博短线反弹 RKLB 盘后最低子啊58.5 周一跳空在57-58可以博短线反弹 tsll 特斯拉双倍 盘后最低价跳到16.88 周一如果跳空到16.1-16.88附近可以加仓买了长拿 马斯克增持价格在正股370--390区间 （比较推荐） MSTR btc囤币类 盘后最低价跳到286 周一如果跳空到 280-286区间可以加仓买了长拿(股性比较慢速) BMNR ETH囤币类 盘后最低价跳到47.3 周一如果跳空到46-47可以加仓买了拿61附近（波动大，比较推荐） CONL coin的双倍做多 稳定币和虚拟货币交易所类别 盘后最低跳到36.7 周一如果跳空到35-36.7区间可以加仓买了拿段时间（波动大，比较推荐） mara btc旷工类 盘后最低到17.55 周一如果在跳空到17.55附近可以加仓拿段时间（中等速度 有利好时候涨幅多，比较推荐） SBET eth龙二套利类 盘后最低到14.2 周一如果跳空到13-14可以加仓拿段时间（属于超跌套利） RDDT 美国版的百度贴吧 盘后最低到191.5 如果周一跳空在190-191附近可以买了长拿（股性中等速度） RDTL RDDT的双倍 盘后最低到39.2 如果周一跳空到 38-39可以买了长拿（波动大） ZETA 电商消费者数据统计 盘后最低到17.6 如果周一跳空在16.5-17.5附近可以买了长拿（股性中等，有利好时候涨幅多） GRAB 电商应用 盘后最低到5.5 如果周一跳空到5-5.5附近可以买了长拿（股性中等） HIMS 减肥药 盘后最低到50.5 如果周一跳空的话可以在49-50.5附近买了长拿（股性中等） NVO 减肥药 盘后最低到了55 如果周一跳空在54-55附近可以买了长拿 OSCR 医疗保险 盘后最低到17.6 如果周一跳空的话可以在16-17.5附近买了长拿（股性中等） JOBY 无人机 盘后最低到15 周一如果跳空到14-15附近可以买了长拿 微牛bull 盘后最低价跳到10.5 中概券商 周一跳空在跌到10-10.5附近可以买了长拿（股性慢 周期到12月6日前） sofi 贷款类(学贷 房贷) 盘后最低到25附近 如果周一跳空到24-25也可以买了拿段时间（股性中等） upst 贷款类 （车贷 房贷）盘后最低到46 如果周一跳空到 45-46附近也可以买了长拿(股性慢) FBL meta的双倍 盘后最低到38.4 如果周一跳空到37-38附近可以加仓买了长拿（股性慢） AMZU 亚马逊的双倍 盘后最低到了31.7 如果周一跳空到 30-31附近可以加仓长拿(股性慢）",
+      "timestamp": "2025-10-11 07:08:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CU4FBay42JizojGGxwwG4",
+      "content": "今天tsll在回压到17.8附近可以在陆续回买 以晚上看到价格为准先有个心理预估",
+      "original_content": "今天tsll在回压到17.8附近可以在陆续回买 以晚上看到价格为准先有个心理预估",
+      "timestamp": "2025-10-13 08:24:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-13 08:24:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 17.8,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CU4MKNJ2KLUBnHc4eVKuq",
+      "content": "把周五比较推荐的几个股单单独拉了下 主要波动率和抄底胜率都高点 到有低点时候在实时发布买点 卖点 可以先加自选 了解下 nvdl 英伟达双倍 盘后最低价跳到 85.6 周一跳空在跌到78-80附近可以买了长拿 最近有中东订单（比较推荐） tsll 特斯拉双倍 盘后最低价跳到16.88 周一如果跳空到16.1-16.88附近可以加仓买了长拿 马斯克增持价格在正股370--390区间 （比较推荐） BMNR ETH囤币类 盘后最低价跳到47.3 周一如果跳空到46-47可以加仓买了拿61附近（波动大，比较推荐） CONL coin的双倍做多 稳定币和虚拟货币交易所类别 盘后最低跳到36.7 周一如果跳空到35-36.7区间可以加仓买了拿段时间（波动大，比较推荐） mara btc旷工类 盘后最低到17.55 周一如果在跳空到17.55附近可以加仓拿段时间（中等速度 有利好时候涨幅多，比较推荐）",
+      "original_content": "把周五比较推荐的几个股单单独拉了下 主要波动率和抄底胜率都高点 到有低点时候在实时发布买点 卖点 可以先加自选 了解下 nvdl 英伟达双倍 盘后最低价跳到 85.6 周一跳空在跌到78-80附近可以买了长拿 最近有中东订单（比较推荐） tsll 特斯拉双倍 盘后最低价跳到16.88 周一如果跳空到16.1-16.88附近可以加仓买了长拿 马斯克增持价格在正股370--390区间 （比较推荐） BMNR ETH囤币类 盘后最低价跳到47.3 周一如果跳空到46-47可以加仓买了拿61附近（波动大，比较推荐） CONL coin的双倍做多 稳定币和虚拟货币交易所类别 盘后最低跳到36.7 周一如果跳空到35-36.7区间可以加仓买了拿段时间（波动大，比较推荐） mara btc旷工类 盘后最低到17.55 周一如果在跳空到17.55附近可以加仓拿段时间（中等速度 有利好时候涨幅多，比较推荐）",
+      "timestamp": "2025-10-13 09:44:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CU5JEhP1fvJrmRrJQA75u",
+      "content": "tsll开盘回踩了下18.5就开始往上 比较强势可以注意再到18.3附近吸一笔",
+      "original_content": "tsll开盘回踩了下18.5就开始往上 比较强势可以注意再到18.3附近吸一笔",
+      "timestamp": "2025-10-13 21:43:00.010",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "今天回吸时候尽量分批点缺口支撑一次 时间上尾盘有低点再一次"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-10-13 21:43:00.010",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 18.3,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CU5NEh46TsgUYZ9McHm2d",
+      "content": "TSLL今天先突破了夜盘最高 特斯拉一般也先于大盘反弹",
+      "original_content": "TSLL今天先突破了夜盘最高 特斯拉一般也先于大盘反弹",
+      "timestamp": "2025-10-13 22:37:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CU5eGhqLzZMrX35Ag7dnd",
+      "content": "今天有些股票减持点就盯着QQQ 或者盯着tsll 他们没跳水都会震荡走高 有些快有些慢 尾盘持续走高就夜盘时候去减点 明天盘中开盘在回踩均价在做T吸回",
+      "original_content": "今天有些股票减持点就盯着QQQ 或者盯着tsll 他们没跳水都会震荡走高 有些快有些慢 尾盘持续走高就夜盘时候去减点 明天盘中开盘在回踩均价在做T吸回",
+      "timestamp": "2025-10-14 02:07:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CU5f4VRY9WFhyDGBvhvtv",
+      "content": "tsll如果没有发言影响 尾盘是最高点走单边模式 也是大盘风向标",
+      "original_content": "tsll如果没有发言影响 尾盘是最高点走单边模式 也是大盘风向标",
+      "timestamp": "2025-10-14 02:17:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CU6FRo4ge37hpkR4RZ1bo",
+      "content": "tsll昨天单边上涨支撑也上移了 今天注意19.1-19.2附近可以小量接 最佳还是18.3-18.6位置 ，昨天吸筹的量比较多短期不太容易在压下去",
+      "original_content": "tsll昨天单边上涨支撑也上移了 今天注意19.1-19.2附近可以小量接 最佳还是18.3-18.6位置 ，昨天吸筹的量比较多短期不太容易在压下去",
+      "timestamp": "2025-10-14 09:46:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "夜盘可以注意bmnr 在53附近支撑在挂个小单接触发了再看情况要不要继续加仓"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-10-14 09:46:00.010",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 19.15,
+      "price_range": [
+        19.1,
+        19.2
+      ],
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CU7Dq34e99KXPLu2grBjF",
+      "content": "tsll今天也是从18.3这里起来 夜盘19.2如果买了的话可以18.3附近小加 盯着几个昨天优先反弹的买 nvdl 英伟达双倍 盘后最低价跳到 85.6 周一跳空在跌到78-80附近可以买了长拿 最近有中东订单（比较推荐） tsll 特斯拉双倍 盘后最低价跳到16.88 周一如果跳空到16.1-16.88附近可以加仓买了长拿 马斯克增持价格在正股370--390区间 （比较推荐） BMNR ETH囤币类 盘后最低价跳到47.3 周一如果跳空到46-47可以加仓买了拿61附近（波动大，比较推荐） CONL coin的双倍做多 稳定币和虚拟货币交易所类别 盘后最低跳到36.7 周一如果跳空到35-36.7区间可以加仓买了拿段时间（波动大，比较推荐） mara btc旷工类 盘后最低到17.55 周一如果在跳空到17.55附近可以加仓拿段时间（中等速度 有利好时候涨幅多，比较推荐）",
+      "original_content": "tsll今天也是从18.3这里起来 夜盘19.2如果买了的话可以18.3附近小加 盯着几个昨天优先反弹的买 nvdl 英伟达双倍 盘后最低价跳到 85.6 周一跳空在跌到78-80附近可以买了长拿 最近有中东订单（比较推荐） tsll 特斯拉双倍 盘后最低价跳到16.88 周一如果跳空到16.1-16.88附近可以加仓买了长拿 马斯克增持价格在正股370--390区间 （比较推荐） BMNR ETH囤币类 盘后最低价跳到47.3 周一如果跳空到46-47可以加仓买了拿61附近（波动大，比较推荐） CONL coin的双倍做多 稳定币和虚拟货币交易所类别 盘后最低跳到36.7 周一如果跳空到35-36.7区间可以加仓买了拿段时间（波动大，比较推荐） mara btc旷工类 盘后最低到17.55 周一如果在跳空到17.55附近可以加仓拿段时间（中等速度 有利好时候涨幅多，比较推荐）",
+      "timestamp": "2025-10-14 22:08:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CU7FFcRsRQ2hn8mu59zGX",
+      "content": "tsll低位有抄底的可以一半长拿 一半做T18.95附近出",
+      "original_content": "tsll低位有抄底的可以一半长拿 一半做T18.95附近出",
+      "timestamp": "2025-10-14 22:26:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-14 22:26:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 18.95,
+      "sell_quantity": "1/2",
+      "quantity": 400
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CU7MT4USnUU8egRqo5StS",
+      "content": "夜盘tsll吸在19.2比较多的可以19.3-19.4减仓点",
+      "original_content": "夜盘tsll吸在19.2比较多的可以19.3-19.4减仓点",
+      "timestamp": "2025-10-14 23:48:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-14 23:48:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 19.35,
+      "price_range": [
+        19.3,
+        19.4
+      ],
+      "sell_quantity": "全部",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CU7RZSbwfTt5ctUWBDwe5",
+      "content": "鲍威尔发言都偏鸽 tsll开始和昨天一样起到带领作用 其他个股可以根据tsll走势拿到高点附近再开始减",
+      "original_content": "鲍威尔发言都偏鸽 tsll开始和昨天一样起到带领作用 其他个股可以根据tsll走势拿到高点附近再开始减",
+      "timestamp": "2025-10-15 00:41:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CU7S5Rxma8kPbpqMMQavk",
+      "content": "今天大多数股票减持点也是放2点-3点 tsll目前和昨天一样走单边上涨 其他都会跟随补涨",
+      "original_content": "今天大多数股票减持点也是放2点-3点 tsll目前和昨天一样走单边上涨 其他都会跟随补涨",
+      "timestamp": "2025-10-15 00:48:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CU94BQxavH9twacA2qV3D",
+      "content": "tsll 盘前也突破昨天高点19.77 也是最近持续反弹的信号 今天还是注意开盘有没有回踩动作 英伟达和特斯拉都是大盘反弹初期的领先领涨的信号",
+      "original_content": "tsll 盘前也突破昨天高点19.77 也是最近持续反弹的信号 今天还是注意开盘有没有回踩动作 英伟达和特斯拉都是大盘反弹初期的领先领涨的信号",
+      "timestamp": "2025-10-15 21:22:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CU978zYoeJi4sgxvRd5vF",
+      "content": "tsll早上回踩有低吸的可以19.95附近减",
+      "original_content": "tsll早上回踩有低吸的可以19.95附近减",
+      "timestamp": "2025-10-15 22:01:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-15 22:01:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 19.95,
+      "sell_quantity": "小仓位",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CU9Foeqo7Q211eWWnc7pT",
+      "content": "tsll 可以把19.95高抛部分 19.4-19.5附近吸回",
+      "original_content": "tsll 可以把19.95高抛部分 19.4-19.5附近吸回",
+      "timestamp": "2025-10-15 23:54:00.010",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "nvdl到了86附近可以把90触发条件出的低吸回来"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-10-15 23:54:00.010",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 19.45,
+      "price_range": [
+        19.4,
+        19.5
+      ],
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CU9QJczYJPhk4WoPJHmpX",
+      "content": "tsll可以这轮冲上去时候仓位大的19.6附近减点防止在讲话回调",
+      "original_content": "tsll可以这轮冲上去时候仓位大的19.6附近减点防止在讲话回调",
+      "timestamp": "2025-10-16 01:46:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-16 01:46:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 19.6,
+      "sell_quantity": "小仓位",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUAurvpQPWXTXUWv62xq2",
+      "content": "tsll可以开盘时间附近在20附近减点 盘中到19.3附近在吸回来",
+      "original_content": "tsll可以开盘时间附近在20附近减点 盘中到19.3附近在吸回来",
+      "timestamp": "2025-10-16 20:51:00.020",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "昨天低吸的 有些可以开盘前 减点仓位",
+        "bmnr可以开盘前冲高在 55附近减点 然后还是52-53附近吸"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-10-16 20:51:00.020",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 19.3,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUBCYvvgXRQ44vnYvJ9cn",
+      "content": "tsll 今天支撑在19.3-19.4支撑目前破了 等讲话有大跳水再加 bmnr 52-53 支撑位 支撑目前破了 讲话有大跳水再加 mara 20.5支撑 还差点到 讲话有大跳水看情况加 nvdl 84-85支撑 也还没到 讲话有大跳水加 conl 36支撑跌破 等讲话再跳时候加 oscr 20支撑 还没到 讲话大跳水时候加 grab 5.6支撑 还没到 讲话大跳水时候加 joby 无人机 16 支撑 还没到 讲话大跳水时候加 目前大多数都破支撑了 等讲话时候在跳水再加",
+      "original_content": "tsll 今天支撑在19.3-19.4支撑目前破了 等讲话有大跳水再加 bmnr 52-53 支撑位 支撑目前破了 讲话有大跳水再加 mara 20.5支撑 还差点到 讲话有大跳水看情况加 nvdl 84-85支撑 也还没到 讲话有大跳水加 conl 36支撑跌破 等讲话再跳时候加 oscr 20支撑 还没到 讲话大跳水时候加 grab 5.6支撑 还没到 讲话大跳水时候加 joby 无人机 16 支撑 还没到 讲话大跳水时候加 目前大多数都破支撑了 等讲话时候在跳水再加",
+      "timestamp": "2025-10-17 00:33:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-17 00:33:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 19.35,
+      "price_range": [
+        19.3,
+        19.4
+      ],
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUBThzY3syaV6HxwJJaPG",
+      "content": "tsll 上去可以把低位加的 19.2-19.3减点",
+      "original_content": "tsll 上去可以把低位加的 19.2-19.3减点",
+      "timestamp": "2025-10-17 03:52:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-17 03:52:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 19.25,
+      "price_range": [
+        19.2,
+        19.3
+      ],
+      "sell_quantity": "小仓位",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUCkmeKDCRp1nrehDfVcZ",
+      "content": "tsll 盘前 19.15附近注意减点掉低吸仓位 可以留点长拿的把做T仓位减点 在等18附近低吸",
+      "original_content": "tsll 盘前 19.15附近注意减点掉低吸仓位 可以留点长拿的把做T仓位减点 在等18附近低吸",
+      "timestamp": "2025-10-17 20:16:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-17 20:16:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 18.0,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUCtE9vPvAzdneyUfTtwh",
+      "content": "tsll可以 19.6-19.7再减点",
+      "original_content": "tsll可以 19.6-19.7再减点",
+      "timestamp": "2025-10-17 21:54:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-17 21:54:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 19.65,
+      "price_range": [
+        19.6,
+        19.7
+      ],
+      "sell_quantity": "全部",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUD2GSMNWxhHkbzjvPQtS",
+      "content": "tsll 19.4回吸点 19.7高抛的部分",
+      "original_content": "tsll 19.4回吸点 19.7高抛的部分",
+      "timestamp": "2025-10-17 23:40:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-17 23:40:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 19.4,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUD4MDTcb9kjhk4GqNvcW",
+      "content": "tsll 20.1附近减 19.4回吸的",
+      "original_content": "tsll 20.1附近减 19.4回吸的",
+      "timestamp": "2025-10-18 00:07:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-18 00:07:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 19.4,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUD6XpREjX3HYAMvJXvtX",
+      "content": "回吸还是看 bmnr 49-48 可以在49附近挂个单子 等到了也会再说 tsll回吸也是看19.4 可以19.43挂个单子 到了也会再说",
+      "original_content": "回吸还是看 bmnr 49-48 可以在49附近挂个单子 等到了也会再说 tsll回吸也是看19.4 可以19.43挂个单子 到了也会再说",
+      "timestamp": "2025-10-18 00:36:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-18 00:36:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 19.43,
+      "position_size": "小仓位",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUHUZPBy9723CWHZubhWU",
+      "content": "tsll 周末马斯克讲了很多利好 可以20.55附近减掉点 有回落到19.5附近在吸回来",
+      "original_content": "tsll 周末马斯克讲了很多利好 可以20.55附近减掉点 有回落到19.5附近在吸回来",
+      "timestamp": "2025-10-20 08:04:00.020",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "周末讲话缓和有利好 可以夜盘8-9点减仓点",
+        "bmnr 52附近出周五49附近低吸的"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-10-20 08:04:00.020",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 19.5,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUJXF56cegEC46rN3LaU9",
+      "content": "今天大多数到开盘前都很强势，今天的回踩支撑位要相应抬高下，比如tsll基本都没回踩",
+      "original_content": "今天大多数到开盘前都很强势，今天的回踩支撑位要相应抬高下，比如tsll基本都没回踩",
+      "timestamp": "2025-10-20 21:23:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CUNReQeb3LXSsp7KXj68G",
+      "content": "盘后特斯拉出财报 财报不好情况下会所有个股在跳水下 就会吸一批 财报好的情况下 盘中被错杀的个股也会出现低吸机会 tsll bmnr hood mara upst upsx rklb crwv joby 等都在准备吸的列表中 等盘后具体看",
+      "original_content": "盘后特斯拉出财报 财报不好情况下会所有个股在跳水下 就会吸一批 财报好的情况下 盘中被错杀的个股也会出现低吸机会 tsll bmnr hood mara upst upsx rklb crwv joby 等都在准备吸的列表中 等盘后具体看",
+      "timestamp": "2025-10-22 22:52:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CUNjR51VUW3DNKNc76BfH",
+      "content": "upst 48 低点 有小V 盘后再跳水可以配置 upsx 低点 13.4 有小V 盘后再跳水可以配置 conl 30.66 低点 有小V 盘后再跳水可以配置 rklb 58.41 低点 有小V 盘后再跳水可以配置 bmnr 46.56 低点 有小V 盘后再跳水可以配置 crwv 114.17 低点 有小V 盘后再跳水可以配置 mstr 276.7 低点 有小V 盘后再跳水可以配置 hood 120.88 低点 有小V 盘后再跳水可以配置 hims 46.15 低点 有小V 盘后再跳水可以配置 nbis 94.64 低点 少量配置 26号接近后看有没有大跳水再加 tsll 等盘后看大跳水加 利好就走掉剩下的 mara 18.39 低点 有小V 盘后再跳水可以配置 nvdl82.9 低点 有小V 盘后再跳水可以配置 rddt 191.3 低点 有小V 盘后再跳水可以配置 orcl 269.25 低点 有小V 盘后再跳水可以配置 tem81.9 低点 有小V 盘后再跳水可以配置 open6.23 低点 有小V 盘后再跳水可以配置 joby 14.9 低点 有小V 盘后再跳水可以配置 zeta18.19 低点 有小V 盘后再跳水可以配置 可以先加自选 然后 盘后和临近尾盘再看看实际情况再执行操作",
+      "original_content": "upst 48 低点 有小V 盘后再跳水可以配置 upsx 低点 13.4 有小V 盘后再跳水可以配置 conl 30.66 低点 有小V 盘后再跳水可以配置 rklb 58.41 低点 有小V 盘后再跳水可以配置 bmnr 46.56 低点 有小V 盘后再跳水可以配置 crwv 114.17 低点 有小V 盘后再跳水可以配置 mstr 276.7 低点 有小V 盘后再跳水可以配置 hood 120.88 低点 有小V 盘后再跳水可以配置 hims 46.15 低点 有小V 盘后再跳水可以配置 nbis 94.64 低点 少量配置 26号接近后看有没有大跳水再加 tsll 等盘后看大跳水加 利好就走掉剩下的 mara 18.39 低点 有小V 盘后再跳水可以配置 nvdl82.9 低点 有小V 盘后再跳水可以配置 rddt 191.3 低点 有小V 盘后再跳水可以配置 orcl 269.25 低点 有小V 盘后再跳水可以配置 tem81.9 低点 有小V 盘后再跳水可以配置 open6.23 低点 有小V 盘后再跳水可以配置 joby 14.9 低点 有小V 盘后再跳水可以配置 zeta18.19 低点 有小V 盘后再跳水可以配置 可以先加自选 然后 盘后和临近尾盘再看看实际情况再执行操作",
+      "timestamp": "2025-10-23 02:45:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-23 02:45:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 26.0,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUNkcSu5TcdNFh9uQmCj3",
+      "content": "补充了点基本面和这段期间的股票涨幅股性 upst 48 低点 有小V 盘后再跳水可以配置 upsx 低点 13.4 有小V 盘后再跳水可以配置 基本面是贷款类之前正股还有个47低点今天也只跳到48附近 博弈贷款政策反转（股性中等反弹时候反弹区间达到正股50-52） conl 30.66 低点 有小V 盘后再跳水可以配置 coin的双倍 稳定币和btc交易所类 几次也是下杀到31附近反弹36（股性高） rklb 58.41 低点 有小V 盘后再跳水可以配置 太空火箭（今天下破64和60两个支撑 博弈反弹64阻力）（股性偏高） bmnr 46.56 低点 有小V 盘后再跳水可以配置 (股性偏高) （eth币囤币类今天下破52和49支撑 博弈回51阻力） crwv 114.17 低点 有小V 盘后再跳水可以配置 （股性中） （最近有减持 博弈减持完毕和订单反弹 昨天123有建仓今天普跌可以补仓或者新建） mstr 276.7 低点 有小V 盘后再跳水可以配置 （股性中） btc 囤币种类 今天跌破282支撑 可以把昨天305抛的低吸 或者新建仓 hood 120.88 低点 有小V 盘后再跳水可以配置 （股性中） 券商类和虚拟币交易所 今天跌破几个支撑回踩120支撑 可以配置 hims 46.15 低点 有小V 盘后再跳水可以配置 （股性中） 利空压制前两天在50-51横盘 今天跌破了48支撑 在46支撑住可以配置 nbis 94.64 低点 少量配置 26号接近后看有没有大跳水再加（股性中） 今天跳的多可以配置 要预留资金 26 27两天解禁看情况 保守的可以 27号后再入 tsll 等盘后看大跳水加 利好就走掉剩下的 mara 18.39 低点 有小V 盘后再跳水可以配置 （股性偏高） 矿工转型 今天在19支撑跌破 低点有反弹也可以配置 nvdl82.9 低点 有小V 盘后再跳水可以配置 （股性偏高） 英伟达的双倍 今天到了83-84支撑 小跌破 也可以配置 rddt 191.3 低点 有小V 盘后再跳水可以配置 （股性中） 美股版贴吧 今天在186支撑上也可以后续几天再看看有没有再跳 可以先配置在低了加 orcl 269.25 低点 有小V 盘后再跳水可以配置 （股性中） 和crwv同一天出的减持计划 今天在270有支撑 可以270附近配置 有在跳水加仓等减持完毕公告 tem81.9 低点 有小V 盘后再跳水可以配置 （股性中） 今天也是连续跌破两个支撑到80支撑上方 可以配置 open6.23 低点 有小V 盘后再跳水可以配置 （股性中） 有减持计划10个交易日 今天大盘回调前先跳了下可以注意6.1附近支撑 可以配置等反弹 joby 14.9 低点 有小V 盘后再跳水可以配置 （股性中） 无人机 跌破了15支撑 也是可以配置等反弹 zeta18.19 低点 有小V 盘后再跳水可以配置 （股性中） 电商 跌幅不是很大 下面有个17支撑能在跳到更安全点",
+      "original_content": "补充了点基本面和这段期间的股票涨幅股性 upst 48 低点 有小V 盘后再跳水可以配置 upsx 低点 13.4 有小V 盘后再跳水可以配置 基本面是贷款类之前正股还有个47低点今天也只跳到48附近 博弈贷款政策反转（股性中等反弹时候反弹区间达到正股50-52） conl 30.66 低点 有小V 盘后再跳水可以配置 coin的双倍 稳定币和btc交易所类 几次也是下杀到31附近反弹36（股性高） rklb 58.41 低点 有小V 盘后再跳水可以配置 太空火箭（今天下破64和60两个支撑 博弈反弹64阻力）（股性偏高） bmnr 46.56 低点 有小V 盘后再跳水可以配置 (股性偏高) （eth币囤币类今天下破52和49支撑 博弈回51阻力） crwv 114.17 低点 有小V 盘后再跳水可以配置 （股性中） （最近有减持 博弈减持完毕和订单反弹 昨天123有建仓今天普跌可以补仓或者新建） mstr 276.7 低点 有小V 盘后再跳水可以配置 （股性中） btc 囤币种类 今天跌破282支撑 可以把昨天305抛的低吸 或者新建仓 hood 120.88 低点 有小V 盘后再跳水可以配置 （股性中） 券商类和虚拟币交易所 今天跌破几个支撑回踩120支撑 可以配置 hims 46.15 低点 有小V 盘后再跳水可以配置 （股性中） 利空压制前两天在50-51横盘 今天跌破了48支撑 在46支撑住可以配置 nbis 94.64 低点 少量配置 26号接近后看有没有大跳水再加（股性中） 今天跳的多可以配置 要预留资金 26 27两天解禁看情况 保守的可以 27号后再入 tsll 等盘后看大跳水加 利好就走掉剩下的 mara 18.39 低点 有小V 盘后再跳水可以配置 （股性偏高） 矿工转型 今天在19支撑跌破 低点有反弹也可以配置 nvdl82.9 低点 有小V 盘后再跳水可以配置 （股性偏高） 英伟达的双倍 今天到了83-84支撑 小跌破 也可以配置 rddt 191.3 低点 有小V 盘后再跳水可以配置 （股性中） 美股版贴吧 今天在186支撑上也可以后续几天再看看有没有再跳 可以先配置在低了加 orcl 269.25 低点 有小V 盘后再跳水可以配置 （股性中） 和crwv同一天出的减持计划 今天在270有支撑 可以270附近配置 有在跳水加仓等减持完毕公告 tem81.9 低点 有小V 盘后再跳水可以配置 （股性中） 今天也是连续跌破两个支撑到80支撑上方 可以配置 open6.23 低点 有小V 盘后再跳水可以配置 （股性中） 有减持计划10个交易日 今天大盘回调前先跳了下可以注意6.1附近支撑 可以配置等反弹 joby 14.9 低点 有小V 盘后再跳水可以配置 （股性中） 无人机 跌破了15支撑 也是可以配置等反弹 zeta18.19 低点 有小V 盘后再跳水可以配置 （股性中） 电商 跌幅不是很大 下面有个17支撑能在跳到更安全点",
+      "timestamp": "2025-10-23 03:00:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CUNkqL8aZt1vxmXpxg8Em",
+      "content": "补充了点基本面和这段期间的股票涨幅股性 upst 48 低点 有小V 盘后再跳水可以配置 upsx 低点 13.4 有小V 盘后再跳水可以配置 基本面是贷款类之前正股还有个47低点今天也只跳到48附近 博弈贷款政策反转（股性中等反弹时候反弹区间达到正股50-52） conl 30.66 低点 有小V 盘后再跳水可以配置 coin的双倍 稳定币和btc交易所类 几次也是下杀到31附近反弹36（股性高） rklb 58.41 低点 有小V 盘后再跳水可以配置 太空火箭（今天下破64和60两个支撑 博弈反弹64阻力）（股性偏高） bmnr 46.56 低点 有小V 盘后再跳水可以配置 (股性偏高) （eth币囤币类今天下破52和49支撑 博弈回51阻力） crwv 114.17 低点 有小V 盘后再跳水可以配置 （股性中） （最近有减持 博弈减持完毕和订单反弹 昨天123有建仓今天普跌可以补仓或者新建） mstr 276.7 低点 有小V 盘后再跳水可以配置 （股性中） btc 囤币种类 今天跌破282支撑 可以把昨天305抛的低吸 或者新建仓 hood 120.88 低点 有小V 盘后再跳水可以配置 （股性中） 券商类和虚拟币交易所 今天跌破几个支撑回踩120支撑 可以配置 hims 46.15 低点 有小V 盘后再跳水可以配置 （股性中） 利空压制前两天在50-51横盘 今天跌破了48支撑 在46支撑住可以配置 nbis 94.64 低点 少量配置 26号接近后看有没有大跳水再加（股性中） 今天跳的多可以配置 要预留资金 26 27两天解禁看情况 保守的可以 27号后再入 tsll 等盘后看大跳水加 利好就走掉剩下的 mara 18.39 低点 有小V 盘后再跳水可以配置 （股性偏高） 矿工转型 今天在19支撑跌破 低点有反弹也可以配置 nvdl82.9 低点 有小V 盘后再跳水可以配置 （股性偏高） 英伟达的双倍 今天到了83-84支撑 小跌破 也可以配置 rddt 191.3 低点 有小V 盘后再跳水可以配置 （股性中） 美股版贴吧 今天在186支撑上也可以后续几天再看看有没有再跳 可以先配置在低了加 orcl 269.25 低点 有小V 盘后再跳水可以配置 （股性中） 和crwv同一天出的减持计划 今天在270有支撑 可以270附近配置 有在跳水加仓等减持完毕公告 tem81.9 低点 有小V 盘后再跳水可以配置 （股性中） 今天也是连续跌破两个支撑到80支撑上方 可以配置 open6.23 低点 有小V 盘后再跳水可以配置 （股性中） 有减持计划10个交易日 今天大盘回调前先跳了下可以注意6.1附近支撑 可以配置等反弹 joby 14.9 低点 有小V 盘后再跳水可以配置 （股性中） 无人机 跌破了15支撑 也是可以配置等反弹 zeta18.19 低点 有小V 盘后再跳水可以配置 （股性中） 电商 跌幅不是很大 下面有个17支撑能在跳到更安全点",
+      "original_content": "补充了点基本面和这段期间的股票涨幅股性 upst 48 低点 有小V 盘后再跳水可以配置 upsx 低点 13.4 有小V 盘后再跳水可以配置 基本面是贷款类之前正股还有个47低点今天也只跳到48附近 博弈贷款政策反转（股性中等反弹时候反弹区间达到正股50-52） conl 30.66 低点 有小V 盘后再跳水可以配置 coin的双倍 稳定币和btc交易所类 几次也是下杀到31附近反弹36（股性高） rklb 58.41 低点 有小V 盘后再跳水可以配置 太空火箭（今天下破64和60两个支撑 博弈反弹64阻力）（股性偏高） bmnr 46.56 低点 有小V 盘后再跳水可以配置 (股性偏高) （eth币囤币类今天下破52和49支撑 博弈回51阻力） crwv 114.17 低点 有小V 盘后再跳水可以配置 （股性中） （最近有减持 博弈减持完毕和订单反弹 昨天123有建仓今天普跌可以补仓或者新建） mstr 276.7 低点 有小V 盘后再跳水可以配置 （股性中） btc 囤币种类 今天跌破282支撑 可以把昨天305抛的低吸 或者新建仓 hood 120.88 低点 有小V 盘后再跳水可以配置 （股性中） 券商类和虚拟币交易所 今天跌破几个支撑回踩120支撑 可以配置 hims 46.15 低点 有小V 盘后再跳水可以配置 （股性中） 利空压制前两天在50-51横盘 今天跌破了48支撑 在46支撑住可以配置 nbis 94.64 低点 少量配置 26号接近后看有没有大跳水再加（股性中） 今天跳的多可以配置 要预留资金 26 27两天解禁看情况 保守的可以 27号后再入 tsll 等盘后看大跳水加 利好就走掉剩下的 mara 18.39 低点 有小V 盘后再跳水可以配置 （股性偏高） 矿工转型 今天在19支撑跌破 低点有反弹也可以配置 nvdl82.9 低点 有小V 盘后再跳水可以配置 （股性偏高） 英伟达的双倍 今天到了83-84支撑 小跌破 也可以配置 rddt 191.3 低点 有小V 盘后再跳水可以配置 （股性中） 美股版贴吧 今天在186支撑上也可以后续几天再看看有没有再跳 可以先配置在低了加 orcl 269.25 低点 有小V 盘后再跳水可以配置 （股性中） 和crwv同一天出的减持计划 今天在270有支撑 可以270附近配置 有在跳水加仓等减持完毕公告 tem81.9 低点 有小V 盘后再跳水可以配置 （股性中） 今天也是连续跌破两个支撑到80支撑上方 可以配置 open6.23 低点 有小V 盘后再跳水可以配置 （股性中） 有减持计划10个交易日 今天大盘回调前先跳了下可以注意6.1附近支撑 可以配置等反弹 joby 14.9 低点 有小V 盘后再跳水可以配置 （股性中） 无人机 跌破了15支撑 也是可以配置等反弹 zeta18.19 低点 有小V 盘后再跳水可以配置 （股性中） 电商 跌幅不是很大 下面有个17支撑能在跳到更安全点",
+      "timestamp": "2025-10-23 03:03:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "目前QQQ也从第四次的低点V起来 也可以看下等下股价在回落接近低点时候进行分批配置 预留点 盘后4点半特斯拉财报不好的情况加"
+      ]
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CUNqrpGBnA2ygbYAV6EDa",
+      "content": "tsla 出了利润业绩 可以先注意除特斯拉以外的其他列表中和单独价格的股票回吸 tsll如果跌很多到19.2-19.3和18.3也可以回吸",
+      "original_content": "tsla 出了利润业绩 可以先注意除特斯拉以外的其他列表中和单独价格的股票回吸 tsll如果跌很多到19.2-19.3和18.3也可以回吸",
+      "timestamp": "2025-10-23 04:09:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CUNxhZ48tu1zR7rXcXoiq",
+      "content": "tsll快到电话会议了19.8减点",
+      "original_content": "tsll快到电话会议了19.8减点",
+      "timestamp": "2025-10-23 05:39:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-23 05:39:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 19.8,
+      "sell_quantity": "小仓位",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUQE8kKt8zHVupUhAR1Dk",
+      "content": "tsll今天先杀多可以18-17.9分批进",
+      "original_content": "tsll今天先杀多可以18-17.9分批进",
+      "timestamp": "2025-10-23 21:40:00.020",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "upst可以52.2出大部分 补仓的和原来的",
+        "upsx可以 15.9全部止盈"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-10-23 21:40:00.020",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 17.95,
+      "price_range": [
+        17.9,
+        18.0
+      ],
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUQF7GkUwBrHEod2ULorF",
+      "content": "tsll开盘杀多完之后开始杀空 看能不能到19.8这个讲话前掉下来的位置",
+      "original_content": "tsll开盘杀多完之后开始杀空 看能不能到19.8这个讲话前掉下来的位置",
+      "timestamp": "2025-10-23 21:51:00.030",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "orcl也要注意昨天270-271的支撑 和crwv一样减持9天左右了到接近支撑可以回吸",
+        "crwv昨天低位V的很快今天接近了我们第一笔的成本了 可以到第一笔成本附近减 在123-124附近",
+        "昨天的nvdl也是83支撑起来 87-88可以减一半"
+      ]
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CUQLQUjTq2qxc85UUrFqg",
+      "content": "tsll 19.2附近可以按自己仓位管理减点 极限位置在19.8 附近",
+      "original_content": "tsll 19.2附近可以按自己仓位管理减点 极限位置在19.8 附近",
+      "timestamp": "2025-10-23 23:04:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-23 23:04:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 19.2,
+      "sell_quantity": "小仓位",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUQMCwRRkpxfKbU27Dc9N",
+      "content": "特斯拉财报 就是不用慌 多做几次就也可以 财报期权双杀 tsll不会 运用好收益反而双倍",
+      "original_content": "特斯拉财报 就是不用慌 多做几次就也可以 财报期权双杀 tsll不会 运用好收益反而双倍",
+      "timestamp": "2025-10-23 23:14:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CUQQjni1bzg4B6t1RC7K5",
+      "content": "tsll目前19.6 快到说的19.8的极限位置 19.8摸到没站稳也可以减持点",
+      "original_content": "tsll目前19.6 快到说的19.8的极限位置 19.8摸到没站稳也可以减持点",
+      "timestamp": "2025-10-24 00:01:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-24 00:01:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 19.8,
+      "sell_quantity": "小仓位",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUSSYkkT5kjUoK1c4Kf53",
+      "content": "tsll 可以在19.6-19.7附近小仓位回吸一笔 另外笔放尾盘",
+      "original_content": "tsll 可以在19.6-19.7附近小仓位回吸一笔 另外笔放尾盘",
+      "timestamp": "2025-10-25 01:46:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-25 01:46:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 19.65,
+      "price_range": [
+        19.6,
+        19.7
+      ],
+      "position_size": "小仓位",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUSSuTxRBZ8EQqouYGTiR",
+      "content": "tsll 19.6 这里有个反弹的量 19.8这个新平台支撑要反复磨",
+      "original_content": "tsll 19.6 这里有个反弹的量 19.8这个新平台支撑要反复磨",
+      "timestamp": "2025-10-25 01:50:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CUScgkUa1jbQg4AMvEknj",
+      "content": "tsll尾盘强平时候19.3出现2次握手都是同一个委托单子在吃",
+      "original_content": "tsll尾盘强平时候19.3出现2次握手都是同一个委托单子在吃",
+      "timestamp": "2025-10-25 03:59:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CUWmmurhY8o1D6dPtEyhZ",
+      "content": "tsll 跳空高开 20-20.1出一半 设置下跌破19.9出剩下的",
+      "original_content": "tsll 跳空高开 20-20.1出一半 设置下跌破19.9出剩下的",
+      "timestamp": "2025-10-27 08:40:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-27 08:40:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 20.05,
+      "price_range": [
+        20.0,
+        20.1
+      ],
+      "sell_quantity": "1/2",
+      "quantity": 400
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUXnns3wmLttahRrEfh1N",
+      "content": "20.5-20.6附近可以在减点剩下的tsll",
+      "original_content": "20.5-20.6附近可以在减点剩下的tsll",
+      "timestamp": "2025-10-27 21:34:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-27 21:34:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 20.55,
+      "price_range": [
+        20.5,
+        20.6
+      ],
+      "sell_quantity": "小仓位",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUXvuCMdRtAd6aPTQYf8z",
+      "content": "tsll剩下仓位可以在21.3-21.45之间出掉",
+      "original_content": "tsll剩下仓位可以在21.3-21.45之间出掉",
+      "timestamp": "2025-10-27 23:21:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-27 23:21:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 21.38,
+      "price_range": [
+        21.3,
+        21.45
+      ],
+      "sell_quantity": "全部",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUbzV7vJ26dtKrDjURGHn",
+      "content": "tsll 可以在21.3-21.4附近建个小仓位",
+      "original_content": "tsll 可以在21.3-21.4附近建个小仓位",
+      "timestamp": "2025-10-30 02:49:00.010",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "bmnr可以在49-48.9附近加点仓"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-10-30 02:49:00.010",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 21.35,
+      "price_range": [
+        21.3,
+        21.4
+      ],
+      "position_size": "小仓位",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUc1ouJuVWm6vXk4ztQWE",
+      "content": "tsll V上去可以22.15-22.25附近减",
+      "original_content": "tsll V上去可以22.15-22.25附近减",
+      "timestamp": "2025-10-30 03:07:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-30 03:07:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 22.2,
+      "price_range": [
+        22.15,
+        22.25
+      ],
+      "sell_quantity": "全部",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUoLu2UF2TWp9fUs8nbCW",
+      "content": "tsll可以20.5-20.6介入一部分 对开盘那个20.5做了支撑测试",
+      "original_content": "tsll可以20.5-20.6介入一部分 对开盘那个20.5做了支撑测试",
+      "timestamp": "2025-11-05 02:44:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-05 02:44:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 20.55,
+      "price_range": [
+        20.5,
+        20.6
+      ],
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUozxhLA44rsLFgtqfFY6",
+      "content": "20.6到20.9这段分批出昨天20。5的tsll",
+      "original_content": "20.6到20.9这段分批出昨天20。5的tsll",
+      "timestamp": "2025-11-05 11:03:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-05 11:03:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 20.75,
+      "price_range": [
+        20.6,
+        20.9
+      ],
+      "sell_quantity": "1/2",
+      "quantity": 400,
+      "sell_reference_price": 20.5,
+      "sell_reference_label": "昨天20.5的"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUpvSLmgVD49PMsoFTDg8",
+      "content": "tsll 可以回踩20.3时候建点 看能不能回踩19.5这个夜盘低点附近再加",
+      "original_content": "tsll 可以回踩20.3时候建点 看能不能回踩19.5这个夜盘低点附近再加",
+      "timestamp": "2025-11-05 22:45:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-05 22:45:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 20.3,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUq49M2Nnh5NiDWUbvZe6",
+      "content": "tsll拉升上去也可以自己注意 20.85-21.1附近分批减",
+      "original_content": "tsll拉升上去也可以自己注意 20.85-21.1附近分批减",
+      "timestamp": "2025-11-06 00:26:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-06 00:26:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 20.98,
+      "price_range": [
+        20.85,
+        21.1
+      ],
+      "sell_quantity": "全部",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUqHTYFg6XPgaE1qX6X7j",
+      "content": "22附近也可以减点tsll 在拿少量持仓博投票结果后的波动",
+      "original_content": "22附近也可以减点tsll 在拿少量持仓博投票结果后的波动",
+      "timestamp": "2025-11-06 03:20:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-06 03:20:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 22.0,
+      "sell_quantity": "全部",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUruXRVhC9eqTFSaD6re9",
+      "content": "tsll回踩昨天低点20-20.3附近回吸部分 也是看一部分是不是回踩19.3-19.5夜盘低点",
+      "original_content": "tsll回踩昨天低点20-20.3附近回吸部分 也是看一部分是不是回踩19.3-19.5夜盘低点",
+      "timestamp": "2025-11-06 23:54:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-06 23:54:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 20.15,
+      "price_range": [
+        20.0,
+        20.3
+      ],
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUs4zsfRQmxE8KfNnRsgm",
+      "content": "hood也是 130附近介入一半 尾盘在回落再介入 nbis找109附近介入一半 尾盘时候在回落确认在介入一半 前面的 tsll nvdl的大盘明星股也是找回落时候介入",
+      "original_content": "hood也是 130附近介入一半 尾盘在回落再介入 nbis找109附近介入一半 尾盘时候在回落确认在介入一半 前面的 tsll nvdl的大盘明星股也是找回落时候介入",
+      "timestamp": "2025-11-07 01:58:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CUs78GuBmXPhiy1fDofEa",
+      "content": "tsll 20.55附近减掉点 19.5缺口附近买的部分",
+      "original_content": "tsll 20.55附近减掉点 19.5缺口附近买的部分",
+      "timestamp": "2025-11-07 02:26:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-07 02:26:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 20.55,
+      "sell_quantity": "小仓位",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUsP55fHomAHgGcMQF45X",
+      "content": "21.2-21.4之间减仓tsll",
+      "original_content": "21.2-21.4之间减仓tsll",
+      "timestamp": "2025-11-07 05:55:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-07 05:55:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 21.3,
+      "price_range": [
+        21.2,
+        21.4
+      ],
+      "sell_quantity": "小仓位",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUteDvvY5r3tCVDNeEoDo",
+      "content": "盘前 19.8-19.9回吸了点高抛的tsll 剩下部分也是19.3-19.5之间吸",
+      "original_content": "盘前 19.8-19.9回吸了点高抛的tsll 剩下部分也是19.3-19.5之间吸",
+      "timestamp": "2025-11-07 21:54:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-07 21:54:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 19.4,
+      "price_range": [
+        19.3,
+        19.5
+      ],
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUteNf3qKsQRYoMLjmwGb",
+      "content": "今天有是否开门的投票应该也是过不了 医改部分没有改动 周五先空开局盘中会反弹下 反弹减仓等尾盘在回买 开局就回吸个波动率大的tsll 其他盘中在回踩时候回吸",
+      "original_content": "今天有是否开门的投票应该也是过不了 医改部分没有改动 周五先空开局盘中会反弹下 反弹减仓等尾盘在回买 开局就回吸个波动率大的tsll 其他盘中在回踩时候回吸",
+      "timestamp": "2025-11-07 21:54:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "盘前 19.8-19.9回吸了点高抛的tsll 剩下部分也是19.3-19.5之间吸"
+      ]
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CUthN7DFKnhCcF2BV6cXk",
+      "content": "tsll今天先杀call中间跌回之前18.8-18.7附近吸把吸的位置降一降",
+      "original_content": "tsll今天先杀call中间跌回之前18.8-18.7附近吸把吸的位置降一降",
+      "timestamp": "2025-11-07 22:35:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-07 22:35:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 18.75,
+      "price_range": [
+        18.7,
+        18.8
+      ],
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUu3Nr3iHDHkrcwgmBByN",
+      "content": "tsll 不放心的可以尾盘19.2-19.4减点18.5附近买的仓位",
+      "original_content": "tsll 不放心的可以尾盘19.2-19.4减点18.5附近买的仓位",
+      "timestamp": "2025-11-08 02:58:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-08 02:58:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 19.3,
+      "price_range": [
+        19.2,
+        19.4
+      ],
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUu6vTxjGUpgN2XQWd5uX",
+      "content": "tsll反正说了无数遍 18.3这里根本不用慌 都是杀call 拿货 也是群里第四次在这里拿货",
+      "original_content": "tsll反正说了无数遍 18.3这里根本不用慌 都是杀call 拿货 也是群里第四次在这里拿货",
+      "timestamp": "2025-11-08 03:44:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CUuCXAGK76tdrBnUYmKgS",
+      "content": "tsll最后几分钟有强平结算的 然后盘后回落18.5-18.8可以低吸回 19.4出的",
+      "original_content": "tsll最后几分钟有强平结算的 然后盘后回落18.5-18.8可以低吸回 19.4出的",
+      "timestamp": "2025-11-08 04:58:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-08 04:58:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 18.65,
+      "price_range": [
+        18.5,
+        18.8
+      ],
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUuF6NBxZSwGpCq9jEteM",
+      "content": "这轮开门行情 配置上可以 2-4个不同板块配置拿反弹段 可以七姐妹当中买1-2个 tsll nvdl meta msft之类 币股买1个 conl bmnr hood mstr（这个股性慢） 明星股1个 oklo tem nbis rklb等等 我自己列的那10几个是都买了的都会跟踪的",
+      "original_content": "这轮开门行情 配置上可以 2-4个不同板块配置拿反弹段 可以七姐妹当中买1-2个 tsll nvdl meta msft之类 币股买1个 conl bmnr hood mstr（这个股性慢） 明星股1个 oklo tem nbis rklb等等 我自己列的那10几个是都买了的都会跟踪的",
+      "timestamp": "2025-11-08 05:32:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-08 05:32:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 3.0,
+      "price_range": [
+        2.0,
+        4.0
+      ],
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUyKjvcmqdzY9wbeT76HG",
+      "content": "19.6-19.7减仓tsll",
+      "original_content": "19.6-19.7减仓tsll",
+      "timestamp": "2025-11-10 09:10:00.060",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "44减仓点到价格的bmnr",
+        "32附近减仓点到价格的conl",
+        "97.5减仓点nvdl",
+        "254减仓点mstr",
+        "632.5减仓625加仓的meta",
+        "55.3减仓rklb"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-11-10 09:10:00.060",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 19.65,
+      "price_range": [
+        19.6,
+        19.7
+      ],
+      "sell_quantity": "小仓位",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUzTc4hmxFWFyXTANHtXN",
+      "content": "20.32出19.8那部分tsll",
+      "original_content": "20.32出19.8那部分tsll",
+      "timestamp": "2025-11-10 23:39:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-10 23:39:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 20.32,
+      "sell_quantity": "全部",
+      "quantity": 800,
+      "sell_reference_price": 19.8,
+      "sell_reference_label": "19.8的"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CV2HbisqmHsnYEGzRmKHh",
+      "content": "19.5-19.6附近吸回一半高抛的tsll",
+      "original_content": "19.5-19.6附近吸回一半高抛的tsll",
+      "timestamp": "2025-11-11 22:49:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-11 22:49:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 19.5,
+      "position_size": "一半",
+      "quantity": 400
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CV63x9yfkNJV5N5LV55M7",
+      "content": "18.05附近加仓了点tsll 剩下等尾盘附近再看看",
+      "original_content": "18.05附近加仓了点tsll 剩下等尾盘附近再看看",
+      "timestamp": "2025-11-13 22:32:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-13 22:32:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 18.05,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CV6SW4f8zM9UjMNaB7pe3",
+      "content": "tsll在讲话时候15.98 尾盘在15.98附近可以确认",
+      "original_content": "tsll在讲话时候15.98 尾盘在15.98附近可以确认",
+      "timestamp": "2025-11-14 03:26:00.010",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "尾盘可以以讲话时候的V的低点做确认 再讲最近关门的影响"
+      ]
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CV6ZzY7uDWbNF1UAyAsNG",
+      "content": "tsll 14点12分价格15.98 二次确认过 可以这个价格附近吸 弹性大 nvdl 14点12分价格88.28 二次确认过 可以这个价格附近吸 弹性大 conl 14点12分 24.06 二次确认过 可以这个价格附近吸 弹性大 bmnr 14点12分 36.3 二次确认过 可以这个价格附近吸 弹性大 meta 605.3 弹性慢 fbl 28.35 弹性大",
+      "original_content": "tsll 14点12分价格15.98 二次确认过 可以这个价格附近吸 弹性大 nvdl 14点12分价格88.28 二次确认过 可以这个价格附近吸 弹性大 conl 14点12分 24.06 二次确认过 可以这个价格附近吸 弹性大 bmnr 14点12分 36.3 二次确认过 可以这个价格附近吸 弹性大 meta 605.3 弹性慢 fbl 28.35 弹性大",
+      "timestamp": "2025-11-14 05:06:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-14 05:06:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 15.98,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CV7yxh1xgywt2n5Sf39ig",
+      "content": "tsll 昨天16附近补的可以16.05附近减点 盘下去再接",
+      "original_content": "tsll 昨天16附近补的可以16.05附近减点 盘下去再接",
+      "timestamp": "2025-11-14 23:01:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-14 23:01:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 16.05,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVDfbmhtKgEq9o7vY1Urk",
+      "content": "tsll 成本在17.6-17.5以下买的可以这个区间减tsll",
+      "original_content": "tsll 成本在17.6-17.5以下买的可以这个区间减tsll",
+      "timestamp": "2025-11-17 23:04:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-17 23:04:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 17.55,
+      "price_range": [
+        17.5,
+        17.6
+      ],
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVFZeXVG7S7HYYdsCK3ee",
+      "content": "15.7-15.8这里可以吸回昨天17.5抛掉了tsll的一半 尾盘再看吸剩下一半",
+      "original_content": "15.7-15.8这里可以吸回昨天17.5抛掉了tsll的一半 尾盘再看吸剩下一半",
+      "timestamp": "2025-11-18 23:07:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-18 23:07:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 15.7,
+      "position_size": "一半",
+      "quantity": 400
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVHT7rUagFPur3qLuFCch",
+      "content": "特斯拉也是今天的风向标 他回调其他也容易回调 我们昨天低吸的等有转弯迹象减tsll",
+      "original_content": "特斯拉也是今天的风向标 他回调其他也容易回调 我们昨天低吸的等有转弯迹象减tsll",
+      "timestamp": "2025-11-19 23:02:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CVHTHEsdjr6K3uChUvRg1",
+      "content": "17.1附近减点昨天的15.7附近买的tsll",
+      "original_content": "17.1附近减点昨天的15.7附近买的tsll",
+      "timestamp": "2025-11-19 23:04:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-19 23:04:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 17.1,
+      "sell_quantity": "全部",
+      "quantity": 800,
+      "sell_reference_price": 15.7,
+      "sell_reference_label": "15.7买的"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVKKfFDCnN7WytBuEj1kg",
+      "content": "tsll今天注意直线上去到上次我们出的阻力18.1-18.2这里看能不能突破 不突破就在减点",
+      "original_content": "tsll今天注意直线上去到上次我们出的阻力18.1-18.2这里看能不能突破 不突破就在减点",
+      "timestamp": "2025-11-20 22:46:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-20 22:46:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 18.15,
+      "price_range": [
+        18.1,
+        18.2
+      ],
+      "sell_quantity": "全部",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVKMAKCbEUkVdaM2YGVBg",
+      "content": "18.3-18.4可以减tsll",
+      "original_content": "18.3-18.4可以减tsll",
+      "timestamp": "2025-11-20 23:05:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-20 23:05:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 18.35,
+      "price_range": [
+        18.3,
+        18.4
+      ],
+      "sell_quantity": "小仓位",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVKVy2xBtiZFm4ASXXXEu",
+      "content": "16.8附近回吸点高抛的tsll 剩下一半尾盘看下有更低的在吸一半",
+      "original_content": "16.8附近回吸点高抛的tsll 剩下一半尾盘看下有更低的在吸一半",
+      "timestamp": "2025-11-21 01:01:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-21 01:01:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 16.8,
+      "position_size": "一半",
+      "quantity": 400
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVM48reXtouC78WmFqARD",
+      "content": "周五盘前低点价格可以加分2次加的点 一次盘前低点附近一次盘中结算putV的时候 tsll 15.6 rklb 38.3-38.6附近 nvdl 79-80附近 iren 40.5 soun 11 oklo 85-86 crwv 66.5 nbis 81 apld 20 rxrx3.78",
+      "original_content": "周五盘前低点价格可以加分2次加的点 一次盘前低点附近一次盘中结算putV的时候 tsll 15.6 rklb 38.3-38.6附近 nvdl 79-80附近 iren 40.5 soun 11 oklo 85-86 crwv 66.5 nbis 81 apld 20 rxrx3.78",
+      "timestamp": "2025-11-21 20:43:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-21 20:43:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 15.6,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVMMXMmiEAh24jX27wU13",
+      "content": "tsll就是15.6那个跌破了 在到15.65 15.7这样就出 最近以本金为优先买高的上去到成本就出再买低价格的 身边要留资金收盘时候买为主",
+      "original_content": "tsll就是15.6那个跌破了 在到15.65 15.7这样就出 最近以本金为优先买高的上去到成本就出再买低价格的 身边要留资金收盘时候买为主",
+      "timestamp": "2025-11-22 00:31:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-22 00:31:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 15.65,
+      "sell_quantity": "全部",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVMMxvscyZyWM2EmqGEzZ",
+      "content": "tsll目前震荡到15.6了 要注意分时转弯走买高的 收盘时候再看看价格低的在回吸 目前put结算的多",
+      "original_content": "tsll目前震荡到15.6了 要注意分时转弯走买高的 收盘时候再看看价格低的在回吸 目前put结算的多",
+      "timestamp": "2025-11-22 00:37:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CVMiGzmf1V8x7dYxvuNAC",
+      "content": "盘后tsll 可以15.3附近进 成交额正股满足",
+      "original_content": "盘后tsll 可以15.3附近进 成交额正股满足",
+      "timestamp": "2025-11-22 05:03:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-22 05:03:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 15.3,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVRqWFptWcYHK9nxGysxu",
+      "content": "16附近减仓周五加仓的tsll",
+      "original_content": "16附近减仓周五加仓的tsll",
+      "timestamp": "2025-11-24 09:19:00.010",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "周末政策利好 夜盘高开了 我们注意减仓 周末政策利好 夜盘高开了 我们注意减仓 周末政策利好 夜盘高开了 我们注意减仓"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-11-24 09:19:00.010",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 16.0,
+      "sell_quantity": "全部",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVSt7BDYX8PY1PPJdqJXM",
+      "content": "等tsll出现转弯往下时候在减手里的 高位回落1%的时候",
+      "original_content": "等tsll出现转弯往下时候在减手里的 高位回落1%的时候",
+      "timestamp": "2025-11-24 22:35:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CVStFxHNha5chreuKWA3t",
+      "content": "17附近再减点tsll",
+      "original_content": "17附近再减点tsll",
+      "timestamp": "2025-11-24 22:35:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "等tsll出现转弯往下时候在减手里的 高位回落1%的时候"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-11-24 22:35:00.010",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 17.0,
+      "sell_quantity": "全部",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVSwF6hjPjDPfG9cw9ivC",
+      "content": "tsll的突破点注意17.4是不是突破价格在上去到17.6做震荡 conl最近有二次回踩15-16就可以买2份一份死拿一份做T bmnr最近二次回踩25-26也可以买2份一份死拿一份做T 加密之后到回踩在看机会发",
+      "original_content": "tsll的突破点注意17.4是不是突破价格在上去到17.6做震荡 conl最近有二次回踩15-16就可以买2份一份死拿一份做T bmnr最近二次回踩25-26也可以买2份一份死拿一份做T 加密之后到回踩在看机会发",
+      "timestamp": "2025-11-24 23:16:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-24 23:16:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 15.5,
+      "price_range": [
+        15.0,
+        16.0
+      ],
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVUdhazaP5MWJEa22tfbH",
+      "content": "tsll盘前有过回踩17的动作 开盘也是盯着tsll这个风向标 有在回踩昨天16.9均线价格附近再看是不是吸",
+      "original_content": "tsll盘前有过回踩17的动作 开盘也是盯着tsll这个风向标 有在回踩昨天16.9均线价格附近再看是不是吸",
+      "timestamp": "2025-11-25 20:48:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-25 20:48:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 16.9,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVUmdbNY6KmcHrTuoTDFo",
+      "content": "17.07附近回吸了一半tsll 剩下一半收盘再看看",
+      "original_content": "17.07附近回吸了一半tsll 剩下一半收盘再看看",
+      "timestamp": "2025-11-25 22:32:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-25 22:32:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 17.07,
+      "position_size": "一半",
+      "quantity": 400
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVUoW8awDC4vdtpxyZt4j",
+      "content": "今天指数也是下上扫的厉害 tsll刚才 17.07买的 到成本也减掉点在挂16.64左右吸",
+      "original_content": "今天指数也是下上扫的厉害 tsll刚才 17.07买的 到成本也减掉点在挂16.64左右吸",
+      "timestamp": "2025-11-25 22:56:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-25 22:56:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 17.07,
+      "sell_quantity": "小仓位",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVUsBZpmT3bpmidMpUhgY",
+      "content": "nvdl盘前79高买的部分也是盘中震荡到79附近出在低买 和tsll一样的操作",
+      "original_content": "nvdl盘前79高买的部分也是盘中震荡到79附近出在低买 和tsll一样的操作",
+      "timestamp": "2025-11-25 23:44:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-25 23:44:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 79.0,
+      "sell_quantity": "全部",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVUvEa8H23RtEP3o4mNNE",
+      "content": "17附近减一半16.64挂单进的tsll 在挂16.64附近吸",
+      "original_content": "17附近减一半16.64挂单进的tsll 在挂16.64附近吸",
+      "timestamp": "2025-11-26 00:23:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "谷歌跌 英伟达回流 带动了QQQ nvdl到78-79附近减盘前79附近的nvdl"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-11-26 00:23:00.010",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 16.64,
+      "position_size": "一半",
+      "quantity": 400
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVUwjhE17ZGhbJdFP2avA",
+      "content": "tsll剩下部分在17.26和17.5两个价格出点 出完也是挂16.64附近吸",
+      "original_content": "tsll剩下部分在17.26和17.5两个价格出点 出完也是挂16.64附近吸",
+      "timestamp": "2025-11-26 00:44:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-26 00:44:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 16.64,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVUyceeYTLA3MWb22UgSH",
+      "content": "tsll 17.5这个价格也达到后 后面看挂单的16.64的低吸和尾盘收盘附近情况",
+      "original_content": "tsll 17.5这个价格也达到后 后面看挂单的16.64的低吸和尾盘收盘附近情况",
+      "timestamp": "2025-11-26 01:09:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-26 01:09:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 16.64,
+      "position_size": "小仓位",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVWfwXzWVaa3kjDzg4sL8",
+      "content": "盘中等tsll回踩转弯这个风向标 转弯低吸和低吸其他的",
+      "original_content": "盘中等tsll回踩转弯这个风向标 转弯低吸和低吸其他的",
+      "timestamp": "2025-11-26 22:38:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CVWg42vSuPPLGxDbhytKR",
+      "content": "tsll可以17.55附近低吸一笔",
+      "original_content": "tsll可以17.55附近低吸一笔",
+      "timestamp": "2025-11-26 22:38:00.010",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "盘中等tsll回踩转弯这个风向标 转弯低吸和低吸其他的"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-11-26 22:38:00.010",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 17.55,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVWg7KyZgFca2jfCMVPZ3",
+      "content": "tsll第一个回踩转弯出来后 先一笔看会不会盘中有二次回踩 我在看看其他的个股机会",
+      "original_content": "tsll第一个回踩转弯出来后 先一笔看会不会盘中有二次回踩 我在看看其他的个股机会",
+      "timestamp": "2025-11-26 22:38:00.020",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "盘中等tsll回踩转弯这个风向标 转弯低吸和低吸其他的",
+        "tsll可以17.55附近低吸一笔"
+      ]
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CVWgW64CRMTUanMiafgvC",
+      "content": "tsll是每天必看的风向标 他提前于qqq 1分钟左右",
+      "original_content": "tsll是每天必看的风向标 他提前于qqq 1分钟左右",
+      "timestamp": "2025-11-26 22:45:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "84附近少量接nvdl 也是等有二次回踩和收盘附近再看 他反弹过越低性价比越高点"
+      ]
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CVWwebxSXwgrBZiX98qMD",
+      "content": "tsll到日内压力位附近18.-18.1附近可以出日内17.55的一半",
+      "original_content": "tsll到日内压力位附近18.-18.1附近可以出日内17.55的一半",
+      "timestamp": "2025-11-27 02:04:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-27 02:04:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 18.0,
+      "sell_quantity": "1/2",
+      "quantity": 400,
+      "sell_reference_price": 17.55,
+      "sell_reference_label": "17.55的一半"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVg8iU8zR2Rh3rA2yhWaN",
+      "content": "tsll 今天注意下先行指标 上去18.4-18.5附近把上次另外一半先减掉",
+      "original_content": "tsll 今天注意下先行指标 上去18.4-18.5附近把上次另外一半先减掉",
+      "timestamp": "2025-12-01 22:35:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-01 22:35:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 18.45,
+      "price_range": [
+        18.4,
+        18.5
+      ],
+      "sell_quantity": "全部",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVgCsDdCr3y6uzM3oj8Kq",
+      "content": "今天是btc eth价格反应了 tsll才反应慢了3分钟 然后qqq反应慢1分钟",
+      "original_content": "今天是btc eth价格反应了 tsll才反应慢了3分钟 然后qqq反应慢1分钟",
+      "timestamp": "2025-12-01 23:29:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CVi44CCVeEd7ofK1JBbQ2",
+      "content": "tsll注意今天要回踩下18.1这个缺口可以注意分时转弯吸",
+      "original_content": "tsll注意今天要回踩下18.1这个缺口可以注意分时转弯吸",
+      "timestamp": "2025-12-02 22:55:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-02 22:55:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 18.1,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CViB467E8LDTg2KAfBwMc",
+      "content": "tsll也是18.1有一笔 预留一笔17.5看会不会二次探底支撑再加",
+      "original_content": "tsll也是18.1有一笔 预留一笔17.5看会不会二次探底支撑再加",
+      "timestamp": "2025-12-03 00:27:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-03 00:27:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 17.5,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CViSy6TTbcB98NBefhNPj",
+      "content": "tsll上去时候可以18.4-18.6分批出掉点",
+      "original_content": "tsll上去时候可以18.4-18.6分批出掉点",
+      "timestamp": "2025-12-03 03:55:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-03 03:55:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 18.4,
+      "sell_quantity": "全部",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CViT521nW5wgEyis9K681",
+      "content": "tsll今天回补了18.1这个缺口 然后明天还会震荡次做二次确认 明天可以今天的低点17.8也观察下机会 可以盘前挂个17.83",
+      "original_content": "tsll今天回补了18.1这个缺口 然后明天还会震荡次做二次确认 明天可以今天的低点17.8也观察下机会 可以盘前挂个17.83",
+      "timestamp": "2025-12-03 03:55:00.010",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "tsll上去时候可以18.4-18.6分批出掉点"
+      ]
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CVjwgRNLiVtJTVDkkXeoF",
+      "content": "tsll今天走独立行情不是风向标了 马斯克盘前讲了机器人未来的规划 机器人属性占大部分要素",
+      "original_content": "tsll今天走独立行情不是风向标了 马斯克盘前讲了机器人未来的规划 机器人属性占大部分要素",
+      "timestamp": "2025-12-03 22:51:00.010",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "iren今天是增发的第二天 今天盘前跌40那个回踩可以注意 开盘目前没在给机会 他属于ai炒币类 有人工智能 电力 btc三个属性"
+      ]
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CVjxaXu2UhEEeQJZw98Kq",
+      "content": "tsll今天也是注意转弯减 机器人板块整体在这轮回踩中吸资金多 之前有笔19.4附近吸的到成本附近可以出",
+      "original_content": "tsll今天也是注意转弯减 机器人板块整体在这轮回踩中吸资金多 之前有笔19.4附近吸的到成本附近可以出",
+      "timestamp": "2025-12-03 23:04:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-03 23:04:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 19.4,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVjxjZGy5uXef3LxxcxA5",
+      "content": "tsll可以注意19.5附近减点 可以把很久之前有笔19.4成本的成本上出掉之后再换点回踩时候低的",
+      "original_content": "tsll可以注意19.5附近减点 可以把很久之前有笔19.4成本的成本上出掉之后再换点回踩时候低的",
+      "timestamp": "2025-12-03 23:06:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-03 23:06:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 19.5,
+      "sell_quantity": "小仓位",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVkJ14WNTz7FeGvSd2VfU",
+      "content": "tsll （23.18+14.81）/2=18.995 今天tsll也低位反弹了跌下来的一半 和apld一样今天出现了溢价到20",
+      "original_content": "tsll （23.18+14.81）/2=18.995 今天tsll也低位反弹了跌下来的一半 和apld一样今天出现了溢价到20",
+      "timestamp": "2025-12-04 03:19:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CVmt8yeNnhT6fw39co8xr",
+      "content": "tsll今天也是注意回踩之前的缺口 19.6-19.7",
+      "original_content": "tsll今天也是注意回踩之前的缺口 19.6-19.7",
+      "timestamp": "2025-12-04 23:27:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CVuPnhLkbZSFERJgf9XMk",
+      "content": "tsll今天等往上转弯时候可以入一笔 今天补了19.6-19.7的缺口会往下在探底下 也是指数方向标作用",
+      "original_content": "tsll今天等往上转弯时候可以入一笔 今天补了19.6-19.7的缺口会往下在探底下 也是指数方向标作用",
+      "timestamp": "2025-12-08 22:40:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CVuPtZbcYb4inKMa9kH5E",
+      "content": "tsll可以19.62附近先建仓一笔 有回落19.1二次探底时候再加",
+      "original_content": "tsll可以19.62附近先建仓一笔 有回落19.1二次探底时候再加",
+      "timestamp": "2025-12-08 22:40:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "tsll今天等往上转弯时候可以入一笔 今天补了19.6-19.7的缺口会往下在探底下 也是指数方向标作用"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-12-08 22:40:00.010",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 19.62,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVuW3KjuYpKRfRasVVd62",
+      "content": "今天币价格和tsll走势都是先行指标 他们走回调 其他股和大盘都会走回调 要等他们先反弹 所有都是收盘附近再看回吸",
+      "original_content": "今天币价格和tsll走势都是先行指标 他们走回调 其他股和大盘都会走回调 要等他们先反弹 所有都是收盘附近再看回吸",
+      "timestamp": "2025-12-09 00:02:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CVuu2z5LVEZmLYuhQ1Gp6",
+      "content": "tsll盘中19.1 和19.6有吸过2笔 没有吸的可以盘中还是19-19.1附近吸",
+      "original_content": "tsll盘中19.1 和19.6有吸过2笔 没有吸的可以盘中还是19-19.1附近吸",
+      "timestamp": "2025-12-09 05:04:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-09 05:04:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 19.05,
+      "price_range": [
+        19.0,
+        19.1
+      ],
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVwH3jS9oWEgqdVTuuVQg",
+      "content": "tsll今天冲高到成本19.15 附近时候可以先出 做倒T到收盘附近再看回买",
+      "original_content": "tsll今天冲高到成本19.15 附近时候可以先出 做倒T到收盘附近再看回买",
+      "timestamp": "2025-12-09 22:33:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-09 22:33:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 19.15,
+      "sell_quantity": "全部",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVwHJzfXTWMANCQnv5Nwz",
+      "content": "tsll 19.6的部分今天也是冲高成本附近减点",
+      "original_content": "tsll 19.6的部分今天也是冲高成本附近减点",
+      "timestamp": "2025-12-09 22:36:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-09 22:36:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 19.6,
+      "sell_quantity": "小仓位",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVwJ5gouXCzigMxXYRzHE",
+      "content": "tsll也是最近大盘的风向标 币股最近在横盘等会议利率 币对利率比较敏感 QQQ日内上下扫会比较震荡 尽量冲高时候往下转弯减为主 到分时昨天低点有往上转弯回买",
+      "original_content": "tsll也是最近大盘的风向标 币股最近在横盘等会议利率 币对利率比较敏感 QQQ日内上下扫会比较震荡 尽量冲高时候往下转弯减为主 到分时昨天低点有往上转弯回买",
+      "timestamp": "2025-12-09 22:46:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CVwK7fHVusnuFSCNdbqXZ",
+      "content": "tsll 19.6部分也是注意拐弯往下时候都出 在19.6-19.8之间",
+      "original_content": "tsll 19.6部分也是注意拐弯往下时候都出 在19.6-19.8之间",
+      "timestamp": "2025-12-09 23:00:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-09 23:00:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 19.7,
+      "price_range": [
+        19.6,
+        19.8
+      ],
+      "sell_quantity": "全部",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVxAPCXWaUbfjDTcs2QTP",
+      "content": "今天nfxl tsll amzu等双倍会有派息 富途价格会算上派息收益 长桥不会算入会有偏差 要注意",
+      "original_content": "今天nfxl tsll amzu等双倍会有派息 富途价格会算上派息收益 长桥不会算入会有偏差 要注意",
+      "timestamp": "2025-12-10 09:46:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CVyj9Z8cngfobDtx1Nnht",
+      "content": "盘后和夜盘主要盯着 受甲骨文拖累的ai板块 nvdl 84.8一笔 然后83-83.5回踩再加 msfl26.6盘中有过一笔了 25.8附近前支撑在看加 tsll（特斯拉有ai属性）18.8-18.6看能不能回踩 iren 44-44.5有过一笔了 41-42附近再看加 cifr18-18.3可以买一笔 剩下等17附近 crwv84-85回踩到可以买一笔 剩下放81 nbis92-93刚回踩到吸过一笔 剩下放86-87",
+      "original_content": "盘后和夜盘主要盯着 受甲骨文拖累的ai板块 nvdl 84.8一笔 然后83-83.5回踩再加 msfl26.6盘中有过一笔了 25.8附近前支撑在看加 tsll（特斯拉有ai属性）18.8-18.6看能不能回踩 iren 44-44.5有过一笔了 41-42附近再看加 cifr18-18.3可以买一笔 剩下等17附近 crwv84-85回踩到可以买一笔 剩下放81 nbis92-93刚回踩到吸过一笔 剩下放86-87",
+      "timestamp": "2025-12-11 05:36:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CVzB5EBEaysu6eEWYjCkc",
+      "content": "tsll在18.8附近回踩支撑附近也是先入一笔 后面一笔放在18.2附近 也是受到指数和ai影响",
+      "original_content": "tsll在18.8附近回踩支撑附近也是先入一笔 后面一笔放在18.2附近 也是受到指数和ai影响",
+      "timestamp": "2025-12-11 11:15:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "nvdl要注意夜盘分时转弯时候在进行加仓 下调到81-82之间看能不能企稳转弯 也是ai板块第二个回踩的导火索 第一个是甲骨文财报利空"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-12-11 11:15:00.010",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 18.8,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVzyGXPfN42D68ZyyoFKb",
+      "content": "19.4出一半18.8的tsll",
+      "original_content": "19.4出一半18.8的tsll",
+      "timestamp": "2025-12-11 21:19:00.030",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "39出夜盘37附近低买的bmnr",
+        "91出夜盘补的nbis",
+        "43.1出夜盘补的iren那部分"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-12-11 21:19:00.030",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 19.4,
+      "sell_quantity": "1/2",
+      "quantity": 400,
+      "sell_reference_price": 18.8,
+      "sell_reference_label": "18.8买的"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CW171mcwVkxAW6GPMbUBX",
+      "content": "tsll 在18.8附近回吸一笔也把剩下的放尾盘再看",
+      "original_content": "tsll 在18.8附近回吸一笔也把剩下的放尾盘再看",
+      "timestamp": "2025-12-11 23:04:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-11 23:04:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 18.8,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CW18NMT8StvTq58wDrukK",
+      "content": "tsll上去时候也注意转弯时候减18.8的今晚会反复震荡下",
+      "original_content": "tsll上去时候也注意转弯时候减18.8的今晚会反复震荡下",
+      "timestamp": "2025-12-11 23:21:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CW1AhdzdgKZvGfAMZRoR6",
+      "content": "tsll可以18.7 附近吸回一半",
+      "original_content": "tsll可以18.7 附近吸回一半",
+      "timestamp": "2025-12-11 23:51:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "今天容易上下扫震荡 都高低点附近转弯了才操作"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-12-11 23:51:00.010",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 18.7,
+      "position_size": "一半",
+      "quantity": 400
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CW1Eks7mhw6ACWVtcJkbN",
+      "content": "tsll这轮上去也是19.1-19.2看转弯卖日内18.7吸的",
+      "original_content": "tsll这轮上去也是19.1-19.2看转弯卖日内18.7吸的",
+      "timestamp": "2025-12-12 00:45:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-12 00:45:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 19.15,
+      "price_range": [
+        19.1,
+        19.2
+      ],
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CW1EmQAWTDgVFtSSxZn8c",
+      "content": "tsll今天振幅小来回次数增多也是观望行情会真有不断震荡再到18.7附近或者跌破18.7 转弯时候可以在来一轮",
+      "original_content": "tsll今天振幅小来回次数增多也是观望行情会真有不断震荡再到18.7附近或者跌破18.7 转弯时候可以在来一轮",
+      "timestamp": "2025-12-12 00:45:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "tsll这轮上去也是19.1-19.2看转弯卖日内18.7吸的"
+      ]
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CW1H6NJ7ZFhnx7G198Enj",
+      "content": "今天qqq会上下扫震荡很多次 tsll也是先行指标 18.7-19.2之间振幅小了次数变多了",
+      "original_content": "今天qqq会上下扫震荡很多次 tsll也是先行指标 18.7-19.2之间振幅小了次数变多了",
+      "timestamp": "2025-12-12 01:16:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CW1JoYxy6Y93cmCdz7T2x",
+      "content": "tsll这轮也是注意19.2这里有没有转弯往下转弯往下出 留个一半数量的18.7的 后面几天再看看有没有在振幅升上去",
+      "original_content": "tsll这轮也是注意19.2这里有没有转弯往下转弯往下出 留个一半数量的18.7的 后面几天再看看有没有在振幅升上去",
+      "timestamp": "2025-12-12 01:38:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-12 01:38:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 19.2,
+      "sell_quantity": "1/2",
+      "quantity": 400
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CW1Pi4ZLiAZpjmf87mazV",
+      "content": "今天也是注意tsll能不能突破盘前的19.5 特斯拉先于大盘反应",
+      "original_content": "今天也是注意tsll能不能突破盘前的19.5 特斯拉先于大盘反应",
+      "timestamp": "2025-12-12 02:43:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CW2xWXRHG6LUw3xCUvZFs",
+      "content": "tsll冲高注意19.7-19.8转弯把昨天剩下一半出",
+      "original_content": "tsll冲高注意19.7-19.8转弯把昨天剩下一半出",
+      "timestamp": "2025-12-12 22:33:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-12 22:33:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 19.75,
+      "price_range": [
+        19.7,
+        19.8
+      ],
+      "sell_quantity": "全部",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CW33GPuYzCEZwM4KUoLAM",
+      "content": "tsll keyi 19.3附近接回开盘高抛的部分的一半",
+      "original_content": "tsll keyi 19.3附近接回开盘高抛的部分的一半",
+      "timestamp": "2025-12-12 23:33:00.020",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "bmnr可以注意36.6-36.8附近可以低吸一笔剩下等博通转弯再加一笔",
+        ".亚马逊双倍amzu可以34.05附近加一笔"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-12-12 23:33:00.020",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 19.3,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CW3B1jwQ7sayv3JP2g88h",
+      "content": "tsll上去时候可以把19.3 的在19.35附近减点针对重仓刚才买的 收盘有低点再吸 18.7那个盘中低点附近",
+      "original_content": "tsll上去时候可以把19.3 的在19.35附近减点针对重仓刚才买的 收盘有低点再吸 18.7那个盘中低点附近",
+      "timestamp": "2025-12-13 01:17:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-13 01:17:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 19.3,
+      "sell_quantity": "小仓位",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CW3FUwd5nvN56MBsBV4kD",
+      "content": "tsll剩下日内买的部分找这轮转弯时候在出剩下的",
+      "original_content": "tsll剩下日内买的部分找这轮转弯时候在出剩下的",
+      "timestamp": "2025-12-13 02:16:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CW8cqkwr46c4gtazgcd7J",
+      "content": "盘中今天注意币市场的回踩预警时候在做吸回 ai看今天博通和英伟达能不能企稳 也是回踩吸回 继续反弹就分批出手里的 特斯拉今天走独立行情 周末马斯克吹的比较多 也是临近他解除限售了 前高因为派息过 目前tsll 22.5附近相当于之前的23",
+      "original_content": "盘中今天注意币市场的回踩预警时候在做吸回 ai看今天博通和英伟达能不能企稳 也是回踩吸回 继续反弹就分批出手里的 特斯拉今天走独立行情 周末马斯克吹的比较多 也是临近他解除限售了 前高因为派息过 目前tsll 22.5附近相当于之前的23",
+      "timestamp": "2025-12-15 22:19:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CW8dyuHtLGWCtGqvk3CmN",
+      "content": "tsll今天注意转弯时候分批减剩下的 注意最近几天能不能冲破前高可以22 -22.5分批减",
+      "original_content": "tsll今天注意转弯时候分批减剩下的 注意最近几天能不能冲破前高可以22 -22.5分批减",
+      "timestamp": "2025-12-15 22:34:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-15 22:34:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 22.25,
+      "price_range": [
+        22.0,
+        22.5
+      ],
+      "sell_quantity": "全部",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWAZeCVCkZq5dhPAMwVQB",
+      "content": "tsll昨天高点没有出的今天也是在到了22-22.3之间看转弯往下就出掉 到加息后再看接回 和rklb高点时候一样的操作",
+      "original_content": "tsll昨天高点没有出的今天也是在到了22-22.3之间看转弯往下就出掉 到加息后再看接回 和rklb高点时候一样的操作",
+      "timestamp": "2025-12-16 22:58:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CWFZvfeggB5vteQfwLtx5",
+      "content": "12月19日更新一半仓位死拿一半仓位做T新一轮股单 每个板块选1-2个 三个板块配置 盘中有四巫日季度期权和周期权平仓时候的回踩去介入 七姐妹和大盘股 nvdl 盘中在找下76-77之间的机会 原来83.5没动 甲骨文会找下185附近的机会 微软双倍msfl可以找26.6附近在重新开仓 亚马逊双倍amzu 可以34 和33两个价格开仓 tsll 后面找20.7附近缺口机会 intc这轮低点在35.7附近找 35.7-36的低吸机会 明星股小盘股 crwv 会67-68附近找机会再加点 原来没动的部分还有77 和84的部分 nbis 夜盘和盘前可以找下78-79的机会加仓一笔 原来还有87的一笔还没动 oklo可以夜盘和盘前找下77附近的价格做介入 上方还有87和97有两笔还没出 sound 上轮有个11部分还没怎么出完 这轮可以找找10.8价格位置吸 到上轮高点12.5附近出 sofi 27.5那部分没动 有25机会再加仓 asts 找63-64附近会吸一笔盘中再看下机会 rklb 后面找52附近机会 盘中在看下 apld到23附近在找机会加仓一笔 上方还有笔27的还没动 eose 12.2-12.4附近可以介入一笔盘中在找个低的机会 joby 13.5附近可以找机会介入一笔 到盘中再看看低的机会再加 tem 可以62附近重新开仓一笔 到盘中低的机会再加 加密货币 bmnr可以夜盘和盘前找找28.8-29附近的价格回吸点 盘中有平期权波动回踩再加一笔 盘中在更新下盘中的价格 conl可以夜盘和盘前找找16.8-17附近的价格回吸点 盘中有平期权波动回踩再加一笔 盘中在更新下盘中的价格 iren可以夜盘和盘前找找36附近的价格回吸点 盘中有平期权波动回踩再加一笔 盘中在更新下盘中的价格 cifr可以夜盘和盘前找找15附近的价格回吸点 盘中有平期权波动回踩再加一笔 盘中在更新下盘中的价格 hood可以夜盘和盘前找找117附近的价格回吸点 盘中有平期权波动回踩再加一笔 盘中在更新下盘中的价格 加密里面有涨幅限制的两个 mstr可以158-159附近做正T差价下 到1月10日附近 剔除指数前一周要减掉大部分 mara 可以9.6-9.7介入 旷股比其他加密涨幅慢 跌时候跌幅大 可以当备选的到12.5压力都出 上一轮的低吸做对比",
+      "original_content": "12月19日更新一半仓位死拿一半仓位做T新一轮股单 每个板块选1-2个 三个板块配置 盘中有四巫日季度期权和周期权平仓时候的回踩去介入 七姐妹和大盘股 nvdl 盘中在找下76-77之间的机会 原来83.5没动 甲骨文会找下185附近的机会 微软双倍msfl可以找26.6附近在重新开仓 亚马逊双倍amzu 可以34 和33两个价格开仓 tsll 后面找20.7附近缺口机会 intc这轮低点在35.7附近找 35.7-36的低吸机会 明星股小盘股 crwv 会67-68附近找机会再加点 原来没动的部分还有77 和84的部分 nbis 夜盘和盘前可以找下78-79的机会加仓一笔 原来还有87的一笔还没动 oklo可以夜盘和盘前找下77附近的价格做介入 上方还有87和97有两笔还没出 sound 上轮有个11部分还没怎么出完 这轮可以找找10.8价格位置吸 到上轮高点12.5附近出 sofi 27.5那部分没动 有25机会再加仓 asts 找63-64附近会吸一笔盘中再看下机会 rklb 后面找52附近机会 盘中在看下 apld到23附近在找机会加仓一笔 上方还有笔27的还没动 eose 12.2-12.4附近可以介入一笔盘中在找个低的机会 joby 13.5附近可以找机会介入一笔 到盘中再看看低的机会再加 tem 可以62附近重新开仓一笔 到盘中低的机会再加 加密货币 bmnr可以夜盘和盘前找找28.8-29附近的价格回吸点 盘中有平期权波动回踩再加一笔 盘中在更新下盘中的价格 conl可以夜盘和盘前找找16.8-17附近的价格回吸点 盘中有平期权波动回踩再加一笔 盘中在更新下盘中的价格 iren可以夜盘和盘前找找36附近的价格回吸点 盘中有平期权波动回踩再加一笔 盘中在更新下盘中的价格 cifr可以夜盘和盘前找找15附近的价格回吸点 盘中有平期权波动回踩再加一笔 盘中在更新下盘中的价格 hood可以夜盘和盘前找找117附近的价格回吸点 盘中有平期权波动回踩再加一笔 盘中在更新下盘中的价格 加密里面有涨幅限制的两个 mstr可以158-159附近做正T差价下 到1月10日附近 剔除指数前一周要减掉大部分 mara 可以9.6-9.7介入 旷股比其他加密涨幅慢 跌时候跌幅大 可以当备选的到12.5压力都出 上一轮的低吸做对比",
+      "timestamp": "2025-12-19 14:25:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CWFgSTrCFgV7hkdaATSod",
+      "content": "之前的派息长桥今天也发放了 amzu nfxl tsll msfl的可以检查下 长桥延迟了点其他的都是昨天发",
+      "original_content": "之前的派息长桥今天也发放了 amzu nfxl tsll msfl的可以检查下 长桥延迟了点其他的都是昨天发",
+      "timestamp": "2025-12-19 15:50:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CWGKA37zAJuT6CxTUauN4",
+      "content": "tsll 特斯拉今晚 是期权杀call 收盘附近会看看 走单边杀call",
+      "original_content": "tsll 特斯拉今晚 是期权杀call 收盘附近会看看 走单边杀call",
+      "timestamp": "2025-12-19 23:52:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CWVZ2D23xirVSSbLho89G",
+      "content": "tsll今天杀call 等第一个转弯时候可以买个一半到补缺口再加一半",
+      "original_content": "tsll今天杀call 等第一个转弯时候可以买个一半到补缺口再加一半",
+      "timestamp": "2025-12-26 23:40:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "rxrx 可以4.24附近开一半仓位 4.14附近有再到再加仓"
+      ]
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CWVZF1seo6us7NarJzZyn",
+      "content": "tsll可以注意21.3这里是转弯了 可以21.4附近吸一半 剩下一半到20.5 周一有冲高 买的一半也出掉",
+      "original_content": "tsll可以注意21.3这里是转弯了 可以21.4附近吸一半 剩下一半到20.5 周一有冲高 买的一半也出掉",
+      "timestamp": "2025-12-26 23:44:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-26 23:44:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 21.4,
+      "position_size": "一半",
+      "quantity": 400
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWVybooJiAEFUpkhvgJAg",
+      "content": "tsll 尾盘强平结束时候是回踩了21.38没有跌破21.3可以21.3-21.4买一半 盘中买过就不加大仓位 另外一半20.5再买 周一有冲高也会走短线做",
+      "original_content": "tsll 尾盘强平结束时候是回踩了21.38没有跌破21.3可以21.3-21.4买一半 盘中买过就不加大仓位 另外一半20.5再买 周一有冲高也会走短线做",
+      "timestamp": "2025-12-27 05:04:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-27 05:04:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 21.35,
+      "price_range": [
+        21.3,
+        21.4
+      ],
+      "position_size": "大仓位",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWbCVtiBKafq1sVsy1jWd",
+      "content": "tsll今天注意补了缺口后20.2附近开始有转弯 可以20.2-20.3加一半",
+      "original_content": "tsll今天注意补了缺口后20.2附近开始有转弯 可以20.2-20.3加一半",
+      "timestamp": "2025-12-29 23:16:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-29 23:16:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 20.25,
+      "price_range": [
+        20.2,
+        20.3
+      ],
+      "position_size": "一半",
+      "quantity": 400
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWbJuZeQzhmEk7xwaLYwT",
+      "content": "tsll可以把补缺口时候20.3的部分 这轮上冲时候20.85-21附近转弯往下出 后面2天还会震荡下 21.4的部分就到21.4接近附近再出",
+      "original_content": "tsll可以把补缺口时候20.3的部分 这轮上冲时候20.85-21附近转弯往下出 后面2天还会震荡下 21.4的部分就到21.4接近附近再出",
+      "timestamp": "2025-12-30 00:40:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-30 00:40:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 20.93,
+      "price_range": [
+        20.85,
+        21.0
+      ],
+      "sell_quantity": "全部",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWbbfkVmcKtETdQSM9UMC",
+      "content": "tsll可以20.2-20.3附近吸回盘中高抛的明天短线出",
+      "original_content": "tsll可以20.2-20.3附近吸回盘中高抛的明天短线出",
+      "timestamp": "2025-12-30 04:18:00.010",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "尾盘到收盘可以把一些回踩盘前低价的做吸回"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-12-30 04:18:00.010",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 20.25,
+      "price_range": [
+        20.2,
+        20.3
+      ],
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWbeyXRfDQYA98LeCXzHT",
+      "content": "tsll 收盘附近有木头姐和巴伦基金之类的元旦抛售 最近几天也不要买很多 到周三节前那天和周五空的轮次再看看",
+      "original_content": "tsll 收盘附近有木头姐和巴伦基金之类的元旦抛售 最近几天也不要买很多 到周三节前那天和周五空的轮次再看看",
+      "timestamp": "2025-12-30 05:03:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CWcduoUcfFhVASpoJERMp",
+      "content": "盘前20.45附近出昨天收盘20.2附近的tsll 等今天再找低点附近再低吸",
+      "original_content": "盘前20.45附近出昨天收盘20.2附近的tsll 等今天再找低点附近再低吸",
+      "timestamp": "2025-12-30 17:30:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-30 17:30:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 20.45,
+      "sell_quantity": "全部",
+      "quantity": 800,
+      "sell_reference_price": 20.2,
+      "sell_reference_label": "20.2的"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWd42WWMsQH6vZn5gNCWG",
+      "content": "tsll可以盘中19.5转弯时候接一段 收盘附近再看价格再接 最近都是收盘附近有基金被动抛售的",
+      "original_content": "tsll可以盘中19.5转弯时候接一段 收盘附近再看价格再接 最近都是收盘附近有基金被动抛售的",
+      "timestamp": "2025-12-30 22:46:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-30 22:46:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 19.5,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWd4zWLrJzR6fXfSz5CJt",
+      "content": "20-20.1附近出19.5的tsll做个T",
+      "original_content": "20-20.1附近出19.5的tsll做个T",
+      "timestamp": "2025-12-30 22:58:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-30 22:58:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 20.05,
+      "price_range": [
+        20.0,
+        20.1
+      ],
+      "sell_quantity": "全部",
+      "quantity": 800,
+      "sell_reference_price": 19.5,
+      "sell_reference_label": "19.5的"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWdYDVpChCgbYvscHv3Yd",
+      "content": "收盘时候可以19.5附近接回点tsll 明天还有被动减可以挂点在18.9附近",
+      "original_content": "收盘时候可以19.5附近接回点tsll 明天还有被动减可以挂点在18.9附近",
+      "timestamp": "2025-12-31 04:55:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-31 04:55:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 18.9,
+      "position_size": "小仓位",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWfSUydiNnfogCa95tf9d",
+      "content": "收盘tsll可以19.1附近 昨天19.5买过的少量加 没买的可以建仓点",
+      "original_content": "收盘tsll可以19.1附近 昨天19.5买过的少量加 没买的可以建仓点",
+      "timestamp": "2026-01-01 05:00:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "有些像crwv 那种 加息那天10几cm 今天节前被压最低附近然后最后5分钟V很多可以哪些低点记住 到周五附近有在压低点可以吸 crwv就是压到70。43最后几分钟V起来"
+      ]
+    },
+    "check": {
+      "timestamp": "2026-01-01 05:00:00.010",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 19.1,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWhgT91HxtZKZNSpZafHw",
+      "content": "tsll可以19.39-19.5出一半19.1的部分也是盘前再看看",
+      "original_content": "tsll可以19.39-19.5出一半19.1的部分也是盘前再看看",
+      "timestamp": "2026-01-02 09:26:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-02 09:26:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 19.5,
+      "sell_quantity": "1/2",
+      "quantity": 400,
+      "sell_reference_price": 19.1,
+      "sell_reference_label": "19.1吸的"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWhi5r64TvWEjSsPDVQuz",
+      "content": "tsll 19.1剩下一半可以找19.8-20附近 19.5那部分也是20-20.1附近出",
+      "original_content": "tsll 19.1剩下一半可以找19.8-20附近 19.5那部分也是20-20.1附近出",
+      "timestamp": "2026-01-02 09:47:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-02 09:47:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 19.9,
+      "price_range": [
+        19.8,
+        20.0
+      ],
+      "sell_quantity": "全部",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWiLCa7B3Zb6FphvSWEnP",
+      "content": "个股要tsll那种就是 夜盘 是收盘最高点19.95收盘 那时候4% 正股就是符合的2% 然后盘前在涨个1-2%在夜盘基础上续涨 不能低于 夜盘收盘价差很多 开盘前还是续涨就是走普涨的迹象",
+      "original_content": "个股要tsll那种就是 夜盘 是收盘最高点19.95收盘 那时候4% 正股就是符合的2% 然后盘前在涨个1-2%在夜盘基础上续涨 不能低于 夜盘收盘价差很多 开盘前还是续涨就是走普涨的迹象",
+      "timestamp": "2026-01-02 17:41:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CWijb5CQgw7wM5pwQjGTX",
+      "content": "tsll 19.1 回吸卖出的一半",
+      "original_content": "tsll 19.1 回吸卖出的一半",
+      "timestamp": "2026-01-02 22:48:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-02 22:48:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 19.1,
+      "position_size": "一半",
+      "quantity": 400
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWj8Toebz7xC78QJnvYPy",
+      "content": "tsll这轮有点抄底的量起来了 可以收盘附近有回踩18.2-18.3分批在加点、",
+      "original_content": "tsll这轮有点抄底的量起来了 可以收盘附近有回踩18.2-18.3分批在加点、",
+      "timestamp": "2026-01-03 03:48:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-03 03:48:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 18.25,
+      "price_range": [
+        18.2,
+        18.3
+      ],
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWoL6LawrTp7LTJdfg6Vj",
+      "content": "tsll可以分两次减一次在18.6-18.8减18.2的一半 一次在盘前19-19.2附近在减剩下一半和19.1的全部",
+      "original_content": "tsll可以分两次减一次在18.6-18.8减18.2的一半 一次在盘前19-19.2附近在减剩下一半和19.1的全部",
+      "timestamp": "2026-01-05 09:02:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-05 09:02:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 19.1,
+      "price_range": [
+        19.0,
+        19.2
+      ],
+      "sell_quantity": "1/2",
+      "quantity": 400
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWpQJkhpzPyaeTp2Jcku1",
+      "content": "tsll 19.1 那部分到转弯时候也出",
+      "original_content": "tsll 19.1 那部分到转弯时候也出",
+      "timestamp": "2026-01-05 22:38:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-05 22:38:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 19.1,
+      "sell_quantity": "全部",
+      "quantity": 800,
+      "sell_reference_price": 19.1,
+      "sell_reference_label": "19.1那部分"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWpR4Lxau5HQ61rZce6Vy",
+      "content": "tsll 19.1 那部分转弯在19.45附近 出",
+      "original_content": "tsll 19.1 那部分转弯在19.45附近 出",
+      "timestamp": "2026-01-05 22:46:00.020",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "conl也是14cm 来了",
+        "conl 16.8的部分可以18.3-18.5分批出 死拿的可以根据自己留点底仓"
+      ]
+    },
+    "check": {
+      "timestamp": "2026-01-05 22:46:00.020",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 19.45,
+      "sell_quantity": "全部",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWrHidQhgDdEcN5kqv5ub",
+      "content": "tsll在18.4-18.45回吸之前卖出的一半 有几家基金减持 剩下一半也是收盘附近再看",
+      "original_content": "tsll在18.4-18.45回吸之前卖出的一半 有几家基金减持 剩下一半也是收盘附近再看",
+      "timestamp": "2026-01-06 22:33:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-06 22:33:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 18.42,
+      "price_range": [
+        18.4,
+        18.45
+      ],
+      "position_size": "一半",
+      "quantity": 400
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWrd1uhZHT8aHTXhznRRa",
+      "content": "tsll 注意 17.3附近有转弯了 可以17.3-17.4附近加一笔",
+      "original_content": "tsll 注意 17.3附近有转弯了 可以17.3-17.4附近加一笔",
+      "timestamp": "2026-01-07 02:46:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-07 02:46:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 17.35,
+      "price_range": [
+        17.3,
+        17.4
+      ],
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWsividHYs34TfrpjSpok",
+      "content": "夜盘可以快收盘附近17.88减一半17.4附近的tsll 剩下盘前人工干预时候出",
+      "original_content": "夜盘可以快收盘附近17.88减一半17.4附近的tsll 剩下盘前人工干预时候出",
+      "timestamp": "2026-01-07 16:44:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-07 16:44:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 17.88,
+      "sell_quantity": "1/2",
+      "quantity": 400,
+      "sell_reference_price": 17.4,
+      "sell_reference_label": "17.4的"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWtCDG3BMRgb2Bai4rxMp",
+      "content": "tsll注意转弯18.02出剩下的17.4部分",
+      "original_content": "tsll注意转弯18.02出剩下的17.4部分",
+      "timestamp": "2026-01-07 22:42:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-07 22:42:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 17.4,
+      "sell_quantity": "全部",
+      "quantity": 800,
+      "sell_reference_price": 17.4,
+      "sell_reference_label": "17.4那部分"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWwxBrf6DsqSrEDXU5Jtv",
+      "content": "今天周五大概率是先多后空的轮次 会后半场和收盘时候在回吸多点，，上半场以冲高减为主 tsll也快震荡到18.2-18.4之前的成本位置",
+      "original_content": "今天周五大概率是先多后空的轮次 会后半场和收盘时候在回吸多点，，上半场以冲高减为主 tsll也快震荡到18.2-18.4之前的成本位置",
+      "timestamp": "2026-01-09 22:21:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CWx2QM871azb59Kv2SYzJ",
+      "content": "tsll今天注意 18.2-18.4到的时候转弯减当时18.2-18.4成本的tsll",
+      "original_content": "tsll今天注意 18.2-18.4到的时候转弯减当时18.2-18.4成本的tsll",
+      "timestamp": "2026-01-09 23:14:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "nvdl在85.2-85.3盘中回踩时候开个常规仓一半的小仓位到收盘附近在加剩下的"
+      ]
+    },
+    "check": {
+      "timestamp": "2026-01-09 23:14:00.010",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 18.3,
+      "price_range": [
+        18.2,
+        18.4
+      ],
+      "sell_quantity": "全部",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWx3Vr18jp5ftNSrh4GyJ",
+      "content": "18.48出了18.4的那部分tsll",
+      "original_content": "18.48出了18.4的那部分tsll",
+      "timestamp": "2026-01-09 23:30:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-09 23:30:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 18.48,
+      "sell_quantity": "全部",
+      "quantity": 800,
+      "sell_reference_price": 18.4,
+      "sell_reference_label": "18.4的"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CX7SLoZYAe1whgcEnW4SP",
+      "content": "tsll 18.06 开了一笔常规仓的一半 关税后再加一笔",
+      "original_content": "tsll 18.06 开了一笔常规仓的一半 关税后再加一笔",
+      "timestamp": "2026-01-14 22:33:00.020",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "nvdl 83.7回吸了点",
+        "nvdl关税裁定后再吸一笔"
+      ]
+    },
+    "check": {
+      "timestamp": "2026-01-14 22:33:00.020",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 18.06,
+      "position_size": "常规仓的一半",
+      "quantity": 400
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CX7VTYjANJKfWqg48Qm8K",
+      "content": "tsll 直线 上涨 18.45出短线",
+      "original_content": "tsll 直线 上涨 18.45出短线",
+      "timestamp": "2026-01-14 23:12:00.040",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "SUPREME COURT DOESN'T RULE ON TRUMP'S TARIFFS WEDNESDAY 最高法院周三未就特朗普的关税做出裁决 推迟了",
+        "82.5-82.7附近加另外常规一半nvdl",
+        "33附近 bmnr开个常规一半的底仓",
+        "18.5附近 conl开个常规一半的底仓"
+      ]
+    },
+    "check": {
+      "timestamp": "2026-01-14 23:12:00.040",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 18.45,
+      "sell_quantity": "全部",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CX7Wd7KYLWCCWsUx3mCGo",
+      "content": "17.9-18。05附近 注意tsll转弯时候还是吸回常规一半",
+      "original_content": "17.9-18。05附近 注意tsll转弯时候还是吸回常规一半",
+      "timestamp": "2026-01-14 23:31:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-14 23:31:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 17.98,
+      "price_range": [
+        17.9,
+        18.05
+      ],
+      "position_size": "常规一半",
+      "quantity": 400
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CX96SUckX6m6N6rN9siYH",
+      "content": "tsll在18.23-18.3之间出昨天18附近低吸的 今天再看下低的再买回",
+      "original_content": "tsll在18.23-18.3之间出昨天18附近低吸的 今天再看下低的再买回",
+      "timestamp": "2026-01-15 19:35:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-15 19:35:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 18.27,
+      "price_range": [
+        18.23,
+        18.3
+      ],
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CX9oAj4pMzoQ3dXQq2TeA",
+      "content": "尾盘17.97常规仓一半的tsll接回",
+      "original_content": "尾盘17.97常规仓一半的tsll接回",
+      "timestamp": "2026-01-16 04:29:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-16 04:29:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 17.97,
+      "position_size": "一半",
+      "quantity": 400
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXBDxAdQwzneKQQJ3AzpW",
+      "content": "tsll 今天注意直线拉升 到转弯时候出昨天收盘卡机制的 也是昨天的高点18.45-18.6之间",
+      "original_content": "tsll 今天注意直线拉升 到转弯时候出昨天收盘卡机制的 也是昨天的高点18.45-18.6之间",
+      "timestamp": "2026-01-16 22:35:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-16 22:35:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 18.53,
+      "price_range": [
+        18.45,
+        18.6
+      ],
+      "sell_quantity": "全部",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXBHHPaFy8FQ38PJhyPbk",
+      "content": "tsll 今天也先多 后空了 可以转弯往上时候先回吸卖出数量的一半 剩下一半到收盘再看 17.8-17.9附近第一次 剩下到收盘看收盘价在一次",
+      "original_content": "tsll 今天也先多 后空了 可以转弯往上时候先回吸卖出数量的一半 剩下一半到收盘再看 17.8-17.9附近第一次 剩下到收盘看收盘价在一次",
+      "timestamp": "2026-01-16 23:19:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-16 23:19:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 17.85,
+      "price_range": [
+        17.8,
+        17.9
+      ],
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXHjZ1D4rL6a2EmNXt71z",
+      "content": "夜盘tsll17.3-17.4加了常规仓一半的tsll",
+      "original_content": "夜盘tsll17.3-17.4加了常规仓一半的tsll",
+      "timestamp": "2026-01-20 09:06:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "夜盘83附近开仓了常规仓一半的nvdl"
+      ]
+    },
+    "check": {
+      "timestamp": "2026-01-20 09:06:00.010",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 17.3,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXKDcTyV5P9RoUB5duFGa",
+      "content": "16.54附近加了常规仓一半的tsll",
+      "original_content": "16.54附近加了常规仓一半的tsll",
+      "timestamp": "2026-01-21 03:55:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-21 03:55:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 16.54,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXL26fDzLfw4C26hjNKzD",
+      "content": "夜盘16.75出一半16.54的tsll",
+      "original_content": "夜盘16.75出一半16.54的tsll",
+      "timestamp": "2026-01-21 14:05:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-21 14:05:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 16.75,
+      "sell_quantity": "1/2",
+      "quantity": 400,
+      "sell_reference_price": 16.54,
+      "sell_reference_label": "16.54买的"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXLkWFbhYPvRhPtRV8y6u",
+      "content": "16.94出剩下一半 16.54的tsll",
+      "original_content": "16.94出剩下一半 16.54的tsll",
+      "timestamp": "2026-01-21 23:21:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-21 23:21:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 16.94,
+      "sell_quantity": "1/2",
+      "quantity": 400,
+      "sell_reference_price": 16.54,
+      "sell_reference_label": "16.54买的"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXLuLnny4H9VkZVVDaMuy",
+      "content": "tsll 可以16.45在吸回常规的一半 剩下一半收盘再加",
+      "original_content": "tsll 可以16.45在吸回常规的一半 剩下一半收盘再加",
+      "timestamp": "2026-01-22 01:17:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-22 01:17:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 16.45,
+      "position_size": "常规的一半",
+      "quantity": 400
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXM1JXvfr3wCLXEigbe76",
+      "content": "16.93再出 盘中16.45低吸的tsll",
+      "original_content": "16.93再出 盘中16.45低吸的tsll",
+      "timestamp": "2026-01-22 02:35:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-22 02:35:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 16.93,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXM5TxfAEqUobRZWfW4X9",
+      "content": "tsll 17.45附近出17.35买的",
+      "original_content": "tsll 17.45附近出17.35买的",
+      "timestamp": "2026-01-22 03:30:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-22 03:30:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 17.45,
+      "sell_quantity": "全部",
+      "quantity": 800,
+      "sell_reference_price": 17.35,
+      "sell_reference_label": "17.35买的"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXM6BZupHGaBGnKrmucNd",
+      "content": "tsll 17.77附近也把节前17.98买的出了",
+      "original_content": "tsll 17.77附近也把节前17.98买的出了",
+      "timestamp": "2026-01-22 03:38:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "34.7再次出盘中33.7买的amzu"
+      ]
+    },
+    "check": {
+      "timestamp": "2026-01-22 03:38:00.010",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 17.77,
+      "sell_quantity": "全部",
+      "quantity": 800,
+      "sell_reference_price": 8.0,
+      "sell_reference_label": "8.0买的"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXaTX9iEHr5YXxYLJ9Qn6",
+      "content": "17.2附近 吸了tsll",
+      "original_content": "17.2附近 吸了tsll",
+      "timestamp": "2026-01-29 05:07:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-29 05:07:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 17.2,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXaTczgsrm1cfNZdF72vz",
+      "content": "tsll 利空销量靴子落地",
+      "original_content": "tsll 利空销量靴子落地",
+      "timestamp": "2026-01-29 05:07:00.010",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "17.2附近 吸了tsll"
+      ]
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CXaUNJXBmnX8oPrs1PKey",
+      "content": "18.5附近出一半tsll",
+      "original_content": "18.5附近出一半tsll",
+      "timestamp": "2026-01-29 05:18:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-29 05:18:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 18.5,
+      "sell_quantity": "1/2",
+      "quantity": 400
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXabVZgSujRKgbdTCYJbK",
+      "content": "17.5加回卖出的tsll",
+      "original_content": "17.5加回卖出的tsll",
+      "timestamp": "2026-01-29 06:51:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-29 06:51:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 17.5,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXbG84yJ36x92iw78ZDd6",
+      "content": "18.16出17.5的tsll 17.2的哪部分不动",
+      "original_content": "18.16出17.5的tsll 17.2的哪部分不动",
+      "timestamp": "2026-01-29 15:18:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-29 15:18:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 18.16,
+      "sell_quantity": "全部",
+      "quantity": 800,
+      "sell_reference_price": 17.5,
+      "sell_reference_label": "17.5的"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXbqRa3Hebkg79FEGHcjj",
+      "content": "17.08加了tsll",
+      "original_content": "17.08加了tsll",
+      "timestamp": "2026-01-29 22:34:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-29 22:34:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 17.08,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXcJtZfsLsLFZ6WA2t1SY",
+      "content": "15.95加了点tsll 预留点明天结算周期权再加",
+      "original_content": "15.95加了点tsll 预留点明天结算周期权再加",
+      "timestamp": "2026-01-30 04:35:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-30 04:35:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 15.95,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXcTyr2QkhyDmUgtEowEr",
+      "content": "tsll直线了 17.2出 15.98和17.08 的",
+      "original_content": "tsll直线了 17.2出 15.98和17.08 的",
+      "timestamp": "2026-01-30 06:34:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-30 06:34:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 17.2,
+      "sell_quantity": "全部",
+      "quantity": 800,
+      "sell_reference_price": 15.98,
+      "sell_reference_label": "15.98买的"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXcUwJ9erZYWSZeCmaNeA",
+      "content": "tsll今天无限套利 接近了18点",
+      "original_content": "tsll今天无限套利 接近了18点",
+      "timestamp": "2026-01-30 06:46:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CXcVfxySn1GoGFCmLZpgo",
+      "content": "tsll明天还有机会的还是16附近吸 明天期权结算也有机会 再来次无限套利",
+      "original_content": "tsll明天还有机会的还是16附近吸 明天期权结算也有机会 再来次无限套利",
+      "timestamp": "2026-01-30 06:56:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-30 06:56:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 16.0,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXcW6KayhcLBtdDsdMPgu",
+      "content": "tsll今天就是特斯拉 call止损 收盘最低卡了下收盘最低的机制 盘后给了惊喜 本来是想夜盘和盘前出了 提前给了惊喜",
+      "original_content": "tsll今天就是特斯拉 call止损 收盘最低卡了下收盘最低的机制 盘后给了惊喜 本来是想夜盘和盘前出了 提前给了惊喜",
+      "timestamp": "2026-01-30 07:02:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CXdMvbuK54SHqwkSAMFNW",
+      "content": "盘前回吸了常规一半的tsll在16.38 剩下看盘中结算在跳 15.多区间再吸",
+      "original_content": "盘前回吸了常规一半的tsll在16.38 剩下看盘中结算在跳 15.多区间再吸",
+      "timestamp": "2026-01-30 17:55:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-30 17:55:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 16.38,
+      "position_size": "常规一半",
+      "quantity": 400
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXdecTVfWukaP4MTMmiv2",
+      "content": "今天主要盘中找些 这周财报 盘中结算影响造成的低点做低吸 主要是tsll为主",
+      "original_content": "今天主要盘中找些 这周财报 盘中结算影响造成的低点做低吸 主要是tsll为主",
+      "timestamp": "2026-01-30 21:34:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CXdmmUcyLDFuQ73MiWstr",
+      "content": "tsll直线了第四轮",
+      "original_content": "tsll直线了第四轮",
+      "timestamp": "2026-01-30 23:08:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CXdmqcUNxL7PLsei24wec",
+      "content": "17.12出 一半盘前低买的tsll",
+      "original_content": "17.12出 一半盘前低买的tsll",
+      "timestamp": "2026-01-30 23:08:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "tsll直线了第四轮"
+      ]
+    },
+    "check": {
+      "timestamp": "2026-01-30 23:08:00.010",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 17.12,
+      "sell_quantity": "1/2",
+      "quantity": 400
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXdnCm6cxKzTQ8GTaaqRw",
+      "content": "tsll最近要注意16附近的转弯价格 可以一半死拿一半做T 资讯里面有几家一直做特斯拉的昨天收盘附近开始再吸了",
+      "original_content": "tsll最近要注意16附近的转弯价格 可以一半死拿一半做T 资讯里面有几家一直做特斯拉的昨天收盘附近开始再吸了",
+      "timestamp": "2026-01-30 23:13:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CXdq3Jeug8VnPYpaBhjcg",
+      "content": "tsll这轮 到一半的位置是20 前高是23.62",
+      "original_content": "tsll这轮 到一半的位置是20 前高是23.62",
+      "timestamp": "2026-01-30 23:51:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CXiM8ZxZDcgmNP4q5GGwk",
+      "content": "16.55附近 加了 常规一半的tsll 也是看盘前有没有15.95附近的价格再加一半",
+      "original_content": "16.55附近 加了 常规一半的tsll 也是看盘前有没有15.95附近的价格再加一半",
+      "timestamp": "2026-02-02 09:08:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-02 09:08:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 15.95,
+      "position_size": "常规一半",
+      "quantity": 400
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXjQUob8rkZpnMLPVmHX4",
+      "content": "tsll在15.92附近 加了次长线的仓位",
+      "original_content": "tsll在15.92附近 加了次长线的仓位",
+      "timestamp": "2026-02-02 22:32:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-02 22:32:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 15.92,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXjVUA5rpAFB7N7j6jnbb",
+      "content": "tsll直线注意",
+      "original_content": "tsll直线注意",
+      "timestamp": "2026-02-02 23:38:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CXjebqYZJw8yRvyv1ifpP",
+      "content": "16.58把夜盘那部分16.55的tsll出到回落在低接",
+      "original_content": "16.58把夜盘那部分16.55的tsll出到回落在低接",
+      "timestamp": "2026-02-03 01:37:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-03 01:37:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 16.55,
+      "sell_quantity": "全部",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXjgKUh4y7wUCVGgkqHdX",
+      "content": "tsll（死拿的部分按16成本算） 死拿的部分就20 和23.62两个点 当中有派息了再扣减 实际情况到那个附近差不多也会出到时候说 做T部分就过程中 低吸高抛做做T部分的",
+      "original_content": "tsll（死拿的部分按16成本算） 死拿的部分就20 和23.62两个点 当中有派息了再扣减 实际情况到那个附近差不多也会出到时候说 做T部分就过程中 低吸高抛做做T部分的",
+      "timestamp": "2026-02-03 02:00:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-03 02:00:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 20.0,
+      "sell_quantity": "全部",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXmaiJtFkWKcUuaEDK1sk",
+      "content": "tsll可以16.1附近开常规一半的做T仓位",
+      "original_content": "tsll可以16.1附近开常规一半的做T仓位",
+      "timestamp": "2026-02-04 02:07:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-04 02:07:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 16.1,
+      "position_size": "常规一半",
+      "quantity": 400
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXmp11zcmKiVJMJjnMJNK",
+      "content": "tsll 做T那部分可以 盘后16.45附近出一半 仅仅做t 部分16.1那部分做T的",
+      "original_content": "tsll 做T那部分可以 盘后16.45附近出一半 仅仅做t 部分16.1那部分做T的",
+      "timestamp": "2026-02-04 05:02:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-04 05:02:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 16.1,
+      "sell_quantity": "全部",
+      "quantity": 800,
+      "sell_reference_price": 16.1,
+      "sell_reference_label": "16.1那部分"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXoCmf9TuXQpTT3G7rt7j",
+      "content": "tsll注意直线 15.55附近出昨天剩下一半 下半场在吸了再通知 出做T那部分",
+      "original_content": "tsll注意直线 15.55附近出昨天剩下一半 下半场在吸了再通知 出做T那部分",
+      "timestamp": "2026-02-04 22:41:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-04 22:41:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 15.55,
+      "sell_quantity": "1/2",
+      "quantity": 400
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXoEk5SJw5HT3eeV4FVRu",
+      "content": "tsll 16.01附近吸回 高抛的做T仓位",
+      "original_content": "tsll 16.01附近吸回 高抛的做T仓位",
+      "timestamp": "2026-02-04 23:02:00.040",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "spy也是今天先往下到685 看685今天能不能支撑住 昨天是行政令签署人为调控支撑的",
+        "14.2重新吸回之前卖的cifr",
+        "47.3吸回之前卖的iren 常规仓的一半",
+        "77.7吸了nvdl另外常规一半 把77.3的先撤单了"
+      ]
+    },
+    "check": {
+      "timestamp": "2026-02-04 23:02:00.040",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 16.01,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXpxCp2zzTNLTi2moEgV2",
+      "content": "14.52盘前加了tsll",
+      "original_content": "14.52盘前加了tsll",
+      "timestamp": "2026-02-05 20:51:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-05 20:51:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 14.52,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXq69TnPMG8P4s6bFciRc",
+      "content": "14.66出tsll 盘前那部分",
+      "original_content": "14.66出tsll 盘前那部分",
+      "timestamp": "2026-02-05 22:35:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-05 22:35:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 14.66,
+      "sell_quantity": "全部",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXq8kwiyMULEZTF87gZVf",
+      "content": "14附近吸回 tsll 卖出那部分",
+      "original_content": "14附近吸回 tsll 卖出那部分",
+      "timestamp": "2026-02-05 23:09:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-05 23:09:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 14.0,
+      "quantity": 800,
+      "buy_quantity_reference": "卖出的"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXqEGkznQBer3iZVf3TwM",
+      "content": "14.34出一半 14的tsll",
+      "original_content": "14.34出一半 14的tsll",
+      "timestamp": "2026-02-06 00:22:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-06 00:22:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 14.34,
+      "sell_quantity": "1/2",
+      "quantity": 400,
+      "sell_reference_price": 14.0,
+      "sell_reference_label": "14.0买的"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXqEuuuQqFAaEA3TYgnZo",
+      "content": "tsll先反弹 剩下一半14.53附近如果转弯出掉 14那部分的",
+      "original_content": "tsll先反弹 剩下一半14.53附近如果转弯出掉 14那部分的",
+      "timestamp": "2026-02-06 00:29:00.010",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "75.4出一半74的nvdl"
+      ]
+    },
+    "check": {
+      "timestamp": "2026-02-06 00:29:00.010",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 14.0,
+      "sell_quantity": "全部",
+      "quantity": 800,
+      "sell_reference_price": 14.0,
+      "sell_reference_label": "14.0那部分"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXqNEZSzfFCoVZA7wNdCo",
+      "content": "tsll 目前还随指数上去 今天下半场看看能不能到15.04之上然后出昨天15.04买的那部分",
+      "original_content": "tsll 目前还随指数上去 今天下半场看看能不能到15.04之上然后出昨天15.04买的那部分",
+      "timestamp": "2026-02-06 02:06:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-06 02:06:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 15.04,
+      "sell_quantity": "全部",
+      "quantity": 800,
+      "sell_reference_price": 15.04,
+      "sell_reference_label": "昨天15.04买的"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXqggzjy3Mp5kPLRy5uCr",
+      "content": "盘后14附近在回吸盘中卖出的tsll",
+      "original_content": "盘后14附近在回吸盘中卖出的tsll",
+      "timestamp": "2026-02-06 06:08:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-06 06:08:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 14.0,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXqz7xREL52W7v1Bkcvvm",
+      "content": "tsll 14.31出一半 14吸的",
+      "original_content": "tsll 14.31出一半 14吸的",
+      "timestamp": "2026-02-06 09:57:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-06 09:57:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 14.0,
+      "position_size": "一半",
+      "quantity": 400
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXrgxPDvMPCivwt2vTNDf",
+      "content": "tsll盘前干预直线了出14剩下和15.04的",
+      "original_content": "tsll盘前干预直线了出14剩下和15.04的",
+      "timestamp": "2026-02-06 18:52:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CXrgxagwQrUUa4aVV7Rct",
+      "content": "tsll盘前干预直线了出14剩下和15.04的",
+      "original_content": "tsll盘前干预直线了出14剩下和15.04的",
+      "timestamp": "2026-02-06 18:52:00.010",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "tsll盘前干预直线了出14剩下和15.04的"
+      ]
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CXrgxkuoHeu7FgJFyryZZ",
+      "content": "tsll盘前干预直线了出14剩下和15.04的",
+      "original_content": "tsll盘前干预直线了出14剩下和15.04的",
+      "timestamp": "2026-02-06 18:52:00.020",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "tsll盘前干预直线了出14剩下和15.04的",
+        "tsll盘前干预直线了出14剩下和15.04的"
+      ]
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CXrjcTAke43T7nrWnBk9a",
+      "content": "前这轮情况和上次周五 11月14日 完全一样了 11月13日的盘后是压的最低点 btc 8万整数 2月5日昨天的盘后也是压最低 BTC6万 这轮准备 100跌50 50去买入的股票 主要目前有 tsll 还有16的两笔 当初一笔死拿 和16.05的一半常规仓 今天解放了2笔14和15的 这部分资金到13.8在探底时候找机会吸两次 自己感觉上这轮 13.8是底部 主要看下周五能不能给机会 大家可以看看 11月14日和11月21日 两次14.8底部 nvdl 目前还有 73.6和当时81.6两笔 72-73应该是这轮底部 amd昨天那个187应该是底部 200先出了 再找机会 amzn亚马逊也会找机会 先正股 企稳在双倍再买正股卖了换双倍 别一开始就双倍 其他小盘股回前高机会 等待安排",
+      "original_content": "前这轮情况和上次周五 11月14日 完全一样了 11月13日的盘后是压的最低点 btc 8万整数 2月5日昨天的盘后也是压最低 BTC6万 这轮准备 100跌50 50去买入的股票 主要目前有 tsll 还有16的两笔 当初一笔死拿 和16.05的一半常规仓 今天解放了2笔14和15的 这部分资金到13.8在探底时候找机会吸两次 自己感觉上这轮 13.8是底部 主要看下周五能不能给机会 大家可以看看 11月14日和11月21日 两次14.8底部 nvdl 目前还有 73.6和当时81.6两笔 72-73应该是这轮底部 amd昨天那个187应该是底部 200先出了 再找机会 amzn亚马逊也会找机会 先正股 企稳在双倍再买正股卖了换双倍 别一开始就双倍 其他小盘股回前高机会 等待安排",
+      "timestamp": "2026-02-06 19:27:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-06 19:27:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 187.0,
+      "sell_quantity": "1/2",
+      "quantity": 400,
+      "sell_reference_price": 16.05,
+      "sell_reference_label": "16.05的一半"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXrydTxeeuTXhGEYerdPP",
+      "content": "tsll 14.6回吸常规的一半",
+      "original_content": "tsll 14.6回吸常规的一半",
+      "timestamp": "2026-02-06 22:31:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-06 22:31:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 14.6,
+      "position_size": "常规的一半",
+      "quantity": 400
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXrz27sdhy78PTyeyCJ99",
+      "content": "tsll直线了 15.05再出一半 14.6吸的",
+      "original_content": "tsll直线了 15.05再出一半 14.6吸的",
+      "timestamp": "2026-02-06 22:36:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-06 22:36:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 14.6,
+      "position_size": "一半",
+      "quantity": 400
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXrzb1YP7WzPjCyFZJApR",
+      "content": "tsll今天低点如果是14.5那里就满足今天高于昨天13.8 昨天13.8就是低点",
+      "original_content": "tsll今天低点如果是14.5那里就满足今天高于昨天13.8 昨天13.8就是低点",
+      "timestamp": "2026-02-06 22:44:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CXs14Qr83qvpHsRDCCGQf",
+      "content": "tsll 15.34出剩下一半14.6吸的tsll",
+      "original_content": "tsll 15.34出剩下一半14.6吸的tsll",
+      "timestamp": "2026-02-06 22:50:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-06 22:50:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 14.6,
+      "position_size": "一半",
+      "quantity": 400
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXs25hjBvbmKEBMtpp8QK",
+      "content": "tsll nvdl看能不能再给一波探底吸的机会盯着两个最大交易的反复套利",
+      "original_content": "tsll nvdl看能不能再给一波探底吸的机会盯着两个最大交易的反复套利",
+      "timestamp": "2026-02-06 23:03:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CXxmb7fzPWFTJD9h4bKmz",
+      "content": "tsll直线到16附近了 可以注意下转弯",
+      "original_content": "tsll直线到16附近了 可以注意下转弯",
+      "timestamp": "2026-02-09 23:57:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CXxmzWpWbRqDPZzmopfRK",
+      "content": "周三周四 tsll到14.7-15.3附近有回调在回吸一笔新的死拿的",
+      "original_content": "周三周四 tsll到14.7-15.3附近有回调在回吸一笔新的死拿的",
+      "timestamp": "2026-02-10 00:02:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-10 00:02:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 15.0,
+      "price_range": [
+        14.7,
+        15.3
+      ],
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXzZLzjFjV3icjNXNTmqm",
+      "content": "tsll 16.55出之前16.05吸的做T仓位",
+      "original_content": "tsll 16.55出之前16.05吸的做T仓位",
+      "timestamp": "2026-02-10 22:37:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-10 22:37:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 16.05,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CY4XVVUgRJNQ2htCFBGxR",
+      "content": "tsll 在16.02附近开个底仓 常规仓的一半 明天再看看有没有15-4附近的",
+      "original_content": "tsll 在16.02附近开个底仓 常规仓的一半 明天再看看有没有15-4附近的",
+      "timestamp": "2026-02-13 00:55:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-13 00:55:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 16.02,
+      "position_size": "常规仓的一半",
+      "quantity": 400
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CY6FDbZrC5HByAvkdzqvo",
+      "content": "15.43加了常规一半的tsll",
+      "original_content": "15.43加了常规一半的tsll",
+      "timestamp": "2026-02-13 22:43:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-13 22:43:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 15.43,
+      "position_size": "常规一半",
+      "quantity": 400
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CY6Pw9vRjkF78cE8XqC2x",
+      "content": "tsll 直线了下 16.04附近可以出昨天16.02的 保留今天15.43低吸那部分",
+      "original_content": "tsll 直线了下 16.04附近可以出昨天16.02的 保留今天15.43低吸那部分",
+      "timestamp": "2026-02-14 00:37:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-14 00:37:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 15.43,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CY6a5XrbiPFjpwD351qAo",
+      "content": "tsll盘中有个利好消息刺激 16.4可以出15.43的一半",
+      "original_content": "tsll盘中有个利好消息刺激 16.4可以出15.43的一半",
+      "timestamp": "2026-02-14 02:50:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-14 02:50:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 16.4,
+      "sell_quantity": "1/2",
+      "quantity": 400,
+      "sell_reference_price": 15.43
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CYDoox11pixmcp6gamEtQ",
+      "content": "15.17附近加回了周五卖出的那部分tsll",
+      "original_content": "15.17附近加回了周五卖出的那部分tsll",
+      "timestamp": "2026-02-17 22:35:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-17 22:35:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 15.17,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CYDxAfB9uiekVj2gnTqbu",
+      "content": "tsll 可以15.3出15.17的等在找下低点",
+      "original_content": "tsll 可以15.3出15.17的等在找下低点",
+      "timestamp": "2026-02-18 00:24:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-18 00:24:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 15.3,
+      "sell_quantity": "全部",
+      "quantity": 800,
+      "sell_reference_price": 15.17,
+      "sell_reference_label": "15.17的"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CYFhVransRbpPqbTWzpdf",
+      "content": "15.35加个tsll 常规的一半",
+      "original_content": "15.35加个tsll 常规的一半",
+      "timestamp": "2026-02-18 22:33:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-18 22:33:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 15.35,
+      "position_size": "常规的一半",
+      "quantity": 400
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CYFjpx6dXztr4UraM2eDb",
+      "content": "tsll直线了",
+      "original_content": "tsll直线了",
+      "timestamp": "2026-02-18 23:04:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CYFk6zta6zKVYawSZTH3L",
+      "content": "15.75出之前15.45剩下一半tsll 留今天的15.35的",
+      "original_content": "15.75出之前15.45剩下一半tsll 留今天的15.35的",
+      "timestamp": "2026-02-18 23:07:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-18 23:07:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 15.75,
+      "sell_quantity": "1/2",
+      "quantity": 400,
+      "sell_reference_price": 15.45,
+      "sell_reference_label": "之前15.45"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CYFp9gU9o6LomZpr8iYv9",
+      "content": "tsll 在到15.76可以在出15.48那部分 在等回踩吸",
+      "original_content": "tsll 在到15.76可以在出15.48那部分 在等回踩吸",
+      "timestamp": "2026-02-19 00:00:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-19 00:00:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 15.76,
+      "sell_quantity": "全部",
+      "quantity": 800,
+      "sell_reference_price": 15.48,
+      "sell_reference_label": "15.48那部分"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CYG6wnmxkg5uTmuhQmQon",
+      "content": "15.40在吸回卖出的tsll",
+      "original_content": "15.40在吸回卖出的tsll",
+      "timestamp": "2026-02-19 03:41:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-19 03:41:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 15.4,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CYHbfC4H13tsZPF3m4j7o",
+      "content": "14.93附近加仓了tsll",
+      "original_content": "14.93附近加仓了tsll",
+      "timestamp": "2026-02-19 22:38:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-19 22:38:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 14.93,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CYHg4AuFgQoRboymPUa8r",
+      "content": "tsll 直线了 可以15.47可以把15.35的出 14.95今天的出个一半",
+      "original_content": "tsll 直线了 可以15.47可以把15.35的出 14.95今天的出个一半",
+      "timestamp": "2026-02-19 23:35:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-19 23:35:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 15.47,
+      "sell_quantity": "全部",
+      "quantity": 800,
+      "sell_reference_price": 14.95,
+      "sell_reference_label": "14.95买的"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CYHi5k7tfrhSFNVabpE8V",
+      "content": "tsll这轮 脉冲在注意把15.4的在15.6附近出就留14。95的",
+      "original_content": "tsll这轮 脉冲在注意把15.4的在15.6附近出就留14。95的",
+      "timestamp": "2026-02-20 00:02:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-20 00:02:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 15.4,
+      "sell_quantity": "全部",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CYKV4P5Y9pQYoXpvdAkzu",
+      "content": "tsll 回踩15.05回吸昨天卖出的部分",
+      "original_content": "tsll 回踩15.05回吸昨天卖出的部分",
+      "timestamp": "2026-02-20 22:32:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-20 22:32:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 15.05,
+      "quantity": 800,
+      "buy_quantity_reference": "昨天卖出的"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CYKWDSKa6vcwA9ThQLAPQ",
+      "content": "tsll直线时候 15.39附近出 15。05的一半",
+      "original_content": "tsll直线时候 15.39附近出 15。05的一半",
+      "timestamp": "2026-02-20 22:48:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-20 22:48:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 15.39,
+      "sell_quantity": "1/2",
+      "quantity": 400,
+      "sell_reference_price": 15.05,
+      "sell_reference_label": "15.05买的"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CYKXMxeB82mGBxCtFFoGi",
+      "content": "15.57-15.65附近出 今天15.05剩下一半tsll 保留昨天14.95的做死拿",
+      "original_content": "15.57-15.65附近出 今天15.05剩下一半tsll 保留昨天14.95的做死拿",
+      "timestamp": "2026-02-20 23:01:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "89-89.5附近可以回买常规仓一半的crwv"
+      ]
+    },
+    "check": {
+      "timestamp": "2026-02-20 23:01:00.010",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 15.61,
+      "price_range": [
+        15.57,
+        15.65
+      ],
+      "sell_quantity": "1/2",
+      "quantity": 400
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CYKXjWhNTP1SkcsoMfaHt",
+      "content": "tsll 15.1-15在回吸今天卖出的部分",
+      "original_content": "tsll 15.1-15在回吸今天卖出的部分",
+      "timestamp": "2026-02-20 23:07:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-20 23:07:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 15.05,
+      "price_range": [
+        15.0,
+        15.1
+      ],
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CYKawo14UcTvGx89sqiVi",
+      "content": "tsll今天日内剩下一半也是在冲15.5-15.6出日内 死拿的仓位14.95那部分不动",
+      "original_content": "tsll今天日内剩下一半也是在冲15.5-15.6出日内 死拿的仓位14.95那部分不动",
+      "timestamp": "2026-02-20 23:50:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-20 23:50:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 14.95,
+      "sell_quantity": "全部",
+      "quantity": 800,
+      "sell_reference_price": 14.95,
+      "sell_reference_label": "14.95那部分"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CYKiK2FFLFGhzrFfhonTB",
+      "content": "tsll 做T部分第三轮可以 15。03附近接",
+      "original_content": "tsll 做T部分第三轮可以 15。03附近接",
+      "timestamp": "2026-02-21 01:26:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-21 01:26:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 15.03,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CYKm6FqsbJxYi6MojnToF",
+      "content": "15.37-15.4附近出一半 15.03的tsll",
+      "original_content": "15.37-15.4附近出一半 15.03的tsll",
+      "timestamp": "2026-02-21 02:03:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-21 02:03:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 15.4,
+      "sell_quantity": "1/2",
+      "quantity": 400,
+      "sell_reference_price": 15.03,
+      "sell_reference_label": "15.03买的"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CYKpQH2FTzyyJrTJS4atz",
+      "content": "15.37-15.4附近出一半 15.03的tsll",
+      "original_content": "15.37-15.4附近出一半 15.03的tsll",
+      "timestamp": "2026-02-21 02:46:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-21 02:46:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 15.4,
+      "sell_quantity": "1/2",
+      "quantity": 400,
+      "sell_reference_price": 15.03,
+      "sell_reference_label": "15.03买的"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CYRCixcnskw4TKDJQQ3Zq",
+      "content": "14.8附近加了 常规仓一半的tsll",
+      "original_content": "14.8附近加了 常规仓一半的tsll",
+      "timestamp": "2026-02-23 23:02:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-23 23:02:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 14.8,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CYRbFDRjWciCvF38vnHnd",
+      "content": "14.2附近 加了tsll",
+      "original_content": "14.2附近 加了tsll",
+      "timestamp": "2026-02-24 03:57:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-24 03:57:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 14.2,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CYRgDGRmaCFuGEytTsSoh",
+      "content": "tsll 14.58可以出 14.2的一半 把14.2剩下一半暂时当死拿的 14.8那笔 明天盘前人工干预再看",
+      "original_content": "tsll 14.58可以出 14.2的一半 把14.2剩下一半暂时当死拿的 14.8那笔 明天盘前人工干预再看",
+      "timestamp": "2026-02-24 05:02:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-24 05:02:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 14.58,
+      "sell_quantity": "1/2",
+      "quantity": 400,
+      "sell_reference_price": 14.2
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CYT8FrjGYSxP461r8cVtj",
+      "content": "tsll 14.96-15附近 出当时 14.95死拿的部分 现在14.2剩下一半当死拿了",
+      "original_content": "tsll 14.96-15附近 出当时 14.95死拿的部分 现在14.2剩下一半当死拿了",
+      "timestamp": "2026-02-24 23:24:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-24 23:24:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 14.98,
+      "price_range": [
+        14.96,
+        15.0
+      ],
+      "sell_quantity": "全部",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CYUx6zauScNJy5pbo7E7K",
+      "content": "tsll今天仍然被大陆不断吸筹 我们14.2抢得了先手",
+      "original_content": "tsll今天仍然被大陆不断吸筹 我们14.2抢得了先手",
+      "timestamp": "2026-02-25 22:32:00.010",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "77.1出一半 71.7 的hood"
+      ]
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CYWrUuv2acr7hTbi9prQa",
+      "content": "tsll可以15.32附近增加一个做T仓位常规仓的一半 死拿的有14.2和15.1的部分加一起",
+      "original_content": "tsll可以15.32附近增加一个做T仓位常规仓的一半 死拿的有14.2和15.1的部分加一起",
+      "timestamp": "2026-02-26 22:38:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "88.1附近 开了个nvdl的底仓 仓位常规仓的一半"
+      ]
+    },
+    "check": {
+      "timestamp": "2026-02-26 22:38:00.010",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 15.32,
+      "position_size": "常规仓的一半",
+      "quantity": 400
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CYYjn424jTFXCLFwDEHV5",
+      "content": "14.7附近 加了tsll 做T仓位的另外一半",
+      "original_content": "14.7附近 加了tsll 做T仓位的另外一半",
+      "timestamp": "2026-02-27 22:33:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-27 22:33:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 14.7,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CYYohmNYJqkaMo2JUe7Mv",
+      "content": "tsll也是注意直线 14.98-15附近出 14.7的",
+      "original_content": "tsll也是注意直线 14.98-15附近出 14.7的",
+      "timestamp": "2026-02-27 23:25:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-27 23:25:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 14.99,
+      "price_range": [
+        14.98,
+        15.0
+      ],
+      "sell_quantity": "全部",
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CYdMdMcPkHcatQ2KRcABc",
+      "content": "夜盘14.05加仓了tsll",
+      "original_content": "夜盘14.05加仓了tsll",
+      "timestamp": "2026-03-02 09:06:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-03-02 09:06:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 14.05,
+      "quantity": 800
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CYeSWwXWjnMeqE4Gnsxyw",
+      "content": "14.37-14.45附近可以出 之前14.2那部分 或者出夜盘14.05的一半tsll",
+      "original_content": "14.37-14.45附近可以出 之前14.2那部分 或者出夜盘14.05的一半tsll",
+      "timestamp": "2026-03-02 22:50:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-03-02 22:50:00.000",
+      "instruction_type": "SELL",
+      "symbol": "TSLL",
+      "target_price": 14.41,
+      "price_range": [
+        14.37,
+        14.45
+      ],
+      "sell_quantity": "1/2",
+      "quantity": 400,
+      "sell_reference_price": 14.05,
+      "sell_reference_label": "14.05的一半"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CYfpiGUuuJYfGsBu1Pftq",
+      "content": "夜盘14.13加了tsll常规仓的一半当做t仓位 在挂了另外一半在13.67",
+      "original_content": "夜盘14.13加了tsll常规仓的一半当做t仓位 在挂了另外一半在13.67",
+      "timestamp": "2026-03-03 16:22:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-03-03 16:22:00.000",
+      "instruction_type": "BUY",
+      "symbol": "TSLL",
+      "target_price": 13.67,
+      "position_size": "常规仓的一半",
+      "quantity": 400
+    }
+  }
+]

@@ -1,0 +1,1017 @@
+[
+  {
+    "origin": {
+      "domID": "post_1CUsMs6USM7XV3iwwdboWg",
+      "content": "几个备选的 和之前发的里面同板块的选一个就可以 tem 72附近可以建仓 oklo 106附近可以建仓",
+      "original_content": "几个备选的 和之前发的里面同板块的选一个就可以 tem 72附近可以建仓 oklo 106附近可以建仓",
+      "timestamp": "2025-11-07 05:39:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-07 05:39:00.000",
+      "instruction_type": "BUY",
+      "symbol": "OKLO",
+      "target_price": 106.0
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUu81qMYGzMbF4YHpr4Vb",
+      "content": "给空仓的没仓位的一些备选的 oklo 目前110 昨天是106吸的 盘后看下接近时候",
+      "original_content": "给空仓的没仓位的一些备选的 oklo 目前110 昨天是106吸的 盘后看下接近时候",
+      "timestamp": "2025-11-08 03:59:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-08 03:59:00.000",
+      "instruction_type": "BUY",
+      "symbol": "OKLO",
+      "target_price": 106.0
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUuF6NBxZSwGpCq9jEteM",
+      "content": "这轮开门行情 配置上可以 2-4个不同板块配置拿反弹段 可以七姐妹当中买1-2个 tsll nvdl meta msft之类 币股买1个 conl bmnr hood mstr（这个股性慢） 明星股1个 oklo tem nbis rklb等等 我自己列的那10几个是都买了的都会跟踪的",
+      "original_content": "这轮开门行情 配置上可以 2-4个不同板块配置拿反弹段 可以七姐妹当中买1-2个 tsll nvdl meta msft之类 币股买1个 conl bmnr hood mstr（这个股性慢） 明星股1个 oklo tem nbis rklb等等 我自己列的那10几个是都买了的都会跟踪的",
+      "timestamp": "2025-11-08 05:32:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CUyKssysWp8yrqjNQeaAN",
+      "content": "118.5减仓oklo",
+      "original_content": "118.5减仓oklo",
+      "timestamp": "2025-11-10 09:10:00.090",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "44减仓点到价格的bmnr",
+        "32附近减仓点到价格的conl",
+        "97.5减仓点nvdl",
+        "254减仓点mstr",
+        "632.5减仓625加仓的meta",
+        "55.3减仓rklb",
+        "19.6-19.7减仓tsll",
+        "75减仓tem",
+        "120减仓nbis"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-11-10 09:10:00.090",
+      "instruction_type": "SELL",
+      "symbol": "OKLO",
+      "target_price": 118.5,
+      "sell_quantity": "全部"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUzUHbh52QAjX2WZG83vV",
+      "content": "109.5附近也可以回吸夜盘高抛的oklo",
+      "original_content": "109.5附近也可以回吸夜盘高抛的oklo",
+      "timestamp": "2025-11-10 23:48:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-10 23:48:00.000",
+      "instruction_type": "BUY",
+      "symbol": "OKLO",
+      "target_price": 109.5
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CV2oXzayfxjgams4K69K7",
+      "content": "oklo可以106附近也减点",
+      "original_content": "oklo可以106附近也减点",
+      "timestamp": "2025-11-12 05:21:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-12 05:21:00.000",
+      "instruction_type": "SELL",
+      "symbol": "OKLO",
+      "target_price": 106.0,
+      "sell_quantity": "小仓位"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CV2p6dhWhsvV2fDPWYYyE",
+      "content": "oklo财报和nbis一样符合预期偏弱点会多空上下扫",
+      "original_content": "oklo财报和nbis一样符合预期偏弱点会多空上下扫",
+      "timestamp": "2025-11-12 05:29:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CV4C5Gzt1DPPBXQEZnVXP",
+      "content": "oklo在114-115附近也都出 财报出来先多了就都出等回吸",
+      "original_content": "oklo在114-115附近也都出 财报出来先多了就都出等回吸",
+      "timestamp": "2025-11-12 22:57:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-12 22:57:00.000",
+      "instruction_type": "BUY",
+      "symbol": "OKLO",
+      "target_price": 114.5,
+      "price_range": [
+        114.0,
+        115.0
+      ]
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVKbL2rtYxKgfQTbtyY8F",
+      "content": "备选的 oklo 92-93可以吸一半 尾盘确认下成交额 iren 47-48可以吸一半 尾盘确认下成交额",
+      "original_content": "备选的 oklo 92-93可以吸一半 尾盘确认下成交额 iren 47-48可以吸一半 尾盘确认下成交额",
+      "timestamp": "2025-11-21 02:11:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-21 02:11:00.000",
+      "instruction_type": "BUY",
+      "symbol": "OKLO",
+      "target_price": 92.5,
+      "price_range": [
+        92.0,
+        93.0
+      ],
+      "position_size": "一半"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVM48reXtouC78WmFqARD",
+      "content": "周五盘前低点价格可以加分2次加的点 一次盘前低点附近一次盘中结算putV的时候 tsll 15.6 rklb 38.3-38.6附近 nvdl 79-80附近 iren 40.5 soun 11 oklo 85-86 crwv 66.5 nbis 81 apld 20 rxrx3.78",
+      "original_content": "周五盘前低点价格可以加分2次加的点 一次盘前低点附近一次盘中结算putV的时候 tsll 15.6 rklb 38.3-38.6附近 nvdl 79-80附近 iren 40.5 soun 11 oklo 85-86 crwv 66.5 nbis 81 apld 20 rxrx3.78",
+      "timestamp": "2025-11-21 20:43:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CVmtJcDc3HxuDdwZvyUR6",
+      "content": "oklo （135+79）/2=107 电力股oklo也在冲一半",
+      "original_content": "oklo （135+79）/2=107 电力股oklo也在冲一半",
+      "timestamp": "2025-12-04 23:29:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CVmvGiuCsieHbdBMdCjZW",
+      "content": "oklo也即将反弹一半位置了",
+      "original_content": "oklo也即将反弹一半位置了",
+      "timestamp": "2025-12-04 23:55:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CVmvmJcHtxqDqEvvk3VEc",
+      "content": "oklo 107 一半到了 等转弯时候有溢价出一半86的",
+      "original_content": "oklo 107 一半到了 等转弯时候有溢价出一半86的",
+      "timestamp": "2025-12-05 00:02:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-05 00:02:00.000",
+      "instruction_type": "SELL",
+      "symbol": "OKLO",
+      "target_price": 107.0,
+      "sell_quantity": "1/2"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVn1PFwYeBKRChkupZerQ",
+      "content": "109。5附近出一半86的oklo 到一半上方转弯了点",
+      "original_content": "109。5附近出一半86的oklo 到一半上方转弯了点",
+      "timestamp": "2025-12-05 01:02:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-05 01:02:00.000",
+      "instruction_type": "SELL",
+      "symbol": "OKLO",
+      "target_price": 109.5,
+      "sell_quantity": "1/2",
+      "sell_reference_price": 86.0,
+      "sell_reference_label": "86.0买的"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVonSgbmkZqmTUr6TkYiL",
+      "content": "oklo也是增发15亿 回踩100时候快 昨天卖了一半 再到100和96附近可以回吸",
+      "original_content": "oklo也是增发15亿 回踩100时候快 昨天卖了一半 再到100和96附近可以回吸",
+      "timestamp": "2025-12-05 23:33:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "sofi这个昨天增发了15亿今天跌幅到26.5是正好跌掉15亿的 和iren一样原理 可以盘中回踩27.5开个底仓 到25-26区间再加仓"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-12-05 23:33:00.010",
+      "instruction_type": "BUY",
+      "symbol": "OKLO",
+      "target_price": 96.0,
+      "position_size": "一半"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVydWDvEX4RdU1ihxDYsZ",
+      "content": "oklo也可以注意回踩100-100.5时候的回踩机会",
+      "original_content": "oklo也可以注意回踩100-100.5时候的回踩机会",
+      "timestamp": "2025-12-11 04:22:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CW18mRGtnDmExb8Rm8po8",
+      "content": "99.5附近可以减点oklo做倒T",
+      "original_content": "99.5附近可以减点oklo做倒T",
+      "timestamp": "2025-12-11 23:27:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-11 23:27:00.000",
+      "instruction_type": "SELL",
+      "symbol": "OKLO",
+      "target_price": 99.5,
+      "sell_quantity": "全部"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CW1MFE4dCqTpVvxxhuGSy",
+      "content": "oklo这轮上去也是注意转弯都出 在101.5-102附近",
+      "original_content": "oklo这轮上去也是注意转弯都出 在101.5-102附近",
+      "timestamp": "2025-12-12 02:10:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CW2yxkDgZAijKricuA9YK",
+      "content": "97.1附近回踩也可以吸回昨天卖的oklo",
+      "original_content": "97.1附近回踩也可以吸回昨天卖的oklo",
+      "timestamp": "2025-12-12 22:51:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "83.3附近可以接回85出的nvdl"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-12-12 22:51:00.010",
+      "instruction_type": "BUY",
+      "symbol": "OKLO",
+      "target_price": 97.1
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CW3UvvFZ4UkmUx61QaqQj",
+      "content": "盘后 oklo 87.2附近可以加仓 盘中有部分97的盘中没到成本下周也会看下出的位置 盘后所有的股票加起来总仓位不要超过7成 周一万一有回踩还要有做T资金",
+      "original_content": "盘后 oklo 87.2附近可以加仓 盘中有部分97的盘中没到成本下周也会看下出的位置 盘后所有的股票加起来总仓位不要超过7成 周一万一有回踩还要有做T资金",
+      "timestamp": "2025-12-13 05:12:00.030",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "盘后34.8-34.9可以回吸bmnr 盘后所有的股票加起来总仓位不要超过7成 周一万一有回踩还要有做T资金",
+        "盘后78-78.2之间可以加仓点nvdl 盘中有部分83.5加的盘中没到成本还没出 盘后所有的股票加起来总仓位不要超过7成 周一万一有回踩还要有做T资金",
+        "盘后78-78.2之间可以加仓点nvdl 盘中有部分83.5加的盘中没到成本还没出 盘后所有的股票加起来总仓位不要超过7成 周一万一有回踩还要有做T资金"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-12-13 05:12:00.030",
+      "instruction_type": "BUY",
+      "symbol": "OKLO",
+      "target_price": 87.2
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWFZvfeggB5vteQfwLtx5",
+      "content": "12月19日更新一半仓位死拿一半仓位做T新一轮股单 每个板块选1-2个 三个板块配置 盘中有四巫日季度期权和周期权平仓时候的回踩去介入 七姐妹和大盘股 nvdl 盘中在找下76-77之间的机会 原来83.5没动 甲骨文会找下185附近的机会 微软双倍msfl可以找26.6附近在重新开仓 亚马逊双倍amzu 可以34 和33两个价格开仓 tsll 后面找20.7附近缺口机会 intc这轮低点在35.7附近找 35.7-36的低吸机会 明星股小盘股 crwv 会67-68附近找机会再加点 原来没动的部分还有77 和84的部分 nbis 夜盘和盘前可以找下78-79的机会加仓一笔 原来还有87的一笔还没动 oklo可以夜盘和盘前找下77附近的价格做介入 上方还有87和97有两笔还没出 sound 上轮有个11部分还没怎么出完 这轮可以找找10.8价格位置吸 到上轮高点12.5附近出 sofi 27.5那部分没动 有25机会再加仓 asts 找63-64附近会吸一笔盘中再看下机会 rklb 后面找52附近机会 盘中在看下 apld到23附近在找机会加仓一笔 上方还有笔27的还没动 eose 12.2-12.4附近可以介入一笔盘中在找个低的机会 joby 13.5附近可以找机会介入一笔 到盘中再看看低的机会再加 tem 可以62附近重新开仓一笔 到盘中低的机会再加 加密货币 bmnr可以夜盘和盘前找找28.8-29附近的价格回吸点 盘中有平期权波动回踩再加一笔 盘中在更新下盘中的价格 conl可以夜盘和盘前找找16.8-17附近的价格回吸点 盘中有平期权波动回踩再加一笔 盘中在更新下盘中的价格 iren可以夜盘和盘前找找36附近的价格回吸点 盘中有平期权波动回踩再加一笔 盘中在更新下盘中的价格 cifr可以夜盘和盘前找找15附近的价格回吸点 盘中有平期权波动回踩再加一笔 盘中在更新下盘中的价格 hood可以夜盘和盘前找找117附近的价格回吸点 盘中有平期权波动回踩再加一笔 盘中在更新下盘中的价格 加密里面有涨幅限制的两个 mstr可以158-159附近做正T差价下 到1月10日附近 剔除指数前一周要减掉大部分 mara 可以9.6-9.7介入 旷股比其他加密涨幅慢 跌时候跌幅大 可以当备选的到12.5压力都出 上一轮的低吸做对比",
+      "original_content": "12月19日更新一半仓位死拿一半仓位做T新一轮股单 每个板块选1-2个 三个板块配置 盘中有四巫日季度期权和周期权平仓时候的回踩去介入 七姐妹和大盘股 nvdl 盘中在找下76-77之间的机会 原来83.5没动 甲骨文会找下185附近的机会 微软双倍msfl可以找26.6附近在重新开仓 亚马逊双倍amzu 可以34 和33两个价格开仓 tsll 后面找20.7附近缺口机会 intc这轮低点在35.7附近找 35.7-36的低吸机会 明星股小盘股 crwv 会67-68附近找机会再加点 原来没动的部分还有77 和84的部分 nbis 夜盘和盘前可以找下78-79的机会加仓一笔 原来还有87的一笔还没动 oklo可以夜盘和盘前找下77附近的价格做介入 上方还有87和97有两笔还没出 sound 上轮有个11部分还没怎么出完 这轮可以找找10.8价格位置吸 到上轮高点12.5附近出 sofi 27.5那部分没动 有25机会再加仓 asts 找63-64附近会吸一笔盘中再看下机会 rklb 后面找52附近机会 盘中在看下 apld到23附近在找机会加仓一笔 上方还有笔27的还没动 eose 12.2-12.4附近可以介入一笔盘中在找个低的机会 joby 13.5附近可以找机会介入一笔 到盘中再看看低的机会再加 tem 可以62附近重新开仓一笔 到盘中低的机会再加 加密货币 bmnr可以夜盘和盘前找找28.8-29附近的价格回吸点 盘中有平期权波动回踩再加一笔 盘中在更新下盘中的价格 conl可以夜盘和盘前找找16.8-17附近的价格回吸点 盘中有平期权波动回踩再加一笔 盘中在更新下盘中的价格 iren可以夜盘和盘前找找36附近的价格回吸点 盘中有平期权波动回踩再加一笔 盘中在更新下盘中的价格 cifr可以夜盘和盘前找找15附近的价格回吸点 盘中有平期权波动回踩再加一笔 盘中在更新下盘中的价格 hood可以夜盘和盘前找找117附近的价格回吸点 盘中有平期权波动回踩再加一笔 盘中在更新下盘中的价格 加密里面有涨幅限制的两个 mstr可以158-159附近做正T差价下 到1月10日附近 剔除指数前一周要减掉大部分 mara 可以9.6-9.7介入 旷股比其他加密涨幅慢 跌时候跌幅大 可以当备选的到12.5压力都出 上一轮的低吸做对比",
+      "timestamp": "2025-12-19 14:25:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CWGDpXWYjfjAunNk6JH4K",
+      "content": "crwv nbis oklo nvdl msfl 等ai的 都是在盘前压一下后 开盘直接结算起来这有盘中结算震荡低点就是正T吸为主 币股是开盘有压了下转弯就给机会吸了",
+      "original_content": "crwv nbis oklo nvdl msfl 等ai的 都是在盘前压一下后 开盘直接结算起来这有盘中结算震荡低点就是正T吸为主 币股是开盘有压了下转弯就给机会吸了",
+      "timestamp": "2025-12-19 22:42:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CWLw5mgTqS6twXrR1BZEY",
+      "content": "oklo 上一轮 高点 10月29日最高152 开盘价 134.53 就是取最高点那天看下最高点是不是几分钟内秒跌的 秒跌的就取开盘价格 上一轮高点取的时间段是基于qqq最高点回调时间 前面的回调不是关门这个事件影响 只取事件影响的时间段 最低点11月21日 大家可以注意低点时间大多数前一轮开门前几天的时间大多数低点都在11月21日前后 （135+79）/2=107 当时在109出过一半oklo 他属于到了一半位置没到前高的 然后109一半他出了15亿定增 这轮 高点12月4日114.29 低点 12月17日75 这轮低点有15亿定增 加上后是相对于上轮来说是78 也在上轮79这里是双底的 (114.29+75)/2=94 94这轮是个保守的一半位置 这轮的前高就变成了跌下来的114.29 然后对于第一轮要114.29突破才会在进入前面那个事件的循环",
+      "original_content": "oklo 上一轮 高点 10月29日最高152 开盘价 134.53 就是取最高点那天看下最高点是不是几分钟内秒跌的 秒跌的就取开盘价格 上一轮高点取的时间段是基于qqq最高点回调时间 前面的回调不是关门这个事件影响 只取事件影响的时间段 最低点11月21日 大家可以注意低点时间大多数前一轮开门前几天的时间大多数低点都在11月21日前后 （135+79）/2=107 当时在109出过一半oklo 他属于到了一半位置没到前高的 然后109一半他出了15亿定增 这轮 高点12月4日114.29 低点 12月17日75 这轮低点有15亿定增 加上后是相对于上轮来说是78 也在上轮79这里是双底的 (114.29+75)/2=94 94这轮是个保守的一半位置 这轮的前高就变成了跌下来的114.29 然后对于第一轮要114.29突破才会在进入前面那个事件的循环",
+      "timestamp": "2025-12-22 10:25:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-22 10:25:00.000",
+      "instruction_type": "SELL",
+      "symbol": "OKLO",
+      "target_price": 109.0,
+      "sell_quantity": "全部",
+      "sell_reference_price": 15.0,
+      "sell_reference_label": "15.0买的"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWPncyiTRx5CygVto5j5K",
+      "content": "oklo到85附近 也可以减掉点",
+      "original_content": "oklo到85附近 也可以减掉点",
+      "timestamp": "2025-12-23 22:35:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "nvdl剩下80附近低吸的也是86.5附近出掉"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-12-23 22:35:00.010",
+      "instruction_type": "SELL",
+      "symbol": "OKLO",
+      "target_price": 85.0,
+      "sell_quantity": "小仓位"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWVY8MfmiqJ8bBpQ8LrR4",
+      "content": "oklo要注意76.3这个这个转弯点 收盘强平时候在回踩没跌破可以低吸",
+      "original_content": "oklo要注意76.3这个这个转弯点 收盘强平时候在回踩没跌破可以低吸",
+      "timestamp": "2025-12-26 23:30:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CWVyjLrdcWAXPPNgEiWfS",
+      "content": "oklo尾盘附近是跌破76.6 然后最后几分钟有资金吸回可以76.6-77附近吸之前高抛的 也是盘中加过的就尽量挂低买",
+      "original_content": "oklo尾盘附近是跌破76.6 然后最后几分钟有资金吸回可以76.6-77附近吸之前高抛的 也是盘中加过的就尽量挂低买",
+      "timestamp": "2025-12-27 05:04:00.010",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "tsll 尾盘强平结束时候是回踩了21.38没有跌破21.3可以21.3-21.4买一半 盘中买过就不加大仓位 另外一半20.5再买 周一有冲高也会走短线做"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-12-27 05:04:00.010",
+      "instruction_type": "BUY",
+      "symbol": "OKLO",
+      "target_price": 76.8,
+      "price_range": [
+        76.6,
+        77.0
+      ]
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWb9qcbT6tjeZGRtq6g6s",
+      "content": "76-77出周五的oklo",
+      "original_content": "76-77出周五的oklo",
+      "timestamp": "2025-12-29 22:37:00.040",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "今天盘前没人工干预主要是币市场压制 开盘币市场反弹就跟随反弹 其他也是盯着币市场有转弯迹象就把周五的都出",
+        "apld 24.5 出周五24的",
+        "15.6出周五的cifr",
+        "4.29出一半rxrx"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-12-29 22:37:00.040",
+      "instruction_type": "SELL",
+      "symbol": "OKLO",
+      "target_price": 76.5,
+      "price_range": [
+        76.0,
+        77.0
+      ],
+      "sell_quantity": "小仓位"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWbcAeU5mtyqB2X5wYSgS",
+      "content": "oklo可以74附近回吸一半 收盘没收75就走弱了 也是反弹走做短线",
+      "original_content": "oklo可以74附近回吸一半 收盘没收75就走弱了 也是反弹走做短线",
+      "timestamp": "2025-12-30 04:26:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-30 04:26:00.000",
+      "instruction_type": "BUY",
+      "symbol": "OKLO",
+      "target_price": 74.0,
+      "position_size": "一半"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWikG4wHNWTdQeDxF8y8G",
+      "content": "75.3-75.5出 74的oklo剩下一半",
+      "original_content": "75.3-75.5出 74的oklo剩下一半",
+      "timestamp": "2026-01-02 22:48:00.090",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "tsll 19.1 回吸卖出的一半",
+        "eose等转弯时候卖 11.6和12.04的一半",
+        "开盘回踩有些put平仓了现在是多的轮次 注意有些冲高出",
+        "12.1-12.3分批出11.6的eose全部和12.04的一半",
+        "28.8-29转弯时候出 周二的27.6的那部分bmnr",
+        "75.7可以出周三收盘附近crwv有买的也可以出",
+        "39.9出39的iren",
+        "cifr 也是转弯时候走14.9的 15.7附近",
+        "rxrx4.22出一半4.11的"
+      ]
+    },
+    "check": {
+      "timestamp": "2026-01-02 22:48:00.090",
+      "instruction_type": "SELL",
+      "symbol": "OKLO",
+      "target_price": 75.5,
+      "sell_quantity": "全部",
+      "sell_reference_price": 74.0,
+      "sell_reference_label": "74.0的"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWpQQDLcDMH6X8CGsbksr",
+      "content": "oklo 87高买那部分也可以到成本87附近出 也可以留点死拿的博下之前跌下来的高点",
+      "original_content": "oklo 87高买那部分也可以到成本87附近出 也可以留点死拿的博下之前跌下来的高点",
+      "timestamp": "2026-01-05 22:38:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "tsll 19.1 那部分到转弯时候也出"
+      ]
+    },
+    "check": {
+      "timestamp": "2026-01-05 22:38:00.010",
+      "instruction_type": "SELL",
+      "symbol": "OKLO",
+      "target_price": 87.0,
+      "sell_quantity": "全部"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWpRPc8XSvBQtJXxe5pmd",
+      "content": "oklo今天也达到11cm",
+      "original_content": "oklo今天也达到11cm",
+      "timestamp": "2026-01-05 22:53:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CWpndmw5pgrCbAbkf2i7C",
+      "content": "oklo 16cm conl 19cm 今天的涨幅担当",
+      "original_content": "oklo 16cm conl 19cm 今天的涨幅担当",
+      "timestamp": "2026-01-06 03:31:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CWrGDXzL4fC4kbW1YevdW",
+      "content": "oklo今天盘前到了上一轮95跌下来的位置 今天盘前也到了95今天可以在前面跌下来的位置出 死拿的一半仓位 剩下当底仓看前一轮的109能不能再到",
+      "original_content": "oklo今天盘前到了上一轮95跌下来的位置 今天盘前也到了95今天可以在前面跌下来的位置出 死拿的一半仓位 剩下当底仓看前一轮的109能不能再到",
+      "timestamp": "2026-01-06 22:13:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-06 22:13:00.000",
+      "instruction_type": "SELL",
+      "symbol": "OKLO",
+      "target_price": 95.0,
+      "sell_quantity": "1/2"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWwveSsBTKctFg3kA1AKJ",
+      "content": "我们的oklo也出了大利好死拿的剩下一半115-117也都出",
+      "original_content": "我们的oklo也出了大利好死拿的剩下一半115-117也都出",
+      "timestamp": "2026-01-09 22:00:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-09 22:00:00.000",
+      "instruction_type": "SELL",
+      "symbol": "OKLO",
+      "target_price": 116.0,
+      "price_range": [
+        115.0,
+        117.0
+      ],
+      "sell_quantity": "全部"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWwwReFEzwdQJQS193kWg",
+      "content": "oklo也完成了公式 主要是对基本面的坚守 基本面好的都会爆发",
+      "original_content": "oklo也完成了公式 主要是对基本面的坚守 基本面好的都会爆发",
+      "timestamp": "2026-01-09 22:11:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CX7TdFureSxbsXW5jaf9x",
+      "content": "92-92.5回吸了 高位卖出的oklo的一半 新开也是开常规的一半",
+      "original_content": "92-92.5回吸了 高位卖出的oklo的一半 新开也是开常规的一半",
+      "timestamp": "2026-01-14 22:50:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "10.84也回吸了常规仓一半的soun"
+      ]
+    },
+    "check": {
+      "timestamp": "2026-01-14 22:50:00.010",
+      "instruction_type": "BUY",
+      "symbol": "OKLO",
+      "target_price": 92.0,
+      "position_size": "常规的一半"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CX7bDuNPJcsprjDHQLeHH",
+      "content": "oklo直线异动也是95.1附近出短线",
+      "original_content": "oklo直线异动也是95.1附近出短线",
+      "timestamp": "2026-01-15 00:32:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-15 00:32:00.000",
+      "instruction_type": "SELL",
+      "symbol": "OKLO",
+      "target_price": 95.1,
+      "sell_quantity": "全部"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CX7bJTdzzEhpzX8ar3Usw",
+      "content": "oklo再挂买单也是92.2在挂或者盘中识别到低点再买反复套利",
+      "original_content": "oklo再挂买单也是92.2在挂或者盘中识别到低点再买反复套利",
+      "timestamp": "2026-01-15 00:32:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "oklo直线异动也是95.1附近出短线"
+      ]
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CX9oeZG7B7Vf5QgRojTGd",
+      "content": "91.9接回了常规仓一半的oklo",
+      "original_content": "91.9接回了常规仓一半的oklo",
+      "timestamp": "2026-01-16 04:35:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "110.3开了常规仓一半的hood"
+      ]
+    },
+    "check": {
+      "timestamp": "2026-01-16 04:35:00.010",
+      "instruction_type": "BUY",
+      "symbol": "OKLO",
+      "target_price": 91.9,
+      "position_size": "一半"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXAiHcu6Eyz31TFLDkodK",
+      "content": "夜盘和盘前94.5-95附近分批出收盘附近91.8的oklo",
+      "original_content": "夜盘和盘前94.5-95附近分批出收盘附近91.8的oklo",
+      "timestamp": "2026-01-16 16:06:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-16 16:06:00.000",
+      "instruction_type": "SELL",
+      "symbol": "OKLO",
+      "target_price": 94.75,
+      "price_range": [
+        94.5,
+        95.0
+      ],
+      "sell_quantity": "小仓位"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXBGCMa8wKakGJdZL7pbh",
+      "content": "oklo夜盘没来得及出的可以盘中出 直线冲高出还是之前的96附近",
+      "original_content": "oklo夜盘没来得及出的可以盘中出 直线冲高出还是之前的96附近",
+      "timestamp": "2026-01-16 23:04:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CXBKGJZg8VHi8FkxGhKco",
+      "content": "90.9附近 回吸卖出的数量的一半 oklo 剩下也是收盘再看加",
+      "original_content": "90.9附近 回吸卖出的数量的一半 oklo 剩下也是收盘再看加",
+      "timestamp": "2026-01-16 23:45:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-16 23:45:00.000",
+      "instruction_type": "BUY",
+      "symbol": "OKLO",
+      "target_price": 90.9,
+      "position_size": "一半"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXJoCuAhVx9iWYmsHdEcG",
+      "content": "oklo 直线冲高出节前的94。1出",
+      "original_content": "oklo 直线冲高出节前的94。1出",
+      "timestamp": "2026-01-20 22:35:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-20 22:35:00.000",
+      "instruction_type": "SELL",
+      "symbol": "OKLO",
+      "target_price": 94.1,
+      "sell_quantity": "全部"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXLXdHv1n5aMvgEFNcwaZ",
+      "content": "oklo盘前冲高94附近卖出",
+      "original_content": "oklo盘前冲高94附近卖出",
+      "timestamp": "2026-01-21 20:32:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-21 20:32:00.000",
+      "instruction_type": "SELL",
+      "symbol": "OKLO",
+      "target_price": 94.0,
+      "sell_quantity": "全部"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXLi1ndbruKDTAHa6CwxT",
+      "content": "oklo可以90.5附近在接常规的一半 另外一半放尾盘附近 他一半都利好出了重新来一轮的",
+      "original_content": "oklo可以90.5附近在接常规的一半 另外一半放尾盘附近 他一半都利好出了重新来一轮的",
+      "timestamp": "2026-01-21 22:48:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-21 22:48:00.000",
+      "instruction_type": "BUY",
+      "symbol": "OKLO",
+      "target_price": 90.5,
+      "position_size": "常规的一半"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXM5hYhXxcufpSXMgVA55",
+      "content": "90。6出 88的oklo",
+      "original_content": "90。6出 88的oklo",
+      "timestamp": "2026-01-22 03:30:00.020",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "tsll 17.45附近出17.35买的",
+        "84.35再次出盘中80.7买的nvdl"
+      ]
+    },
+    "check": {
+      "timestamp": "2026-01-22 03:30:00.020",
+      "instruction_type": "SELL",
+      "symbol": "OKLO",
+      "target_price": 90.6,
+      "sell_quantity": "全部",
+      "sell_reference_price": 88.0,
+      "sell_reference_label": "88.0的"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXNdPYU8paUMgnamuEsqS",
+      "content": "90.4附近回吸常规一半的oklo",
+      "original_content": "90.4附近回吸常规一半的oklo",
+      "timestamp": "2026-01-22 23:09:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-22 23:09:00.000",
+      "instruction_type": "BUY",
+      "symbol": "OKLO",
+      "target_price": 90.4,
+      "position_size": "常规一半"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXYDQV1nApLnYNU3U9NPM",
+      "content": "oklo也是注意这轮的直线 如果仓位大的和自己补的可以这轮直线里面找成本上的出",
+      "original_content": "oklo也是注意这轮的直线 如果仓位大的和自己补的可以这轮直线里面找成本上的出",
+      "timestamp": "2026-01-28 00:40:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CXZxad8nrdRyBymsfkkSs",
+      "content": "oklo注意直线",
+      "original_content": "oklo注意直线",
+      "timestamp": "2026-01-28 22:47:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CXZxfXciXJUDp2bug1Qbk",
+      "content": "90.8出90.6的oklo",
+      "original_content": "90.8出90.6的oklo",
+      "timestamp": "2026-01-28 22:47:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "oklo注意直线"
+      ]
+    },
+    "check": {
+      "timestamp": "2026-01-28 22:47:00.010",
+      "instruction_type": "SELL",
+      "symbol": "OKLO",
+      "target_price": 90.8,
+      "sell_quantity": "全部",
+      "sell_reference_price": 90.6,
+      "sell_reference_label": "90.6的"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXbwosMDvrJimSAJ11gfi",
+      "content": "oklo 84。1-84.2吸了常规一半",
+      "original_content": "oklo 84。1-84.2吸了常规一半",
+      "timestamp": "2026-01-29 23:58:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-29 23:58:00.000",
+      "instruction_type": "BUY",
+      "symbol": "OKLO",
+      "target_price": 84.15,
+      "price_range": [
+        84.1,
+        84.2
+      ],
+      "position_size": "常规一半"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXdkQPHBsXmdrks96aoN5",
+      "content": "oklo注意直线了",
+      "original_content": "oklo注意直线了",
+      "timestamp": "2026-01-30 22:50:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CXeCkyJUdXgoSJCXsmUeZ",
+      "content": "尾盘79回吸了开盘卖出的oklo那部分",
+      "original_content": "尾盘79回吸了开盘卖出的oklo那部分",
+      "timestamp": "2026-01-31 04:35:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-31 04:35:00.000",
+      "instruction_type": "BUY",
+      "symbol": "OKLO",
+      "target_price": 79.0
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXmNDGd8LuS4XALnBmrz9",
+      "content": "oklo注意这轮直线",
+      "original_content": "oklo注意这轮直线",
+      "timestamp": "2026-02-03 23:24:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CXmNcxrRMPZuQmMHnR3ne",
+      "content": "78.2附近出一般之前79的一半oklo",
+      "original_content": "78.2附近出一般之前79的一半oklo",
+      "timestamp": "2026-02-03 23:29:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-03 23:29:00.000",
+      "instruction_type": "SELL",
+      "symbol": "OKLO",
+      "target_price": 78.2,
+      "sell_quantity": "1/2"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXmP9J2Guso1bkhqtkCCF",
+      "content": "oklo剩下一半可以看下79附近出 如果没到就后面再回落时候在吸回一半 今天主要高点出一半79就完成任务了 有79多点最好",
+      "original_content": "oklo剩下一半可以看下79附近出 如果没到就后面再回落时候在吸回一半 今天主要高点出一半79就完成任务了 有79多点最好",
+      "timestamp": "2026-02-03 23:36:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-03 23:36:00.000",
+      "instruction_type": "SELL",
+      "symbol": "OKLO",
+      "target_price": 79.0,
+      "sell_quantity": "1/2"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXoWD1fajWm85VypqJ1xz",
+      "content": "oklo在64.8附近 加昨天卖出的那部分数量",
+      "original_content": "oklo在64.8附近 加昨天卖出的那部分数量",
+      "timestamp": "2026-02-05 02:26:00.030",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "spy 682附近要开始注意了 分时低点在来次二次探底附近接近尾盘时候就可以 这个低点有吸筹迹象了 主要看个股的分时v 点",
+        "nvdl 74附近找震荡加常规一半 收盘再到73.43附近再加次",
+        "rxrx在3.78附近加了次常规的一半"
+      ]
+    },
+    "check": {
+      "timestamp": "2026-02-05 02:26:00.030",
+      "instruction_type": "BUY",
+      "symbol": "OKLO",
+      "target_price": 64.8
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXodQ3Fxgp4VVWtYCKLQk",
+      "content": "oklo 68.5附近出 64.8的 做T资金有赚就留出来 特朗普拿伊朗事件做T了",
+      "original_content": "oklo 68.5附近出 64.8的 做T资金有赚就留出来 特朗普拿伊朗事件做T了",
+      "timestamp": "2026-02-05 04:04:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-05 04:04:00.000",
+      "instruction_type": "SELL",
+      "symbol": "OKLO",
+      "target_price": 68.5,
+      "sell_quantity": "全部",
+      "sell_reference_price": 64.8,
+      "sell_reference_label": "64.8买的"
+    }
+  }
+]

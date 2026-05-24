@@ -2,3 +2,7 @@ playwright>=1.40.0
 python-dotenv>=1.0.0
 longport
 rich>=13.0.0
+# SPY 期权大单监听（scripts/spy_options_flow_monitor.py）
+websockets>=12.0
+requests>=2.28.0
+yfinance>=0.2.0

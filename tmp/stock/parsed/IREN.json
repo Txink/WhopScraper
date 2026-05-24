@@ -1,0 +1,883 @@
+[
+  {
+    "origin": {
+      "domID": "post_1CVKbL2rtYxKgfQTbtyY8F",
+      "content": "备选的 oklo 92-93可以吸一半 尾盘确认下成交额 iren 47-48可以吸一半 尾盘确认下成交额",
+      "original_content": "备选的 oklo 92-93可以吸一半 尾盘确认下成交额 iren 47-48可以吸一半 尾盘确认下成交额",
+      "timestamp": "2025-11-21 02:11:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CVM48reXtouC78WmFqARD",
+      "content": "周五盘前低点价格可以加分2次加的点 一次盘前低点附近一次盘中结算putV的时候 tsll 15.6 rklb 38.3-38.6附近 nvdl 79-80附近 iren 40.5 soun 11 oklo 85-86 crwv 66.5 nbis 81 apld 20 rxrx3.78",
+      "original_content": "周五盘前低点价格可以加分2次加的点 一次盘前低点附近一次盘中结算putV的时候 tsll 15.6 rklb 38.3-38.6附近 nvdl 79-80附近 iren 40.5 soun 11 oklo 85-86 crwv 66.5 nbis 81 apld 20 rxrx3.78",
+      "timestamp": "2025-11-21 20:43:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CVStgxxzJtSZts7YgzAz9",
+      "content": "iren也是冲高时候注意转弯时候把周四周五的都止盈 45-46附近",
+      "original_content": "iren也是冲高时候注意转弯时候把周四周五的都止盈 45-46附近",
+      "timestamp": "2025-11-24 22:42:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "apld冲高注意转弯时候把周四周五买的都出 22.5-23附近"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-11-24 22:42:00.010",
+      "instruction_type": "SELL",
+      "symbol": "IREN",
+      "target_price": 45.0,
+      "sell_quantity": "全部"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVT8BQNF2ZW1yDiUqCATX",
+      "content": "币类反弹 一般先是btc conl hood这类交易所 eth囤币的bmnr iren cifr这类AI炒币先反弹 mstr一月有剔除指数风险最近会压制涨幅 二阶段是mara clsk这类",
+      "original_content": "币类反弹 一般先是btc conl hood这类交易所 eth囤币的bmnr iren cifr这类AI炒币先反弹 mstr一月有剔除指数风险最近会压制涨幅 二阶段是mara clsk这类",
+      "timestamp": "2025-11-25 01:40:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CVaj6XGSg2FK5utLKnaxq",
+      "content": "加密货币今天有杠杆结算 盘后iren 47.8附近少量加仓点",
+      "original_content": "加密货币今天有杠杆结算 盘后iren 47.8附近少量加仓点",
+      "timestamp": "2025-11-29 02:01:00.010",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "盘后nvdl可以80.3-80.4加仓点"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-11-29 02:01:00.010",
+      "instruction_type": "BUY",
+      "symbol": "IREN",
+      "target_price": 47.8
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVgAQDzg3FDpbBatRKAhA",
+      "content": "iren也是47.7成本附近先出",
+      "original_content": "iren也是47.7成本附近先出",
+      "timestamp": "2025-12-01 22:57:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-01 22:57:00.000",
+      "instruction_type": "SELL",
+      "symbol": "IREN",
+      "target_price": 47.7,
+      "sell_quantity": "全部"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CViPiCQ5J4yBR7Z35NmM7",
+      "content": "iren可以注意43.5这个价格的转弯 昨天盘后出了增发会压低价格三天左右也预留点后面2天在加仓",
+      "original_content": "iren可以注意43.5这个价格的转弯 昨天盘后出了增发会压低价格三天左右也预留点后面2天在加仓",
+      "timestamp": "2025-12-03 03:12:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-03 03:12:00.000",
+      "instruction_type": "SELL",
+      "symbol": "IREN",
+      "target_price": 43.5,
+      "sell_quantity": "全部"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVjwZ12Ch8ZPF5LrL8bcU",
+      "content": "iren今天是增发的第二天 今天盘前跌40那个回踩可以注意 开盘目前没在给机会 他属于ai炒币类 有人工智能 电力 btc三个属性",
+      "original_content": "iren今天是增发的第二天 今天盘前跌40那个回踩可以注意 开盘目前没在给机会 他属于ai炒币类 有人工智能 电力 btc三个属性",
+      "timestamp": "2025-12-03 22:51:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CVkQ88xugH253TLVfxA2j",
+      "content": "还有个技巧就是板块加密昨天都涨 就iren -16% 就要去看看为啥跌 增发这种第一天砍市值这种正常的就是 捡漏机会 今天也是反弹第一",
+      "original_content": "还有个技巧就是板块加密昨天都涨 就iren -16% 就要去看看为啥跌 增发这种第一天砍市值这种正常的就是 捡漏机会 今天也是反弹第一",
+      "timestamp": "2025-12-04 04:39:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CVonNn2kGhs3TFqsjwmKu",
+      "content": "sofi这个昨天增发了15亿今天跌幅到26.5是正好跌掉15亿的 和iren一样原理 可以盘中回踩27.5开个底仓 到25-26区间再加仓",
+      "original_content": "sofi这个昨天增发了15亿今天跌幅到26.5是正好跌掉15亿的 和iren一样原理 可以盘中回踩27.5开个底仓 到25-26区间再加仓",
+      "timestamp": "2025-12-05 23:33:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CVuQ9B2Mk7bZ7ptQ1YL47",
+      "content": "iren今天也是转弯时候可以减仓点 46-46.5之间",
+      "original_content": "iren今天也是转弯时候可以减仓点 46-46.5之间",
+      "timestamp": "2025-12-08 22:45:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-08 22:45:00.000",
+      "instruction_type": "SELL",
+      "symbol": "IREN",
+      "target_price": 46.25,
+      "price_range": [
+        46.0,
+        46.5
+      ],
+      "sell_quantity": "全部"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVycD76TVA3o3voRrnWa4",
+      "content": "iren也可以注意44-44.5吸回高抛的",
+      "original_content": "iren也可以注意44-44.5吸回高抛的",
+      "timestamp": "2025-12-11 04:05:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-11 04:05:00.000",
+      "instruction_type": "BUY",
+      "symbol": "IREN",
+      "target_price": 44.25,
+      "price_range": [
+        44.0,
+        44.5
+      ]
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVyj9Z8cngfobDtx1Nnht",
+      "content": "盘后和夜盘主要盯着 受甲骨文拖累的ai板块 nvdl 84.8一笔 然后83-83.5回踩再加 msfl26.6盘中有过一笔了 25.8附近前支撑在看加 tsll（特斯拉有ai属性）18.8-18.6看能不能回踩 iren 44-44.5有过一笔了 41-42附近再看加 cifr18-18.3可以买一笔 剩下等17附近 crwv84-85回踩到可以买一笔 剩下放81 nbis92-93刚回踩到吸过一笔 剩下放86-87",
+      "original_content": "盘后和夜盘主要盯着 受甲骨文拖累的ai板块 nvdl 84.8一笔 然后83-83.5回踩再加 msfl26.6盘中有过一笔了 25.8附近前支撑在看加 tsll（特斯拉有ai属性）18.8-18.6看能不能回踩 iren 44-44.5有过一笔了 41-42附近再看加 cifr18-18.3可以买一笔 剩下等17附近 crwv84-85回踩到可以买一笔 剩下放81 nbis92-93刚回踩到吸过一笔 剩下放86-87",
+      "timestamp": "2025-12-11 05:36:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CVzBND4h8hgSyg9hmE1Fc",
+      "content": "iren也是直接回踩到第二笔的支撑41-42之间",
+      "original_content": "iren也是直接回踩到第二笔的支撑41-42之间",
+      "timestamp": "2025-12-11 11:19:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "msfl还是剩下一笔看25.8这个前支撑"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-12-11 11:19:00.010",
+      "instruction_type": "SELL",
+      "symbol": "IREN",
+      "target_price": 41.5,
+      "price_range": [
+        41.0,
+        42.0
+      ],
+      "sell_quantity": "全部"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVzyCSNUrDE4wdrGH3JTa",
+      "content": "43.1出夜盘补的iren那部分",
+      "original_content": "43.1出夜盘补的iren那部分",
+      "timestamp": "2025-12-11 21:19:00.020",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "39出夜盘37附近低买的bmnr",
+        "91出夜盘补的nbis"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-12-11 21:19:00.020",
+      "instruction_type": "SELL",
+      "symbol": "IREN",
+      "target_price": 43.1,
+      "sell_quantity": "全部"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CW1Zg1ngGBvz5n8GnpUVW",
+      "content": "iren 高买的44.3部分还没到 有夜盘低买的可以43.8附近出掉点",
+      "original_content": "iren 高买的44.3部分还没到 有夜盘低买的可以43.8附近出掉点",
+      "timestamp": "2025-12-12 04:51:00.020",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "conl到21.5成本附近可以减点 昨天买入后冲高22.6时候也有减过 等币在回调时候在低买在正T",
+        "cifr 可以18.9附近出夜盘加的 ai+bi概念"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-12-12 04:51:00.020",
+      "instruction_type": "SELL",
+      "symbol": "IREN",
+      "target_price": 43.8,
+      "sell_quantity": "全部"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CW1a2G6v4WVjLkoy2sqMW",
+      "content": "币股每次只要触发了预警 conl bmnr iren cifr容错率都是可以的",
+      "original_content": "币股每次只要触发了预警 conl bmnr iren cifr容错率都是可以的",
+      "timestamp": "2025-12-12 04:58:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CW1bXxEyeMrNHH1wwcPdP",
+      "content": "iren 44.4那部分也是博通财报带起来时候减点在低买",
+      "original_content": "iren 44.4那部分也是博通财报带起来时候减点在低买",
+      "timestamp": "2025-12-12 05:16:00.020",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "博通财报 板块AI带起来一下",
+        "nvdl可以84.7昨天高买那部分减点"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-12-12 05:16:00.020",
+      "instruction_type": "SELL",
+      "symbol": "IREN",
+      "target_price": 44.4,
+      "sell_quantity": "小仓位"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CW33X6pA1YVcRyitL379t",
+      "content": "42.2附近可以接回昨天高抛的iren",
+      "original_content": "42.2附近可以接回昨天高抛的iren",
+      "timestamp": "2025-12-12 23:33:00.040",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "bmnr可以注意36.6-36.8附近可以低吸一笔剩下等博通转弯再加一笔",
+        ".亚马逊双倍amzu可以34.05附近加一笔",
+        "tsll keyi 19.3附近接回开盘高抛的部分的一半",
+        "21附近可以接回一半高抛的 conl"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-12-12 23:33:00.040",
+      "instruction_type": "BUY",
+      "symbol": "IREN",
+      "target_price": 42.2
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CW3FuvoUER9CRKW63hYCD",
+      "content": "iren也是42.2成本附近的减仓点 到收盘后再看",
+      "original_content": "iren也是42.2成本附近的减仓点 到收盘后再看",
+      "timestamp": "2025-12-13 02:22:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-13 02:22:00.000",
+      "instruction_type": "SELL",
+      "symbol": "IREN",
+      "target_price": 42.2,
+      "sell_quantity": "小仓位"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CW3Ux7eBsd88Nx2wzr6H7",
+      "content": "盘后iren在40.1-40.2之间回吸 盘后所有的股票加起来总仓位不要超过7成 周一万一有回踩还要有做T资金",
+      "original_content": "盘后iren在40.1-40.2之间回吸 盘后所有的股票加起来总仓位不要超过7成 周一万一有回踩还要有做T资金",
+      "timestamp": "2025-12-13 05:12:00.040",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "盘后34.8-34.9可以回吸bmnr 盘后所有的股票加起来总仓位不要超过7成 周一万一有回踩还要有做T资金",
+        "盘后78-78.2之间可以加仓点nvdl 盘中有部分83.5加的盘中没到成本还没出 盘后所有的股票加起来总仓位不要超过7成 周一万一有回踩还要有做T资金",
+        "盘后78-78.2之间可以加仓点nvdl 盘中有部分83.5加的盘中没到成本还没出 盘后所有的股票加起来总仓位不要超过7成 周一万一有回踩还要有做T资金",
+        "盘后 oklo 87.2附近可以加仓 盘中有部分97的盘中没到成本下周也会看下出的位置 盘后所有的股票加起来总仓位不要超过7成 周一万一有回踩还要有做T资金"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-12-13 05:12:00.040",
+      "instruction_type": "BUY",
+      "symbol": "IREN",
+      "target_price": 40.15,
+      "price_range": [
+        40.1,
+        40.2
+      ]
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWFXEFZMKWXeujvSuVkXP",
+      "content": "iren可以夜盘和盘前找找36附近的价格回吸点 盘中有平期权波动回踩再加一笔",
+      "original_content": "iren可以夜盘和盘前找找36附近的价格回吸点 盘中有平期权波动回踩再加一笔",
+      "timestamp": "2025-12-19 13:50:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-19 13:50:00.000",
+      "instruction_type": "BUY",
+      "symbol": "IREN",
+      "target_price": 36.0
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWFZvfeggB5vteQfwLtx5",
+      "content": "12月19日更新一半仓位死拿一半仓位做T新一轮股单 每个板块选1-2个 三个板块配置 盘中有四巫日季度期权和周期权平仓时候的回踩去介入 七姐妹和大盘股 nvdl 盘中在找下76-77之间的机会 原来83.5没动 甲骨文会找下185附近的机会 微软双倍msfl可以找26.6附近在重新开仓 亚马逊双倍amzu 可以34 和33两个价格开仓 tsll 后面找20.7附近缺口机会 intc这轮低点在35.7附近找 35.7-36的低吸机会 明星股小盘股 crwv 会67-68附近找机会再加点 原来没动的部分还有77 和84的部分 nbis 夜盘和盘前可以找下78-79的机会加仓一笔 原来还有87的一笔还没动 oklo可以夜盘和盘前找下77附近的价格做介入 上方还有87和97有两笔还没出 sound 上轮有个11部分还没怎么出完 这轮可以找找10.8价格位置吸 到上轮高点12.5附近出 sofi 27.5那部分没动 有25机会再加仓 asts 找63-64附近会吸一笔盘中再看下机会 rklb 后面找52附近机会 盘中在看下 apld到23附近在找机会加仓一笔 上方还有笔27的还没动 eose 12.2-12.4附近可以介入一笔盘中在找个低的机会 joby 13.5附近可以找机会介入一笔 到盘中再看看低的机会再加 tem 可以62附近重新开仓一笔 到盘中低的机会再加 加密货币 bmnr可以夜盘和盘前找找28.8-29附近的价格回吸点 盘中有平期权波动回踩再加一笔 盘中在更新下盘中的价格 conl可以夜盘和盘前找找16.8-17附近的价格回吸点 盘中有平期权波动回踩再加一笔 盘中在更新下盘中的价格 iren可以夜盘和盘前找找36附近的价格回吸点 盘中有平期权波动回踩再加一笔 盘中在更新下盘中的价格 cifr可以夜盘和盘前找找15附近的价格回吸点 盘中有平期权波动回踩再加一笔 盘中在更新下盘中的价格 hood可以夜盘和盘前找找117附近的价格回吸点 盘中有平期权波动回踩再加一笔 盘中在更新下盘中的价格 加密里面有涨幅限制的两个 mstr可以158-159附近做正T差价下 到1月10日附近 剔除指数前一周要减掉大部分 mara 可以9.6-9.7介入 旷股比其他加密涨幅慢 跌时候跌幅大 可以当备选的到12.5压力都出 上一轮的低吸做对比",
+      "original_content": "12月19日更新一半仓位死拿一半仓位做T新一轮股单 每个板块选1-2个 三个板块配置 盘中有四巫日季度期权和周期权平仓时候的回踩去介入 七姐妹和大盘股 nvdl 盘中在找下76-77之间的机会 原来83.5没动 甲骨文会找下185附近的机会 微软双倍msfl可以找26.6附近在重新开仓 亚马逊双倍amzu 可以34 和33两个价格开仓 tsll 后面找20.7附近缺口机会 intc这轮低点在35.7附近找 35.7-36的低吸机会 明星股小盘股 crwv 会67-68附近找机会再加点 原来没动的部分还有77 和84的部分 nbis 夜盘和盘前可以找下78-79的机会加仓一笔 原来还有87的一笔还没动 oklo可以夜盘和盘前找下77附近的价格做介入 上方还有87和97有两笔还没出 sound 上轮有个11部分还没怎么出完 这轮可以找找10.8价格位置吸 到上轮高点12.5附近出 sofi 27.5那部分没动 有25机会再加仓 asts 找63-64附近会吸一笔盘中再看下机会 rklb 后面找52附近机会 盘中在看下 apld到23附近在找机会加仓一笔 上方还有笔27的还没动 eose 12.2-12.4附近可以介入一笔盘中在找个低的机会 joby 13.5附近可以找机会介入一笔 到盘中再看看低的机会再加 tem 可以62附近重新开仓一笔 到盘中低的机会再加 加密货币 bmnr可以夜盘和盘前找找28.8-29附近的价格回吸点 盘中有平期权波动回踩再加一笔 盘中在更新下盘中的价格 conl可以夜盘和盘前找找16.8-17附近的价格回吸点 盘中有平期权波动回踩再加一笔 盘中在更新下盘中的价格 iren可以夜盘和盘前找找36附近的价格回吸点 盘中有平期权波动回踩再加一笔 盘中在更新下盘中的价格 cifr可以夜盘和盘前找找15附近的价格回吸点 盘中有平期权波动回踩再加一笔 盘中在更新下盘中的价格 hood可以夜盘和盘前找找117附近的价格回吸点 盘中有平期权波动回踩再加一笔 盘中在更新下盘中的价格 加密里面有涨幅限制的两个 mstr可以158-159附近做正T差价下 到1月10日附近 剔除指数前一周要减掉大部分 mara 可以9.6-9.7介入 旷股比其他加密涨幅慢 跌时候跌幅大 可以当备选的到12.5压力都出 上一轮的低吸做对比",
+      "timestamp": "2025-12-19 14:25:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CWGDSAZwiqGBqv2qVWsH6",
+      "content": "盘中可以注意币股的几个转弯往上时候低吸 conl bmnr iren cifr hood",
+      "original_content": "盘中可以注意币股的几个转弯往上时候低吸 conl bmnr iren cifr hood",
+      "timestamp": "2025-12-19 22:37:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CWGMH5fmmMmQMW6uChdmz",
+      "content": "iren cifr也涨到8个点 今天看置顶里面哪些10个点的 下轮也是这样做优先买双底 crwv 15% nbis 12% apld14%之类的",
+      "original_content": "iren cifr也涨到8个点 今天看置顶里面哪些10个点的 下轮也是这样做优先买双底 crwv 15% nbis 12% apld14%之类的",
+      "timestamp": "2025-12-20 00:20:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CWLpkT7Q8t9SCYXHtWEXp",
+      "content": "btc和eth也是周末跳空小涨的 今天是注意预警的延续性 没有回调迹象 就是低位补仓的 bmnr conl iren cifr hood之类的持股为主",
+      "original_content": "btc和eth也是周末跳空小涨的 今天是注意预警的延续性 没有回调迹象 就是低位补仓的 bmnr conl iren cifr hood之类的持股为主",
+      "timestamp": "2025-12-22 09:02:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CWLqcTBxTH1SZwR7subue",
+      "content": "conl bmnr iren cifr hood 周五很低买的可以做好一半死拿跌下来一半位置 一半仓位用来正T",
+      "original_content": "conl bmnr iren cifr hood 周五很低买的可以做好一半死拿跌下来一半位置 一半仓位用来正T",
+      "timestamp": "2025-12-22 09:10:00.020",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "80-82附近可以注意分批出掉周五64附近吸的asts 也是跳到了前高附近 涨幅巨大",
+        "asts是第一个 从一半位置一下 隔开一个周末就到前高附近的 和上一轮一样 有榜样出现 很多会效仿冲击前高"
+      ]
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CWLqu3yAvJppn77T9xX3E",
+      "content": "iren 可以42-43把40.6-41买那部分出 低位36买的可以一半不动 动做T那部分",
+      "original_content": "iren 可以42-43把40.6-41买那部分出 低位36买的可以一半不动 动做T那部分",
+      "timestamp": "2025-12-22 09:17:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-22 09:17:00.000",
+      "instruction_type": "BUY",
+      "symbol": "IREN",
+      "target_price": 42.5,
+      "price_range": [
+        42.0,
+        43.0
+      ],
+      "position_size": "一半"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWMvcGiyWNaasADXonHRS",
+      "content": "iRen 43-43.5附近也是减剩下持仓里面 成本高的 留个一半仓位",
+      "original_content": "iRen 43-43.5附近也是减剩下持仓里面 成本高的 留个一半仓位",
+      "timestamp": "2025-12-22 23:00:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-22 23:00:00.000",
+      "instruction_type": "SELL",
+      "symbol": "IREN",
+      "target_price": 43.25,
+      "price_range": [
+        43.0,
+        43.5
+      ],
+      "sell_quantity": "全部"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWPobLLvvVix7YQUm1wA2",
+      "content": "iren和cifr今天盯着这轮冲高也可以在减点 主要是ai属性在涨 币属性压制还没提现 今天大盘股反弹 也是大盘股反弹时候看有转弯往下迹象时候也减点",
+      "original_content": "iren和cifr今天盯着这轮冲高也可以在减点 主要是ai属性在涨 币属性压制还没提现 今天大盘股反弹 也是大盘股反弹时候看有转弯往下迹象时候也减点",
+      "timestamp": "2025-12-23 22:49:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CWVYbAkPm4amEMRkK1zPC",
+      "content": "iren注意39.6这个转弯点 也是收盘附近看强平时候的回踩机会没跌破就39.6附近回吸",
+      "original_content": "iren注意39.6这个转弯点 也是收盘附近看强平时候的回踩机会没跌破就39.6附近回吸",
+      "timestamp": "2025-12-26 23:34:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "apld 在24.2附近 回吸之前28卖出的一半 收盘在看情况加仓"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-12-26 23:34:00.010",
+      "instruction_type": "BUY",
+      "symbol": "IREN",
+      "target_price": 39.6
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWVzLyQRgJ3ALi6Jz2VK1",
+      "content": "iren盘中低点是39.6 收盘在40.2也符合 可以挂低点也可以40附近买少量下周有低点再加",
+      "original_content": "iren盘中低点是39.6 收盘在40.2也符合 可以挂低点也可以40附近买少量下周有低点再加",
+      "timestamp": "2025-12-27 05:09:00.040",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "cifr盘中低点在15 可以15-15.1吸回一半",
+        "bmnr 盘中低点在28附近 盘后在28.3不上不下位置 可以挂28附近挂低 没有进到就下周先出在低买",
+        "conl也是原来的16.45的下周先考虑出 盘中的15.6距离太远",
+        "rxrx盘中4.24 收盘4.25也符合 也是只吸一半 日k有4.14的低点时候在吸一半 也是上去了当短线都出"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-12-27 05:09:00.040",
+      "instruction_type": "BUY",
+      "symbol": "IREN",
+      "target_price": 40.0
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWb9KwUgYG4cVmzuLw5fe",
+      "content": "41附近出周五的iren",
+      "original_content": "41附近出周五的iren",
+      "timestamp": "2025-12-29 22:33:00.020",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "开盘币市场反弹时候 加密注意成本上出",
+        "开盘币市场反弹时候 加密注意成本上出"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-12-29 22:33:00.020",
+      "instruction_type": "SELL",
+      "symbol": "IREN",
+      "target_price": 41.0,
+      "sell_quantity": "全部"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWbbnptPqPfo82G4HniBB",
+      "content": "iren可以39.5-39.7附近吸回高抛的",
+      "original_content": "iren可以39.5-39.7附近吸回高抛的",
+      "timestamp": "2025-12-30 04:18:00.030",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "尾盘到收盘可以把一些回踩盘前低价的做吸回",
+        "tsll可以20.2-20.3附近吸回盘中高抛的明天短线出",
+        "bmnr可以28.3-28.4附近吸夜盘高抛的也是明天做短线出"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-12-30 04:18:00.030",
+      "instruction_type": "BUY",
+      "symbol": "IREN",
+      "target_price": 39.6,
+      "price_range": [
+        39.5,
+        39.7
+      ]
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWik58u4vgJG8Z5BR1fgX",
+      "content": "39.9出39的iren",
+      "original_content": "39.9出39的iren",
+      "timestamp": "2026-01-02 22:48:00.060",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "tsll 19.1 回吸卖出的一半",
+        "eose等转弯时候卖 11.6和12.04的一半",
+        "开盘回踩有些put平仓了现在是多的轮次 注意有些冲高出",
+        "12.1-12.3分批出11.6的eose全部和12.04的一半",
+        "28.8-29转弯时候出 周二的27.6的那部分bmnr",
+        "75.7可以出周三收盘附近crwv有买的也可以出"
+      ]
+    },
+    "check": {
+      "timestamp": "2026-01-02 22:48:00.060",
+      "instruction_type": "SELL",
+      "symbol": "IREN",
+      "target_price": 39.9,
+      "sell_quantity": "全部",
+      "sell_reference_price": 39.0,
+      "sell_reference_label": "39.0的"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWpRsUyMB1SHvJWkwZEJA",
+      "content": "iren cift这两个也快到 圣诞节跌下来的价格也可以死拿的等转弯出一半",
+      "original_content": "iren cift这两个也快到 圣诞节跌下来的价格也可以死拿的等转弯出一半",
+      "timestamp": "2026-01-05 22:59:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CWpRzEs5HMBwsGFiUw7te",
+      "content": "iren 45.6附近可以死拿的部分出一半",
+      "original_content": "iren 45.6附近可以死拿的部分出一半",
+      "timestamp": "2026-01-05 22:59:00.010",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "iren cift这两个也快到 圣诞节跌下来的价格也可以死拿的等转弯出一半"
+      ]
+    },
+    "check": {
+      "timestamp": "2026-01-05 22:59:00.010",
+      "instruction_type": "SELL",
+      "symbol": "IREN",
+      "target_price": 45.6,
+      "sell_quantity": "1/2"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWrepefyU8WPbNsNtasP4",
+      "content": "iren 43.5 也是吸点昨天卖出数量的一半 小仓位 后面几天再有回调再加",
+      "original_content": "iren 43.5 也是吸点昨天卖出数量的一半 小仓位 后面几天再有回调再加",
+      "timestamp": "2026-01-07 03:10:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-07 03:10:00.000",
+      "instruction_type": "BUY",
+      "symbol": "IREN",
+      "target_price": 43.5,
+      "position_size": "小仓位"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWriJvnA3J6N5SAN1cNFK",
+      "content": "iren 45。1出43.5的部分 在挂个43.5接",
+      "original_content": "iren 45。1出43.5的部分 在挂个43.5接",
+      "timestamp": "2026-01-07 03:56:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-07 03:56:00.000",
+      "instruction_type": "BUY",
+      "symbol": "IREN",
+      "target_price": 43.5
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CX3ntzcuaEhJa5o3M2pzp",
+      "content": "iren距离前一轮加息前的高点11月28日 51.5差个1.5了 死拿剩下一半也可以今天50附近出",
+      "original_content": "iren距离前一轮加息前的高点11月28日 51.5差个1.5了 死拿剩下一半也可以今天50附近出",
+      "timestamp": "2026-01-13 00:22:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-13 00:22:00.000",
+      "instruction_type": "SELL",
+      "symbol": "IREN",
+      "target_price": 50.0,
+      "sell_quantity": "1/2"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXY7AEFEkge9cgPrfRgTa",
+      "content": "币股其他的也是看类似cifr这种直线异动时候才出 然后吸的点都是双底 conl这个稳定币利空 等法案修改稳定币仍然有利息时候再补 目前币就cifr iren bmnr抓跌的机会做短线 法案快修正投票在中线",
+      "original_content": "币股其他的也是看类似cifr这种直线异动时候才出 然后吸的点都是双底 conl这个稳定币利空 等法案修改稳定币仍然有利息时候再补 目前币就cifr iren bmnr抓跌的机会做短线 法案快修正投票在中线",
+      "timestamp": "2026-01-27 23:18:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CXeCyQsVFSH5vpsZkssj9",
+      "content": "53附近吸了常规仓一半的iren",
+      "original_content": "53附近吸了常规仓一半的iren",
+      "timestamp": "2026-01-31 04:38:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-31 04:38:00.000",
+      "instruction_type": "BUY",
+      "symbol": "IREN",
+      "target_price": 53.0,
+      "position_size": "一半"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXjdAZkD39WboaSyjxcZP",
+      "content": "iren也注意直线了",
+      "original_content": "iren也注意直线了",
+      "timestamp": "2026-02-03 01:18:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CXjdEdmfQQ4H5FbfeNF9T",
+      "content": "53.65附近出一半 周五53的iren",
+      "original_content": "53.65附近出一半 周五53的iren",
+      "timestamp": "2026-02-03 01:18:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "iren也注意直线了"
+      ]
+    },
+    "check": {
+      "timestamp": "2026-02-03 01:18:00.010",
+      "instruction_type": "SELL",
+      "symbol": "IREN",
+      "target_price": 53.65,
+      "sell_quantity": "全部",
+      "sell_reference_price": 53.0,
+      "sell_reference_label": "53.0的"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXjeg1Z1GGu8ag2DAHqME",
+      "content": "54。15出剩下一半iren",
+      "original_content": "54。15出剩下一半iren",
+      "timestamp": "2026-02-03 01:37:00.010",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "16.58把夜盘那部分16.55的tsll出到回落在低接"
+      ]
+    },
+    "check": {
+      "timestamp": "2026-02-03 01:37:00.010",
+      "instruction_type": "SELL",
+      "symbol": "IREN",
+      "target_price": 54.15,
+      "sell_quantity": "1/2"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXjfNT2MTSTRti3QaD7et",
+      "content": "算力卡炒币（日内币可以高抛低吸获利的公司）>>>囤币（中线的都在亏损）>>>挖矿的（电费都大于挖到的币了） 交易所 等利息商讨中也是跌腰斩附近了 币三个梯队的 算力卡炒币 iren cifr hut（最近新尝试算力卡业务的） 囤币 bmnr mstr（中线 两家都在亏损） 交易所 利息等商讨 coin hood 挖矿最末梯队",
+      "original_content": "算力卡炒币（日内币可以高抛低吸获利的公司）>>>囤币（中线的都在亏损）>>>挖矿的（电费都大于挖到的币了） 交易所 等利息商讨中也是跌腰斩附近了 币三个梯队的 算力卡炒币 iren cifr hut（最近新尝试算力卡业务的） 囤币 bmnr mstr（中线 两家都在亏损） 交易所 利息等商讨 coin hood 挖矿最末梯队",
+      "timestamp": "2026-02-03 01:47:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CXoEZptJgNZQ548fuDr9r",
+      "content": "47.3吸回之前卖的iren 常规仓的一半",
+      "original_content": "47.3吸回之前卖的iren 常规仓的一半",
+      "timestamp": "2026-02-04 23:02:00.020",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "spy也是今天先往下到685 看685今天能不能支撑住 昨天是行政令签署人为调控支撑的",
+        "14.2重新吸回之前卖的cifr"
+      ]
+    },
+    "check": {
+      "timestamp": "2026-02-04 23:02:00.020",
+      "instruction_type": "BUY",
+      "symbol": "IREN",
+      "target_price": 47.3,
+      "position_size": "常规仓的一半"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXqcEo8cJssSY5Evem8F3",
+      "content": "iren 财报中等 小超预期 42。15附近也先把昨天的 47的先止损了",
+      "original_content": "iren 财报中等 小超预期 42。15附近也先把昨天的 47的先止损了",
+      "timestamp": "2026-02-06 05:10:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CYdPgqoH2oWfHPV17x7pQ",
+      "content": "39.5开了iren常规仓的一半",
+      "original_content": "39.5开了iren常规仓的一半",
+      "timestamp": "2026-03-02 09:33:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-03-02 09:33:00.000",
+      "instruction_type": "BUY",
+      "symbol": "IREN",
+      "target_price": 39.5,
+      "position_size": "常规仓的一半"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CYeTwXHgRmrQtUbpi7efF",
+      "content": "夜盘的iren也因为btc 反弹直线了 等转弯时候可以出",
+      "original_content": "夜盘的iren也因为btc 反弹直线了 等转弯时候可以出",
+      "timestamp": "2026-03-02 23:09:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CYeUSvFHAUALJwD3UXVda",
+      "content": "41.5出夜盘 39.5的iren",
+      "original_content": "41.5出夜盘 39.5的iren",
+      "timestamp": "2026-03-02 23:16:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-03-02 23:16:00.000",
+      "instruction_type": "SELL",
+      "symbol": "IREN",
+      "target_price": 41.5,
+      "sell_quantity": "全部",
+      "sell_reference_price": 39.5,
+      "sell_reference_label": "39.5的"
+    }
+  }
+]

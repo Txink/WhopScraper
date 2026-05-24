@@ -1,0 +1,2625 @@
+[
+  {
+    "origin": {
+      "domID": "post_1CTwtPCDadK4MxvymC8V9L",
+      "content": "bmnr要注意 56这个支撑会不会跌破 等看到有进场单子在小仓位建仓一笔",
+      "original_content": "bmnr要注意 56这个支撑会不会跌破 等看到有进场单子在小仓位建仓一笔",
+      "timestamp": "2025-10-09 23:47:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CTx2tZRie42KoGL6DYnya",
+      "content": "sbet 可以16.26附近建仓点 主要还是等bmnr 都是eth板块 bmnr是龙头 56没怎么下去 sbet 套利下",
+      "original_content": "sbet 可以16.26附近建仓点 主要还是等bmnr 都是eth板块 bmnr是龙头 56没怎么下去 sbet 套利下",
+      "timestamp": "2025-10-10 01:39:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CTx4ck8atBsrMD1pFc5hZ",
+      "content": "bmnr 可以57-57.2附近 先建仓点 今天支撑位56比较强 一直没下去",
+      "original_content": "bmnr 可以57-57.2附近 先建仓点 今天支撑位56比较强 一直没下去",
+      "timestamp": "2025-10-10 02:00:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "tsll 目前正好到19.6 出掉一半 剩下一半还是19.8-19.9附近看再出"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-10-10 02:00:00.010",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 57.2
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CTxD1mHJbypyiEk7s71VX",
+      "content": "bmnr 59压力位附近可以出一半 剩下一半 夜盘和盘前看看",
+      "original_content": "bmnr 59压力位附近可以出一半 剩下一半 夜盘和盘前看看",
+      "timestamp": "2025-10-10 03:52:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-10 03:52:00.000",
+      "instruction_type": "SELL",
+      "symbol": "BMNR",
+      "target_price": 59.0,
+      "sell_quantity": "1/2"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CTxEs3XVwMK89bTsma6Q2",
+      "content": "微牛支撑12.00没有打压到和bmnr情况差不多可以挂单或者找找12.4附近的机会加仓点在预留点12附近加",
+      "original_content": "微牛支撑12.00没有打压到和bmnr情况差不多可以挂单或者找找12.4附近的机会加仓点在预留点12附近加",
+      "timestamp": "2025-10-10 04:16:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-10 04:16:00.000",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 12.4
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CTyaWoh5qsrxeqw5fkj5W",
+      "content": "盘前17.01附近可以减仓一半sbet bmnr有机会到56-57区间在进行加仓",
+      "original_content": "盘前17.01附近可以减仓一半sbet bmnr有机会到56-57区间在进行加仓",
+      "timestamp": "2025-10-10 21:14:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CTycSCzQgofP2GV4n3eHY",
+      "content": "bmnr剩下一半也关注震荡走高63是今天压力位",
+      "original_content": "bmnr剩下一半也关注震荡走高63是今天压力位",
+      "timestamp": "2025-10-10 21:38:00.010",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "tsll震荡走高可以昨天剩下的在20.7-20.6附近做T"
+      ]
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CTycWS6piFwAN8DcLBbui",
+      "content": "sbet今天注意 17.25的压力 这个是龙二只是套利 波动性 bmnr强",
+      "original_content": "sbet今天注意 17.25的压力 这个是龙二只是套利 波动性 bmnr强",
+      "timestamp": "2025-10-10 21:38:00.020",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "tsll震荡走高可以昨天剩下的在20.7-20.6附近做T",
+        "bmnr剩下一半也关注震荡走高63是今天压力位"
+      ]
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CTydAxQesuAZ3rWaiZkd7",
+      "content": "bmnr可以60-60.5附近在减持点 突然拉升下降也是昨天抄底资金在做T降本 下来还是57附近去看补仓",
+      "original_content": "bmnr可以60-60.5附近在减持点 突然拉升下降也是昨天抄底资金在做T降本 下来还是57附近去看补仓",
+      "timestamp": "2025-10-10 21:49:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-10 21:49:00.000",
+      "instruction_type": "SELL",
+      "symbol": "BMNR",
+      "target_price": 60.25,
+      "price_range": [
+        60.0,
+        60.5
+      ],
+      "sell_quantity": "全部"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CTyj2zHNgw2NxW8m3Tfcp",
+      "content": "bmnr 注意 56这个昨天的支撑 在附近可以先小仓位吸 看市场对特朗普的利空发言反应",
+      "original_content": "bmnr 注意 56这个昨天的支撑 在附近可以先小仓位吸 看市场对特朗普的利空发言反应",
+      "timestamp": "2025-10-10 23:05:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "TRUMP THREATENS 'MASSIVE INCREASE' OF TARIFFS ON CHINESE GOODSOFFSHORE YUAN PARES GAINS AS TRUMPS SUGGESTS TARIFF HIKESNASDAQ 100 FALLS 0.8% AFTER TRUMP CHINA COMMENTS 特朗普威胁对中国商品\"大幅加征\"关税 离岸人民币回吐涨幅 受特朗普关税言论影响 纳斯达克100指数下跌0.8% 受特朗普对华言论拖累"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-10-10 23:05:00.010",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 56.0,
+      "position_size": "小仓位"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CTymbEoczcr7AZWKfHfq7",
+      "content": "bmnr在到53.5附近可以再加没有就56拿着",
+      "original_content": "bmnr在到53.5附近可以再加没有就56拿着",
+      "timestamp": "2025-10-10 23:38:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "53.5附近 开了hims"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-10-10 23:38:00.010",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 53.5
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CTzHhmGNdRes8qWJ1rJwf",
+      "content": "bmnr 今天53.5和56附近买的可以缓和上升时候在53.5附近减点 周一再加",
+      "original_content": "bmnr 今天53.5和56附近买的可以缓和上升时候在53.5附近减点 周一再加",
+      "timestamp": "2025-10-11 06:13:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "tsll目前记者问及再谈和马斯克关系 有所上涨 18.3仓位买的重的可以18减点仓位 给周一留余地"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-10-11 06:13:00.010",
+      "instruction_type": "SELL",
+      "symbol": "BMNR",
+      "target_price": 56.0,
+      "sell_quantity": "小仓位"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CTzMpfmdKaGUkowS5DTtF",
+      "content": "收盘在更新收盘价看是不是V nvdl 英伟达双倍 盘后最低价跳到 85.6 周一跳空在跌到78-80附近可以买了长拿 最近有中东订单（比较推荐） CRWV 没跳到128支撑 周一跳空在127-128可以买了博短线反弹 NBIS 没跳到118支撑 周一跳空在117-188附近可以博短线反弹 RKLB 盘后最低子啊58.5 周一跳空在57-58可以博短线反弹 tsll 特斯拉双倍 盘后最低价跳到16.88 周一如果跳空到16.1-16.88附近可以加仓买了长拿 马斯克增持价格在正股370--390区间 （比较推荐） MSTR btc囤币类 盘后最低价跳到286 周一如果跳空到 280-286区间可以加仓买了长拿(股性比较慢速) BMNR ETH囤币类 盘后最低价跳到47.3 周一如果跳空到46-47可以加仓买了拿61附近（波动大，比较推荐） CONL coin的双倍做多 稳定币和虚拟货币交易所类别 盘后最低跳到36.7 周一如果跳空到35-36.7区间可以加仓买了拿段时间（波动大，比较推荐） mara btc旷工类 盘后最低到17.55 周一如果在跳空到17.55附近可以加仓拿段时间（中等速度 有利好时候涨幅多，比较推荐） SBET eth龙二套利类 盘后最低到14.2 周一如果跳空到13-14可以加仓拿段时间（属于超跌套利） RDDT 美国版的百度贴吧 盘后最低到191.5 如果周一跳空在190-191附近可以买了长拿（股性中等速度） RDTL RDDT的双倍 盘后最低到39.2 如果周一跳空到 38-39可以买了长拿（波动大） ZETA 电商消费者数据统计 盘后最低到17.6 如果周一跳空在16.5-17.5附近可以买了长拿（股性中等，有利好时候涨幅多） GRAB 电商应用 盘后最低到5.5 如果周一跳空到5-5.5附近可以买了长拿（股性中等） HIMS 减肥药 盘后最低到50.5 如果周一跳空的话可以在49-50.5附近买了长拿（股性中等） NVO 减肥药 盘后最低到了55 如果周一跳空在54-55附近可以买了长拿 OSCR 医疗保险 盘后最低到17.6 如果周一跳空的话可以在16-17.5附近买了长拿（股性中等） JOBY 无人机 盘后最低到15 周一如果跳空到14-15附近可以买了长拿 微牛bull 盘后最低价跳到10.5 中概券商 周一跳空在跌到10-10.5附近可以买了长拿（股性慢 周期到12月6日前） sofi 贷款类(学贷 房贷) 盘后最低到25附近 如果周一跳空到24-25也可以买了拿段时间（股性中等） upst 贷款类 （车贷 房贷）盘后最低到46 如果周一跳空到 45-46附近也可以买了长拿(股性慢) FBL meta的双倍 盘后最低到38.4 如果周一跳空到37-38附近可以加仓买了长拿（股性慢） AMZU 亚马逊的双倍 盘后最低到了31.7 如果周一跳空到 30-31附近可以加仓长拿(股性慢）",
+      "original_content": "收盘在更新收盘价看是不是V nvdl 英伟达双倍 盘后最低价跳到 85.6 周一跳空在跌到78-80附近可以买了长拿 最近有中东订单（比较推荐） CRWV 没跳到128支撑 周一跳空在127-128可以买了博短线反弹 NBIS 没跳到118支撑 周一跳空在117-188附近可以博短线反弹 RKLB 盘后最低子啊58.5 周一跳空在57-58可以博短线反弹 tsll 特斯拉双倍 盘后最低价跳到16.88 周一如果跳空到16.1-16.88附近可以加仓买了长拿 马斯克增持价格在正股370--390区间 （比较推荐） MSTR btc囤币类 盘后最低价跳到286 周一如果跳空到 280-286区间可以加仓买了长拿(股性比较慢速) BMNR ETH囤币类 盘后最低价跳到47.3 周一如果跳空到46-47可以加仓买了拿61附近（波动大，比较推荐） CONL coin的双倍做多 稳定币和虚拟货币交易所类别 盘后最低跳到36.7 周一如果跳空到35-36.7区间可以加仓买了拿段时间（波动大，比较推荐） mara btc旷工类 盘后最低到17.55 周一如果在跳空到17.55附近可以加仓拿段时间（中等速度 有利好时候涨幅多，比较推荐） SBET eth龙二套利类 盘后最低到14.2 周一如果跳空到13-14可以加仓拿段时间（属于超跌套利） RDDT 美国版的百度贴吧 盘后最低到191.5 如果周一跳空在190-191附近可以买了长拿（股性中等速度） RDTL RDDT的双倍 盘后最低到39.2 如果周一跳空到 38-39可以买了长拿（波动大） ZETA 电商消费者数据统计 盘后最低到17.6 如果周一跳空在16.5-17.5附近可以买了长拿（股性中等，有利好时候涨幅多） GRAB 电商应用 盘后最低到5.5 如果周一跳空到5-5.5附近可以买了长拿（股性中等） HIMS 减肥药 盘后最低到50.5 如果周一跳空的话可以在49-50.5附近买了长拿（股性中等） NVO 减肥药 盘后最低到了55 如果周一跳空在54-55附近可以买了长拿 OSCR 医疗保险 盘后最低到17.6 如果周一跳空的话可以在16-17.5附近买了长拿（股性中等） JOBY 无人机 盘后最低到15 周一如果跳空到14-15附近可以买了长拿 微牛bull 盘后最低价跳到10.5 中概券商 周一跳空在跌到10-10.5附近可以买了长拿（股性慢 周期到12月6日前） sofi 贷款类(学贷 房贷) 盘后最低到25附近 如果周一跳空到24-25也可以买了拿段时间（股性中等） upst 贷款类 （车贷 房贷）盘后最低到46 如果周一跳空到 45-46附近也可以买了长拿(股性慢) FBL meta的双倍 盘后最低到38.4 如果周一跳空到37-38附近可以加仓买了长拿（股性慢） AMZU 亚马逊的双倍 盘后最低到了31.7 如果周一跳空到 30-31附近可以加仓长拿(股性慢）",
+      "timestamp": "2025-10-11 07:08:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CU4AYZoccPp43j1yAuZZF",
+      "content": "今天要盯着点夜盘的btc 和th的仓位 目前反弹很多 周五的mstr conl bmnr sbet都属于币类",
+      "original_content": "今天要盯着点夜盘的btc 和th的仓位 目前反弹很多 周五的mstr conl bmnr sbet都属于币类",
+      "timestamp": "2025-10-13 07:23:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CU4DhBRzEjUdbE1JjLQBm",
+      "content": "bmnr 56.5可以把56买的都出 53.5买的出一半",
+      "original_content": "bmnr 56.5可以把56买的都出 53.5买的出一半",
+      "timestamp": "2025-10-13 08:02:00.020",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "很多高开很多 大家盯着点分批出 稍后我发不下减仓点位",
+        "tsll19.05-19.1减仓一半 这个成本以上了"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-10-13 08:02:00.020",
+      "instruction_type": "SELL",
+      "symbol": "BMNR",
+      "target_price": 56.0,
+      "sell_quantity": "1/2"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CU4MKNJ2KLUBnHc4eVKuq",
+      "content": "把周五比较推荐的几个股单单独拉了下 主要波动率和抄底胜率都高点 到有低点时候在实时发布买点 卖点 可以先加自选 了解下 nvdl 英伟达双倍 盘后最低价跳到 85.6 周一跳空在跌到78-80附近可以买了长拿 最近有中东订单（比较推荐） tsll 特斯拉双倍 盘后最低价跳到16.88 周一如果跳空到16.1-16.88附近可以加仓买了长拿 马斯克增持价格在正股370--390区间 （比较推荐） BMNR ETH囤币类 盘后最低价跳到47.3 周一如果跳空到46-47可以加仓买了拿61附近（波动大，比较推荐） CONL coin的双倍做多 稳定币和虚拟货币交易所类别 盘后最低跳到36.7 周一如果跳空到35-36.7区间可以加仓买了拿段时间（波动大，比较推荐） mara btc旷工类 盘后最低到17.55 周一如果在跳空到17.55附近可以加仓拿段时间（中等速度 有利好时候涨幅多，比较推荐）",
+      "original_content": "把周五比较推荐的几个股单单独拉了下 主要波动率和抄底胜率都高点 到有低点时候在实时发布买点 卖点 可以先加自选 了解下 nvdl 英伟达双倍 盘后最低价跳到 85.6 周一跳空在跌到78-80附近可以买了长拿 最近有中东订单（比较推荐） tsll 特斯拉双倍 盘后最低价跳到16.88 周一如果跳空到16.1-16.88附近可以加仓买了长拿 马斯克增持价格在正股370--390区间 （比较推荐） BMNR ETH囤币类 盘后最低价跳到47.3 周一如果跳空到46-47可以加仓买了拿61附近（波动大，比较推荐） CONL coin的双倍做多 稳定币和虚拟货币交易所类别 盘后最低跳到36.7 周一如果跳空到35-36.7区间可以加仓买了拿段时间（波动大，比较推荐） mara btc旷工类 盘后最低到17.55 周一如果在跳空到17.55附近可以加仓拿段时间（中等速度 有利好时候涨幅多，比较推荐）",
+      "timestamp": "2025-10-13 09:44:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CU5JJFLJC3Ga2rcC9zkkq",
+      "content": "bmnr也是回踩下53开始上去也是盘中再到53附近回吸一笔",
+      "original_content": "bmnr也是回踩下53开始上去也是盘中再到53附近回吸一笔",
+      "timestamp": "2025-10-13 21:43:00.020",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "今天回吸时候尽量分批点缺口支撑一次 时间上尾盘有低点再一次",
+        "tsll开盘回踩了下18.5就开始往上 比较强势可以注意再到18.3附近吸一笔"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-10-13 21:43:00.020",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 53.0
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CU5dpTTGa2geCSSqZNr7r",
+      "content": "bmnr 从53支撑起来了 可以注意 55.2-56开始分批减持点",
+      "original_content": "bmnr 从53支撑起来了 可以注意 55.2-56开始分批减持点",
+      "timestamp": "2025-10-14 02:01:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-14 02:01:00.000",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 55.6,
+      "price_range": [
+        55.2,
+        56.0
+      ]
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CU6FHuAJCZD6SMBMNc5k9",
+      "content": "夜盘可以注意bmnr 在53附近支撑在挂个小单接触发了再看情况要不要继续加仓",
+      "original_content": "夜盘可以注意bmnr 在53附近支撑在挂个小单接触发了再看情况要不要继续加仓",
+      "timestamp": "2025-10-14 09:46:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-14 09:46:00.000",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 53.0
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CU7Dq34e99KXPLu2grBjF",
+      "content": "tsll今天也是从18.3这里起来 夜盘19.2如果买了的话可以18.3附近小加 盯着几个昨天优先反弹的买 nvdl 英伟达双倍 盘后最低价跳到 85.6 周一跳空在跌到78-80附近可以买了长拿 最近有中东订单（比较推荐） tsll 特斯拉双倍 盘后最低价跳到16.88 周一如果跳空到16.1-16.88附近可以加仓买了长拿 马斯克增持价格在正股370--390区间 （比较推荐） BMNR ETH囤币类 盘后最低价跳到47.3 周一如果跳空到46-47可以加仓买了拿61附近（波动大，比较推荐） CONL coin的双倍做多 稳定币和虚拟货币交易所类别 盘后最低跳到36.7 周一如果跳空到35-36.7区间可以加仓买了拿段时间（波动大，比较推荐） mara btc旷工类 盘后最低到17.55 周一如果在跳空到17.55附近可以加仓拿段时间（中等速度 有利好时候涨幅多，比较推荐）",
+      "original_content": "tsll今天也是从18.3这里起来 夜盘19.2如果买了的话可以18.3附近小加 盯着几个昨天优先反弹的买 nvdl 英伟达双倍 盘后最低价跳到 85.6 周一跳空在跌到78-80附近可以买了长拿 最近有中东订单（比较推荐） tsll 特斯拉双倍 盘后最低价跳到16.88 周一如果跳空到16.1-16.88附近可以加仓买了长拿 马斯克增持价格在正股370--390区间 （比较推荐） BMNR ETH囤币类 盘后最低价跳到47.3 周一如果跳空到46-47可以加仓买了拿61附近（波动大，比较推荐） CONL coin的双倍做多 稳定币和虚拟货币交易所类别 盘后最低跳到36.7 周一如果跳空到35-36.7区间可以加仓买了拿段时间（波动大，比较推荐） mara btc旷工类 盘后最低到17.55 周一如果在跳空到17.55附近可以加仓拿段时间（中等速度 有利好时候涨幅多，比较推荐）",
+      "timestamp": "2025-10-14 22:08:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CU94VVist4YxLwuayA6Jt",
+      "content": "bmnr还是52-53附近吸 55-56区间做T卖出的策略",
+      "original_content": "bmnr还是52-53附近吸 55-56区间做T卖出的策略",
+      "timestamp": "2025-10-15 21:25:00.020",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "微牛要留意底部反转的突破区 12元整数关口的突破情况",
+        "conl 还是可以以36-37附近看有回调时候低吸，这个还有继续吸筹的迹象"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-10-15 21:25:00.020",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 52.5,
+      "price_range": [
+        52.0,
+        53.0
+      ]
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CU9Vnqy997KZHMT2Y5MBb",
+      "content": "54附近可以减仓点 仓位重的 53-52补仓的bmnr",
+      "original_content": "54附近可以减仓点 仓位重的 53-52补仓的bmnr",
+      "timestamp": "2025-10-16 02:58:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-16 02:58:00.000",
+      "instruction_type": "SELL",
+      "symbol": "BMNR",
+      "target_price": 54.0,
+      "sell_quantity": "全部"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUAuiLgzqB5nXxhA4KQes",
+      "content": "bmnr可以开盘前冲高在 55附近减点 然后还是52-53附近吸",
+      "original_content": "bmnr可以开盘前冲高在 55附近减点 然后还是52-53附近吸",
+      "timestamp": "2025-10-16 20:51:00.010",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "昨天低吸的 有些可以开盘前 减点仓位"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-10-16 20:51:00.010",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 52.5,
+      "price_range": [
+        52.0,
+        53.0
+      ]
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUB9Y4h8u3gRkeZ1TTTDx",
+      "content": "bmnr刚跳水到52.7 介入到了52到53支撑内 可以小仓位吸一笔 大的等所有讲话完毕在3点钟后再看看加",
+      "original_content": "bmnr刚跳水到52.7 介入到了52到53支撑内 可以小仓位吸一笔 大的等所有讲话完毕在3点钟后再看看加",
+      "timestamp": "2025-10-16 23:54:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-16 23:54:00.000",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 52.7,
+      "position_size": "小仓位"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUBCYvvgXRQ44vnYvJ9cn",
+      "content": "tsll 今天支撑在19.3-19.4支撑目前破了 等讲话有大跳水再加 bmnr 52-53 支撑位 支撑目前破了 讲话有大跳水再加 mara 20.5支撑 还差点到 讲话有大跳水看情况加 nvdl 84-85支撑 也还没到 讲话有大跳水加 conl 36支撑跌破 等讲话再跳时候加 oscr 20支撑 还没到 讲话大跳水时候加 grab 5.6支撑 还没到 讲话大跳水时候加 joby 无人机 16 支撑 还没到 讲话大跳水时候加 目前大多数都破支撑了 等讲话时候在跳水再加",
+      "original_content": "tsll 今天支撑在19.3-19.4支撑目前破了 等讲话有大跳水再加 bmnr 52-53 支撑位 支撑目前破了 讲话有大跳水再加 mara 20.5支撑 还差点到 讲话有大跳水看情况加 nvdl 84-85支撑 也还没到 讲话有大跳水加 conl 36支撑跌破 等讲话再跳时候加 oscr 20支撑 还没到 讲话大跳水时候加 grab 5.6支撑 还没到 讲话大跳水时候加 joby 无人机 16 支撑 还没到 讲话大跳水时候加 目前大多数都破支撑了 等讲话时候在跳水再加",
+      "timestamp": "2025-10-17 00:33:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CUBGvdSKGAzF3r8r4w6P3",
+      "content": "bmnr和 mara 在讲话前配置的 可以讲话当中有异动时候分批出做个T",
+      "original_content": "bmnr和 mara 在讲话前配置的 可以讲话当中有异动时候分批出做个T",
+      "timestamp": "2025-10-17 01:31:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CUCkswYQXyemuwhntkLp8",
+      "content": "bmnr 盘前 51.1附近减掉点做T仓位 成本在51附近买的也可以都出 在等低点在48附近在吸回",
+      "original_content": "bmnr 盘前 51.1附近减掉点做T仓位 成本在51附近买的也可以都出 在等低点在48附近在吸回",
+      "timestamp": "2025-10-17 20:16:00.010",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "tsll 盘前 19.15附近注意减点掉低吸仓位 可以留点长拿的把做T仓位减点 在等18附近低吸"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-10-17 20:16:00.010",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 48.0
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUCsmBYguYaDDJgUU96YH",
+      "content": "51走的bmnr可以49.2-48附近在回吸",
+      "original_content": "51走的bmnr可以49.2-48附近在回吸",
+      "timestamp": "2025-10-17 21:48:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-17 21:48:00.000",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 48.6,
+      "price_range": [
+        48.0,
+        49.2
+      ]
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUD49kcFq49xbDwuL6Pik",
+      "content": "bmnr注意下异动 51附近注意减 目前刚50",
+      "original_content": "bmnr注意下异动 51附近注意减 目前刚50",
+      "timestamp": "2025-10-18 00:03:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "mstr要注意下异动 他没回踩272就往上了"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-10-18 00:03:00.010",
+      "instruction_type": "SELL",
+      "symbol": "BMNR",
+      "target_price": 51.0,
+      "sell_quantity": "小仓位"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUD5j9NmscW5VA8BCd4ZN",
+      "content": "bmnr也注意分时线条 51附近或者50.7附近有拐弯迹象时候做T出",
+      "original_content": "bmnr也注意分时线条 51附近或者50.7附近有拐弯迹象时候做T出",
+      "timestamp": "2025-10-18 00:25:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-18 00:25:00.000",
+      "instruction_type": "SELL",
+      "symbol": "BMNR",
+      "target_price": 50.7,
+      "sell_quantity": "全部"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUD6XpREjX3HYAMvJXvtX",
+      "content": "回吸还是看 bmnr 49-48 可以在49附近挂个单子 等到了也会再说 tsll回吸也是看19.4 可以19.43挂个单子 到了也会再说",
+      "original_content": "回吸还是看 bmnr 49-48 可以在49附近挂个单子 等到了也会再说 tsll回吸也是看19.4 可以19.43挂个单子 到了也会再说",
+      "timestamp": "2025-10-18 00:36:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CUHUUkXEm7pWpLZMpbLA7",
+      "content": "bmnr 52附近出周五49附近低吸的",
+      "original_content": "bmnr 52附近出周五49附近低吸的",
+      "timestamp": "2025-10-20 08:04:00.010",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "周末讲话缓和有利好 可以夜盘8-9点减仓点"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-10-20 08:04:00.010",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 49.0
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CULUcCtV1gUT47QKaMtty",
+      "content": "bmnr 今天可以52附近配置点 支撑在51 可以等在下去支撑附近再加",
+      "original_content": "bmnr 今天可以52附近配置点 支撑在51 可以等在下去支撑附近再加",
+      "timestamp": "2025-10-21 22:09:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-21 22:09:00.000",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 52.0
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CULYLAc6w73xQnXS8N6tH",
+      "content": "bmnr 54这里压力位可以减点",
+      "original_content": "bmnr 54这里压力位可以减点",
+      "timestamp": "2025-10-21 22:58:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-21 22:58:00.000",
+      "instruction_type": "SELL",
+      "symbol": "BMNR",
+      "target_price": 54.0,
+      "sell_quantity": "小仓位"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CULYRNceGMe4qdUyHjyg5",
+      "content": "bmnr剩下仓位看今天能不能突破站稳54 去56阻力",
+      "original_content": "bmnr剩下仓位看今天能不能突破站稳54 去56阻力",
+      "timestamp": "2025-10-21 22:58:00.010",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "bmnr 54这里压力位可以减点"
+      ]
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CULaGmUcdUrWnP59F6SKd",
+      "content": "eth横盘好几天今天也开始异动 今天要注意下bmnr 能不能突破2个价位 目前去冲击56",
+      "original_content": "eth横盘好几天今天也开始异动 今天要注意下bmnr 能不能突破2个价位 目前去冲击56",
+      "timestamp": "2025-10-21 23:23:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CUNReQeb3LXSsp7KXj68G",
+      "content": "盘后特斯拉出财报 财报不好情况下会所有个股在跳水下 就会吸一批 财报好的情况下 盘中被错杀的个股也会出现低吸机会 tsll bmnr hood mara upst upsx rklb crwv joby 等都在准备吸的列表中 等盘后具体看",
+      "original_content": "盘后特斯拉出财报 财报不好情况下会所有个股在跳水下 就会吸一批 财报好的情况下 盘中被错杀的个股也会出现低吸机会 tsll bmnr hood mara upst upsx rklb crwv joby 等都在准备吸的列表中 等盘后具体看",
+      "timestamp": "2025-10-22 22:52:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CUNSox5hRbAjX1EWGHYHr",
+      "content": "bmnr 48盘中低点 尾盘如果有二次握手探底没有破的可以回吸",
+      "original_content": "bmnr 48盘中低点 尾盘如果有二次握手探底没有破的可以回吸",
+      "timestamp": "2025-10-22 23:02:00.040",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "conl 盘中低点在31.3 尾盘再到31附近没破可以吸",
+        "crwv 盘中低点在116.5 尾盘在到116.5附近没有破可以回吸",
+        "rklb 盘中低点在60.36 盘如果有二次握手探底没有破的可以回吸",
+        "hood 122.9盘中低点 尾盘如果有二次握手探底没有破的可以回吸"
+      ]
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CUNjR51VUW3DNKNc76BfH",
+      "content": "upst 48 低点 有小V 盘后再跳水可以配置 upsx 低点 13.4 有小V 盘后再跳水可以配置 conl 30.66 低点 有小V 盘后再跳水可以配置 rklb 58.41 低点 有小V 盘后再跳水可以配置 bmnr 46.56 低点 有小V 盘后再跳水可以配置 crwv 114.17 低点 有小V 盘后再跳水可以配置 mstr 276.7 低点 有小V 盘后再跳水可以配置 hood 120.88 低点 有小V 盘后再跳水可以配置 hims 46.15 低点 有小V 盘后再跳水可以配置 nbis 94.64 低点 少量配置 26号接近后看有没有大跳水再加 tsll 等盘后看大跳水加 利好就走掉剩下的 mara 18.39 低点 有小V 盘后再跳水可以配置 nvdl82.9 低点 有小V 盘后再跳水可以配置 rddt 191.3 低点 有小V 盘后再跳水可以配置 orcl 269.25 低点 有小V 盘后再跳水可以配置 tem81.9 低点 有小V 盘后再跳水可以配置 open6.23 低点 有小V 盘后再跳水可以配置 joby 14.9 低点 有小V 盘后再跳水可以配置 zeta18.19 低点 有小V 盘后再跳水可以配置 可以先加自选 然后 盘后和临近尾盘再看看实际情况再执行操作",
+      "original_content": "upst 48 低点 有小V 盘后再跳水可以配置 upsx 低点 13.4 有小V 盘后再跳水可以配置 conl 30.66 低点 有小V 盘后再跳水可以配置 rklb 58.41 低点 有小V 盘后再跳水可以配置 bmnr 46.56 低点 有小V 盘后再跳水可以配置 crwv 114.17 低点 有小V 盘后再跳水可以配置 mstr 276.7 低点 有小V 盘后再跳水可以配置 hood 120.88 低点 有小V 盘后再跳水可以配置 hims 46.15 低点 有小V 盘后再跳水可以配置 nbis 94.64 低点 少量配置 26号接近后看有没有大跳水再加 tsll 等盘后看大跳水加 利好就走掉剩下的 mara 18.39 低点 有小V 盘后再跳水可以配置 nvdl82.9 低点 有小V 盘后再跳水可以配置 rddt 191.3 低点 有小V 盘后再跳水可以配置 orcl 269.25 低点 有小V 盘后再跳水可以配置 tem81.9 低点 有小V 盘后再跳水可以配置 open6.23 低点 有小V 盘后再跳水可以配置 joby 14.9 低点 有小V 盘后再跳水可以配置 zeta18.19 低点 有小V 盘后再跳水可以配置 可以先加自选 然后 盘后和临近尾盘再看看实际情况再执行操作",
+      "timestamp": "2025-10-23 02:45:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CUNkcSu5TcdNFh9uQmCj3",
+      "content": "补充了点基本面和这段期间的股票涨幅股性 upst 48 低点 有小V 盘后再跳水可以配置 upsx 低点 13.4 有小V 盘后再跳水可以配置 基本面是贷款类之前正股还有个47低点今天也只跳到48附近 博弈贷款政策反转（股性中等反弹时候反弹区间达到正股50-52） conl 30.66 低点 有小V 盘后再跳水可以配置 coin的双倍 稳定币和btc交易所类 几次也是下杀到31附近反弹36（股性高） rklb 58.41 低点 有小V 盘后再跳水可以配置 太空火箭（今天下破64和60两个支撑 博弈反弹64阻力）（股性偏高） bmnr 46.56 低点 有小V 盘后再跳水可以配置 (股性偏高) （eth币囤币类今天下破52和49支撑 博弈回51阻力） crwv 114.17 低点 有小V 盘后再跳水可以配置 （股性中） （最近有减持 博弈减持完毕和订单反弹 昨天123有建仓今天普跌可以补仓或者新建） mstr 276.7 低点 有小V 盘后再跳水可以配置 （股性中） btc 囤币种类 今天跌破282支撑 可以把昨天305抛的低吸 或者新建仓 hood 120.88 低点 有小V 盘后再跳水可以配置 （股性中） 券商类和虚拟币交易所 今天跌破几个支撑回踩120支撑 可以配置 hims 46.15 低点 有小V 盘后再跳水可以配置 （股性中） 利空压制前两天在50-51横盘 今天跌破了48支撑 在46支撑住可以配置 nbis 94.64 低点 少量配置 26号接近后看有没有大跳水再加（股性中） 今天跳的多可以配置 要预留资金 26 27两天解禁看情况 保守的可以 27号后再入 tsll 等盘后看大跳水加 利好就走掉剩下的 mara 18.39 低点 有小V 盘后再跳水可以配置 （股性偏高） 矿工转型 今天在19支撑跌破 低点有反弹也可以配置 nvdl82.9 低点 有小V 盘后再跳水可以配置 （股性偏高） 英伟达的双倍 今天到了83-84支撑 小跌破 也可以配置 rddt 191.3 低点 有小V 盘后再跳水可以配置 （股性中） 美股版贴吧 今天在186支撑上也可以后续几天再看看有没有再跳 可以先配置在低了加 orcl 269.25 低点 有小V 盘后再跳水可以配置 （股性中） 和crwv同一天出的减持计划 今天在270有支撑 可以270附近配置 有在跳水加仓等减持完毕公告 tem81.9 低点 有小V 盘后再跳水可以配置 （股性中） 今天也是连续跌破两个支撑到80支撑上方 可以配置 open6.23 低点 有小V 盘后再跳水可以配置 （股性中） 有减持计划10个交易日 今天大盘回调前先跳了下可以注意6.1附近支撑 可以配置等反弹 joby 14.9 低点 有小V 盘后再跳水可以配置 （股性中） 无人机 跌破了15支撑 也是可以配置等反弹 zeta18.19 低点 有小V 盘后再跳水可以配置 （股性中） 电商 跌幅不是很大 下面有个17支撑能在跳到更安全点",
+      "original_content": "补充了点基本面和这段期间的股票涨幅股性 upst 48 低点 有小V 盘后再跳水可以配置 upsx 低点 13.4 有小V 盘后再跳水可以配置 基本面是贷款类之前正股还有个47低点今天也只跳到48附近 博弈贷款政策反转（股性中等反弹时候反弹区间达到正股50-52） conl 30.66 低点 有小V 盘后再跳水可以配置 coin的双倍 稳定币和btc交易所类 几次也是下杀到31附近反弹36（股性高） rklb 58.41 低点 有小V 盘后再跳水可以配置 太空火箭（今天下破64和60两个支撑 博弈反弹64阻力）（股性偏高） bmnr 46.56 低点 有小V 盘后再跳水可以配置 (股性偏高) （eth币囤币类今天下破52和49支撑 博弈回51阻力） crwv 114.17 低点 有小V 盘后再跳水可以配置 （股性中） （最近有减持 博弈减持完毕和订单反弹 昨天123有建仓今天普跌可以补仓或者新建） mstr 276.7 低点 有小V 盘后再跳水可以配置 （股性中） btc 囤币种类 今天跌破282支撑 可以把昨天305抛的低吸 或者新建仓 hood 120.88 低点 有小V 盘后再跳水可以配置 （股性中） 券商类和虚拟币交易所 今天跌破几个支撑回踩120支撑 可以配置 hims 46.15 低点 有小V 盘后再跳水可以配置 （股性中） 利空压制前两天在50-51横盘 今天跌破了48支撑 在46支撑住可以配置 nbis 94.64 低点 少量配置 26号接近后看有没有大跳水再加（股性中） 今天跳的多可以配置 要预留资金 26 27两天解禁看情况 保守的可以 27号后再入 tsll 等盘后看大跳水加 利好就走掉剩下的 mara 18.39 低点 有小V 盘后再跳水可以配置 （股性偏高） 矿工转型 今天在19支撑跌破 低点有反弹也可以配置 nvdl82.9 低点 有小V 盘后再跳水可以配置 （股性偏高） 英伟达的双倍 今天到了83-84支撑 小跌破 也可以配置 rddt 191.3 低点 有小V 盘后再跳水可以配置 （股性中） 美股版贴吧 今天在186支撑上也可以后续几天再看看有没有再跳 可以先配置在低了加 orcl 269.25 低点 有小V 盘后再跳水可以配置 （股性中） 和crwv同一天出的减持计划 今天在270有支撑 可以270附近配置 有在跳水加仓等减持完毕公告 tem81.9 低点 有小V 盘后再跳水可以配置 （股性中） 今天也是连续跌破两个支撑到80支撑上方 可以配置 open6.23 低点 有小V 盘后再跳水可以配置 （股性中） 有减持计划10个交易日 今天大盘回调前先跳了下可以注意6.1附近支撑 可以配置等反弹 joby 14.9 低点 有小V 盘后再跳水可以配置 （股性中） 无人机 跌破了15支撑 也是可以配置等反弹 zeta18.19 低点 有小V 盘后再跳水可以配置 （股性中） 电商 跌幅不是很大 下面有个17支撑能在跳到更安全点",
+      "timestamp": "2025-10-23 03:00:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CUNkqL8aZt1vxmXpxg8Em",
+      "content": "补充了点基本面和这段期间的股票涨幅股性 upst 48 低点 有小V 盘后再跳水可以配置 upsx 低点 13.4 有小V 盘后再跳水可以配置 基本面是贷款类之前正股还有个47低点今天也只跳到48附近 博弈贷款政策反转（股性中等反弹时候反弹区间达到正股50-52） conl 30.66 低点 有小V 盘后再跳水可以配置 coin的双倍 稳定币和btc交易所类 几次也是下杀到31附近反弹36（股性高） rklb 58.41 低点 有小V 盘后再跳水可以配置 太空火箭（今天下破64和60两个支撑 博弈反弹64阻力）（股性偏高） bmnr 46.56 低点 有小V 盘后再跳水可以配置 (股性偏高) （eth币囤币类今天下破52和49支撑 博弈回51阻力） crwv 114.17 低点 有小V 盘后再跳水可以配置 （股性中） （最近有减持 博弈减持完毕和订单反弹 昨天123有建仓今天普跌可以补仓或者新建） mstr 276.7 低点 有小V 盘后再跳水可以配置 （股性中） btc 囤币种类 今天跌破282支撑 可以把昨天305抛的低吸 或者新建仓 hood 120.88 低点 有小V 盘后再跳水可以配置 （股性中） 券商类和虚拟币交易所 今天跌破几个支撑回踩120支撑 可以配置 hims 46.15 低点 有小V 盘后再跳水可以配置 （股性中） 利空压制前两天在50-51横盘 今天跌破了48支撑 在46支撑住可以配置 nbis 94.64 低点 少量配置 26号接近后看有没有大跳水再加（股性中） 今天跳的多可以配置 要预留资金 26 27两天解禁看情况 保守的可以 27号后再入 tsll 等盘后看大跳水加 利好就走掉剩下的 mara 18.39 低点 有小V 盘后再跳水可以配置 （股性偏高） 矿工转型 今天在19支撑跌破 低点有反弹也可以配置 nvdl82.9 低点 有小V 盘后再跳水可以配置 （股性偏高） 英伟达的双倍 今天到了83-84支撑 小跌破 也可以配置 rddt 191.3 低点 有小V 盘后再跳水可以配置 （股性中） 美股版贴吧 今天在186支撑上也可以后续几天再看看有没有再跳 可以先配置在低了加 orcl 269.25 低点 有小V 盘后再跳水可以配置 （股性中） 和crwv同一天出的减持计划 今天在270有支撑 可以270附近配置 有在跳水加仓等减持完毕公告 tem81.9 低点 有小V 盘后再跳水可以配置 （股性中） 今天也是连续跌破两个支撑到80支撑上方 可以配置 open6.23 低点 有小V 盘后再跳水可以配置 （股性中） 有减持计划10个交易日 今天大盘回调前先跳了下可以注意6.1附近支撑 可以配置等反弹 joby 14.9 低点 有小V 盘后再跳水可以配置 （股性中） 无人机 跌破了15支撑 也是可以配置等反弹 zeta18.19 低点 有小V 盘后再跳水可以配置 （股性中） 电商 跌幅不是很大 下面有个17支撑能在跳到更安全点",
+      "original_content": "补充了点基本面和这段期间的股票涨幅股性 upst 48 低点 有小V 盘后再跳水可以配置 upsx 低点 13.4 有小V 盘后再跳水可以配置 基本面是贷款类之前正股还有个47低点今天也只跳到48附近 博弈贷款政策反转（股性中等反弹时候反弹区间达到正股50-52） conl 30.66 低点 有小V 盘后再跳水可以配置 coin的双倍 稳定币和btc交易所类 几次也是下杀到31附近反弹36（股性高） rklb 58.41 低点 有小V 盘后再跳水可以配置 太空火箭（今天下破64和60两个支撑 博弈反弹64阻力）（股性偏高） bmnr 46.56 低点 有小V 盘后再跳水可以配置 (股性偏高) （eth币囤币类今天下破52和49支撑 博弈回51阻力） crwv 114.17 低点 有小V 盘后再跳水可以配置 （股性中） （最近有减持 博弈减持完毕和订单反弹 昨天123有建仓今天普跌可以补仓或者新建） mstr 276.7 低点 有小V 盘后再跳水可以配置 （股性中） btc 囤币种类 今天跌破282支撑 可以把昨天305抛的低吸 或者新建仓 hood 120.88 低点 有小V 盘后再跳水可以配置 （股性中） 券商类和虚拟币交易所 今天跌破几个支撑回踩120支撑 可以配置 hims 46.15 低点 有小V 盘后再跳水可以配置 （股性中） 利空压制前两天在50-51横盘 今天跌破了48支撑 在46支撑住可以配置 nbis 94.64 低点 少量配置 26号接近后看有没有大跳水再加（股性中） 今天跳的多可以配置 要预留资金 26 27两天解禁看情况 保守的可以 27号后再入 tsll 等盘后看大跳水加 利好就走掉剩下的 mara 18.39 低点 有小V 盘后再跳水可以配置 （股性偏高） 矿工转型 今天在19支撑跌破 低点有反弹也可以配置 nvdl82.9 低点 有小V 盘后再跳水可以配置 （股性偏高） 英伟达的双倍 今天到了83-84支撑 小跌破 也可以配置 rddt 191.3 低点 有小V 盘后再跳水可以配置 （股性中） 美股版贴吧 今天在186支撑上也可以后续几天再看看有没有再跳 可以先配置在低了加 orcl 269.25 低点 有小V 盘后再跳水可以配置 （股性中） 和crwv同一天出的减持计划 今天在270有支撑 可以270附近配置 有在跳水加仓等减持完毕公告 tem81.9 低点 有小V 盘后再跳水可以配置 （股性中） 今天也是连续跌破两个支撑到80支撑上方 可以配置 open6.23 低点 有小V 盘后再跳水可以配置 （股性中） 有减持计划10个交易日 今天大盘回调前先跳了下可以注意6.1附近支撑 可以配置等反弹 joby 14.9 低点 有小V 盘后再跳水可以配置 （股性中） 无人机 跌破了15支撑 也是可以配置等反弹 zeta18.19 低点 有小V 盘后再跳水可以配置 （股性中） 电商 跌幅不是很大 下面有个17支撑能在跳到更安全点",
+      "timestamp": "2025-10-23 03:03:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "目前QQQ也从第四次的低点V起来 也可以看下等下股价在回落接近低点时候进行分批配置 预留点 盘后4点半特斯拉财报不好的情况加"
+      ]
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CUPjQaVpnmFkxFbN1Ff8U",
+      "content": "bmnr可以49.5-51附近分批减补仓的",
+      "original_content": "bmnr可以49.5-51附近分批减补仓的",
+      "timestamp": "2025-10-23 15:25:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-23 15:25:00.000",
+      "instruction_type": "SELL",
+      "symbol": "BMNR",
+      "target_price": 50.25,
+      "price_range": [
+        49.5,
+        51.0
+      ],
+      "sell_quantity": "全部"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUQYhPqFSYgsjvLgcs9ge",
+      "content": "conl bmnr mstr mara 会议中如果讲到利好有冲下也可以注意减",
+      "original_content": "conl bmnr mstr mara 会议中如果讲到利好有冲下也可以注意减",
+      "timestamp": "2025-10-24 01:44:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "crwv123.5可以出昨天补仓的 原来买的多的也可以123.5减点"
+      ]
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CUQZybWc8ZcSk5LTACufN",
+      "content": "49.5可以减低吸的bmnr",
+      "original_content": "49.5可以减低吸的bmnr",
+      "timestamp": "2025-10-24 02:01:00.010",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "34.3附近可以出昨天低吸的conl剩下一半"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-10-24 02:01:00.010",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 49.5
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUQepDvsDgcg8eqn3qWHH",
+      "content": "mstr 277-278的回踩支撑 bmnr 46.5-47的支撑 conl 31的支撑 mara 18.4的支撑 hood 121的支撑 明天那个接近了到时候在吸到时候再通知",
+      "original_content": "mstr 277-278的回踩支撑 bmnr 46.5-47的支撑 conl 31的支撑 mara 18.4的支撑 hood 121的支撑 明天那个接近了到时候在吸到时候再通知",
+      "timestamp": "2025-10-24 03:02:00.020",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "医疗板块属于普涨中慢涨的 昨天低吸了tem hims支撑昨天最低价46也很明显 可以等几天看看补涨上去出",
+        "加密货币四个股 今天加密会议时候都高抛了 现在在回踩 明天也不用急 夜盘和盘前 找找回踩支撑附近在接回"
+      ]
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CUWmqZ8jdB66uf9oZVyNF",
+      "content": "bmnr 跳空高开 53.3-53.5出一半 设置下跌破52.8出剩下的",
+      "original_content": "bmnr 跳空高开 53.3-53.5出一半 设置下跌破52.8出剩下的",
+      "timestamp": "2025-10-27 08:40:00.010",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "tsll 跳空高开 20-20.1出一半 设置下跌破19.9出剩下的"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-10-27 08:40:00.010",
+      "instruction_type": "SELL",
+      "symbol": "BMNR",
+      "target_price": 53.4,
+      "price_range": [
+        53.3,
+        53.5
+      ],
+      "sell_quantity": "1/2"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUbcrnPZL7NfEjRXP2erX",
+      "content": "bmnr今天回踩了 50.6-51的缺口可以 50.6-51附近回吸部分 等会议后再看加仓",
+      "original_content": "bmnr今天回踩了 50.6-51的缺口可以 50.6-51附近回吸部分 等会议后再看加仓",
+      "timestamp": "2025-10-29 22:06:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-29 22:06:00.000",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 50.8,
+      "price_range": [
+        50.6,
+        51.0
+      ]
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUbzRaiSTY2N5EnT2gwbD",
+      "content": "bmnr可以在49-48.9附近加点仓",
+      "original_content": "bmnr可以在49-48.9附近加点仓",
+      "timestamp": "2025-10-30 02:49:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-10-30 02:49:00.000",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 48.9
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUmCvb5hEY2sZN3gQ5NnG",
+      "content": "bmnr 42.7-42.8可以加仓点 也预留点尾盘在吸",
+      "original_content": "bmnr 42.7-42.8可以加仓点 也预留点尾盘在吸",
+      "timestamp": "2025-11-03 23:38:00.010",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "hims 在44.2-44.3配置了一半 预留点尾盘在吸"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-11-03 23:38:00.010",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 42.75,
+      "price_range": [
+        42.7,
+        42.8
+      ]
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUmPps2FjpikCSBvcEwAC",
+      "content": "44.15可以减仓点42.8附近吸的bmnr",
+      "original_content": "44.15可以减仓点42.8附近吸的bmnr",
+      "timestamp": "2025-11-04 02:01:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-04 02:01:00.000",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 44.15
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUmh55ZgtNte95GVjXQpP",
+      "content": "bmnr 42.6第一次回踩 然后冲高后尾盘又回落到42.6 就是属于二次握手中一般 正正好好 要等有一个异动来确认这个低点",
+      "original_content": "bmnr 42.6第一次回踩 然后冲高后尾盘又回落到42.6 就是属于二次握手中一般 正正好好 要等有一个异动来确认这个低点",
+      "timestamp": "2025-11-04 05:46:00.030",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "joby上次也是15.8附近买入 盘后利好是17都出的 今天类似ionq 回踩上次买入的最低附近 也是尾盘回踩均线没有再去15.8 属于比较强势",
+        "ionq 我们上一轮也是58 和 57两个价位买卖在61-63 今天也是回踩了 58 跌破到57 他今天没有二次回踩57 而只是回踩了58 均线 分时中黄色是均线 比较强势的",
+        "发下几个盘中二次握手的 案例回顾 hims 上周是46买过次然后 周四遇到单边下跌 最低到过44 那这个44成为潜在的支撑 周五上冲46.5在成本上出了 就等44的机会 今天hims回踩了44这个支撑 然后吸了 尾盘也是回踩44 精准的二次握手 在财报前夕 可以参考rddt上周四 一模一样复刻的走势 盘后先杀设置止损的然后往上拉 杀止损时候带动了被动盘 主力41-43全部吸筹了被动止损的"
+      ]
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CUmzuepvnPQVfDoA5FvhK",
+      "content": "夜盘44附近注意减掉点二次握手补仓的bmnr",
+      "original_content": "夜盘44附近注意减掉点二次握手补仓的bmnr",
+      "timestamp": "2025-11-04 09:41:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-04 09:41:00.000",
+      "instruction_type": "SELL",
+      "symbol": "BMNR",
+      "target_price": 44.0,
+      "sell_quantity": "全部"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUnijLttyeZCCMQ9DtZ4u",
+      "content": "bmnr目前是41.3 盘前是跳低过40.5的等再次回踩40.5可以在介入 之前加的仓位重要注意快进快出 这部分仅仅做T用",
+      "original_content": "bmnr目前是41.3 盘前是跳低过40.5的等再次回踩40.5可以在介入 之前加的仓位重要注意快进快出 这部分仅仅做T用",
+      "timestamp": "2025-11-04 18:44:00.040",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "intc 今天注意38这个财报跳空缺口支撑的附近的可以回吸 预留点盘中再看下 二次握手的价格有没有继续跌35支撑",
+        "ionq今天可以注意昨天高抛的在今天56这个支撑附近回吸",
+        "conl 波动今天比较大 也可以夜盘高抛的在31.5-31.7之间回吸",
+        "meta和fbl盘中在确认下 没有建仓的盘前跳626附近可以先建点 加仓的话盘中再看下二次握手有确定再加"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-11-04 18:44:00.040",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 40.5
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUo2XtAk7JZTXg48EntdT",
+      "content": "42附近可以减点40.8盘前的bmnr",
+      "original_content": "42附近可以减点40.8盘前的bmnr",
+      "timestamp": "2025-11-04 22:43:00.010",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "有些第一轮回踩后V起来的可以把盘前买的冲高减点"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-11-04 22:43:00.010",
+      "instruction_type": "SELL",
+      "symbol": "BMNR",
+      "target_price": 42.0,
+      "sell_quantity": "全部"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUo2bsHCLCizxnw2K6bv7",
+      "content": "bmnr 做T部分还是盯着 40.4-40.5这个开盘后回踩的点位等第二次回踩到附近吸",
+      "original_content": "bmnr 做T部分还是盯着 40.4-40.5这个开盘后回踩的点位等第二次回踩到附近吸",
+      "timestamp": "2025-11-04 22:43:00.020",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "有些第一轮回踩后V起来的可以把盘前买的冲高减点",
+        "42附近可以减点40.8盘前的bmnr"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-11-04 22:43:00.020",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 40.45,
+      "price_range": [
+        40.4,
+        40.5
+      ]
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUo5iTYqVS7K6sjefeoDt",
+      "content": "eth 目前3400开始企稳 盘前bmnr低点40.6时候正好对应 3400附近的价格 剩下持仓到自己加的价格附近再减对应数量 在下去时候也会看情况再吸",
+      "original_content": "eth 目前3400开始企稳 盘前bmnr低点40.6时候正好对应 3400附近的价格 剩下持仓到自己加的价格附近再减对应数量 在下去时候也会看情况再吸",
+      "timestamp": "2025-11-04 23:24:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "ionq 可以57.1附近减点 56加的"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-11-04 23:24:00.010",
+      "instruction_type": "SELL",
+      "symbol": "BMNR",
+      "target_price": 3400.0,
+      "sell_quantity": "全部"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUoMiG4gqrgTZzf4vHKR8",
+      "content": "bmnr在40附近回吸",
+      "original_content": "bmnr在40附近回吸",
+      "timestamp": "2025-11-05 02:52:00.040",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "QQQ目前有开始转V迹象 个股也可以开始看看 然后看看特斯拉这个先行指标",
+        "ionq可以在54附近回吸高抛的",
+        "rklb 在57.5附近回吸",
+        "conl在29.6附近回吸"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-11-05 02:52:00.040",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 40.0
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUovv7kUxTA2T6RCQvg8i",
+      "content": "分批只减自己最后补的那笔 距离举例 比如40补的bmnr 也在反弹40附近就先成本出 盘后压低过37.5 就是等在回踩确认往低买",
+      "original_content": "分批只减自己最后补的那笔 距离举例 比如40补的bmnr 也在反弹40附近就先成本出 盘后压低过37.5 就是等在回踩确认往低买",
+      "timestamp": "2025-11-05 10:10:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-05 10:10:00.000",
+      "instruction_type": "SELL",
+      "symbol": "BMNR",
+      "target_price": 40.0,
+      "sell_quantity": "全部"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUow2NxgnwwmxWUm4bipS",
+      "content": "bmnr 先把尾盘吸的40那笔 40附近出 盘后调低过到37.5在等机会 37.5附近吸",
+      "original_content": "bmnr 先把尾盘吸的40那笔 40附近出 盘后调低过到37.5在等机会 37.5附近吸",
+      "timestamp": "2025-11-05 10:10:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "分批只减自己最后补的那笔 距离举例 比如40补的bmnr 也在反弹40附近就先成本出 盘后压低过37.5 就是等在回踩确认往低买"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-11-05 10:10:00.010",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 37.5
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUp5Bg33amGjLdvbB4i5W",
+      "content": "规律性的几个总结： 盘前冬令时9点半涨幅是高开涨的 10点半 11点 11点半 7姐妹和明星股价格一路下滑 有走单边下跌的风险 尾盘附近才吸 夜盘9点30分附近看看有V就可以放心是尾盘最低夜盘吸筹模式了 夜盘都普跌 就等盘前冬令时是18点30分惯性下跌小V时候补仓 等人工介入时候拉升减 股票开始不断新低的 meta，bmnr那种 就每天看尾盘低点和开盘三小时的低点有没有0.2%幅度上下对应 对应没跌破的尾盘吸 隔天夜盘和盘前冲高减 都跌就不慌 夜盘都跌等18点30分 盘中都跌等尾盘 都V要耐心 先V是小盘股 大盘会后续延时到补涨 然后观察外围指数 上证 恒生 BTC ETH价格等 指数涨 股票就随后涨 参考前面的 有个5分钟的延迟的特性 可以先行指标参考 股票先行指标参考还有个特斯拉 也是先行指标",
+      "original_content": "规律性的几个总结： 盘前冬令时9点半涨幅是高开涨的 10点半 11点 11点半 7姐妹和明星股价格一路下滑 有走单边下跌的风险 尾盘附近才吸 夜盘9点30分附近看看有V就可以放心是尾盘最低夜盘吸筹模式了 夜盘都普跌 就等盘前冬令时是18点30分惯性下跌小V时候补仓 等人工介入时候拉升减 股票开始不断新低的 meta，bmnr那种 就每天看尾盘低点和开盘三小时的低点有没有0.2%幅度上下对应 对应没跌破的尾盘吸 隔天夜盘和盘前冲高减 都跌就不慌 夜盘都跌等18点30分 盘中都跌等尾盘 都V要耐心 先V是小盘股 大盘会后续延时到补涨 然后观察外围指数 上证 恒生 BTC ETH价格等 指数涨 股票就随后涨 参考前面的 有个5分钟的延迟的特性 可以先行指标参考 股票先行指标参考还有个特斯拉 也是先行指标",
+      "timestamp": "2025-11-05 11:59:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-05 11:59:00.000",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 9.0
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUpjxT8s4qyec2wj2uDBa",
+      "content": "加密类股票 昨天btc和eth都跌7月最低价格附近了 最近是中线布局 conl 活性大点 夜盘低点28 昨天尾盘29.6 可以注意最近盘中低点 一部分可以拿着 一部分做T bmnr 夜盘低点在37.5 昨天尾盘低点40 也是在调低 拿一部分死拿 一部分做T mstr股性差点 也是注意240-245这个低点 可以 看三个里面选哪几个做",
+      "original_content": "加密类股票 昨天btc和eth都跌7月最低价格附近了 最近是中线布局 conl 活性大点 夜盘低点28 昨天尾盘29.6 可以注意最近盘中低点 一部分可以拿着 一部分做T bmnr 夜盘低点在37.5 昨天尾盘低点40 也是在调低 拿一部分死拿 一部分做T mstr股性差点 也是注意240-245这个低点 可以 看三个里面选哪几个做",
+      "timestamp": "2025-11-05 20:27:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CUprnKbGv2LRNP5TS2bNm",
+      "content": "特朗普喊话一般这轮底部差不多就是今天夜盘价格了 空仓的可以找机会 bmnr和conl占点仓位 加密调整的多点 mstr看个人因为股性比较慢点波动小",
+      "original_content": "特朗普喊话一般这轮底部差不多就是今天夜盘价格了 空仓的可以找机会 bmnr和conl占点仓位 加密调整的多点 mstr看个人因为股性比较慢点波动小",
+      "timestamp": "2025-11-05 21:57:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CUpvAukcwRtQsmEJSqiTY",
+      "content": "bmnr没有的也可以40.5附近建点",
+      "original_content": "bmnr没有的也可以40.5附近建点",
+      "timestamp": "2025-11-05 22:40:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "30-30.3附近可以没有的建点conl"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-11-05 22:40:00.010",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 40.5
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUq1uW9jSyG2BJuFP27Jj",
+      "content": "bmnr可以42附近一半做T减 另外一半长拿",
+      "original_content": "bmnr可以42附近一半做T减 另外一半长拿",
+      "timestamp": "2025-11-05 23:56:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-05 23:56:00.000",
+      "instruction_type": "SELL",
+      "symbol": "BMNR",
+      "target_price": 42.0,
+      "sell_quantity": "1/2"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUrpJCKbe9CdAp71cXrrk",
+      "content": "bmnr可以在回踩39.7-39.8附近在回吸做T的部分",
+      "original_content": "bmnr可以在回踩39.7-39.8附近在回吸做T的部分",
+      "timestamp": "2025-11-06 22:43:00.010",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "meta今天的回踩点在625附近可以 加和建仓 fbl在30.5"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-11-06 22:43:00.010",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 39.75,
+      "price_range": [
+        39.7,
+        39.8
+      ]
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUsMKzqFEB6rTAGvTvrLg",
+      "content": "盘后nvdl 92-93可以加点 盘后rklb 49-50可以建点仓位 盘后 conl26-27 可以加 盘后 bmnr 37-38可以加 盘后nbis 109附近可以建仓 盘后hood 127附近可以建仓 盘后hims 41附近可以加",
+      "original_content": "盘后nvdl 92-93可以加点 盘后rklb 49-50可以建点仓位 盘后 conl26-27 可以加 盘后 bmnr 37-38可以加 盘后nbis 109附近可以建仓 盘后hood 127附近可以建仓 盘后hims 41附近可以加",
+      "timestamp": "2025-11-07 05:32:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-07 05:32:00.000",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 109.0
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUt3wAsqUSEdaGNTyUuSF",
+      "content": "bmnr 在38.7-39附近也减掉 38以下加的 把资金减出来应对周五 双杀要用的",
+      "original_content": "bmnr 在38.7-39附近也减掉 38以下加的 把资金减出来应对周五 双杀要用的",
+      "timestamp": "2025-11-07 14:25:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-07 14:25:00.000",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 39.0
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUtvy7ZiVo3WPRyd8FUgL",
+      "content": "夜盘有个conl和bmnr 夜盘没有减仓的注意反弹减仓 还是夜盘的价格附近减",
+      "original_content": "夜盘有个conl和bmnr 夜盘没有减仓的注意反弹减仓 还是夜盘的价格附近减",
+      "timestamp": "2025-11-08 01:34:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CUuEfJuuZEJy41NF9kuNk",
+      "content": "bmnr昨天在40买过 37也补过 37的仓位夜盘38走了 再有回踩时候再加周一也会看 上面 45 49 51仓位也都有买过 等后面反弹时候到价格在依次出 每天主要处理T的仓位 有些高的就反弹延续后陆续到价格附近出",
+      "original_content": "bmnr昨天在40买过 37也补过 37的仓位夜盘38走了 再有回踩时候再加周一也会看 上面 45 49 51仓位也都有买过 等后面反弹时候到价格在依次出 每天主要处理T的仓位 有些高的就反弹延续后陆续到价格附近出",
+      "timestamp": "2025-11-08 05:26:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-08 05:26:00.000",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 37.0
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUuF6NBxZSwGpCq9jEteM",
+      "content": "这轮开门行情 配置上可以 2-4个不同板块配置拿反弹段 可以七姐妹当中买1-2个 tsll nvdl meta msft之类 币股买1个 conl bmnr hood mstr（这个股性慢） 明星股1个 oklo tem nbis rklb等等 我自己列的那10几个是都买了的都会跟踪的",
+      "original_content": "这轮开门行情 配置上可以 2-4个不同板块配置拿反弹段 可以七姐妹当中买1-2个 tsll nvdl meta msft之类 币股买1个 conl bmnr hood mstr（这个股性慢） 明星股1个 oklo tem nbis rklb等等 我自己列的那10几个是都买了的都会跟踪的",
+      "timestamp": "2025-11-08 05:32:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CUyKPgHY62wdxx8HtPat9",
+      "content": "44减仓点到价格的bmnr",
+      "original_content": "44减仓点到价格的bmnr",
+      "timestamp": "2025-11-10 09:10:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-10 09:10:00.000",
+      "instruction_type": "SELL",
+      "symbol": "BMNR",
+      "target_price": 44.0,
+      "sell_quantity": "全部"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CUySvjmpuzk9YRVLsXNqe",
+      "content": "现在很多没有减持的都反弹很多了 比如bmnr nvdl conl之类的 这些盘中有回踩还会继续吸回 之后也会重点关注一些减持即将完毕的 哪些还没怎么反弹 空仓的可以配置 然后财报最近还有一周 错杀的一些也会在杀多时候介入",
+      "original_content": "现在很多没有减持的都反弹很多了 比如bmnr nvdl conl之类的 这些盘中有回踩还会继续吸回 之后也会重点关注一些减持即将完毕的 哪些还没怎么反弹 空仓的可以配置 然后财报最近还有一周 错杀的一些也会在杀多时候介入",
+      "timestamp": "2025-11-10 10:49:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CUzSPkBDbkJxsjwJ589wp",
+      "content": "bmnr在41.9-42附近接回夜盘卖出一半 夜盘出的数量为当时40.5和44附近部分的部分有两笔只接回一笔",
+      "original_content": "bmnr在41.9-42附近接回夜盘卖出一半 夜盘出的数量为当时40.5和44附近部分的部分有两笔只接回一笔",
+      "timestamp": "2025-11-10 23:23:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-10 23:23:00.000",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 42.0
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CV1E9SN3T9s5id8CcyquT",
+      "content": "bmnr夜盘价格跳涨43.5-43.7附近可以减点昨天42附近低吸的",
+      "original_content": "bmnr夜盘价格跳涨43.5-43.7附近可以减点昨天42附近低吸的",
+      "timestamp": "2025-11-11 09:23:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-11 09:23:00.000",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 43.6,
+      "price_range": [
+        43.5,
+        43.7
+      ]
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CV2GqbPKLXgjoJmMdKWAG",
+      "content": "40-40.1附近回吸一半bmnr",
+      "original_content": "40-40.1附近回吸一半bmnr",
+      "timestamp": "2025-11-11 22:39:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-11 22:39:00.000",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 40.0,
+      "position_size": "一半"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CV49LVtbjc3HWqfpNpxHX",
+      "content": "bmnr可以41.3附近减持部分 crwv开盘后看下91-93把88附近补的也减持掉 这两个反弹比较少主要减出来等有再有回踩确认时候在回吸",
+      "original_content": "bmnr可以41.3附近减持部分 crwv开盘后看下91-93把88附近补的也减持掉 这两个反弹比较少主要减出来等有再有回踩确认时候在回吸",
+      "timestamp": "2025-11-12 22:21:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-12 22:21:00.000",
+      "instruction_type": "SELL",
+      "symbol": "BMNR",
+      "target_price": 92.0,
+      "price_range": [
+        91.0,
+        93.0
+      ],
+      "sell_quantity": "全部"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CV5WRPwLxzvUWzSQ423VE",
+      "content": "bmnr 42.2附近减手里40附近加的",
+      "original_content": "bmnr 42.2附近减手里40附近加的",
+      "timestamp": "2025-11-13 15:38:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "conl夜盘29.4附近减盘后加的"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-11-13 15:38:00.010",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 42.2
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CV6SfNQRzcpAX5rjddLcs",
+      "content": "bmnr 36.2 conl 24.2 这两个讲话时候的V点",
+      "original_content": "bmnr 36.2 conl 24.2 这两个讲话时候的V点",
+      "timestamp": "2025-11-14 03:26:00.030",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "尾盘可以以讲话时候的V的低点做确认 再讲最近关门的影响",
+        "tsll在讲话时候15.98 尾盘在15.98附近可以确认",
+        "nvdl 讲话时候的V点在87.75 尾盘高于也可以确认低点"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-11-14 03:26:00.030",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 36.2
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CV6ZzY7uDWbNF1UAyAsNG",
+      "content": "tsll 14点12分价格15.98 二次确认过 可以这个价格附近吸 弹性大 nvdl 14点12分价格88.28 二次确认过 可以这个价格附近吸 弹性大 conl 14点12分 24.06 二次确认过 可以这个价格附近吸 弹性大 bmnr 14点12分 36.3 二次确认过 可以这个价格附近吸 弹性大 meta 605.3 弹性慢 fbl 28.35 弹性大",
+      "original_content": "tsll 14点12分价格15.98 二次确认过 可以这个价格附近吸 弹性大 nvdl 14点12分价格88.28 二次确认过 可以这个价格附近吸 弹性大 conl 14点12分 24.06 二次确认过 可以这个价格附近吸 弹性大 bmnr 14点12分 36.3 二次确认过 可以这个价格附近吸 弹性大 meta 605.3 弹性慢 fbl 28.35 弹性大",
+      "timestamp": "2025-11-14 05:06:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CV8TzDxu89nJd6Z7gY4Pu",
+      "content": "bmnr可以盘后34.5附近做点配置",
+      "original_content": "bmnr可以盘后34.5附近做点配置",
+      "timestamp": "2025-11-15 05:08:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-11-15 05:08:00.000",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 34.5
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVSv9Bo2E2PgTgxcemZHu",
+      "content": "币股主要注意 btc conl 和eth bmnr周五的低点企稳点",
+      "original_content": "币股主要注意 btc conl 和eth bmnr周五的低点企稳点",
+      "timestamp": "2025-11-24 23:02:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CVSwF6hjPjDPfG9cw9ivC",
+      "content": "tsll的突破点注意17.4是不是突破价格在上去到17.6做震荡 conl最近有二次回踩15-16就可以买2份一份死拿一份做T bmnr最近二次回踩25-26也可以买2份一份死拿一份做T 加密之后到回踩在看机会发",
+      "original_content": "tsll的突破点注意17.4是不是突破价格在上去到17.6做震荡 conl最近有二次回踩15-16就可以买2份一份死拿一份做T bmnr最近二次回踩25-26也可以买2份一份死拿一份做T 加密之后到回踩在看机会发",
+      "timestamp": "2025-11-24 23:16:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CVT8BQNF2ZW1yDiUqCATX",
+      "content": "币类反弹 一般先是btc conl hood这类交易所 eth囤币的bmnr iren cifr这类AI炒币先反弹 mstr一月有剔除指数风险最近会压制涨幅 二阶段是mara clsk这类",
+      "original_content": "币类反弹 一般先是btc conl hood这类交易所 eth囤币的bmnr iren cifr这类AI炒币先反弹 mstr一月有剔除指数风险最近会压制涨幅 二阶段是mara clsk这类",
+      "timestamp": "2025-11-25 01:40:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CVTAfGQ2R3HtUHUF5YWFH",
+      "content": "币股可以 长桥bmnr下面一些tom lee发的资讯看看 包括他怎么保市值 币市场为啥流通资金减少 成交额为什么增大都有详细说",
+      "original_content": "币股可以 长桥bmnr下面一些tom lee发的资讯看看 包括他怎么保市值 币市场为啥流通资金减少 成交额为什么增大都有详细说",
+      "timestamp": "2025-11-25 02:12:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CVUyhpozk8XVBNBhsSfzv",
+      "content": "conl和bmnr属于和ai无关的 开盘回踩有补的就是正T到尾盘高点附近出 也是就开盘一个回踩点就上去了",
+      "original_content": "conl和bmnr属于和ai无关的 开盘回踩有补的就是正T到尾盘高点附近出 也是就开盘一个回踩点就上去了",
+      "timestamp": "2025-11-26 01:09:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "tsll 17.5这个价格也达到后 后面看挂单的16.64的低吸和尾盘收盘附近情况"
+      ]
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CVVHWGtVWy3GqhMpXQMd8",
+      "content": "bmnr今天是缩量的 也是明天盘中注意回踩时候看28.7这个支撑会不会破下 也要看明天盘前时候eth价格",
+      "original_content": "bmnr今天是缩量的 也是明天盘中注意回踩时候看28.7这个支撑会不会破下 也要看明天盘前时候eth价格",
+      "timestamp": "2025-11-26 05:01:00.020",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "tsla今天是缩量的也是注意盘前有没有跌 盘前跌也是找第一个回踩 今天的16.64附近回吸",
+        "伟达今天成交额是增量的明天回踩力度会小点也是盘中找第一个回踩企稳时候吸"
+      ]
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CVajCJccPBjsmkeGybweP",
+      "content": "bmnr也是加密影响可以挂个32.2附近 下周有在低的回踩在加",
+      "original_content": "bmnr也是加密影响可以挂个32.2附近 下周有在低的回踩在加",
+      "timestamp": "2025-11-29 02:01:00.020",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "盘后nvdl可以80.3-80.4加仓点",
+        "加密货币今天有杠杆结算 盘后iren 47.8附近少量加仓点"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-11-29 02:01:00.020",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 32.2
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVgJQoRc9UqpARdsbsrW6",
+      "content": "btc要注意83822这轮的启动的成交额今天26亿这轮也和上次11月21日-9一样展开反弹 eth2700这个点反弹目前是0.81%力度反弹没有btc大 bmnr对应就是28.9-29这里",
+      "original_content": "btc要注意83822这轮的启动的成交额今天26亿这轮也和上次11月21日-9一样展开反弹 eth2700这个点反弹目前是0.81%力度反弹没有btc大 bmnr对应就是28.9-29这里",
+      "timestamp": "2025-12-02 00:42:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-02 00:42:00.000",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 26.0
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVhwb3XtRMYihUdozmCzj",
+      "content": "conl可以设置个跌破20.2止盈昨天的条件设置 bmnr可以设置个跌破30.1止盈昨天的条件设置",
+      "original_content": "conl可以设置个跌破20.2止盈昨天的条件设置 bmnr可以设置个跌破30.1止盈昨天的条件设置",
+      "timestamp": "2025-12-02 21:30:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CVi3YKRw7SXk63L5EXRff",
+      "content": "bmnr条件上移到跌破31.05出",
+      "original_content": "bmnr条件上移到跌破31.05出",
+      "timestamp": "2025-12-02 22:48:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-02 22:48:00.000",
+      "instruction_type": "SELL",
+      "symbol": "BMNR",
+      "target_price": 31.05,
+      "sell_quantity": "全部"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVjwFMeQu76oeTTGxSFZX",
+      "content": "bmnr conl之类币股今天根据币价格可以设置跌破条件减持的条件 bmnr33.7跌破减点 conl21.2跌破减点",
+      "original_content": "bmnr conl之类币股今天根据币价格可以设置跌破条件减持的条件 bmnr33.7跌破减点 conl21.2跌破减点",
+      "timestamp": "2025-12-03 22:47:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-03 22:47:00.000",
+      "instruction_type": "SELL",
+      "symbol": "BMNR",
+      "target_price": 33.7,
+      "sell_quantity": "小仓位"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVwKc6zeadgbvn13Gzx4p",
+      "content": "加密数据上升了下 bmnr 可以36-36.2附近减低位加的 conl可以22.5-23附近减低位加的",
+      "original_content": "加密数据上升了下 bmnr 可以36-36.2附近减低位加的 conl可以22.5-23附近减低位加的",
+      "timestamp": "2025-12-09 23:06:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-09 23:06:00.000",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 36.2
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVwRQHgSAP7m1cyKD39WE",
+      "content": "bmnr （10月28日 54+24.3）/2=39.15 今天bmnr也快接近39.15一半的位置了",
+      "original_content": "bmnr （10月28日 54+24.3）/2=39.15 今天bmnr也快接近39.15一半的位置了",
+      "timestamp": "2025-12-10 00:22:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-10 00:22:00.000",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 24.3,
+      "position_size": "一半"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVwSdxwALzq8naNKSmjmA",
+      "content": "bmnr 39.15也是一半涨幅的位置可以死拿的低位的出一半 剩下一半博前高 做T部分还是有回踩时候做正T为主 一半涨幅到了会震荡下",
+      "original_content": "bmnr 39.15也是一半涨幅的位置可以死拿的低位的出一半 剩下一半博前高 做T部分还是有回踩时候做正T为主 一半涨幅到了会震荡下",
+      "timestamp": "2025-12-10 00:39:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CVzBgd6TTvncekzxrSkEV",
+      "content": "bmnr可以37附近随指数跌时候 回吸一笔39一半位置卖出的部分 在预留点等晚上看下币市场的价格",
+      "original_content": "bmnr可以37附近随指数跌时候 回吸一笔39一半位置卖出的部分 在预留点等晚上看下币市场的价格",
+      "timestamp": "2025-12-11 11:23:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "英伟达这个跟上次 大陆说英伟达违反反垄断差不多 都不计入大陆地区收益了 夜盘都机器人 判断为利空抛售 正好可以找机会找些转弯往上的吸"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-12-11 11:23:00.010",
+      "instruction_type": "SELL",
+      "symbol": "BMNR",
+      "target_price": 39.0,
+      "sell_quantity": "1/2"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CVzxzwats3q12nsQBtw9i",
+      "content": "39出夜盘37附近低买的bmnr",
+      "original_content": "39出夜盘37附近低买的bmnr",
+      "timestamp": "2025-12-11 21:19:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-11 21:19:00.000",
+      "instruction_type": "SELL",
+      "symbol": "BMNR",
+      "target_price": 39.0,
+      "sell_quantity": "全部",
+      "sell_reference_price": 37.0,
+      "sell_reference_label": "37.0的"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CW1a2G6v4WVjLkoy2sqMW",
+      "content": "币股每次只要触发了预警 conl bmnr iren cifr容错率都是可以的",
+      "original_content": "币股每次只要触发了预警 conl bmnr iren cifr容错率都是可以的",
+      "timestamp": "2025-12-12 04:58:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CW334hU7XeHMV6GmMQQtx",
+      "content": "bmnr可以注意36.6-36.8附近可以低吸一笔剩下等博通转弯再加一笔",
+      "original_content": "bmnr可以注意36.6-36.8附近可以低吸一笔剩下等博通转弯再加一笔",
+      "timestamp": "2025-12-12 23:33:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-12 23:33:00.000",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 36.7,
+      "price_range": [
+        36.6,
+        36.8
+      ]
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CW3Usru7GwbYU3aukjmQo",
+      "content": "盘后34.8-34.9可以回吸bmnr 盘后所有的股票加起来总仓位不要超过7成 周一万一有回踩还要有做T资金",
+      "original_content": "盘后34.8-34.9可以回吸bmnr 盘后所有的股票加起来总仓位不要超过7成 周一万一有回踩还要有做T资金",
+      "timestamp": "2025-12-13 05:12:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-13 05:12:00.000",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 34.8
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWFWHTzA9ysGXyiTMXkpM",
+      "content": "bmnr可以夜盘和盘前找找28.8-29附近的价格回吸点 盘中有平期权波动回踩再加一笔",
+      "original_content": "bmnr可以夜盘和盘前找找28.8-29附近的价格回吸点 盘中有平期权波动回踩再加一笔",
+      "timestamp": "2025-12-19 13:37:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-19 13:37:00.000",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 28.9,
+      "price_range": [
+        28.8,
+        29.0
+      ]
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWFZvfeggB5vteQfwLtx5",
+      "content": "12月19日更新一半仓位死拿一半仓位做T新一轮股单 每个板块选1-2个 三个板块配置 盘中有四巫日季度期权和周期权平仓时候的回踩去介入 七姐妹和大盘股 nvdl 盘中在找下76-77之间的机会 原来83.5没动 甲骨文会找下185附近的机会 微软双倍msfl可以找26.6附近在重新开仓 亚马逊双倍amzu 可以34 和33两个价格开仓 tsll 后面找20.7附近缺口机会 intc这轮低点在35.7附近找 35.7-36的低吸机会 明星股小盘股 crwv 会67-68附近找机会再加点 原来没动的部分还有77 和84的部分 nbis 夜盘和盘前可以找下78-79的机会加仓一笔 原来还有87的一笔还没动 oklo可以夜盘和盘前找下77附近的价格做介入 上方还有87和97有两笔还没出 sound 上轮有个11部分还没怎么出完 这轮可以找找10.8价格位置吸 到上轮高点12.5附近出 sofi 27.5那部分没动 有25机会再加仓 asts 找63-64附近会吸一笔盘中再看下机会 rklb 后面找52附近机会 盘中在看下 apld到23附近在找机会加仓一笔 上方还有笔27的还没动 eose 12.2-12.4附近可以介入一笔盘中在找个低的机会 joby 13.5附近可以找机会介入一笔 到盘中再看看低的机会再加 tem 可以62附近重新开仓一笔 到盘中低的机会再加 加密货币 bmnr可以夜盘和盘前找找28.8-29附近的价格回吸点 盘中有平期权波动回踩再加一笔 盘中在更新下盘中的价格 conl可以夜盘和盘前找找16.8-17附近的价格回吸点 盘中有平期权波动回踩再加一笔 盘中在更新下盘中的价格 iren可以夜盘和盘前找找36附近的价格回吸点 盘中有平期权波动回踩再加一笔 盘中在更新下盘中的价格 cifr可以夜盘和盘前找找15附近的价格回吸点 盘中有平期权波动回踩再加一笔 盘中在更新下盘中的价格 hood可以夜盘和盘前找找117附近的价格回吸点 盘中有平期权波动回踩再加一笔 盘中在更新下盘中的价格 加密里面有涨幅限制的两个 mstr可以158-159附近做正T差价下 到1月10日附近 剔除指数前一周要减掉大部分 mara 可以9.6-9.7介入 旷股比其他加密涨幅慢 跌时候跌幅大 可以当备选的到12.5压力都出 上一轮的低吸做对比",
+      "original_content": "12月19日更新一半仓位死拿一半仓位做T新一轮股单 每个板块选1-2个 三个板块配置 盘中有四巫日季度期权和周期权平仓时候的回踩去介入 七姐妹和大盘股 nvdl 盘中在找下76-77之间的机会 原来83.5没动 甲骨文会找下185附近的机会 微软双倍msfl可以找26.6附近在重新开仓 亚马逊双倍amzu 可以34 和33两个价格开仓 tsll 后面找20.7附近缺口机会 intc这轮低点在35.7附近找 35.7-36的低吸机会 明星股小盘股 crwv 会67-68附近找机会再加点 原来没动的部分还有77 和84的部分 nbis 夜盘和盘前可以找下78-79的机会加仓一笔 原来还有87的一笔还没动 oklo可以夜盘和盘前找下77附近的价格做介入 上方还有87和97有两笔还没出 sound 上轮有个11部分还没怎么出完 这轮可以找找10.8价格位置吸 到上轮高点12.5附近出 sofi 27.5那部分没动 有25机会再加仓 asts 找63-64附近会吸一笔盘中再看下机会 rklb 后面找52附近机会 盘中在看下 apld到23附近在找机会加仓一笔 上方还有笔27的还没动 eose 12.2-12.4附近可以介入一笔盘中在找个低的机会 joby 13.5附近可以找机会介入一笔 到盘中再看看低的机会再加 tem 可以62附近重新开仓一笔 到盘中低的机会再加 加密货币 bmnr可以夜盘和盘前找找28.8-29附近的价格回吸点 盘中有平期权波动回踩再加一笔 盘中在更新下盘中的价格 conl可以夜盘和盘前找找16.8-17附近的价格回吸点 盘中有平期权波动回踩再加一笔 盘中在更新下盘中的价格 iren可以夜盘和盘前找找36附近的价格回吸点 盘中有平期权波动回踩再加一笔 盘中在更新下盘中的价格 cifr可以夜盘和盘前找找15附近的价格回吸点 盘中有平期权波动回踩再加一笔 盘中在更新下盘中的价格 hood可以夜盘和盘前找找117附近的价格回吸点 盘中有平期权波动回踩再加一笔 盘中在更新下盘中的价格 加密里面有涨幅限制的两个 mstr可以158-159附近做正T差价下 到1月10日附近 剔除指数前一周要减掉大部分 mara 可以9.6-9.7介入 旷股比其他加密涨幅慢 跌时候跌幅大 可以当备选的到12.5压力都出 上一轮的低吸做对比",
+      "timestamp": "2025-12-19 14:25:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CWGDSAZwiqGBqv2qVWsH6",
+      "content": "盘中可以注意币股的几个转弯往上时候低吸 conl bmnr iren cifr hood",
+      "original_content": "盘中可以注意币股的几个转弯往上时候低吸 conl bmnr iren cifr hood",
+      "timestamp": "2025-12-19 22:37:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CWGDyLEXaadvZGiB1sAYY",
+      "content": "bmnr 在29.6附近回吸一笔",
+      "original_content": "bmnr 在29.6附近回吸一笔",
+      "timestamp": "2025-12-19 22:42:00.020",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "crwv nbis oklo nvdl msfl 等ai的 都是在盘前压一下后 开盘直接结算起来这有盘中结算震荡低点就是正T吸为主 币股是开盘有压了下转弯就给机会吸了",
+        "conl 16.8位置到了 置顶的区间也是吸一笔"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-12-19 22:42:00.020",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 29.6
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWGjNVrAsd6vAEwa8CUS2",
+      "content": "bmnr你们就盯着 29-30这个价格的 下周夜盘再看下",
+      "original_content": "bmnr你们就盯着 29-30这个价格的 下周夜盘再看下",
+      "timestamp": "2025-12-20 05:06:00.040",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "博通可以下周看下335附近可以开 它属于错杀过度 财报还可以的",
+        "amzu盘后四巫期权杀下来34还是可以 就是34买过仓位就不加大 适合空仓和仓位小的",
+        "msfl 微软双倍也是可以27.1附近占仓位用 他低点这轮回踩26.5附近 下限不大也适合占仓",
+        "conl也是在有16.8价格就拿着就可以会跟币反弹上去点"
+      ]
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CWLpkT7Q8t9SCYXHtWEXp",
+      "content": "btc和eth也是周末跳空小涨的 今天是注意预警的延续性 没有回调迹象 就是低位补仓的 bmnr conl iren cifr hood之类的持股为主",
+      "original_content": "btc和eth也是周末跳空小涨的 今天是注意预警的延续性 没有回调迹象 就是低位补仓的 bmnr conl iren cifr hood之类的持股为主",
+      "timestamp": "2025-12-22 09:02:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CWLqcTBxTH1SZwR7subue",
+      "content": "conl bmnr iren cifr hood 周五很低买的可以做好一半死拿跌下来一半位置 一半仓位用来正T",
+      "original_content": "conl bmnr iren cifr hood 周五很低买的可以做好一半死拿跌下来一半位置 一半仓位用来正T",
+      "timestamp": "2025-12-22 09:10:00.020",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "80-82附近可以注意分批出掉周五64附近吸的asts 也是跳到了前高附近 涨幅巨大",
+        "asts是第一个 从一半位置一下 隔开一个周末就到前高附近的 和上一轮一样 有榜样出现 很多会效仿冲击前高"
+      ]
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CWMuwdLexbMckzv2otjVG",
+      "content": "32.6也是注意转弯出个三分之一bmnr 到回踩在做T",
+      "original_content": "32.6也是注意转弯出个三分之一bmnr 到回踩在做T",
+      "timestamp": "2025-12-22 22:51:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-22 22:51:00.000",
+      "instruction_type": "SELL",
+      "symbol": "BMNR",
+      "target_price": 32.6,
+      "sell_quantity": "全部"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWNNvpg4aNW48MTKUkoQU",
+      "content": "收盘附近bmnr 可以30.8附近回吸高抛的bmnr",
+      "original_content": "收盘附近bmnr 可以30.8附近回吸高抛的bmnr",
+      "timestamp": "2025-12-23 04:45:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2025-12-23 04:45:00.000",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 30.8
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWPr5pb8JSpAFCMeetMfJ",
+      "content": "bmnr可以挂个28.98 挂一笔回吸 另外一笔放收盘附近",
+      "original_content": "bmnr可以挂个28.98 挂一笔回吸 另外一笔放收盘附近",
+      "timestamp": "2025-12-23 23:20:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "conl盘中有低点出来16.45左右盘中可以吸一笔 一笔放尾盘再看看"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-12-23 23:20:00.010",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 28.98
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWVz71dWFJb7ouSystqPd",
+      "content": "bmnr 盘中低点在28附近 盘后在28.3不上不下位置 可以挂28附近挂低 没有进到就下周先出在低买",
+      "original_content": "bmnr 盘中低点在28附近 盘后在28.3不上不下位置 可以挂28附近挂低 没有进到就下周先出在低买",
+      "timestamp": "2025-12-27 05:09:00.010",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "cifr盘中低点在15 可以15-15.1吸回一半"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-12-27 05:09:00.010",
+      "instruction_type": "SELL",
+      "symbol": "BMNR",
+      "target_price": 28.0,
+      "sell_quantity": "全部"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWaJXvjChMNG7yFFVLP8M",
+      "content": "bmnr 注意 29.5-30这段出现转弯往下就止盈2次周五28和上周五29的部分",
+      "original_content": "bmnr 注意 29.5-30这段出现转弯往下就止盈2次周五28和上周五29的部分",
+      "timestamp": "2025-12-29 11:53:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "btc和eth夜盘如期出现异动预警 夜盘和盘前注意个股转弯时候可以减2次周五抄底的部分"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-12-29 11:53:00.010",
+      "instruction_type": "SELL",
+      "symbol": "BMNR",
+      "target_price": 29.75,
+      "price_range": [
+        29.5,
+        30.0
+      ],
+      "sell_quantity": "全部"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWbBB3JxJTJfWTbH4atY8",
+      "content": "比如bmnr 他夜盘高点就扫出来29.5 低点在27.8盘前低点 开盘的反弹还是扫在29.5 这个27.8就还会后面2天被扫到",
+      "original_content": "比如bmnr 他夜盘高点就扫出来29.5 低点在27.8盘前低点 开盘的反弹还是扫在29.5 这个27.8就还会后面2天被扫到",
+      "timestamp": "2025-12-29 22:57:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "今天盘前有些个股的低点是被币市场 政府资金往下扫去测试出来的 这些低点后面2天会在扫到 时间还是节前2天尾盘吸 夜盘和盘前有反弹出做短线为主"
+      ]
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CWbbjYBC6gPyK4anddYfP",
+      "content": "bmnr可以28.3-28.4附近吸夜盘高抛的也是明天做短线出",
+      "original_content": "bmnr可以28.3-28.4附近吸夜盘高抛的也是明天做短线出",
+      "timestamp": "2025-12-30 04:18:00.020",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "尾盘到收盘可以把一些回踩盘前低价的做吸回",
+        "tsll可以20.2-20.3附近吸回盘中高抛的明天短线出"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-12-30 04:18:00.020",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 28.35,
+      "price_range": [
+        28.3,
+        28.4
+      ]
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWd4iSzBzcQhLosRxNYjs",
+      "content": "29附近出一半昨天收盘附近的bmnr",
+      "original_content": "29附近出一半昨天收盘附近的bmnr",
+      "timestamp": "2025-12-30 22:53:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "币市场反弹预警了下 也是注意到9万附近看看政府资金会不会和昨天一样出现抛售 冲高转弯回调预警时候减点币股"
+      ]
+    },
+    "check": {
+      "timestamp": "2025-12-30 22:53:00.010",
+      "instruction_type": "SELL",
+      "symbol": "BMNR",
+      "target_price": 29.0,
+      "sell_quantity": "1/2"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWfSjGv9MpMY5c7sQGj7x",
+      "content": "bmnr昨天27.6收盘买过 今天收盘差不多 昨天买过的今天不加了 没买的可以27.1附近开 然后收盘附近是26.8V起来的 也可以周五有小跌26.8附近在加和开也可以",
+      "original_content": "bmnr昨天27.6收盘买过 今天收盘差不多 昨天买过的今天不加了 没买的可以27.1附近开 然后收盘附近是26.8V起来的 也可以周五有小跌26.8附近在加和开也可以",
+      "timestamp": "2026-01-01 05:05:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-01 05:05:00.000",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 27.1
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWijrzg2EG1oZB34USeJR",
+      "content": "28.8-29转弯时候出 周二的27.6的那部分bmnr",
+      "original_content": "28.8-29转弯时候出 周二的27.6的那部分bmnr",
+      "timestamp": "2026-01-02 22:48:00.040",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "tsll 19.1 回吸卖出的一半",
+        "eose等转弯时候卖 11.6和12.04的一半",
+        "开盘回踩有些put平仓了现在是多的轮次 注意有些冲高出",
+        "12.1-12.3分批出11.6的eose全部和12.04的一半"
+      ]
+    },
+    "check": {
+      "timestamp": "2026-01-02 22:48:00.040",
+      "instruction_type": "SELL",
+      "symbol": "BMNR",
+      "target_price": 28.9,
+      "price_range": [
+        28.8,
+        29.0
+      ],
+      "sell_quantity": "小仓位"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWoQJd2bdwZNoCJrPm6FM",
+      "content": "币的资讯就bmnr下面资讯都很实时披露的 为啥元旦前连续抄底就是 每天都有eth tom lee和韩国在大量抄底",
+      "original_content": "币的资讯就bmnr下面资讯都很实时披露的 为啥元旦前连续抄底就是 每天都有eth tom lee和韩国在大量抄底",
+      "timestamp": "2026-01-05 09:58:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CWtCKriqkNUjGTP2r2mry",
+      "content": "bmnr 31附近吸常规仓的一半或者高位卖的一半数量",
+      "original_content": "bmnr 31附近吸常规仓的一半或者高位卖的一半数量",
+      "timestamp": "2026-01-07 22:42:00.010",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "tsll注意转弯18.02出剩下的17.4部分"
+      ]
+    },
+    "check": {
+      "timestamp": "2026-01-07 22:42:00.010",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 31.0,
+      "position_size": "常规仓的一半"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWtgjsvUZrU6sJ2XmW85H",
+      "content": "bmnr可以收盘在30.3-30.4少量加点 币价格只是91000横盘方向还没出 放周五空的轮次在多加",
+      "original_content": "bmnr可以收盘在30.3-30.4少量加点 币价格只是91000横盘方向还没出 放周五空的轮次在多加",
+      "timestamp": "2026-01-08 04:56:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-08 04:56:00.000",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 30.35,
+      "price_range": [
+        30.3,
+        30.4
+      ]
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWvD13jouLNnabyWscYFm",
+      "content": "bmnr 这轮上去 出昨天收盘买的30.4部分 明天周五在空的轮次在往低开",
+      "original_content": "bmnr 这轮上去 出昨天收盘买的30.4部分 明天周五在空的轮次在往低开",
+      "timestamp": "2026-01-09 00:14:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-09 00:14:00.000",
+      "instruction_type": "SELL",
+      "symbol": "BMNR",
+      "target_price": 30.4,
+      "sell_quantity": "全部",
+      "sell_reference_price": 30.4,
+      "sell_reference_label": "30.4那部分"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWvGkvj7yPJ7aFUJHXoa7",
+      "content": "bmnr 31.15-31.3附近有转弯往下时候出掉31的部分也周五在低买",
+      "original_content": "bmnr 31.15-31.3附近有转弯往下时候出掉31的部分也周五在低买",
+      "timestamp": "2026-01-09 01:03:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-09 01:03:00.000",
+      "instruction_type": "SELL",
+      "symbol": "BMNR",
+      "target_price": 31.23,
+      "price_range": [
+        31.15,
+        31.3
+      ],
+      "sell_quantity": "全部"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWx1UMNazrW388k1h3DcF",
+      "content": "盘中 bmnr可以在29.6-29.7附近开个常规仓少一半的小仓位到收盘附近在加一半",
+      "original_content": "盘中 bmnr可以在29.6-29.7附近开个常规仓少一半的小仓位到收盘附近在加一半",
+      "timestamp": "2026-01-09 23:04:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-09 23:04:00.000",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 29.65,
+      "price_range": [
+        29.6,
+        29.7
+      ],
+      "position_size": "小仓位"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWx3y9ASMsJsLbNVcXNw9",
+      "content": "31.6-31。7附近出盘中29.8低买的bmnr",
+      "original_content": "31.6-31。7附近出盘中29.8低买的bmnr",
+      "timestamp": "2026-01-09 23:36:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-09 23:36:00.000",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 31.65,
+      "price_range": [
+        31.6,
+        31.7
+      ]
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CWxUGESpApask7AXgUa8C",
+      "content": "尾盘29.9-30买回高抛的bmnr 也是常规仓的一半 剩下等周一再买一半",
+      "original_content": "尾盘29.9-30买回高抛的bmnr 也是常规仓的一半 剩下等周一再买一半",
+      "timestamp": "2026-01-10 04:55:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-10 04:55:00.000",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 29.95,
+      "price_range": [
+        29.9,
+        30.0
+      ],
+      "position_size": "常规仓的一半"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CX2mnpJZiHfhGrxCxTDxN",
+      "content": "bmnr夜盘异动可以31.05出一半周五尾盘买的",
+      "original_content": "bmnr夜盘异动可以31.05出一半周五尾盘买的",
+      "timestamp": "2026-01-12 11:27:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-12 11:27:00.000",
+      "instruction_type": "SELL",
+      "symbol": "BMNR",
+      "target_price": 31.05,
+      "sell_quantity": "1/2"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CX3mRe5k4aBSjmDApwL4k",
+      "content": "31.1附近出掉 周五的bmnr剩下一半",
+      "original_content": "31.1附近出掉 周五的bmnr剩下一半",
+      "timestamp": "2026-01-13 00:03:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-13 00:03:00.000",
+      "instruction_type": "SELL",
+      "symbol": "BMNR",
+      "target_price": 31.1,
+      "sell_quantity": "1/2"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CX7VL91UQ3oGKMK3G9Q3z",
+      "content": "33附近 bmnr开个常规一半的底仓",
+      "original_content": "33附近 bmnr开个常规一半的底仓",
+      "timestamp": "2026-01-14 23:12:00.020",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "SUPREME COURT DOESN'T RULE ON TRUMP'S TARIFFS WEDNESDAY 最高法院周三未就特朗普的关税做出裁决 推迟了",
+        "82.5-82.7附近加另外常规一半nvdl"
+      ]
+    },
+    "check": {
+      "timestamp": "2026-01-14 23:12:00.020",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 33.0,
+      "position_size": "常规一半"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CX7X7sAihghgh24BoYYcV",
+      "content": "34.1附近出盘中买的bmnr",
+      "original_content": "34.1附近出盘中买的bmnr",
+      "timestamp": "2026-01-14 23:38:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-14 23:38:00.000",
+      "instruction_type": "SELL",
+      "symbol": "BMNR",
+      "target_price": 34.1,
+      "sell_quantity": "全部"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CX7uZoaZASJewbRzLXNPo",
+      "content": "32.2附近小仓位开bmnr底仓",
+      "original_content": "32.2附近小仓位开bmnr底仓",
+      "timestamp": "2026-01-15 04:32:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-15 04:32:00.000",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 32.2,
+      "position_size": "小仓位"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CX9AGLgq6FgrLgM2m9Vku",
+      "content": "bmnr盘前也出现异动可以33.3附近出昨天32.2的部分",
+      "original_content": "bmnr盘前也出现异动可以33.3附近出昨天32.2的部分",
+      "timestamp": "2026-01-15 20:25:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-15 20:25:00.000",
+      "instruction_type": "SELL",
+      "symbol": "BMNR",
+      "target_price": 33.3,
+      "sell_quantity": "全部"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CX9MDUNopmUSHUjtNCNsa",
+      "content": "bmnr可以 盘中31.8附近开常规仓的一半继续当底仓收盘附近再看下低的",
+      "original_content": "bmnr可以 盘中31.8附近开常规仓的一半继续当底仓收盘附近再看下低的",
+      "timestamp": "2026-01-15 22:49:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-15 22:49:00.000",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 31.8,
+      "position_size": "常规仓的一半"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXBNZz7avWgkn7375ZNiq",
+      "content": "bmnr这轮上去31.05 昨天31.8只开了个小仓位底仓 如果仓位买大了可以31.1-31.3有转弯往下回调时间减点",
+      "original_content": "bmnr这轮上去31.05 昨天31.8只开了个小仓位底仓 如果仓位买大了可以31.1-31.3有转弯往下回调时间减点",
+      "timestamp": "2026-01-17 00:28:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-17 00:28:00.000",
+      "instruction_type": "SELL",
+      "symbol": "BMNR",
+      "target_price": 31.2,
+      "price_range": [
+        31.1,
+        31.3
+      ],
+      "sell_quantity": "全部"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXHksx8McuykMBVR83VYH",
+      "content": "15.3 加了常规仓一半的conl 29.7加了常规仓一半的bmnr",
+      "original_content": "15.3 加了常规仓一半的conl 29.7加了常规仓一半的bmnr",
+      "timestamp": "2026-01-20 09:24:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CXM76z4CnxXKoty4FfcGR",
+      "content": "bmnr 29.2也出 前天29.7吸的",
+      "original_content": "bmnr 29.2也出 前天29.7吸的",
+      "timestamp": "2026-01-22 03:51:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-22 03:51:00.000",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 29.7
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXNdpz3aRFofcRY7WLmR1",
+      "content": "28.5也回吸 昨天卖的bmnr 新开也是常规一半",
+      "original_content": "28.5也回吸 昨天卖的bmnr 新开也是常规一半",
+      "timestamp": "2026-01-22 23:15:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-22 23:15:00.000",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 28.5,
+      "position_size": "常规一半"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXNzLMFkvYzY45ATSMB1J",
+      "content": "29.5可以出盘中28.5的bmnr",
+      "original_content": "29.5可以出盘中28.5的bmnr",
+      "timestamp": "2026-01-23 03:44:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-23 03:44:00.000",
+      "instruction_type": "SELL",
+      "symbol": "BMNR",
+      "target_price": 29.5,
+      "sell_quantity": "全部",
+      "sell_reference_price": 28.5,
+      "sell_reference_label": "28.5的"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXQUcPUHkkVzndDNtoUtw",
+      "content": "28.25附近吸回昨天卖出的bmnr",
+      "original_content": "28.25附近吸回昨天卖出的bmnr",
+      "timestamp": "2026-01-23 22:35:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-23 22:35:00.000",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 28.25
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXQfJvX4Gto7rZ7YdtE9D",
+      "content": "29.1出一半 28.25的bmnr",
+      "original_content": "29.1出一半 28.25的bmnr",
+      "timestamp": "2026-01-24 00:55:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "17.75附近出剩下一半cifr"
+      ]
+    },
+    "check": {
+      "timestamp": "2026-01-24 00:55:00.010",
+      "instruction_type": "SELL",
+      "symbol": "BMNR",
+      "target_price": 29.1,
+      "sell_quantity": "1/2",
+      "sell_reference_price": 28.25,
+      "sell_reference_label": "28.25买的"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXQihHih4hChLZaGvQaLy",
+      "content": "29.75出bmnr剩下一半",
+      "original_content": "29.75出bmnr剩下一半",
+      "timestamp": "2026-01-24 01:40:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-24 01:40:00.000",
+      "instruction_type": "SELL",
+      "symbol": "BMNR",
+      "target_price": 29.75,
+      "sell_quantity": "全部"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXV7FbTr6YQEJfz7Psr4u",
+      "content": "27.7接回常规仓一半的bmnr",
+      "original_content": "27.7接回常规仓一半的bmnr",
+      "timestamp": "2026-01-26 09:18:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-26 09:18:00.000",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 27.7,
+      "position_size": "一半"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXWAfQP9NtCNhpPEbFauw",
+      "content": "28.65出一半夜盘27.7的bmnr",
+      "original_content": "28.65出一半夜盘27.7的bmnr",
+      "timestamp": "2026-01-26 22:43:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-26 22:43:00.000",
+      "instruction_type": "SELL",
+      "symbol": "BMNR",
+      "target_price": 28.65,
+      "sell_quantity": "全部",
+      "sell_reference_price": 27.7,
+      "sell_reference_label": "27.7的"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXY7AEFEkge9cgPrfRgTa",
+      "content": "币股其他的也是看类似cifr这种直线异动时候才出 然后吸的点都是双底 conl这个稳定币利空 等法案修改稳定币仍然有利息时候再补 目前币就cifr iren bmnr抓跌的机会做短线 法案快修正投票在中线",
+      "original_content": "币股其他的也是看类似cifr这种直线异动时候才出 然后吸的点都是双底 conl这个稳定币利空 等法案修改稳定币仍然有利息时候再补 目前币就cifr iren bmnr抓跌的机会做短线 法案快修正投票在中线",
+      "timestamp": "2026-01-27 23:18:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CXYAsr5NvCF4VeTUxkx8e",
+      "content": "bmnr也直线异动了 说了天天都有",
+      "original_content": "bmnr也直线异动了 说了天天都有",
+      "timestamp": "2026-01-28 00:07:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CXYAvtukWuBo67A8BSHwu",
+      "content": "28.7出bmnr剩下一半",
+      "original_content": "28.7出bmnr剩下一半",
+      "timestamp": "2026-01-28 00:07:00.010",
+      "refer": null,
+      "position": "last",
+      "history": [
+        "bmnr也直线异动了 说了天天都有"
+      ]
+    },
+    "check": {
+      "timestamp": "2026-01-28 00:07:00.010",
+      "instruction_type": "SELL",
+      "symbol": "BMNR",
+      "target_price": 28.7,
+      "sell_quantity": "全部"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXbrCVQxeyx39XJCEFvyK",
+      "content": "28.1回吸了之前卖出的bmnr 也是常规仓的一半",
+      "original_content": "28.1回吸了之前卖出的bmnr 也是常规仓的一半",
+      "timestamp": "2026-01-29 22:45:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-29 22:45:00.000",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 28.1,
+      "position_size": "常规仓的一半"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXcLXbqB55jbgE8SZQRbC",
+      "content": "26.4附近加了点bmnr常规仓的一半也是预留点明天收盘附近",
+      "original_content": "26.4附近加了点bmnr常规仓的一半也是预留点明天收盘附近",
+      "timestamp": "2026-01-30 04:56:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-01-30 04:56:00.000",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 26.4,
+      "position_size": "常规仓的一半"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXjfNT2MTSTRti3QaD7et",
+      "content": "算力卡炒币（日内币可以高抛低吸获利的公司）>>>囤币（中线的都在亏损）>>>挖矿的（电费都大于挖到的币了） 交易所 等利息商讨中也是跌腰斩附近了 币三个梯队的 算力卡炒币 iren cifr hut（最近新尝试算力卡业务的） 囤币 bmnr mstr（中线 两家都在亏损） 交易所 利息等商讨 coin hood 挖矿最末梯队",
+      "original_content": "算力卡炒币（日内币可以高抛低吸获利的公司）>>>囤币（中线的都在亏损）>>>挖矿的（电费都大于挖到的币了） 交易所 等利息商讨中也是跌腰斩附近了 币三个梯队的 算力卡炒币 iren cifr hut（最近新尝试算力卡业务的） 囤币 bmnr mstr（中线 两家都在亏损） 交易所 利息等商讨 coin hood 挖矿最末梯队",
+      "timestamp": "2026-02-03 01:47:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": null
+  },
+  {
+    "origin": {
+      "domID": "post_1CXqyT7HrjdkdRqVtJ2ATG",
+      "content": "17.7加了常规一半的bmnr",
+      "original_content": "17.7加了常规一半的bmnr",
+      "timestamp": "2026-02-06 09:48:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-06 09:48:00.000",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 17.7,
+      "position_size": "常规一半"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXrhQp4AAe19aSBXYia2R",
+      "content": "bmnr出夜盘17.7的 在18.46出",
+      "original_content": "bmnr出夜盘17.7的 在18.46出",
+      "timestamp": "2026-02-06 18:58:00.000",
+      "refer": null,
+      "position": "first",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-06 18:58:00.000",
+      "instruction_type": "SELL",
+      "symbol": "BMNR",
+      "target_price": 17.7,
+      "sell_quantity": "全部"
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXrzAsbs6M4c2wSVw6rZZ",
+      "content": "19附近再进个bmnr 止损放在18.5",
+      "original_content": "19附近再进个bmnr 止损放在18.5",
+      "timestamp": "2026-02-06 22:36:00.010",
+      "refer": null,
+      "position": "middle",
+      "history": [
+        "tsll直线了 15.05再出一半 14.6吸的"
+      ]
+    },
+    "check": {
+      "timestamp": "2026-02-06 22:36:00.010",
+      "instruction_type": "BUY",
+      "symbol": "BMNR",
+      "target_price": 19.0
+    }
+  },
+  {
+    "origin": {
+      "domID": "post_1CXs5wJAjv5ddxt7RLsJs4",
+      "content": "19.45附近出日内的19的bmnr",
+      "original_content": "19.45附近出日内的19的bmnr",
+      "timestamp": "2026-02-06 23:54:00.000",
+      "refer": null,
+      "position": "single",
+      "history": []
+    },
+    "check": {
+      "timestamp": "2026-02-06 23:54:00.000",
+      "instruction_type": "SELL",
+      "symbol": "BMNR",
+      "target_price": 19.45,
+      "sell_quantity": "全部",
+      "sell_reference_price": 19.0,
+      "sell_reference_label": "19.0的"
+    }
+  }
+]

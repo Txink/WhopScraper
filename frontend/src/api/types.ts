@@ -990,6 +990,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Orders */
+        get: operations["get_orders_api_orders_get"];
+        put?: never;
+        /** Post Order */
+        post: operations["post_order_api_orders_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/orders/{order_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Order */
+        delete: operations["delete_order_api_orders__order_id__delete"];
+        options?: never;
+        head?: never;
+        /** Patch Order */
+        patch: operations["patch_order_api_orders__order_id__patch"];
+        trace?: never;
+    };
     "/api/sim/scenarios": {
         parameters: {
             query?: never;
@@ -1398,6 +1434,49 @@ export interface components {
             /** Quoted Message Id */
             quoted_message_id: string | null;
         };
+        /** OrderListOut */
+        OrderListOut: {
+            /** Orders */
+            orders: components["schemas"]["OrderOut"][];
+        };
+        /** OrderOut */
+        OrderOut: {
+            /** Order Id */
+            order_id: string;
+            /** Task Id */
+            task_id: string | null;
+            /** Ticker */
+            ticker: string;
+            /** Symbol */
+            symbol: string;
+            /**
+             * Side
+             * @enum {string}
+             */
+            side: "BUY" | "SELL";
+            /**
+             * Order Type
+             * @enum {string}
+             */
+            order_type: "LIMIT" | "MARKET";
+            /** Price */
+            price: number | null;
+            /** Qty */
+            qty: number;
+            /** Filled Qty */
+            filled_qty: number;
+            /** Status */
+            status: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "signal" | "manual" | "external";
+            /** Submitted At */
+            submitted_at: string | null;
+            /** Last Replaced At */
+            last_replaced_at: string | null;
+        };
         /** OrphanCleanupRequest */
         OrphanCleanupRequest: {
             /** Url */
@@ -1606,6 +1685,13 @@ export interface components {
             /** Quotes */
             quotes: components["schemas"]["QuoteOut"][];
         };
+        /** ReplaceOrderRequest */
+        ReplaceOrderRequest: {
+            /** Price */
+            price?: number | null;
+            /** Qty */
+            qty?: number | null;
+        };
         /** ScenarioOverviewOut */
         ScenarioOverviewOut: {
             /** Name */
@@ -1654,6 +1740,33 @@ export interface components {
             filled: number;
             /** Rejected */
             rejected: number;
+        };
+        /** SubmitOrderRequest */
+        SubmitOrderRequest: {
+            /** Symbol */
+            symbol: string;
+            /**
+             * Side
+             * @enum {string}
+             */
+            side: "BUY" | "SELL";
+            /** Qty */
+            qty: number;
+            /**
+             * Order Type
+             * @enum {string}
+             */
+            order_type: "LIMIT" | "MARKET";
+            /** Price */
+            price?: number | null;
+            /**
+             * Time In Force
+             * @default Day
+             * @constant
+             */
+            time_in_force: "Day";
+            /** Note */
+            note?: string | null;
         };
         /**
          * TPairAllocation
@@ -3597,6 +3710,139 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["WhopCookieStatusOut"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_orders_api_orders_get: {
+        parameters: {
+            query: {
+                ticker: string;
+                token?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderListOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_order_api_orders_post: {
+        parameters: {
+            query?: {
+                token?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubmitOrderRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_order_api_orders__order_id__delete: {
+        parameters: {
+            query?: {
+                token?: string | null;
+            };
+            header?: never;
+            path: {
+                order_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_order_api_orders__order_id__patch: {
+        parameters: {
+            query?: {
+                token?: string | null;
+            };
+            header?: never;
+            path: {
+                order_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReplaceOrderRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

@@ -1,0 +1,6259 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Signal Station",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/tasks": {
+      "get": {
+        "summary": "List Tasks Endpoint",
+        "description": "Return a paginated, optionally-filtered list of tasks.\n\nPagination is cursor-based: pass ``cursor=<ISO-datetime>`` from\n``next_cursor`` in the previous page to advance.  ``next_cursor`` is\n``null`` when no further pages exist.\n\nMulti-value URL filter: pass ``?urls=u1&urls=u2``. Time window:\n``week_start`` / ``week_end`` apply a half-open [start, end) filter on\n``message.posted_at``.",
+        "operationId": "list_tasks_endpoint_api_tasks_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Type"
+            }
+          },
+          {
+            "name": "symbol",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Symbol"
+            }
+          },
+          {
+            "name": "urls",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Urls"
+            }
+          },
+          {
+            "name": "week_start",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Week Start"
+            }
+          },
+          {
+            "name": "week_end",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Week End"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskListOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tasks/count": {
+      "get": {
+        "summary": "Count Tasks Endpoint",
+        "description": "Return total task count (supports the same filters as /api/tasks).",
+        "operationId": "count_tasks_endpoint_api_tasks_count_get",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Type"
+            }
+          },
+          {
+            "name": "symbol",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Symbol"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskCountOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tasks/{task_id}": {
+      "get": {
+        "summary": "Get Task Endpoint",
+        "description": "Return the fully-hydrated Task including all push_events.",
+        "operationId": "get_task_endpoint_api_tasks__task_id__get",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Task Id"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tasks/{task_id}/cancel": {
+      "post": {
+        "summary": "Cancel Task Endpoint",
+        "description": "Cancel the brokerage order associated with a task.\n\nReturns 404 if the task doesn't exist, 400 if it has no ``order_id``\n(not yet submitted), or 502 if the broker call fails.",
+        "operationId": "cancel_task_endpoint_api_tasks__task_id__cancel_post",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Task Id"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CancelOk"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stats/today": {
+      "get": {
+        "summary": "Stats Today Endpoint",
+        "description": "Return today's task counts grouped into summary buckets.",
+        "operationId": "stats_today_endpoint_api_stats_today_get",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatsTodayOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/positions": {
+      "get": {
+        "summary": "List Positions Endpoint",
+        "description": "Return current positions split into stocks and options.\n\nPulls live from the broker on every call so the dashboard cards\nreflect the latest holdings without a periodic sync job, and\nupserts the result into the ``positions`` table (account-scoped)\nas a side-effect. The DB row is the anchor for\n``history_synced`` — the per-(account, ticker) \"broker_executions\nis fully backfilled\" flag the detail-pane sync path consults.\n\nSymbols no longer reported by the broker are zeroed out\n(``quantity = 0``) rather than deleted so ``history_synced``\nsurvives close/re-open cycles. The dashboard read filters qty>0.\n\nLongbridge's ``stock_positions`` endpoint actually returns BOTH\nstocks and option contracts the user holds (the option contracts\ncarry an OCC-format symbol). We classify each row via\n``parse_option_symbol`` and route to the appropriate bucket.",
+        "operationId": "list_positions_endpoint_api_positions_get",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PositionsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/db/{table}": {
+      "get": {
+        "summary": "List Db Rows Endpoint",
+        "operationId": "list_db_rows_endpoint_api_db__table__get",
+        "parameters": [
+          {
+            "name": "table",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Table"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 15,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response List Db Rows Endpoint Api Db  Table  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/pairs": {
+      "get": {
+        "summary": "List Pairs Endpoint",
+        "description": "List做T pairs for the active account, optionally filtered by\nticker. Cross-account isolation is enforced via the broker's\n``account_id``; pairs created under a different account stay\nhidden after switching.\n\nPaginated: ``offset`` / ``limit`` slice the result. The response\ncarries ``total_count`` and ``has_more`` so the UI can render a\n\"已加载 M / N · 加载更多\" affordance without a separate count call.",
+        "operationId": "list_pairs_endpoint_api_pairs_get",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ticker"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TPairsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create Pair Endpoint",
+        "description": "Create a做T pair binding broker fills (one row per order_id).\nServer auto-balances qty using FIFO; leftover qty stays on the\noriginating fills for future bindings. The pair id is assigned by\nSQLite (autoincrement integer).",
+        "operationId": "create_pair_endpoint_api_pairs_post",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TPairCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TPairOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete Pairs By Ticker Endpoint",
+        "description": "Bulk-delete every做T pair on the active account for ``ticker``.\nEach affected trade's ``broker_executions.t_pair_tags`` is\nrewritten so the做T chip column reflects the change immediately.\n``ticker`` is REQUIRED — there's no \"wipe across all tickers\"\nshortcut, because that would be too easy to fat-finger.",
+        "operationId": "delete_pairs_by_ticker_endpoint_api_pairs_delete",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "title": "Ticker"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/pairs/{pair_id}/extend": {
+      "post": {
+        "summary": "Extend Pair Endpoint",
+        "description": "Add trades to an existing做T pair.",
+        "operationId": "extend_pair_endpoint_api_pairs__pair_id__extend_post",
+        "parameters": [
+          {
+            "name": "pair_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Pair Id"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TPairExtendIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TPairOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/pairs/{pair_id}": {
+      "delete": {
+        "summary": "Delete Pair Endpoint",
+        "description": "Unbind a做T pair. The underlying trades become available again.",
+        "operationId": "delete_pair_endpoint_api_pairs__pair_id__delete",
+        "parameters": [
+          {
+            "name": "pair_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Pair Id"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/pairs/aggregate": {
+      "get": {
+        "summary": "Pair Aggregate Endpoint",
+        "description": "Account+ticker scoped做T aggregates via SQL SUM/COUNT.\n\nUsed by PairKPIs so the frontend never has to fetch every pair\njust to display totals. ``ticker`` is optional; omit for an\naccount-wide aggregate.",
+        "operationId": "pair_aggregate_endpoint_api_pairs_aggregate_get",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ticker"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PairAggregateOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/broker/executions/pending": {
+      "get": {
+        "summary": "Pending Executions Endpoint",
+        "description": "List broker fills whose qty exceeds the qty already allocated\nto any做T pair, plus aggregate pending qty by side.\n\n``allocated_qty`` is derived from ``t_pair_tags`` via\n``json_each``; the WHERE filter drops fully-allocated fills so the\nUI can scan the result for what's still open. ``limit`` caps the\nlisting but the aggregate row totals everything regardless.",
+        "operationId": "pending_executions_endpoint_api_broker_executions_pending_get",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ticker"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingExecutionsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/quote": {
+      "get": {
+        "summary": "Quote Endpoint",
+        "description": "Fetch snapshot quotes for the comma-separated symbol list.\n\nSymbols missing from the broker's response are silently dropped from\nthe result — callers should expect a possibly-smaller result set.",
+        "operationId": "quote_endpoint_api_quote_get",
+        "parameters": [
+          {
+            "name": "symbols",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "comma-separated symbols",
+              "title": "Symbols"
+            },
+            "description": "comma-separated symbols"
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/quotes/watch": {
+      "post": {
+        "summary": "Watch Quotes Endpoint",
+        "description": "Set the symbols whose quote push-stream the backend forwards\nto WS clients. Replaces the previous set — backend diffs and\nissues subscribe/unsubscribe to the broker.\n\nFrontend calls this once after positions resolve, and again on\nevery account switch (after /broker/reload). Empty list clears\nall subscriptions (used on dashboard unmount / logout).\n\nReturns 503 when no SubscriptionManager is bound yet (early\nstartup window before broker init completes, or right after an\naccount-switch reload tore the old manager down) — frontend\nretries on the next positions tick.",
+        "operationId": "watch_quotes_endpoint_api_quotes_watch_post",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuoteWatchIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuoteWatchOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/candlesticks": {
+      "get": {
+        "summary": "Candlesticks Endpoint",
+        "description": "Return candlestick bars for a single symbol.\n\nFor `today`, granularity (2/3/5 min) and sessions (regular vs\npre+post) are user-selectable so the user can choose between a\nclean regular-hours curve and a wider view that includes pre-market\nand after-hours. For other periods these query params are ignored\n(fixed mapping):\n  5/7 → 5-min stitched across days (多日 line view);\n  day/week/month/year → 1/4/10/30-year batch of candles for the\n                        日K/周K/月K/年K candlestick views.",
+        "operationId": "candlesticks_endpoint_api_candlesticks_get",
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Symbol"
+            }
+          },
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "today | 5 | 7 | 30 | day | week | month | year",
+              "default": "today",
+              "title": "Period"
+            },
+            "description": "today | 5 | 7 | 30 | day | week | month | year"
+          },
+          {
+            "name": "granularity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "(today only) 2min | 3min | 5min",
+              "default": "5min",
+              "title": "Granularity"
+            },
+            "description": "(today only) 2min | 3min | 5min"
+          },
+          {
+            "name": "sessions",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "(today only) regular | all (include pre/post-market)",
+              "default": "regular",
+              "title": "Sessions"
+            },
+            "description": "(today only) regular | all (include pre/post-market)"
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional UTC instant — when set, return bars strictly older than this (used by the detail-pane pan-back flow). Only supported for day/week/month/year periods.",
+              "title": "Before"
+            },
+            "description": "Optional UTC instant — when set, return bars strictly older than this (used by the detail-pane pan-back flow). Only supported for day/week/month/year periods."
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CandlesticksOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/broker/executions": {
+      "get": {
+        "summary": "History Executions Endpoint",
+        "description": "Broker-side fill history for the detail pane's trade list.\n\nSync semantics (both modes iterate 90-day chunks — LongBridge\nrejects wider single calls; see knowledge/longbridge-api-limits.md):\n  - Incremental: starts from ``MAX(ts)`` already in DB for this\n    account (+ optional ticker), walks 90-day chunks back to\n    cover the gap.\n  - First-ever sync: walks 90-day chunks backwards up to\n    ``days`` total (default 730 = 2 years) so the user's complete\n    history materializes on initial detail-pane open. Stops\n    early on any empty window — saves wasted calls when the\n    account opened mid-horizon.\n\nRead comes from DB filtered by account_id (cross-account bleed\nis impossible) and is NOT truncated by ``days``: once history is\nsynced, every page returns it. ``days`` only governs the\nfirst-time backfill horizon.\n\nPaginated: ``offset`` / ``limit`` slice the result newest-first.\nSync runs on every call (idempotent upsert) so a page-flip also\npicks up new fills that arrived since the previous open.",
+        "operationId": "history_executions_endpoint_api_broker_executions_get",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ticker"
+            }
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 3650,
+              "minimum": 1,
+              "default": 730,
+              "title": "Days"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecutionsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete Broker Executions Endpoint",
+        "description": "Wipe ``broker_executions`` rows for the active account scoped\nto ``ticker`` AND reset ``positions.history_synced`` to False.\nAfter this, a follow-up GET ``/api/broker/executions?ticker=X``\nre-triggers the full chunked 2-year backfill from scratch.\n\n``ticker`` is REQUIRED — keeps the bulk wipe scope explicit.",
+        "operationId": "delete_broker_executions_endpoint_api_broker_executions_delete",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "title": "Ticker"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/broker/executions/sync": {
+      "post": {
+        "summary": "Sync Executions Endpoint",
+        "description": "Force-pull the last ``days`` of broker fills for ``ticker`` and\nupsert into ``broker_executions``. Distinct from the GET path's\nincremental sync (which anchors on ``MAX(ts)``) — this\nunconditionally walks back ``days`` so mid-window gaps in the\nlocal cache are filled. Idempotent: PK is order_id.\n\n``days`` capped at 90 because LongBridge's history_executions\nrejects wider single calls (see knowledge/longbridge-api-limits.md).",
+        "operationId": "sync_executions_endpoint_api_broker_executions_sync_post",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "title": "Ticker"
+            }
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 90,
+              "minimum": 1,
+              "default": 7,
+              "title": "Days"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecutionsSyncOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/broker/today_executions": {
+      "get": {
+        "summary": "Today Executions Endpoint",
+        "description": "Today's (ET trading day) order-level executions for the active\naccount. Same DB-backed path as /api/broker/executions but with a\nnarrow window — used by Day P/L on position cards.\n\nSync pulls today_executions from the broker (which already covers\n~30h via history_executions internally) and upserts as one row\nper order. Frontend re-filters by ET trading day client-side.",
+        "operationId": "today_executions_endpoint_api_broker_today_executions_get",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecutionsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/trades": {
+      "get": {
+        "summary": "Trades Endpoint",
+        "description": "Return chronologically-ordered FILLED / PARTIAL trades for a ticker.\n\nEach entry corresponds to one task (its id is the trade_id used in\n做T pair allocations). Unfilled tasks (no cumulative_qty) are\nfiltered out — they have no position to bind.",
+        "operationId": "trades_endpoint_api_trades_get",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "user-facing ticker, e.g. TSLA",
+              "title": "Ticker"
+            },
+            "description": "user-facing ticker, e.g. TSLA"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 200,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TradesOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/health": {
+      "get": {
+        "summary": "Health Endpoint",
+        "description": "Return service liveness + mode status.\n\n``whop`` is always ``\"down\"`` until the Phase 6 Whop scraper is wired\ninto the health probe.  ``longport`` is assumed ``\"up\"`` because the\nbroker is injected at startup (real health-check is future work).",
+        "operationId": "health_endpoint_api_health_get",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/longport/settings": {
+      "get": {
+        "summary": "Get Longport Settings",
+        "operationId": "get_longport_settings_api_longport_settings_get",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LongPortSettingsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Patch Longport Settings",
+        "operationId": "patch_longport_settings_api_longport_settings_patch",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LongPortSettingsPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LongPortSettingsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/longport/oauth/start": {
+      "post": {
+        "summary": "Post Longport Oauth Start",
+        "description": "Start a fresh OAuth flow to add a new LongBridge account slot.\n\nAlways registers a brand-new OAuth client_id — there is no concept\nof \"re-using\" a previously-authorized account here, because each\ninvocation expresses the user's intent to add an account.",
+        "operationId": "post_longport_oauth_start_api_longport_oauth_start_post",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LongPortOAuthStartOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/longport/oauth/status": {
+      "get": {
+        "summary": "Get Longport Oauth Status",
+        "operationId": "get_longport_oauth_status_api_longport_oauth_status_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LongPortOAuthStatusOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/longport/oauth/activate": {
+      "post": {
+        "summary": "Post Longport Oauth Activate",
+        "description": "Set ``account_id`` as the active account. Caller is expected to\ninvoke /broker/reload separately to actually swap the broker.",
+        "operationId": "post_longport_oauth_activate_api_longport_oauth_activate_post",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LongPortAccountActivateIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LongPortSettingsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/longport/oauth/logout": {
+      "post": {
+        "summary": "Post Longport Oauth Logout",
+        "description": "Remove an account: scrub the SDK token cache, drop from the\nsettings list. If it was the active account, fall back to whatever\naccount remains.",
+        "operationId": "post_longport_oauth_logout_api_longport_oauth_logout_post",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LongPortAccountLogoutIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LongPortSettingsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/longport/oauth/account": {
+      "patch": {
+        "summary": "Patch Longport Oauth Account",
+        "description": "Rename an account's display label.",
+        "operationId": "patch_longport_oauth_account_api_longport_oauth_account_patch",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LongPortAccountRenameIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LongPortSettingsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/longport/broker/status": {
+      "get": {
+        "summary": "Get Broker Status",
+        "operationId": "get_broker_status_api_longport_broker_status_get",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrokerStatusOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/longport/broker/reload": {
+      "post": {
+        "summary": "Post Broker Reload",
+        "description": "Tear down the current broker + push subscription, build a\nnew one from the latest credentials in runtime store, and\nreturn the resulting status. Used by the UI's refresh button.",
+        "operationId": "post_broker_reload_api_longport_broker_reload_post",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrokerStatusOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tasks/{task_id}/confirm": {
+      "post": {
+        "summary": "Confirm Task Endpoint",
+        "operationId": "confirm_task_endpoint_api_tasks__task_id__confirm_post",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Task Id"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tasks/{task_id}/skip": {
+      "post": {
+        "summary": "Skip Task Endpoint",
+        "description": "Mark an INSTRUCTION_READY task as SKIPPED on user request.",
+        "operationId": "skip_task_endpoint_api_tasks__task_id__skip_post",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Task Id"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/whop/pages": {
+      "get": {
+        "summary": "List Whop Pages",
+        "description": "List monitored pages.\n\nDefault (no query param): only top-level pages (parent_chat_id IS NULL).\nWith ``?parent_chat_id=<id>``: only that parent's sub-monitors.",
+        "operationId": "list_whop_pages_api_whop_pages_get",
+        "parameters": [
+          {
+            "name": "parent_chat_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Parent Chat Id"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WhopPagesOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create Whop Page",
+        "operationId": "create_whop_page_api_whop_pages_post",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WhopPageCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WhopPageOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/whop/pages/{page_id}": {
+      "delete": {
+        "summary": "Delete Whop Page",
+        "operationId": "delete_whop_page_api_whop_pages__page_id__delete",
+        "parameters": [
+          {
+            "name": "page_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Page Id"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/whop/pages/{page_id}/chat-messages": {
+      "get": {
+        "summary": "Get Chat Messages",
+        "description": "Return one Beijing-calendar-day's worth of chat messages\nfor *page_id*.\n\n``day=YYYY-MM-DD`` is required; the window is ``[day 00:00 +08:00,\nnext 00:00 +08:00)`` expressed in UTC. ``senders`` is a\ncomma-separated allow-list of authors; empty / absent → no filter.\n``authors`` is the (author, count) breakdown for the *unfiltered*\nday — the chip bar should show every author seen in the window\nregardless of the active filter selection.",
+        "operationId": "get_chat_messages_api_whop_pages__page_id__chat_messages_get",
+        "parameters": [
+          {
+            "name": "page_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Page Id"
+            }
+          },
+          {
+            "name": "day",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Day"
+            }
+          },
+          {
+            "name": "senders",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Senders"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatMessagesOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/whop/pages/{page_id}/chat-message-counts": {
+      "get": {
+        "summary": "Get Chat Message Counts",
+        "description": "Return per-Beijing-day message counts for the given month.\n\nDays with zero messages are omitted from ``counts``. The window\nis ``[month-01 00:00 +08:00, (month+1)-01 00:00 +08:00)``\nexpressed in UTC.",
+        "operationId": "get_chat_message_counts_api_whop_pages__page_id__chat_message_counts_get",
+        "parameters": [
+          {
+            "name": "page_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Page Id"
+            }
+          },
+          {
+            "name": "month",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Month"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatMessageCountsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/chat-images/{message_id}": {
+      "get": {
+        "summary": "Get Chat Image",
+        "description": "Serve a cached chat image from ``<data_dir>/chat-images/``.\n\nThe chat_writer downloads images at scrape time (see\n``app.whop.chat_writer._download_image``). This endpoint returns\nthe bytes with a media type inferred from the file extension.\n404 if the row is missing, the row has no image, or the file is\nmissing on disk.",
+        "operationId": "get_chat_image_api_chat_images__message_id__get",
+        "parameters": [
+          {
+            "name": "message_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Message Id"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/whop/pages/{page_id}/restart": {
+      "post": {
+        "summary": "Restart Whop Page",
+        "operationId": "restart_whop_page_api_whop_pages__page_id__restart_post",
+        "parameters": [
+          {
+            "name": "page_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Page Id"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WhopPageOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/whop/pages/{page_id}/start": {
+      "post": {
+        "summary": "Start Whop Page Endpoint",
+        "description": "Start the Playwright listener for a page.\n\nIdempotent w.r.t. the entry: if a listener is already running it\nis stopped and re-started (same semantics as restart). Returns 404\nif the page id is unknown OR if Playwright launch fails.",
+        "operationId": "start_whop_page_endpoint_api_whop_pages__page_id__start_post",
+        "parameters": [
+          {
+            "name": "page_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Page Id"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WhopPageOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/whop/pages/{page_id}/stop": {
+      "post": {
+        "summary": "Stop Whop Page Endpoint",
+        "description": "Stop the Playwright listener for a page (entry stays).\n\nIdempotent: returns 200 even if no listener was running. Returns\n404 only when the entry id is unknown.",
+        "operationId": "stop_whop_page_endpoint_api_whop_pages__page_id__stop_post",
+        "parameters": [
+          {
+            "name": "page_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Page Id"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WhopPageOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/whop/pages/defaults": {
+      "get": {
+        "summary": "Whop Settings Defaults",
+        "operationId": "whop_settings_defaults_api_whop_pages_defaults_get",
+        "parameters": [
+          {
+            "name": "source",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Source"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WhopPageSettingsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/whop/pages/{page_id}/settings": {
+      "patch": {
+        "summary": "Patch Whop Page Settings",
+        "operationId": "patch_whop_page_settings_api_whop_pages__page_id__settings_patch",
+        "parameters": [
+          {
+            "name": "page_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Page Id"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WhopPageSettingsPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WhopPageOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/whop/orphan/cleanup": {
+      "post": {
+        "summary": "Cleanup Orphan Tasks",
+        "description": "Delete all tasks (and linked rows) for a given url.\n\nDefensive: rejects (400) if the url is currently registered to an\nactive page — unless `force=true`. The orphan-cleanup UI never\nsets force; the per-page settings modal \"清空本页历史\" sets\nforce=true since it's an explicit user choice.",
+        "operationId": "cleanup_orphan_tasks_api_whop_orphan_cleanup_post",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrphanCleanupRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrphanCleanupResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/whop/cookie": {
+      "get": {
+        "summary": "Whop Cookie Status",
+        "operationId": "whop_cookie_status_api_whop_cookie_get",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WhopCookieStatusOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orders": {
+      "post": {
+        "summary": "Post Order",
+        "operationId": "post_order_api_orders_post",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitOrderRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Get Orders",
+        "operationId": "get_orders_api_orders_get",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderListOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orders/{order_id}": {
+      "patch": {
+        "summary": "Patch Order",
+        "operationId": "patch_order_api_orders__order_id__patch",
+        "parameters": [
+          {
+            "name": "order_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Order Id"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplaceOrderRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete Order",
+        "operationId": "delete_order_api_orders__order_id__delete",
+        "parameters": [
+          {
+            "name": "order_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Order Id"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sim/scenarios": {
+      "get": {
+        "summary": "Get Scenarios",
+        "operationId": "get_scenarios_api_sim_scenarios_get",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenariosOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sim/run/{name}": {
+      "post": {
+        "summary": "Post Run Scenario",
+        "operationId": "post_run_scenario_api_sim_run__name__post",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SimRunOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "BrokerStatusOut": {
+        "properties": {
+          "is_real": {
+            "type": "boolean",
+            "title": "Is Real"
+          },
+          "account_label": {
+            "type": "string",
+            "title": "Account Label",
+            "default": ""
+          },
+          "dry_run": {
+            "type": "boolean",
+            "title": "Dry Run"
+          },
+          "last_init_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Init Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "is_real",
+          "dry_run"
+        ],
+        "title": "BrokerStatusOut",
+        "description": "Snapshot of the running broker — whether it's a live LongPortClient\nor fell back to NoopBrokerClient, plus the last init error if any."
+      },
+      "CancelOk": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok",
+            "default": true
+          }
+        },
+        "type": "object",
+        "title": "CancelOk"
+      },
+      "CandlestickOut": {
+        "properties": {
+          "timestamp": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timestamp"
+          },
+          "open": {
+            "type": "number",
+            "title": "Open"
+          },
+          "high": {
+            "type": "number",
+            "title": "High"
+          },
+          "low": {
+            "type": "number",
+            "title": "Low"
+          },
+          "close": {
+            "type": "number",
+            "title": "Close"
+          },
+          "volume": {
+            "type": "integer",
+            "title": "Volume"
+          },
+          "turnover": {
+            "type": "number",
+            "title": "Turnover"
+          }
+        },
+        "type": "object",
+        "required": [
+          "timestamp",
+          "open",
+          "high",
+          "low",
+          "close",
+          "volume",
+          "turnover"
+        ],
+        "title": "CandlestickOut"
+      },
+      "CandlesticksOut": {
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "period": {
+            "type": "string",
+            "title": "Period"
+          },
+          "bars": {
+            "items": {
+              "$ref": "#/components/schemas/CandlestickOut"
+            },
+            "type": "array",
+            "title": "Bars"
+          }
+        },
+        "type": "object",
+        "required": [
+          "symbol",
+          "period",
+          "bars"
+        ],
+        "title": "CandlesticksOut"
+      },
+      "ChatAuthorOut": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "count"
+        ],
+        "title": "ChatAuthorOut"
+      },
+      "ChatDayWindowOut": {
+        "properties": {
+          "start": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Start"
+          },
+          "end": {
+            "type": "string",
+            "format": "date-time",
+            "title": "End"
+          }
+        },
+        "type": "object",
+        "required": [
+          "start",
+          "end"
+        ],
+        "title": "ChatDayWindowOut",
+        "description": "北京日历日的半开 UTC 区间 ``[start, end)``。"
+      },
+      "ChatMessageCountsOut": {
+        "properties": {
+          "month": {
+            "type": "string",
+            "title": "Month"
+          },
+          "counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Counts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "month",
+          "counts"
+        ],
+        "title": "ChatMessageCountsOut",
+        "description": "按北京日历日聚合的当月消息计数。``counts`` 仅包含 ``count > 0`` 的天。"
+      },
+      "ChatMessageOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "page_id": {
+            "type": "string",
+            "title": "Page Id"
+          },
+          "author": {
+            "type": "string",
+            "title": "Author"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          },
+          "posted_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Posted At"
+          },
+          "quoted": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QuotedRefOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "page_id",
+          "author",
+          "content",
+          "posted_at"
+        ],
+        "title": "ChatMessageOut"
+      },
+      "ChatMessagesOut": {
+        "properties": {
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/ChatMessageOut"
+            },
+            "type": "array",
+            "title": "Messages"
+          },
+          "authors": {
+            "items": {
+              "$ref": "#/components/schemas/ChatAuthorOut"
+            },
+            "type": "array",
+            "title": "Authors"
+          },
+          "day": {
+            "$ref": "#/components/schemas/ChatDayWindowOut"
+          }
+        },
+        "type": "object",
+        "required": [
+          "messages",
+          "authors",
+          "day"
+        ],
+        "title": "ChatMessagesOut"
+      },
+      "ExecutionOut": {
+        "properties": {
+          "order_id": {
+            "type": "string",
+            "title": "Order Id"
+          },
+          "task_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task Id"
+          },
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "ticker": {
+            "type": "string",
+            "title": "Ticker"
+          },
+          "side": {
+            "type": "string",
+            "enum": [
+              "BUY",
+              "SELL"
+            ],
+            "title": "Side"
+          },
+          "qty": {
+            "type": "integer",
+            "title": "Qty"
+          },
+          "price": {
+            "type": "number",
+            "title": "Price"
+          },
+          "ts": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Ts"
+          },
+          "t_pair_tags": {
+            "items": {
+              "prefixItems": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "integer"
+                }
+              ],
+              "type": "array",
+              "maxItems": 2,
+              "minItems": 2
+            },
+            "type": "array",
+            "title": "T Pair Tags",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "order_id",
+          "symbol",
+          "ticker",
+          "side",
+          "qty",
+          "price",
+          "ts"
+        ],
+        "title": "ExecutionOut",
+        "description": "One broker-side ORDER (with partial fills aggregated). The unit\nof做T binding + day-PL accounting.\n\n``order_id`` is the unique key. ``task_id`` (nullable) links back to\nthe signal-station ``tasks`` row that submitted this order — present\nonly for orders that went through the trader pipeline; manual fills\nplaced via the LongBridge app / web have ``task_id = null``.\n\n``t_pair_tags`` is the server-denormalised做T allocation list:\n``[[pair_id, allocated_qty], ...]``. Lets the trade-list frontend\npaint做T chips without a separate /api/pairs round-trip, AND\nsurvives across page reloads — without it on the wire, a re-fetch\nafter detail-pane re-open silently dropped the chips. Defaults to\n``[]`` for fills that aren't bound to any pair."
+      },
+      "ExecutionsOut": {
+        "properties": {
+          "executions": {
+            "items": {
+              "$ref": "#/components/schemas/ExecutionOut"
+            },
+            "type": "array",
+            "title": "Executions"
+          },
+          "last_synced_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Synced At"
+          },
+          "total_count": {
+            "type": "integer",
+            "title": "Total Count",
+            "default": 0
+          },
+          "has_more": {
+            "type": "boolean",
+            "title": "Has More",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "executions"
+        ],
+        "title": "ExecutionsOut"
+      },
+      "ExecutionsSyncOut": {
+        "properties": {
+          "persisted": {
+            "type": "integer",
+            "title": "Persisted"
+          }
+        },
+        "type": "object",
+        "required": [
+          "persisted"
+        ],
+        "title": "ExecutionsSyncOut",
+        "description": "Response payload for ``POST /api/broker/executions/sync``.\n\n``persisted`` is the upsert count returned by\n``sync_broker_executions`` (new rows + updated rows). The frontend\ndoesn't display it; the field exists for logging and test assertions."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthOut": {
+        "properties": {
+          "whop": {
+            "type": "string",
+            "title": "Whop"
+          },
+          "longport": {
+            "type": "string",
+            "title": "Longport"
+          },
+          "account_label": {
+            "type": "string",
+            "title": "Account Label",
+            "default": ""
+          },
+          "dry_run": {
+            "type": "boolean",
+            "title": "Dry Run"
+          }
+        },
+        "type": "object",
+        "required": [
+          "whop",
+          "longport",
+          "dry_run"
+        ],
+        "title": "HealthOut"
+      },
+      "InstructionOut": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "description": "stock | option"
+          },
+          "instruction_type": {
+            "type": "string",
+            "title": "Instruction Type"
+          },
+          "price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price"
+          },
+          "price_range": {
+            "anyOf": [
+              {
+                "prefixItems": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  }
+                ],
+                "type": "array",
+                "maxItems": 2,
+                "minItems": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Range"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quantity"
+          },
+          "position_size": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position Size"
+          },
+          "stop_loss_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Loss Price"
+          },
+          "take_profit_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Take Profit Price"
+          },
+          "context_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context Source"
+          },
+          "parser_notes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Parser Notes"
+          },
+          "referenced_lot_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Referenced Lot Price"
+          },
+          "ticker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ticker"
+          },
+          "symbol": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Symbol"
+          },
+          "sell_quantity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sell Quantity"
+          },
+          "option_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Option Type"
+          },
+          "strike": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strike"
+          },
+          "expiry": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiry"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "instruction_type",
+          "price",
+          "price_range",
+          "quantity",
+          "position_size",
+          "stop_loss_price",
+          "take_profit_price",
+          "context_source",
+          "parser_notes"
+        ],
+        "title": "InstructionOut",
+        "description": "Union serializer for Stock/Option — carries a discriminator field."
+      },
+      "LongPortAccountActivateIn": {
+        "properties": {
+          "account_id": {
+            "type": "string",
+            "title": "Account Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "account_id"
+        ],
+        "title": "LongPortAccountActivateIn"
+      },
+      "LongPortAccountLogoutIn": {
+        "properties": {
+          "account_id": {
+            "type": "string",
+            "title": "Account Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "account_id"
+        ],
+        "title": "LongPortAccountLogoutIn"
+      },
+      "LongPortAccountOut": {
+        "properties": {
+          "account_id": {
+            "type": "string",
+            "title": "Account Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "authorized": {
+            "type": "boolean",
+            "title": "Authorized"
+          }
+        },
+        "type": "object",
+        "required": [
+          "account_id",
+          "label",
+          "authorized"
+        ],
+        "title": "LongPortAccountOut",
+        "description": "One OAuth-authorized LongBridge account slot in the settings list.\n\n``account_id`` is the registered Longbridge OAuth client_id (stable\nper Longbridge account). ``label`` is a user-chosen display name.\n``authorized`` reflects whether the SDK token cache holds a valid\ntoken for that account."
+      },
+      "LongPortAccountRenameIn": {
+        "properties": {
+          "account_id": {
+            "type": "string",
+            "title": "Account Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          }
+        },
+        "type": "object",
+        "required": [
+          "account_id",
+          "label"
+        ],
+        "title": "LongPortAccountRenameIn"
+      },
+      "LongPortOAuthStartOut": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "auth_url": {
+            "type": "string",
+            "title": "Auth Url"
+          },
+          "account_id": {
+            "type": "string",
+            "title": "Account Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "auth_url",
+          "account_id"
+        ],
+        "title": "LongPortOAuthStartOut",
+        "description": "Returned by POST /oauth/start — the URL is opened in a new tab and\nthe session_id is polled by /oauth/status until completion. The new\naccount_id is added to the settings list only after success."
+      },
+      "LongPortOAuthStatusOut": {
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "awaiting_url",
+              "ready",
+              "success",
+              "error",
+              "cancelled"
+            ],
+            "title": "State"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "account_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "state"
+        ],
+        "title": "LongPortOAuthStatusOut"
+      },
+      "LongPortSettingsOut": {
+        "properties": {
+          "active_account_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Account Id"
+          },
+          "accounts": {
+            "items": {
+              "$ref": "#/components/schemas/LongPortAccountOut"
+            },
+            "type": "array",
+            "title": "Accounts"
+          },
+          "auto_trade": {
+            "type": "boolean",
+            "title": "Auto Trade"
+          },
+          "region": {
+            "type": "string",
+            "title": "Region"
+          },
+          "dry_run": {
+            "type": "boolean",
+            "title": "Dry Run"
+          }
+        },
+        "type": "object",
+        "required": [
+          "active_account_id",
+          "accounts",
+          "auto_trade",
+          "region",
+          "dry_run"
+        ],
+        "title": "LongPortSettingsOut"
+      },
+      "LongPortSettingsPatch": {
+        "properties": {
+          "auto_trade": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Auto Trade"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region"
+          },
+          "dry_run": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dry Run"
+          }
+        },
+        "type": "object",
+        "title": "LongPortSettingsPatch",
+        "description": "Mutable subset of LongPort settings. Account list is managed via the\nOAuth + account endpoints and cannot be patched here."
+      },
+      "MessageOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          },
+          "raw_content": {
+            "type": "string",
+            "title": "Raw Content"
+          },
+          "author": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "posted_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Posted At"
+          },
+          "received_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Received At"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          },
+          "quoted_message_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quoted Message Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "content",
+          "raw_content",
+          "author",
+          "source",
+          "posted_at",
+          "received_at",
+          "quoted_message_id"
+        ],
+        "title": "MessageOut"
+      },
+      "OrderListOut": {
+        "properties": {
+          "orders": {
+            "items": {
+              "$ref": "#/components/schemas/OrderOut"
+            },
+            "type": "array",
+            "title": "Orders"
+          }
+        },
+        "type": "object",
+        "required": [
+          "orders"
+        ],
+        "title": "OrderListOut"
+      },
+      "OrderOut": {
+        "properties": {
+          "order_id": {
+            "type": "string",
+            "title": "Order Id"
+          },
+          "task_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task Id"
+          },
+          "ticker": {
+            "type": "string",
+            "title": "Ticker"
+          },
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "side": {
+            "type": "string",
+            "enum": [
+              "BUY",
+              "SELL"
+            ],
+            "title": "Side"
+          },
+          "order_type": {
+            "type": "string",
+            "enum": [
+              "LIMIT",
+              "MARKET"
+            ],
+            "title": "Order Type"
+          },
+          "price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price"
+          },
+          "qty": {
+            "type": "integer",
+            "title": "Qty"
+          },
+          "filled_qty": {
+            "type": "integer",
+            "title": "Filled Qty"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "signal",
+              "manual",
+              "external"
+            ],
+            "title": "Source"
+          },
+          "submitted_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted At"
+          },
+          "last_replaced_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Replaced At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "order_id",
+          "task_id",
+          "ticker",
+          "symbol",
+          "side",
+          "order_type",
+          "price",
+          "qty",
+          "filled_qty",
+          "status",
+          "source",
+          "submitted_at",
+          "last_replaced_at"
+        ],
+        "title": "OrderOut"
+      },
+      "OrphanCleanupRequest": {
+        "properties": {
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          },
+          "force": {
+            "type": "boolean",
+            "title": "Force",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "OrphanCleanupRequest"
+      },
+      "OrphanCleanupResponse": {
+        "properties": {
+          "deleted_count": {
+            "type": "integer",
+            "title": "Deleted Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "deleted_count"
+        ],
+        "title": "OrphanCleanupResponse"
+      },
+      "PairAggregateOut": {
+        "properties": {
+          "profit_total": {
+            "type": "number",
+            "title": "Profit Total"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "win_count": {
+            "type": "integer",
+            "title": "Win Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "profit_total",
+          "count",
+          "win_count"
+        ],
+        "title": "PairAggregateOut",
+        "description": "Account+ticker scoped做T aggregates — driven by SQL SUM/COUNT\nover t_pairs so PairKPIs can render without pulling every pair into\nmemory."
+      },
+      "PendingExecutionsOut": {
+        "properties": {
+          "pending_buy_qty": {
+            "type": "integer",
+            "title": "Pending Buy Qty"
+          },
+          "pending_sell_qty": {
+            "type": "integer",
+            "title": "Pending Sell Qty"
+          },
+          "trades": {
+            "items": {
+              "$ref": "#/components/schemas/PendingTradeOut"
+            },
+            "type": "array",
+            "title": "Trades"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pending_buy_qty",
+          "pending_sell_qty",
+          "trades"
+        ],
+        "title": "PendingExecutionsOut",
+        "description": "Aggregate + per-trade breakdown of unallocated qty."
+      },
+      "PendingTradeOut": {
+        "properties": {
+          "order_id": {
+            "type": "string",
+            "title": "Order Id"
+          },
+          "ticker": {
+            "type": "string",
+            "title": "Ticker"
+          },
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "side": {
+            "type": "string",
+            "title": "Side"
+          },
+          "qty": {
+            "type": "integer",
+            "title": "Qty"
+          },
+          "allocated_qty": {
+            "type": "integer",
+            "title": "Allocated Qty"
+          },
+          "pending_qty": {
+            "type": "integer",
+            "title": "Pending Qty"
+          },
+          "price": {
+            "type": "number",
+            "title": "Price"
+          },
+          "ts": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Ts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "order_id",
+          "ticker",
+          "symbol",
+          "side",
+          "qty",
+          "allocated_qty",
+          "pending_qty",
+          "price",
+          "ts"
+        ],
+        "title": "PendingTradeOut",
+        "description": "One row of \"pending做T\" trade — broker fill with remaining qty\nnot yet allocated to any pair."
+      },
+      "PositionOut": {
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "ticker": {
+            "type": "string",
+            "title": "Ticker"
+          },
+          "quantity": {
+            "type": "integer",
+            "title": "Quantity"
+          },
+          "avg_cost": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Cost"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "option_strike": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Option Strike"
+          },
+          "option_expiry": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Option Expiry"
+          },
+          "option_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Option Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "symbol",
+          "type",
+          "ticker",
+          "quantity",
+          "avg_cost"
+        ],
+        "title": "PositionOut"
+      },
+      "PositionsOut": {
+        "properties": {
+          "stocks": {
+            "items": {
+              "$ref": "#/components/schemas/PositionOut"
+            },
+            "type": "array",
+            "title": "Stocks"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/PositionOut"
+            },
+            "type": "array",
+            "title": "Options"
+          }
+        },
+        "type": "object",
+        "required": [
+          "stocks",
+          "options"
+        ],
+        "title": "PositionsOut"
+      },
+      "PushEventOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "task_id": {
+            "type": "string",
+            "title": "Task Id"
+          },
+          "order_id": {
+            "type": "string",
+            "title": "Order Id"
+          },
+          "state": {
+            "type": "string",
+            "title": "State"
+          },
+          "received_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Received At"
+          },
+          "delta_qty": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delta Qty"
+          },
+          "delta_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delta Price"
+          },
+          "cumulative_qty": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cumulative Qty"
+          },
+          "cumulative_avg_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cumulative Avg Price"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "submitted_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted Price"
+          },
+          "submitted_quantity": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted Quantity"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "task_id",
+          "order_id",
+          "state",
+          "received_at",
+          "delta_qty",
+          "delta_price",
+          "cumulative_qty",
+          "cumulative_avg_price",
+          "note"
+        ],
+        "title": "PushEventOut"
+      },
+      "QuoteOut": {
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "last_done": {
+            "type": "number",
+            "title": "Last Done"
+          },
+          "prev_close": {
+            "type": "number",
+            "title": "Prev Close"
+          },
+          "today_close": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Today Close"
+          },
+          "open": {
+            "type": "number",
+            "title": "Open"
+          },
+          "high": {
+            "type": "number",
+            "title": "High"
+          },
+          "low": {
+            "type": "number",
+            "title": "Low"
+          },
+          "volume": {
+            "type": "integer",
+            "title": "Volume"
+          },
+          "turnover": {
+            "type": "number",
+            "title": "Turnover"
+          },
+          "change": {
+            "type": "number",
+            "title": "Change"
+          },
+          "change_pct": {
+            "type": "number",
+            "title": "Change Pct"
+          },
+          "trade_session": {
+            "type": "string",
+            "enum": [
+              "regular",
+              "pre",
+              "post",
+              "overnight",
+              "closed"
+            ],
+            "title": "Trade Session",
+            "default": "regular"
+          }
+        },
+        "type": "object",
+        "required": [
+          "symbol",
+          "last_done",
+          "prev_close",
+          "open",
+          "high",
+          "low",
+          "volume",
+          "turnover",
+          "change",
+          "change_pct"
+        ],
+        "title": "QuoteOut"
+      },
+      "QuoteWatchIn": {
+        "properties": {
+          "symbols": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Symbols"
+          }
+        },
+        "type": "object",
+        "required": [
+          "symbols"
+        ],
+        "title": "QuoteWatchIn",
+        "description": "Request body for ``POST /api/quotes/watch``.\n\nReplaces the active quote-push watch set with ``symbols``. Backend\ndiffs vs. the prior set and issues subscribe/unsubscribe calls to the\nbroker. Empty list clears all subscriptions (e.g. on dashboard close)."
+      },
+      "QuoteWatchOut": {
+        "properties": {
+          "added": {
+            "type": "integer",
+            "title": "Added"
+          },
+          "removed": {
+            "type": "integer",
+            "title": "Removed"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "added",
+          "removed",
+          "total"
+        ],
+        "title": "QuoteWatchOut",
+        "description": "Response body for ``POST /api/quotes/watch`` — observability fields\nso the UI / log can confirm the diff actually took effect."
+      },
+      "QuotedRefOut": {
+        "properties": {
+          "message_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message Id"
+          },
+          "author": {
+            "type": "string",
+            "title": "Author"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          },
+          "posted_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Posted At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "author",
+          "content"
+        ],
+        "title": "QuotedRefOut",
+        "description": "Nested representation of a quoted parent message.\n\nAll four fields are denormalized into ``chat_messages`` columns at write\ntime, so the row renders correctly even if the parent message is missing\n(different week, never scraped, non-watched sender). ``message_id`` and\n``posted_at`` may be ``None`` when the scrape only captured the visible\nquote bubble without a stable id / timestamp."
+      },
+      "QuotesOut": {
+        "properties": {
+          "quotes": {
+            "items": {
+              "$ref": "#/components/schemas/QuoteOut"
+            },
+            "type": "array",
+            "title": "Quotes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "quotes"
+        ],
+        "title": "QuotesOut"
+      },
+      "ReplaceOrderRequest": {
+        "properties": {
+          "price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price"
+          },
+          "qty": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Qty"
+          }
+        },
+        "type": "object",
+        "title": "ReplaceOrderRequest"
+      },
+      "ScenarioOverviewOut": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "message_text": {
+            "type": "string",
+            "title": "Message Text"
+          },
+          "push_step_count": {
+            "type": "integer",
+            "title": "Push Step Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "label",
+          "description",
+          "source",
+          "message_text",
+          "push_step_count"
+        ],
+        "title": "ScenarioOverviewOut"
+      },
+      "ScenariosOut": {
+        "properties": {
+          "scenarios": {
+            "items": {
+              "$ref": "#/components/schemas/ScenarioOverviewOut"
+            },
+            "type": "array",
+            "title": "Scenarios"
+          }
+        },
+        "type": "object",
+        "required": [
+          "scenarios"
+        ],
+        "title": "ScenariosOut"
+      },
+      "SimRunOut": {
+        "properties": {
+          "scenario_name": {
+            "type": "string",
+            "title": "Scenario Name"
+          },
+          "message_id": {
+            "type": "string",
+            "title": "Message Id"
+          },
+          "order_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Id"
+          },
+          "started": {
+            "type": "boolean",
+            "title": "Started",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "scenario_name",
+          "message_id"
+        ],
+        "title": "SimRunOut"
+      },
+      "StatsTodayOut": {
+        "properties": {
+          "msg_count": {
+            "type": "integer",
+            "title": "Msg Count"
+          },
+          "parse_ok": {
+            "type": "integer",
+            "title": "Parse Ok"
+          },
+          "parse_rate": {
+            "type": "number",
+            "title": "Parse Rate"
+          },
+          "orders": {
+            "type": "integer",
+            "title": "Orders"
+          },
+          "filled": {
+            "type": "integer",
+            "title": "Filled"
+          },
+          "rejected": {
+            "type": "integer",
+            "title": "Rejected"
+          }
+        },
+        "type": "object",
+        "required": [
+          "msg_count",
+          "parse_ok",
+          "parse_rate",
+          "orders",
+          "filled",
+          "rejected"
+        ],
+        "title": "StatsTodayOut"
+      },
+      "SubmitOrderRequest": {
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Symbol"
+          },
+          "side": {
+            "type": "string",
+            "enum": [
+              "BUY",
+              "SELL"
+            ],
+            "title": "Side"
+          },
+          "qty": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Qty"
+          },
+          "order_type": {
+            "type": "string",
+            "enum": [
+              "LIMIT",
+              "MARKET"
+            ],
+            "title": "Order Type"
+          },
+          "price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price"
+          },
+          "time_in_force": {
+            "type": "string",
+            "const": "Day",
+            "title": "Time In Force",
+            "default": "Day"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "symbol",
+          "side",
+          "qty",
+          "order_type"
+        ],
+        "title": "SubmitOrderRequest"
+      },
+      "TPairAllocation": {
+        "properties": {
+          "trade_id": {
+            "type": "string",
+            "title": "Trade Id"
+          },
+          "qty": {
+            "type": "integer",
+            "title": "Qty"
+          }
+        },
+        "type": "object",
+        "required": [
+          "trade_id",
+          "qty"
+        ],
+        "title": "TPairAllocation",
+        "description": "One trade's allocation into a做T pair. ``qty`` may be less than the\ntrade's filled quantity — a trade can be split across multiple pairs."
+      },
+      "TPairCreate": {
+        "properties": {
+          "ticker": {
+            "type": "string",
+            "title": "Ticker"
+          },
+          "symbol": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Symbol"
+          },
+          "buy_trade_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Buy Trade Ids",
+            "default": []
+          },
+          "sell_trade_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Sell Trade Ids",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "ticker"
+        ],
+        "title": "TPairCreate",
+        "description": "Client selection for a new做T pair. The server computes per-trade\nqty allocations using FIFO + min(BUY_avail, SELL_avail) and persists\nthe result; partial / one-sided selections are accepted."
+      },
+      "TPairExtendIn": {
+        "properties": {
+          "buy_trade_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Buy Trade Ids",
+            "default": []
+          },
+          "sell_trade_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Sell Trade Ids",
+            "default": []
+          }
+        },
+        "type": "object",
+        "title": "TPairExtendIn",
+        "description": "Add more trades to an existing pair. Same allocation rules apply,\nwith the existing pair contents counted against trade availability."
+      },
+      "TPairOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "ticker": {
+            "type": "string",
+            "title": "Ticker"
+          },
+          "symbol": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Symbol"
+          },
+          "buys": {
+            "items": {
+              "$ref": "#/components/schemas/TPairAllocation"
+            },
+            "type": "array",
+            "title": "Buys"
+          },
+          "sells": {
+            "items": {
+              "$ref": "#/components/schemas/TPairAllocation"
+            },
+            "type": "array",
+            "title": "Sells"
+          },
+          "profit": {
+            "type": "number",
+            "title": "Profit",
+            "default": 0.0
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "ticker",
+          "buys",
+          "sells",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "TPairOut"
+      },
+      "TPairsOut": {
+        "properties": {
+          "pairs": {
+            "items": {
+              "$ref": "#/components/schemas/TPairOut"
+            },
+            "type": "array",
+            "title": "Pairs"
+          },
+          "total_count": {
+            "type": "integer",
+            "title": "Total Count",
+            "default": 0
+          },
+          "has_more": {
+            "type": "boolean",
+            "title": "Has More",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "pairs"
+        ],
+        "title": "TPairsOut"
+      },
+      "TaskCountOut": {
+        "properties": {
+          "total_count": {
+            "type": "integer",
+            "title": "Total Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_count"
+        ],
+        "title": "TaskCountOut"
+      },
+      "TaskListOut": {
+        "properties": {
+          "tasks": {
+            "items": {
+              "$ref": "#/components/schemas/TaskSummaryOut"
+            },
+            "type": "array",
+            "title": "Tasks"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tasks"
+        ],
+        "title": "TaskListOut"
+      },
+      "TaskOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "order_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Id"
+          },
+          "submit_order_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submit Order Type"
+          },
+          "submit_order_context": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submit Order Context"
+          },
+          "submit_quote_last_done": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submit Quote Last Done"
+          },
+          "submit_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submit Price"
+          },
+          "stage_timings": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Stage Timings"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "reject_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reject Reason"
+          },
+          "message": {
+            "$ref": "#/components/schemas/MessageOut"
+          },
+          "instruction": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InstructionOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "push_events": {
+            "items": {
+              "$ref": "#/components/schemas/PushEventOut"
+            },
+            "type": "array",
+            "title": "Push Events"
+          },
+          "last_cum_qty": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Cum Qty"
+          },
+          "last_cum_avg_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Cum Avg Price"
+          },
+          "last_submitted_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Submitted Price"
+          },
+          "last_submitted_qty": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Submitted Qty"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "status",
+          "order_id",
+          "stage_timings",
+          "created_at",
+          "updated_at",
+          "reject_reason",
+          "message",
+          "instruction",
+          "push_events"
+        ],
+        "title": "TaskOut"
+      },
+      "TaskSummaryOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "order_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Id"
+          },
+          "submit_order_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submit Order Type"
+          },
+          "submit_order_context": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submit Order Context"
+          },
+          "submit_quote_last_done": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submit Quote Last Done"
+          },
+          "submit_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submit Price"
+          },
+          "stage_timings": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Stage Timings"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "reject_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reject Reason"
+          },
+          "message": {
+            "$ref": "#/components/schemas/MessageOut"
+          },
+          "instruction": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InstructionOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "last_cum_qty": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Cum Qty"
+          },
+          "last_cum_avg_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Cum Avg Price"
+          },
+          "last_submitted_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Submitted Price"
+          },
+          "last_submitted_qty": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Submitted Qty"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "status",
+          "order_id",
+          "stage_timings",
+          "created_at",
+          "updated_at",
+          "reject_reason",
+          "message",
+          "instruction"
+        ],
+        "title": "TaskSummaryOut"
+      },
+      "TickerConfigOut": {
+        "properties": {
+          "trade_quantity": {
+            "type": "integer",
+            "title": "Trade Quantity"
+          }
+        },
+        "type": "object",
+        "required": [
+          "trade_quantity"
+        ],
+        "title": "TickerConfigOut"
+      },
+      "TradeOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "ticker": {
+            "type": "string",
+            "title": "Ticker"
+          },
+          "symbol": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Symbol"
+          },
+          "side": {
+            "type": "string",
+            "title": "Side"
+          },
+          "qty": {
+            "type": "integer",
+            "title": "Qty"
+          },
+          "price": {
+            "type": "number",
+            "title": "Price"
+          },
+          "ts": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Ts"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "tag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tag"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "ticker",
+          "side",
+          "qty",
+          "price",
+          "ts"
+        ],
+        "title": "TradeOut",
+        "description": "A single fully-executed (or partial) trade, suitable as a做T\npair member. ``id`` matches the originating task id."
+      },
+      "TradesOut": {
+        "properties": {
+          "ticker": {
+            "type": "string",
+            "title": "Ticker"
+          },
+          "trades": {
+            "items": {
+              "$ref": "#/components/schemas/TradeOut"
+            },
+            "type": "array",
+            "title": "Trades"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ticker",
+          "trades"
+        ],
+        "title": "TradesOut"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "WhopCookieStatusOut": {
+        "properties": {
+          "exists": {
+            "type": "boolean",
+            "title": "Exists"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "last_modified": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Modified"
+          },
+          "age_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age Seconds"
+          }
+        },
+        "type": "object",
+        "required": [
+          "exists",
+          "path"
+        ],
+        "title": "WhopCookieStatusOut"
+      },
+      "WhopPageCreate": {
+        "properties": {
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "stock",
+              "option",
+              "chat"
+            ],
+            "title": "Source"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "parent_chat_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Chat Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "url",
+          "source"
+        ],
+        "title": "WhopPageCreate"
+      },
+      "WhopPageOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "added_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Added At"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/WhopPageSettingsOut"
+          },
+          "running": {
+            "type": "boolean",
+            "title": "Running"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "last_poll_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Poll At"
+          },
+          "messages_published": {
+            "type": "integer",
+            "title": "Messages Published"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "parent_chat_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Chat Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "url",
+          "source",
+          "name",
+          "added_at",
+          "settings",
+          "running",
+          "started_at",
+          "last_poll_at",
+          "messages_published",
+          "last_error"
+        ],
+        "title": "WhopPageOut"
+      },
+      "WhopPageSettingsOut": {
+        "properties": {
+          "dedupe_processed_messages": {
+            "type": "boolean",
+            "title": "Dedupe Processed Messages"
+          },
+          "price_deviation_tolerance": {
+            "type": "number",
+            "title": "Price Deviation Tolerance"
+          },
+          "block_historical_messages": {
+            "type": "boolean",
+            "title": "Block Historical Messages"
+          },
+          "launch_headless": {
+            "type": "boolean",
+            "title": "Launch Headless"
+          },
+          "parser_version": {
+            "type": "string",
+            "enum": [
+              "v1",
+              "v2"
+            ],
+            "title": "Parser Version",
+            "default": "v1"
+          },
+          "tickers": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/TickerConfigOut"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tickers"
+          },
+          "option_buy_quantity_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Option Buy Quantity Enabled"
+          },
+          "option_buy_quantity": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Option Buy Quantity"
+          },
+          "option_total_price_limit_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Option Total Price Limit Enabled"
+          },
+          "option_total_price_limit": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Option Total Price Limit"
+          },
+          "watched_senders": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Watched Senders"
+          },
+          "chat_card_max_msgs": {
+            "type": "integer",
+            "title": "Chat Card Max Msgs",
+            "default": 5
+          }
+        },
+        "type": "object",
+        "required": [
+          "dedupe_processed_messages",
+          "price_deviation_tolerance",
+          "block_historical_messages",
+          "launch_headless"
+        ],
+        "title": "WhopPageSettingsOut"
+      },
+      "WhopPageSettingsPatch": {
+        "properties": {
+          "dedupe_processed_messages": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dedupe Processed Messages"
+          },
+          "price_deviation_tolerance": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Deviation Tolerance"
+          },
+          "block_historical_messages": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Block Historical Messages"
+          },
+          "launch_headless": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Launch Headless"
+          },
+          "parser_version": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "v1",
+                  "v2"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parser Version"
+          },
+          "tickers": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/TickerConfigOut"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tickers"
+          },
+          "option_buy_quantity_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Option Buy Quantity Enabled"
+          },
+          "option_buy_quantity": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Option Buy Quantity"
+          },
+          "option_total_price_limit_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Option Total Price Limit Enabled"
+          },
+          "option_total_price_limit": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Option Total Price Limit"
+          },
+          "watched_senders": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Watched Senders"
+          },
+          "chat_card_max_msgs": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 50.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chat Card Max Msgs"
+          }
+        },
+        "type": "object",
+        "title": "WhopPageSettingsPatch",
+        "description": "Local update; any unspecified field = unchanged."
+      },
+      "WhopPagesOut": {
+        "properties": {
+          "pages": {
+            "items": {
+              "$ref": "#/components/schemas/WhopPageOut"
+            },
+            "type": "array",
+            "title": "Pages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pages"
+        ],
+        "title": "WhopPagesOut"
+      }
+    }
+  }
+}
