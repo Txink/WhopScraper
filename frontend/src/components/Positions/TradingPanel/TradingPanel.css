@@ -202,7 +202,9 @@ table.tbl .num { text-align: right; }
 .qo-qty-caret:hover { color: var(--fg-1); border-color: var(--brand); }
 .qo-qty-menu {
   position: absolute;
-  top: calc(100% + 4px);
+  /* Opens UPWARD — the quick-order row sits at the bottom of the
+   * panel, so opening downward would clip past the tab-foot. */
+  bottom: calc(100% + 4px);
   right: 0;
   background: var(--bg-2);
   border: 1px solid var(--line-strong);
@@ -210,7 +212,7 @@ table.tbl .num { text-align: right; }
   padding: 4px 0;
   min-width: 110px;
   z-index: 5;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 -6px 16px rgba(0, 0, 0, 0.4);
   display: flex;
   flex-direction: column;
 }
