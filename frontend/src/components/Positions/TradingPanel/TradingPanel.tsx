@@ -64,16 +64,33 @@ export function TradingPanel({ ticker, symbol }: Props) {
     }
   };
 
+  const activeCount = orders.filter(
+    (o) => !["FilledStatus", "Filled", "CancelledStatus", "Cancelled", "RejectedStatus", "Rejected"].includes(o.status),
+  ).length;
+
   return (
-    <div className="trading-panel">
+    <div className="panel trading-panel">
       <div className="trading-panel-head">
         <div className="alerts-h">活跃订单 · {ticker} · 今日</div>
         <button className="row-btn" onClick={() => setActiveOnly((v) => !v)}>
           {activeOnly ? "全部" : "仅活跃"}
         </button>
       </div>
-      <ActiveOrdersTable orders={orders} activeOnly={activeOnly} onReplace={onReplace} onCancel={onCancel} />
+      <div className="trading-panel-body">
+        <ActiveOrdersTable orders={orders} activeOnly={activeOnly} onReplace={onReplace} onCancel={onCancel} />
+      </div>
       <QuickOrderRow symbol={symbol} ticker={ticker} presets={presets} lastDone={lastDone} onSubmit={onSubmit} onMore={() => setMoreOpen(true)} />
+      <div className="tab-foot">
+        <span className="tab-foot-left">
+          <button type="button" className="trade-menu-btn" aria-label="交易面板设置" title="交易面板设置（暂未启用）">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+          </button>
+          <span>交易面板 · 活跃 {activeCount} / 共 {orders.length}</span>
+        </span>
+      </div>
       {replaceFor && <ReplaceOrderPopover order={replaceFor} onSubmit={submitReplace} onClose={() => setReplaceFor(null)} />}
       {moreOpen && <FullOrderModal symbol={symbol} ticker={ticker} lastDone={lastDone} onSubmit={(r) => { void onSubmit(r); setMoreOpen(false); }} onClose={() => setMoreOpen(false)} />}
       {confirmCancel && (

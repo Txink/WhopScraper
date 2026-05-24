@@ -42,31 +42,37 @@ describe("DetailTabSwipe", () => {
     expect(onIndex).toHaveBeenLastCalledWith(1);
   });
 
-  it("footer shows the active tab's label", () => {
-    render(<DetailTabSwipe tabs={tabs} index={1} onIndexChange={() => {}} />);
-    expect(screen.getByText("交易面板")).toBeInTheDocument();
-  });
-
-  it("⚙ click invokes onOpenSettings with active index", async () => {
-    const onSettings = vi.fn();
-    render(
-      <DetailTabSwipe tabs={tabs} index={1} onIndexChange={() => {}} onOpenSettings={onSettings} />
-    );
-    await userEvent.click(screen.getByRole("button", { name: /设置/ }));
-    expect(onSettings).toHaveBeenCalledWith(1);
-  });
-
   it("mouse drag past threshold changes tab", () => {
+    // Drag move + up live on `document` (so the drag survives if the
+    // pointer leaves the swipe div mid-gesture); fire them on document.
     const onIndex = vi.fn();
     render(<DetailTabSwipe tabs={tabs} index={1} onIndexChange={onIndex} />);
     const container = screen.getByTestId("detail-tab-swipe");
-    fireEvent.mouseDown(container, { clientX: 500 });
-    fireEvent.mouseMove(container, { clientX: 400 });
-    fireEvent.mouseUp(container, { clientX: 400 });
+    fireEvent.mouseDown(container, { clientX: 500, button: 0 });
+    fireEvent.mouseMove(document, { clientX: 400 });
+    fireEvent.mouseUp(document, { clientX: 400 });
     expect(onIndex).toHaveBeenCalledWith(2);
   });
 
-  it("clicking an input inside content does NOT trigger drag", () => {
+  it("dragging starting from a button element still triggers swipe", () => {
+    // Buttons used to block drag-start under isFormTarget — buttons are
+    // densely packed inside the trade list, so swipe was unreachable in
+    // practice. Drag should now begin on any non-text-input target.
+    const onIndex = vi.fn();
+    const tabsWithButton = [
+      { id: "records", label: "交易记录", content: <button data-testid="btn">click me</button> },
+      ...tabs.slice(1),
+    ];
+    render(<DetailTabSwipe tabs={tabsWithButton} index={0} onIndexChange={onIndex} />);
+    const btn = screen.getByTestId("btn");
+    // Drag leftward (200 → 100): negative dx → forward swipe → next tab.
+    fireEvent.mouseDown(btn, { clientX: 200, button: 0 });
+    fireEvent.mouseMove(document, { clientX: 100 });
+    fireEvent.mouseUp(document, { clientX: 100 });
+    expect(onIndex).toHaveBeenCalledWith(1);
+  });
+
+  it("dragging from a text input does NOT trigger swipe", () => {
     const onIndex = vi.fn();
     const tabsWithInput = [
       ...tabs.slice(0, 1),
@@ -75,9 +81,29 @@ describe("DetailTabSwipe", () => {
     ];
     render(<DetailTabSwipe tabs={tabsWithInput} index={1} onIndexChange={onIndex} />);
     const inp = screen.getByTestId("inp");
-    fireEvent.mouseDown(inp, { clientX: 500 });
-    fireEvent.mouseMove(inp, { clientX: 400 });
-    fireEvent.mouseUp(inp, { clientX: 400 });
+    fireEvent.mouseDown(inp, { clientX: 500, button: 0 });
+    fireEvent.mouseMove(document, { clientX: 400 });
+    fireEvent.mouseUp(document, { clientX: 400 });
+    expect(onIndex).not.toHaveBeenCalled();
+  });
+
+  it("trackpad horizontal wheel accumulates into a tab switch", () => {
+    const onIndex = vi.fn();
+    render(<DetailTabSwipe tabs={tabs} index={0} onIndexChange={onIndex} />);
+    const container = screen.getByTestId("detail-tab-swipe");
+    // 3 small horizontal wheel events that sum past WHEEL_COMMIT_PX (60).
+    fireEvent.wheel(container, { deltaX: 30, deltaY: 0 });
+    fireEvent.wheel(container, { deltaX: 30, deltaY: 0 });
+    fireEvent.wheel(container, { deltaX: 30, deltaY: 0 });
+    expect(onIndex).toHaveBeenCalledWith(1);
+  });
+
+  it("vertical-dominant wheel does NOT switch tabs", () => {
+    const onIndex = vi.fn();
+    render(<DetailTabSwipe tabs={tabs} index={0} onIndexChange={onIndex} />);
+    const container = screen.getByTestId("detail-tab-swipe");
+    // Vertical scroll dominates — should be ignored.
+    fireEvent.wheel(container, { deltaX: 5, deltaY: 100 });
     expect(onIndex).not.toHaveBeenCalled();
   });
 });

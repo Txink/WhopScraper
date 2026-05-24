@@ -15,6 +15,37 @@
   flex-shrink: 0;
 }
 
+/* Scrollable body between the head and the sticky quick-order + tab-foot.
+ * Keeps the order list scrollable while head/order/foot stay pinned. */
+.trading-panel-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+/* ─── Shared tab footer (used by TradingPanel + AlertsPanel) ─── */
+.tab-foot {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 14px;
+  border-top: 1px dashed var(--line);
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-2);
+}
+.tab-foot-left {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.tab-foot-right {
+  justify-self: end;
+}
+
 /* ─── Tables ─── */
 table.tbl {
   width: 100%;

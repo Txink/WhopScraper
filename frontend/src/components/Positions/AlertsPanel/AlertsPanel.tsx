@@ -68,35 +68,49 @@ export function AlertsPanel({ ticker, symbol }: Props) {
   const enabledCount = alerts.filter((a) => a.enabled).length;
 
   return (
-    <div className="alerts-panel">
+    <div className="panel alerts-panel">
       <div className="alerts-head">
         <div className="alerts-h">告警 · {ticker} · 共 {alerts.length} 条 · 启用 {enabledCount}</div>
         <button className="alert-add-btn" onClick={() => setModalFor("new")}>+ 添加告警</button>
       </div>
 
-      {alerts.map((a) => {
-        const state = fmtState(a);
-        return (
-          <div key={a.id} className={`alert-row ${a.enabled ? "" : "disabled"}`}>
-            <input type="checkbox" checked={a.enabled} onChange={() => toggle(a)} />
-            <div>
-              <div className="alert-cond">{fmtCond(a)}</div>
-              <div className="alert-meta">
-                <span className={`alert-mode ${a.repeat_mode === "recurring" ? "recurring" : ""}`}>
-                  {a.repeat_mode === "one_shot" ? "ONE-SHOT" : `RECURRING · ${a.cooldown_seconds}s 节流`}
-                </span>
-                <span className={`alert-state ${state.cls}`}>{state.text}</span>
-                {a.note && <span style={{ color: "var(--fg-3)", fontStyle: "italic" }}>— {a.note}</span>}
+      <div className="alerts-body">
+        {alerts.map((a) => {
+          const state = fmtState(a);
+          return (
+            <div key={a.id} className={`alert-row ${a.enabled ? "" : "disabled"}`}>
+              <input type="checkbox" checked={a.enabled} onChange={() => toggle(a)} />
+              <div>
+                <div className="alert-cond">{fmtCond(a)}</div>
+                <div className="alert-meta">
+                  <span className={`alert-mode ${a.repeat_mode === "recurring" ? "recurring" : ""}`}>
+                    {a.repeat_mode === "one_shot" ? "ONE-SHOT" : `RECURRING · ${a.cooldown_seconds}s 节流`}
+                  </span>
+                  <span className={`alert-state ${state.cls}`}>{state.text}</span>
+                  {a.note && <span style={{ color: "var(--fg-3)", fontStyle: "italic" }}>— {a.note}</span>}
+                </div>
+              </div>
+              <div></div>
+              <div className="alert-actions">
+                <button className="row-btn" onClick={() => setModalFor(a)}>编辑</button>
+                <button className="row-btn danger" onClick={() => setConfirmDelete(a)}>×</button>
               </div>
             </div>
-            <div></div>
-            <div className="alert-actions">
-              <button className="row-btn" onClick={() => setModalFor(a)}>编辑</button>
-              <button className="row-btn danger" onClick={() => setConfirmDelete(a)}>×</button>
-            </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
+
+      <div className="tab-foot">
+        <span className="tab-foot-left">
+          <button type="button" className="trade-menu-btn" aria-label="告警设置" title="告警设置（暂未启用）">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+          </button>
+          <span>告警 · 启用 {enabledCount} / 共 {alerts.length}</span>
+        </span>
+      </div>
 
       {modalFor && (
         <AlertModal

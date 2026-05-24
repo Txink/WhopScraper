@@ -1,7 +1,6 @@
 import {
   useCallback, useEffect, useRef, useState, type ReactNode,
 } from "react";
-import { DetailTabFooter } from "./DetailTabFooter";
 import "./DetailTabSwipe.css";
 
 export interface TabDef {
@@ -14,98 +13,188 @@ interface Props {
   tabs: TabDef[];
   index: number;
   onIndexChange: (i: number) => void;
-  onOpenSettings?: (i: number) => void;
 }
 
 const DRAG_THRESHOLD_PX = 8;
 const SWIPE_DISTANCE_PX = 50;
 const SWIPE_VELOCITY = 0.4;  // px/ms
+/** Cumulative horizontal trackpad wheel delta required to commit a tab
+ *  switch. Tuned so a deliberate two-finger swipe lands the next tab
+ *  while inertia from vertical scrolling on a busy page doesn't drift it. */
+const WHEEL_COMMIT_PX = 60;
+/** Idle gap after which the wheel accumulator resets — separates one
+ *  swipe from the next so two quick gestures don't merge. */
+const WHEEL_RESET_MS = 200;
 
-function isFormTarget(el: EventTarget | null): boolean {
+/** Block drag-start only on text-entry elements where horizontal mouse
+ *  movement should belong to caret/selection. Buttons and other
+ *  click-only controls are fine — the 8px drag threshold keeps pure
+ *  clicks from being mistaken for drags. */
+function isTextInput(el: EventTarget | null): boolean {
   if (!(el instanceof HTMLElement)) return false;
   const tag = el.tagName;
-  return (
-    tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA" || tag === "BUTTON" ||
-    el.isContentEditable
-  );
+  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+  return el.isContentEditable;
 }
 
-export function DetailTabSwipe({ tabs, index, onIndexChange, onOpenSettings }: Props) {
+export function DetailTabSwipe({ tabs, index, onIndexChange }: Props) {
   const max = tabs.length - 1;
   const [dragDx, setDragDx] = useState(0);
-  const startRef = useRef<{ x: number; t: number; pointerId: number | null } | null>(null);
+  /** Latest props captured into refs so document-level listeners installed
+   *  on mousedown stay accurate without re-attaching every render. */
+  const indexRef = useRef(index);
+  const maxRef = useRef(max);
+  const onIndexChangeRef = useRef(onIndexChange);
+  useEffect(() => {
+    indexRef.current = index;
+    maxRef.current = max;
+    onIndexChangeRef.current = onIndexChange;
+  }, [index, max, onIndexChange]);
+
+  /** Drag-in-progress state. Once set, document-level mousemove/mouseup
+   *  drive the drag through to release — the original element can lose
+   *  the pointer (e.g. user drags out of the swipe div) without
+   *  stranding the state. */
+  const dragRef = useRef<{ x: number; t: number } | null>(null);
+  /** Wheel-accumulator state for trackpad horizontal swipes. */
+  const wheelRef = useRef<{ accum: number; lastTs: number }>({ accum: 0, lastTs: 0 });
+  /** Set true on a successful swipe (drag or wheel) commit and reset
+   *  shortly after, so the click event that fires post-mouseup is
+   *  suppressed (so swiping across a clickable row doesn't also toggle
+   *  selection). */
+  const swipeCommittedRef = useRef(false);
+
+  const markCommitted = () => {
+    swipeCommittedRef.current = true;
+    window.setTimeout(() => {
+      swipeCommittedRef.current = false;
+    }, 60);
+  };
+
+  const commitSwipe = useCallback((direction: 1 | -1) => {
+    const i = indexRef.current;
+    const m = maxRef.current;
+    if (direction > 0 && i < m) onIndexChangeRef.current(i + 1);
+    else if (direction < 0 && i > 0) onIndexChangeRef.current(i - 1);
+  }, []);
 
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLDivElement>) => {
-      if (e.key === "ArrowRight" && index < max) {
-        onIndexChange(index + 1);
-      } else if (e.key === "ArrowLeft" && index > 0) {
-        onIndexChange(index - 1);
-      }
+      if (e.key === "ArrowRight") commitSwipe(1);
+      else if (e.key === "ArrowLeft") commitSwipe(-1);
     },
-    [index, max, onIndexChange],
+    [commitSwipe],
   );
 
-  const startDrag = (clientX: number, target: EventTarget | null) => {
-    if (isFormTarget(target)) return;
-    startRef.current = { x: clientX, t: Date.now(), pointerId: null };
+  const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (isTextInput(e.target)) return;
+    if (e.button !== 0) return; // left-click only
+    dragRef.current = { x: e.clientX, t: Date.now() };
     setDragDx(0);
-  };
-  const moveDrag = (clientX: number) => {
-    const s = startRef.current;
-    if (!s) return;
-    setDragDx(clientX - s.x);
-  };
-  const endDrag = (clientX: number) => {
-    const s = startRef.current;
-    startRef.current = null;
-    if (!s) return;
-    const dx = clientX - s.x;
-    const dt = Math.max(1, Date.now() - s.t);
-    const velocity = Math.abs(dx) / dt;
-    setDragDx(0);
-    if (Math.abs(dx) < DRAG_THRESHOLD_PX) return;
-    const shouldSwipe = Math.abs(dx) > SWIPE_DISTANCE_PX || velocity > SWIPE_VELOCITY;
-    if (!shouldSwipe) return;
-    if (dx < 0 && index < max) onIndexChange(index + 1);
-    else if (dx > 0 && index > 0) onIndexChange(index - 1);
   };
 
-  // Mouse
-  const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => startDrag(e.clientX, e.target);
-  const onMouseMove = (e: React.MouseEvent<HTMLDivElement>) => moveDrag(e.clientX);
-  const onMouseUp = (e: React.MouseEvent<HTMLDivElement>) => endDrag(e.clientX);
+  /** Document-level move / up listeners installed once. They consult
+   *  dragRef and only do work when a drag is in progress, so they have
+   *  near-zero cost when idle. Installing here avoids losing the
+   *  mouseup event if the user drags outside the swipe container. */
+  useEffect(() => {
+    const onDocMove = (e: MouseEvent) => {
+      const s = dragRef.current;
+      if (!s) return;
+      setDragDx(e.clientX - s.x);
+    };
+    const onDocUp = (e: MouseEvent) => {
+      const s = dragRef.current;
+      if (!s) return;
+      dragRef.current = null;
+      const dx = e.clientX - s.x;
+      const dt = Math.max(1, Date.now() - s.t);
+      const velocity = Math.abs(dx) / dt;
+      setDragDx(0);
+      if (Math.abs(dx) < DRAG_THRESHOLD_PX) return;
+      const shouldSwipe =
+        Math.abs(dx) > SWIPE_DISTANCE_PX || velocity > SWIPE_VELOCITY;
+      if (!shouldSwipe) return;
+      markCommitted();
+      commitSwipe(dx < 0 ? 1 : -1);
+    };
+    const cancel = () => {
+      dragRef.current = null;
+      setDragDx(0);
+    };
+    document.addEventListener("mousemove", onDocMove);
+    document.addEventListener("mouseup", onDocUp);
+    window.addEventListener("blur", cancel);
+    return () => {
+      document.removeEventListener("mousemove", onDocMove);
+      document.removeEventListener("mouseup", onDocUp);
+      window.removeEventListener("blur", cancel);
+    };
+  }, [commitSwipe]);
 
   // Touch
   const onTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     const t = e.touches[0];
-    if (!t) return;
-    startDrag(t.clientX, e.target);
+    if (!t || isTextInput(e.target)) return;
+    dragRef.current = { x: t.clientX, t: Date.now() };
+    setDragDx(0);
   };
   const onTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
     const t = e.touches[0];
-    if (!t) return;
-    moveDrag(t.clientX);
+    const s = dragRef.current;
+    if (!t || !s) return;
+    setDragDx(t.clientX - s.x);
   };
   const onTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
     const t = e.changedTouches[0];
-    if (!t) return;
-    endDrag(t.clientX);
+    const s = dragRef.current;
+    if (!t || !s) return;
+    dragRef.current = null;
+    const dx = t.clientX - s.x;
+    const dt = Math.max(1, Date.now() - s.t);
+    const velocity = Math.abs(dx) / dt;
+    setDragDx(0);
+    if (Math.abs(dx) < DRAG_THRESHOLD_PX) return;
+    const shouldSwipe =
+      Math.abs(dx) > SWIPE_DISTANCE_PX || velocity > SWIPE_VELOCITY;
+    if (!shouldSwipe) return;
+    markCommitted();
+    commitSwipe(dx < 0 ? 1 : -1);
   };
 
-  // Cancel drag if pointer leaves window mid-drag
-  useEffect(() => {
-    const cancel = () => {
-      startRef.current = null;
-      setDragDx(0);
-    };
-    window.addEventListener("mouseleave", cancel);
-    window.addEventListener("blur", cancel);
-    return () => {
-      window.removeEventListener("mouseleave", cancel);
-      window.removeEventListener("blur", cancel);
-    };
-  }, []);
+  /** Trackpad two-finger horizontal swipe. Browser fires wheel events
+   *  with deltaX (Mac trackpads, Windows precision touchpads). We
+   *  accumulate signed deltaX; when it crosses ±WHEEL_COMMIT_PX we
+   *  switch tabs and zero the accumulator. The accumulator self-resets
+   *  after WHEEL_RESET_MS of idle so consecutive swipes don't merge.
+   *
+   *  Vertical-dominant wheels (text scroll) are ignored. */
+  const onWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (Math.abs(e.deltaX) < Math.abs(e.deltaY)) return;
+    if (Math.abs(e.deltaX) < 1) return;
+    e.preventDefault();
+    const now = Date.now();
+    const state = wheelRef.current;
+    if (now - state.lastTs > WHEEL_RESET_MS) {
+      state.accum = 0;
+    }
+    state.accum += e.deltaX;
+    state.lastTs = now;
+    if (Math.abs(state.accum) >= WHEEL_COMMIT_PX) {
+      const dir: 1 | -1 = state.accum > 0 ? 1 : -1;
+      state.accum = 0;
+      commitSwipe(dir);
+    }
+  };
+
+  // Suppress click events that follow a committed swipe — prevents
+  // swiping across a clickable row from also firing its onClick.
+  const onClickCapture = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (swipeCommittedRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
 
   const translatePct = -index * 100;
   const transform = `translateX(calc(${translatePct}% + ${dragDx}px))`;
@@ -117,11 +206,11 @@ export function DetailTabSwipe({ tabs, index, onIndexChange, onOpenSettings }: P
       tabIndex={0}
       onKeyDown={onKeyDown}
       onMouseDown={onMouseDown}
-      onMouseMove={onMouseMove}
-      onMouseUp={onMouseUp}
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
+      onWheel={onWheel}
+      onClickCapture={onClickCapture}
     >
       <div className="detail-tab-track" style={{ transform }}>
         {tabs.map((t) => (
@@ -130,12 +219,20 @@ export function DetailTabSwipe({ tabs, index, onIndexChange, onOpenSettings }: P
           </div>
         ))}
       </div>
-      <DetailTabFooter
-        tabs={tabs}
-        index={index}
-        onIndexChange={onIndexChange}
-        onOpenSettings={onOpenSettings}
-      />
+      {/* Floating indicator — sits over whichever tab's footer is showing,
+       *  centered horizontally near the bottom edge. Clickable for direct
+       *  tab jumps. */}
+      <div className="detail-tab-indicator" aria-hidden={false}>
+        {tabs.map((t, i) => (
+          <button
+            type="button"
+            key={t.id}
+            className={`detail-tab-dot ${i === index ? "active" : ""}`}
+            onClick={() => onIndexChange(i)}
+            aria-label={`切换到 ${t.label}`}
+          />
+        ))}
+      </div>
     </div>
   );
 }
