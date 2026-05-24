@@ -57,6 +57,12 @@ interface DetailViewState {
   clearOverlayDates(): void;
   toggleTrade(tradeId: string, side: "BUY" | "SELL"): void;
   clearSelection(): void;
+
+  /** Active tab in the bottom detail-pane container:
+   *  0 = trade records, 1 = trading panel, 2 = alerts.
+   *  Persists across ticker switches; resets to 0 on selectSymbol(null). */
+  tabIndex: 0 | 1 | 2;
+  setTabIndex(idx: 0 | 1 | 2): void;
 }
 
 /** Max overlay slots — matches the user-visible "最多同时显示5个" cap. */
@@ -74,6 +80,7 @@ export const useDetailViewStore = create<DetailViewState>((set) => ({
   overlayDates: [],
   selectedBuys: new Set(),
   selectedSells: new Set(),
+  tabIndex: 0,
 
   selectSymbol: (symbol) =>
     set({
@@ -81,6 +88,7 @@ export const useDetailViewStore = create<DetailViewState>((set) => ({
       activePairId: null,
       selectedBuys: new Set(),
       selectedSells: new Set(),
+      tabIndex: 0,
     }),
   setActivePair: (id) => set({ activePairId: id }),
   setShowAllPairs: (v) => set({ showAllPairs: v }),
@@ -114,4 +122,5 @@ export const useDetailViewStore = create<DetailViewState>((set) => ({
     }),
   clearSelection: () =>
     set({ selectedBuys: new Set(), selectedSells: new Set() }),
+  setTabIndex: (idx) => set({ tabIndex: idx }),
 }));

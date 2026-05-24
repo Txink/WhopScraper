@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { configureHttp, api, HttpError } from "./api/http";
 import { createWsClient } from "./api/ws";
+import { handleOrderChanged, handleAlertChanged, handleAlertTriggered } from "./api/wsHandlers";
 import { useConnStore } from "./stores/conn";
 import { useTasksStore, selectTasksByUrl } from "./stores/tasks";
 import { useStatsStore } from "./stores/stats";
@@ -224,6 +225,12 @@ function Dashboard({ token }: { token: string }) {
               void store.fetchCounts(p.page_id, month);
             }
           }
+        } else if (evt.type === "order.changed") {
+          handleOrderChanged(evt);
+        } else if (evt.type === "alert.changed") {
+          handleAlertChanged(evt);
+        } else if (evt.type === "alert.triggered") {
+          handleAlertTriggered(evt);
         } else {
           applyWs(evt);
         }
