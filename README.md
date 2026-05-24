@@ -201,6 +201,185 @@ cp .env.example .env
 
 **最小可跑配置**（其他全用默认值）：
 
+<<<<<<< Updated upstream
+=======
+
+## 长桥OpenAPI 配置
+
+[https://open.longbridge.com/zh-CN/](https://open.longbridge.com/zh-CN/)
+
+![](./images/longport_1.png)
+
+登录后，就可以看到自己的AppKey，AppSecret，AccessToken
+> 注意：如果期望通过API完成下单操作，需要购买对应的OpenAPI行情 
+
+![](./images/longport_2.png)
+
+
+```bash
+# 长桥账户相关配置
+# 账户模式
+LONGPORT_MODE=paper            # paper=模拟账户, real=真实账户
+# API 凭据（模拟账户）
+LONGPORT_PAPER_APP_KEY=xxxx
+LONGPORT_PAPER_APP_SECRET=xxxx
+LONGPORT_PAPER_ACCESS_TOKEN=xxxx
+# API 凭据（真实账户）
+LONGPORT_REAL_APP_KEY=xxxx
+LONGPORT_REAL_APP_SECRET=xxxx
+LONGPORT_REAL_ACCESS_TOKEN=xxxx
+# 交易模式
+LONGPORT_AUTO_TRADE=true      # 是否启用自动交易
+LONGPORT_DRY_RUN=false          # 是否启用模拟模式（不实际下单）
+
+```
+
+```bash
+# 与TG通信配置，目前我只是跑通了链路，自己并没有使用
+
+# 是否启用 Telegram 确认：开启后，解析到交易指令会发到 Telegram Bot，带「确认/取消」按钮，
+# 只有在 App 里点击确认后才会调用 longport 下单
+# 默认值: false
+TELEGRAM_ENABLED=false
+
+# Telegram Bot Token（从 @BotFather 创建 Bot 后获得）
+TELEGRAM_BOT_TOKEN=xxxx:xxxx
+
+# 接收消息的 Chat ID（与 Bot 对话后，可从 getUpdates 或 @userinfobot 等获取）
+TELEGRAM_CHAT_ID=xxxx
+```
+
+## 抓取Cookie
+```bash
+# 需要抓取网页的cookie，获取登录态，后续可直接监听，不用登录
+# 执行后会自动打开网页，登录完毕在命令行回车即可
+# Cookie 默认保存在 .auth/whop_cookie.json
+python3 whop/whop_login.py
+```
+
+## 启动系统
+```bash
+python3 main.py
+```
+
+## 开发者指南
+
+### 导出页面消息（自动滚动抓取）
+
+全屏打开浏览器，自动滚动消息区以加载历史，抓取后按 domID 去重导出为 JSON。
+
+```bash
+python3 scripts/scraper/export_page_message.py [--type stock|option] [--output PATH] [--url URL]
+```
+
+| 参数 | 说明 | 默认值 |
+|------|------|--------|
+| `--type` | 页面类型：`stock` 正股、`option` 期权 | `stock` |
+| `--output` | 消息导出路径 | `tmp/<type>/origin_message.json` |
+| `--url` | 目标页面 URL；不传则从 `.env` 的 `PAGES` 中按 `--type` 取首个 | - |
+
+示例：
+```bash
+# 正股页消息导出到默认路径 tmp/stock/origin_message.json
+python3 scripts/scraper/export_page_message.py
+
+# 期权页消息导出到指定路径
+python3 scripts/scraper/export_page_message.py --type option --output tmp/option/origin_message.json
+
+# 指定 URL（可直接复制 .env 中 PAGES 的 url）
+python3 scripts/scraper/export_page_message.py --type stock --url "https://whop.com/joined/stock-and-option/-GiWyN1ZTuUjwlG/app/"
+python3 scripts/scraper/export_page_message.py --type option --url "https://whop.com/joined/stock-and-option/-gZyq1MzOZAWO98/app/"
+```
+
+### 导出页面 HTML
+
+打开目标页面，将当前 DOM 的 HTML 导出到本地文件（用于分析页面结构或调试滚动逻辑）。
+
+```bash
+python3 scripts/scraper/export_page_html.py [--type stock|option] [--output PATH] [--url URL]
+```
+
+| 参数 | 说明 | 默认值 |
+|------|------|--------|
+| `--type` | 页面类型：`stock` 正股、`option` 期权 | `stock` |
+| `--output` | HTML 导出路径 | `tmp/<type>/page_html.html` |
+| `--url` | 目标页面 URL；不传则从 `.env` 的 `PAGES` 中按 `--type` 取首个 | - |
+
+示例：
+```bash
+# 正股页 HTML 导出到默认路径 tmp/stock/page_html.html
+python3 scripts/scraper/export_page_html.py
+
+# 期权页 HTML 导出到指定路径
+python3 scripts/scraper/export_page_html.py --type option --output tmp/option/page_html.html
+
+# 指定 URL（可直接复制 .env 中 PAGES 的 url）
+python3 scripts/scraper/export_page_html.py --type stock --url "https://whop.com/joined/stock-and-option/-GiWyN1ZTuUjwlG/app/"
+python3 scripts/scraper/export_page_html.py --type option --url "https://whop.com/joined/stock-and-option/-gZyq1MzOZAWO98/app/"
+```
+
+### 按股票过滤消息
+
+从原始消息 JSON 中筛出**仅在本条 content 中提及指定股票**的消息，导出到 `tmp/stock/origin_<TICKER>_message.json`（不按 history 匹配）。
+
+```bash
+python3 scripts/parser/filter_target_stock.py TICKER [--input PATH] [--output PATH]
+```
+
+| 参数 | 说明 | 默认值 |
+|------|------|--------|
+| `TICKER` | 股票代码（必填） | - |
+| `--input` | 原始消息 JSON 路径 | `tmp/stock/origin_message.json` |
+| `--output` | 导出路径 | `tmp/stock/origin_<TICKER>_message.json` |
+
+示例：
+```bash
+# 过滤出 content 中提到 TSLL 的消息，导出到 tmp/stock/origin_TSLL_message.json
+python3 scripts/parser/filter_target_stock.py tsll
+
+# 指定输入与输出路径
+python3 scripts/parser/filter_target_stock.py HIMS --input data/stock_origin_message.json --output tmp/stock/origin_HIMS_message.json
+```
+
+### 股票做T情况分析
+
+分析单只股票的买卖记录，识别哪些买入成本尚未通过当日 T 交易消除；结果以表格形式输出到终端（未 T 出的买入仓位、已完成 T 交易、超额卖出、汇总）。
+
+**数据来源**：不指定 `--file` 时从长桥 API 拉取该股票最近 N 天已成交订单（含当日已成交）；指定 `--file` 时从本地 JSON 读取。
+
+**匹配策略**：卖单在「买入价 < 卖价」的批次中按**买入价从高到低**匹配，优先消掉高成本仓位。
+
+```bash
+python3 scripts/analysis/t_trade_analysis.py [TICKER] [--file PATH] [--days N]
+```
+
+| 参数 | 说明 | 默认值 |
+|------|------|--------|
+| `TICKER` | 股票代码（如 TSLL，不含 .US） | `TSLL` |
+| `--file` | 交易记录 JSON 路径 | 不指定则走长桥 API |
+| `--days` | API 拉取最近天数（仅在不使用 `--file` 时生效） | `90` |
+
+示例：
+```bash
+# 从长桥 API 拉取 TSLL 最近 90 天（含当日）并分析
+python3 scripts/analysis/t_trade_analysis.py TSLL
+
+# 拉取最近 60 天
+python3 scripts/analysis/t_trade_analysis.py TSLL --days 60
+
+# 从本地文件分析
+python3 scripts/analysis/t_trade_analysis.py TSLL --file data/stock_trade_records.json
+```
+
+## 文档索引
+
+- [股票页监控与关注列表](docs/stock_monitoring.md) — 正股页面监控、关注股票列表、消息抓取脚本
+- [SPY 期权大单实时监听](docs/spy_options_flow.md) — Polygon 期权成交流、大单过滤与趋势参考
+
+### 配置分类
+
+#### Whop 平台配置
+>>>>>>> Stashed changes
 ```env
 # 必填：前端登录 + REST/WS token（随便 32 字符随机串）
 APP_TOKEN=put-your-32-char-secret-here
@@ -524,6 +703,22 @@ cd frontend && npm run gen:types
 | PATCH | `/api/whop/pages/{id}/settings` | 更新该 page 的设置（dedupe / tolerance / tickers） |
 | GET | `/api/whop/pages/defaults?source=stock\|option` | 获取该 source 的默认 PageSettings（前端新建表单用） |
 | GET | `/api/whop/cookie` | Cookie 文件状态（exists / age_seconds / mtime） |
+
+### 手动下单 + 告警
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | /api/orders | 手动下单 |
+| PATCH | /api/orders/{id} | 改单 (LongPort replace_order) |
+| DELETE | /api/orders/{id} | 撤单 |
+| GET | /api/orders?ticker= | 当日订单（含 LongPort app 端下单） |
+| GET | /api/alerts?ticker= | 列出告警 |
+| POST | /api/alerts | 创建告警 |
+| PATCH | /api/alerts/{id} | 修改 / 启用切换 |
+| DELETE | /api/alerts/{id} | 删除 |
+| GET | /api/alerts/events?ticker=&limit= | 触发历史 |
+
+WS 事件新增：`order.changed`、`alert.triggered`、`alert.changed`
 
 ### WebSocket
 
