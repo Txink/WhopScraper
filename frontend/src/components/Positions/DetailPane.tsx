@@ -18,6 +18,9 @@ import {
 import { PairDetailModal } from "./PairDetailModal";
 import { TradeList, type TradeListFilter } from "./TradeList";
 import { ConfirmModal } from "./ConfirmModal";
+import { DetailTabSwipe, type TabDef } from "./DetailTabSwipe";
+import { TradingPanel } from "./TradingPanel/TradingPanel";
+import { AlertsPanel } from "./AlertsPanel/AlertsPanel";
 import { findBarForTrade, buildDayBoundaries } from "./tradeToBar";
 
 interface PendingConfirm {
@@ -361,6 +364,8 @@ export function DetailPane({ position, onBack }: Props) {
   const setDayKGranularity = useDetailViewStore((s) => s.setDayKGranularity);
   const overlayDates = useDetailViewStore((s) => s.overlayDates);
   const toggleOverlayDate = useDetailViewStore((s) => s.toggleOverlayDate);
+  const tabIndex = useDetailViewStore((s) => s.tabIndex);
+  const setTabIndex = useDetailViewStore((s) => s.setTabIndex);
   // Shared between the head's legend (date + price) and the overlay
   // chart so both render off the same cached fetch.
   const overlayBars = useOverlayBars(symbol, overlayDates);
@@ -909,23 +914,37 @@ export function DetailPane({ position, onBack }: Props) {
         </div>
       </div>
 
-      <TradeList
-        trades={trades}
-        pairs={isOption ? [] : pairs}
-        ticker={ticker}
-        lastSyncedAt={lastSyncedAt}
-        disableBinding={isOption}
-        totalCount={tradesTotal}
-        loading={tradesLoading}
-        onRequestMore={loadMoreTrades}
-        onConfirmBind={onConfirmBind}
-        onExtendPair={onExtendPair}
-        filter={tradeFilter}
-        onFilterChange={setTradeFilter}
-        onClearAllPairs={onClearAllPairs}
-        onSyncRecentTrades={onSyncRecentTrades}
-        onRefetchTrades={onRefetchTrades}
-        onClearAllTrades={onClearAllTrades}
+      <DetailTabSwipe
+        tabs={[
+          {
+            id: "records",
+            label: "交易记录",
+            content: (
+              <TradeList
+                trades={trades}
+                pairs={isOption ? [] : pairs}
+                ticker={ticker}
+                lastSyncedAt={lastSyncedAt}
+                disableBinding={isOption}
+                totalCount={tradesTotal}
+                loading={tradesLoading}
+                onRequestMore={loadMoreTrades}
+                onConfirmBind={onConfirmBind}
+                onExtendPair={onExtendPair}
+                filter={tradeFilter}
+                onFilterChange={setTradeFilter}
+                onClearAllPairs={onClearAllPairs}
+                onSyncRecentTrades={onSyncRecentTrades}
+                onRefetchTrades={onRefetchTrades}
+                onClearAllTrades={onClearAllTrades}
+              />
+            ),
+          },
+          { id: "trading", label: "交易面板", content: <TradingPanel ticker={ticker} symbol={symbol} /> },
+          { id: "alerts",  label: "告警",     content: <AlertsPanel ticker={ticker} symbol={symbol} /> },
+        ] satisfies TabDef[]}
+        index={tabIndex}
+        onIndexChange={(i) => setTabIndex(i as 0 | 1 | 2)}
       />
 
       {/* Clicking a T-N chip on a trade row sets activePairId in the
