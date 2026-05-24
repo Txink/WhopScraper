@@ -11,28 +11,28 @@ interface Props {
   onMore: () => void;
 }
 
-/** Two-row quick-order form:
+/** Single-row LIMIT-only quick-order form:
  *
- *   ┌──────────────┬──────────────┬────────────────────────────────────┐
- *   │  BUY  SELL   │ 价：[___]    │                                    │
- *   │ LIMIT MARKET │ 数：[___] ▾  │  总价 $X   提交   更多 ▾  (center) │
- *   └──────────────┴──────────────┴────────────────────────────────────┘
+ *   [BUY  SELL]   价 [___]   数 [___]▾   总价 $X   提交   更多 ▾
  *
- * Active BUY/SELL + LIMIT/MARKET fill with the brand color (project
- * theme), not buy-green / sell-red. Submit is always primary-themed
- * (filled light-green background) regardless of side. */
+ * Active BUY/SELL fills with the brand color (project theme), not
+ * buy-green / sell-red. Submit is always primary-themed (filled
+ * light-green background) regardless of side. MARKET + advanced
+ * options live in the FullOrderModal (更多 ▾). */
 export function QuickOrderRow({ symbol, presets, lastDone, onSubmit, onMore }: Props) {
   const [side, setSide] = useState<"BUY" | "SELL">("BUY");
-  const [orderType, setOrderType] = useState<"LIMIT" | "MARKET">("LIMIT");
+  // Quick-order is LIMIT-only by design — MARKET (and other advanced
+  // order types / TIFs) live in the FullOrderModal.
+  const orderType = "LIMIT" as const;
   const [price, setPrice] = useState<string>(lastDone != null ? lastDone.toFixed(2) : "");
   const [qty, setQty] = useState<string>(String(presets.regular));
   const [presetsOpen, setPresetsOpen] = useState(false);
   const qtyMenuRef = useRef<HTMLDivElement | null>(null);
 
-  // Sync price input with the live quote when in LIMIT mode.
+  // Sync price input with the live quote.
   useEffect(() => {
-    if (orderType === "LIMIT" && lastDone != null) setPrice(lastDone.toFixed(2));
-  }, [lastDone, orderType]);
+    if (lastDone != null) setPrice(lastDone.toFixed(2));
+  }, [lastDone]);
 
   // Outside-click closes the qty preset menu.
   useEffect(() => {
@@ -47,10 +47,9 @@ export function QuickOrderRow({ symbol, presets, lastDone, onSubmit, onMore }: P
   }, [presetsOpen]);
 
   const submit = () => {
-    const p = orderType === "LIMIT" ? parseFloat(price) : null;
+    const p = parseFloat(price);
     const q = parseInt(qty, 10);
-    if (!q || q <= 0) return;
-    if (orderType === "LIMIT" && (!p || p <= 0)) return;
+    if (!q || q <= 0 || !p || p <= 0) return;
     onSubmit({
       symbol, side, order_type: orderType, price: p, qty: q,
       time_in_force: "Day", note: null,
@@ -58,7 +57,7 @@ export function QuickOrderRow({ symbol, presets, lastDone, onSubmit, onMore }: P
   };
 
   const totalStr = (() => {
-    const p = orderType === "LIMIT" ? parseFloat(price) : (lastDone ?? 0);
+    const p = parseFloat(price);
     const q = parseInt(qty, 10) || 0;
     return p && q
       ? `$${(p * q).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -68,87 +67,66 @@ export function QuickOrderRow({ symbol, presets, lastDone, onSubmit, onMore }: P
   const canSubmit = (() => {
     const q = parseInt(qty, 10);
     if (!q || q <= 0) return false;
-    if (orderType === "MARKET") return true;
     const p = parseFloat(price);
     return !!(p && p > 0);
   })();
 
   return (
     <div className="quick-order">
-      {/* Column 1 — stacked toggles */}
-      <div className="qo-toggles">
-        <div className="qo-seg">
+      <div className="qo-seg">
+        <button
+          type="button"
+          className={`qo-seg-btn ${side === "BUY" ? "active" : ""}`}
+          onClick={() => setSide("BUY")}
+        >BUY</button>
+        <button
+          type="button"
+          className={`qo-seg-btn ${side === "SELL" ? "active" : ""}`}
+          onClick={() => setSide("SELL")}
+        >SELL</button>
+      </div>
+
+      <div className="qo-field">
+        <span className="qo-k">价</span>
+        <input
+          aria-label="价"
+          className="qo-input"
+          type="text"
+          value={price}
+          onChange={(e) => setPrice(e.target.value)}
+        />
+      </div>
+
+      <div className="qo-field">
+        <span className="qo-k">数</span>
+        <input
+          aria-label="数"
+          className="qo-input qo-input-qty"
+          type="text"
+          value={qty}
+          onChange={(e) => setQty(e.target.value)}
+        />
+        <div className="qo-qty-menu-wrap" ref={qtyMenuRef}>
           <button
             type="button"
-            className={`qo-seg-btn ${side === "BUY" ? "active" : ""}`}
-            onClick={() => setSide("BUY")}
-          >BUY</button>
-          <button
-            type="button"
-            className={`qo-seg-btn ${side === "SELL" ? "active" : ""}`}
-            onClick={() => setSide("SELL")}
-          >SELL</button>
-        </div>
-        <div className="qo-seg">
-          <button
-            type="button"
-            className={`qo-seg-btn ${orderType === "LIMIT" ? "active" : ""}`}
-            onClick={() => setOrderType("LIMIT")}
-          >LIMIT</button>
-          <button
-            type="button"
-            className={`qo-seg-btn ${orderType === "MARKET" ? "active" : ""}`}
-            onClick={() => setOrderType("MARKET")}
-          >MARKET</button>
+            className="qo-qty-caret"
+            aria-label="数量预设"
+            onClick={() => setPresetsOpen((o) => !o)}
+          >
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+          {presetsOpen && (
+            <div className="qo-qty-menu" role="menu">
+              <button type="button" onClick={() => { setQty(String(presets.regular)); setPresetsOpen(false); }}>常规 {presets.regular}</button>
+              <button type="button" onClick={() => { setQty(String(presets.half)); setPresetsOpen(false); }}>半仓 {presets.half}</button>
+              <button type="button" onClick={() => { setQty(String(presets.third)); setPresetsOpen(false); }}>1/3 {presets.third}</button>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Column 2 — labeled inputs */}
-      <div className="qo-fields">
-        <div className="qo-field">
-          <span className="qo-k">价</span>
-          <input
-            aria-label="价"
-            className="qo-input"
-            type="text"
-            value={price}
-            disabled={orderType === "MARKET"}
-            onChange={(e) => setPrice(e.target.value)}
-            placeholder={orderType === "MARKET" ? "市价" : ""}
-          />
-        </div>
-        <div className="qo-field">
-          <span className="qo-k">数</span>
-          <input
-            aria-label="数"
-            className="qo-input qo-input-qty"
-            type="text"
-            value={qty}
-            onChange={(e) => setQty(e.target.value)}
-          />
-          <div className="qo-qty-menu-wrap" ref={qtyMenuRef}>
-            <button
-              type="button"
-              className="qo-qty-caret"
-              aria-label="数量预设"
-              onClick={() => setPresetsOpen((o) => !o)}
-            >
-              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-            </button>
-            {presetsOpen && (
-              <div className="qo-qty-menu" role="menu">
-                <button type="button" onClick={() => { setQty(String(presets.regular)); setPresetsOpen(false); }}>常规 {presets.regular}</button>
-                <button type="button" onClick={() => { setQty(String(presets.half)); setPresetsOpen(false); }}>半仓 {presets.half}</button>
-                <button type="button" onClick={() => { setQty(String(presets.third)); setPresetsOpen(false); }}>1/3 {presets.third}</button>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Column 3 — centered action group */}
       <div className="qo-actions">
         <span className="qo-total">
           <span className="qo-total-k">总价</span>

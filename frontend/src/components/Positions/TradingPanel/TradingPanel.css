@@ -101,34 +101,17 @@ table.tbl .num { text-align: right; }
 .row-btn.danger:hover { color: var(--err); border-color: var(--err); }
 .row-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
-/* ─── Quick order — 2-row × 3-col grid ───
- *   col 1: stacked toggles (BUY/SELL, LIMIT/MARKET)
- *   col 2: 价 input (row 1), 数 input + ▾ (row 2)
- *   col 3: action group (总价 + 提交 + 更多), centered, only on row 2
- */
+/* ─── Quick order — single LIMIT-only row ───
+ *   [BUY/SELL] 价[___] 数[___]▾   总价 $X   提交   更多▾
+ * The action group on the right is right-aligned via margin-left:auto. */
 .quick-order {
   background: var(--bg-3);
   border-top: 1px solid var(--line);
   padding: 8px 14px;
-  display: grid;
-  grid-template-columns: auto auto 1fr;
-  grid-template-rows: auto auto;
-  align-items: center;
-  column-gap: 18px;
-  row-gap: 6px;
-  flex-shrink: 0;
-}
-
-.qo-toggles {
-  grid-column: 1;
-  grid-row: 1 / span 2;
   display: flex;
-  flex-direction: column;
-  /* Keep each row at its content width — without this the flex
-   * default ``stretch`` would size the BUY/SELL row to match the
-   * wider LIMIT/MARKET row, padding extra whitespace after SELL. */
-  align-items: flex-start;
-  gap: 4px;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
 }
 
 .qo-seg {
@@ -157,13 +140,6 @@ table.tbl .num { text-align: right; }
   background: var(--brand);
 }
 
-.qo-fields {
-  grid-column: 2;
-  grid-row: 1 / span 2;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
 .qo-field {
   display: inline-flex;
   align-items: center;
@@ -232,13 +208,11 @@ table.tbl .num { text-align: right; }
 }
 .qo-qty-menu button:hover { background: var(--bg-hover); color: var(--fg-1); }
 
-/* Centered action group sits on row 2, column 3. */
+/* Action group floats to the right edge via margin-left:auto. */
 .qo-actions {
-  grid-column: 3;
-  grid-row: 2;
+  margin-left: auto;
   display: inline-flex;
   align-items: center;
-  justify-self: center;
   gap: 14px;
 }
 
@@ -260,11 +234,15 @@ table.tbl .num { text-align: right; }
   font-weight: 500;
 }
 
+/* Submit — solid light-green fill regardless of buy/sell side. Uses
+ * a mixed pastel of --up against the panel background so it reads as
+ * a clearly distinct "go" affordance (vs the very subtle --up-soft
+ * tint, which faded into the row). */
 .qo-submit {
-  background: var(--up-soft);
-  color: var(--up);
-  border: 1px solid color-mix(in srgb, var(--up) 35%, transparent);
-  padding: 5px 18px;
+  background: color-mix(in srgb, var(--up) 45%, var(--bg-2));
+  color: #062a17;
+  border: 1px solid color-mix(in srgb, var(--up) 60%, transparent);
+  padding: 5px 22px;
   border-radius: var(--radius-chip);
   font-weight: 600;
   font-size: 12px;
@@ -274,7 +252,7 @@ table.tbl .num { text-align: right; }
   transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
 }
 .qo-submit:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--up) 28%, transparent);
+  background: color-mix(in srgb, var(--up) 65%, var(--bg-2));
 }
 .qo-submit:disabled {
   opacity: 0.4;

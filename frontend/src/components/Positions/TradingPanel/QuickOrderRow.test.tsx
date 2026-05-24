@@ -4,10 +4,12 @@ import userEvent from "@testing-library/user-event";
 import { QuickOrderRow } from "./QuickOrderRow";
 
 describe("QuickOrderRow", () => {
-  it("toggling MARKET disables price input", async () => {
+  it("price input stays enabled — quick-order is LIMIT-only", () => {
+    // MARKET / advanced order types live in the FullOrderModal; the
+    // quick-order row only emits LIMIT orders, so the price input
+    // is always editable.
     render(<QuickOrderRow symbol="AAPL.US" ticker="AAPL" presets={{ regular: 200, half: 100, third: 67 }} lastDone={199.0} onSubmit={() => {}} onMore={() => {}} />);
-    await userEvent.click(screen.getByRole("button", { name: "MARKET" }));
-    expect(screen.getByLabelText("价")).toBeDisabled();
+    expect(screen.getByLabelText("价")).not.toBeDisabled();
   });
 
   it("submit calls onSubmit with form state", async () => {
