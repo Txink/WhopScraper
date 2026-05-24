@@ -246,7 +246,7 @@ table.tbl .num { text-align: right; }
  * tint, which faded into the row). */
 .qo-submit {
   background: color-mix(in srgb, var(--up-color) 45%, var(--bg-2));
-  color: #062a17;
+  color: #fff;
   border: 1px solid color-mix(in srgb, var(--up-color) 60%, transparent);
   padding: 5px 22px;
   border-radius: var(--radius-chip);
