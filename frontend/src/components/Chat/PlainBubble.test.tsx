@@ -1,7 +1,18 @@
 import "@testing-library/jest-dom/vitest";
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { configureHttp, __resetForTests } from "../../api/http";
 import { PlainBubble } from "./PlainBubble";
+
+// PlainBubble's image branch calls authedAssetUrl(), which reads the
+// module-level HTTP config. Configure once for the whole file so any
+// describe that exercises imageUrl has a valid baseUrl/token to read.
+beforeAll(() => {
+  configureHttp({ baseUrl: "http://localhost:8000", token: "test-token" });
+});
+afterAll(() => {
+  __resetForTests();
+});
 
 describe("PlainBubble", () => {
   it("short · plain text", () => {
@@ -36,7 +47,12 @@ describe("PlainBubble image rendering", () => {
     );
     const img = container.querySelector("img");
     expect(img).not.toBeNull();
-    expect(img).toHaveAttribute("src", "/api/chat-images/abc");
+    // authedAssetUrl resolves the relative path against the configured
+    // baseUrl and appends ``token=…`` so <img> requests carry auth.
+    expect(img).toHaveAttribute(
+      "src",
+      "http://localhost:8000/api/chat-images/abc?token=test-token",
+    );
     expect(screen.getByText("caption")).toBeInTheDocument();
   });
 
