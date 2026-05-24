@@ -57,4 +57,6 @@ export const alertsApi = {
   create: (body: AlertCreate) => createAlert(body),
   update: (alertId: number, body: AlertUpdate) => updateAlert(alertId, body),
   remove: (alertId: number) => deleteAlert(alertId),
+  events: (opts: { limit?: number; offset?: number } = {}) =>
+    listAlertEvents(undefined, opts),
 };

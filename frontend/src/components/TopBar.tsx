@@ -1,6 +1,7 @@
 import { useState } from "react";
 import "./TopBar.css";
 import { useViewStore } from "../stores/view";
+import { AlertBell } from "./AlertNotifications/AlertBell";
 
 export interface TopBarProps {
   connLongport: "up" | "down" | "unknown";
@@ -92,6 +93,7 @@ export function TopBar({
 
       {/* Right cluster: conn indicators + account pill */}
       <div className="topbar-right">
+        <AlertBell />
         <div className="conn-group">
           <button
             type="button"
