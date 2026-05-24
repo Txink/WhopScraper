@@ -340,7 +340,10 @@ def test_whop_endpoints_absent_when_no_registry(
     settings_test: Settings,
 ) -> None:
     """When build_http_router has no whop_registry, whop endpoints are not registered."""
-    # We need a minimal session factory for the non-whop router
+    # We need a minimal session factory for the non-whop router.
+    # ``asyncio.get_event_loop()`` raises in Python 3.10+ once any prior
+    # event loop has been closed (which happens after every pytest-asyncio
+    # test), making this test order-dependent. Use a fresh loop instead.
     import asyncio
 
     from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -354,7 +357,11 @@ def test_whop_endpoints_absent_when_no_registry(
             await conn.run_sync(Base.metadata.create_all)
         return async_sessionmaker(engine, expire_on_commit=False)
 
-    sf = asyncio.get_event_loop().run_until_complete(_build())
+    loop = asyncio.new_event_loop()
+    try:
+        sf = loop.run_until_complete(_build())
+    finally:
+        loop.close()
 
     broker = FakeBrokerClient()
     app = FastAPI()
