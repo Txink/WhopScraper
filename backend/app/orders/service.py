@@ -28,7 +28,7 @@ SessionFactory = Callable[[], AsyncSession]
 
 
 def _start_of_today_utc() -> datetime:
-    return datetime.combine(datetime.now(timezone.utc).date(), time.min, tzinfo=timezone.utc)
+    return datetime.combine(datetime.now(UTC).date(), time.min, tzinfo=UTC)
 
 
 class OrderImmutable(RuntimeError):
