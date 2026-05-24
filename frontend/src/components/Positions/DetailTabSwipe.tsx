@@ -22,9 +22,10 @@ const SWIPE_VELOCITY = 0.4;  // px/ms
  *  switch. Tuned so a deliberate two-finger swipe lands the next tab
  *  while inertia from vertical scrolling on a busy page doesn't drift it. */
 const WHEEL_COMMIT_PX = 60;
-/** Idle gap after which the wheel accumulator resets — separates one
- *  swipe from the next so two quick gestures don't merge. */
-const WHEEL_RESET_MS = 200;
+/** Once a swipe has committed, the lock releases as soon as the wheel
+ *  signal drops below this many pixels — i.e. the gesture has tapered
+ *  toward zero (the natural end of any trackpad swipe / inertia tail). */
+const WHEEL_TAPER_PX = 3;
 
 /** Block drag-start only on text-entry elements where horizontal mouse
  *  movement should belong to caret/selection. Buttons and other
@@ -57,13 +58,12 @@ export function DetailTabSwipe({ tabs, index, onIndexChange }: Props) {
    *  stranding the state. */
   const dragRef = useRef<{ x: number; t: number } | null>(null);
   /** Wheel-accumulator state for trackpad horizontal swipes.
-   *  ``locked`` flips true on commit and only clears when the wheel
-   *  stream goes idle for ``WHEEL_RESET_MS`` — that's how we make
-   *  one continuous trackpad gesture move at most one tab, even when
-   *  the OS emits inertial wheel events well past the commit point. */
-  const wheelRef = useRef<{ accum: number; lastTs: number; locked: boolean }>({
+   *  ``locked`` flips true on commit; we unlock based on the wheel
+   *  signal itself (direction reversal or magnitude tapering to zero)
+   *  rather than a wall-clock idle gap, so a gesture's natural end
+   *  releases the lock and the next swipe can begin immediately. */
+  const wheelRef = useRef<{ accum: number; locked: boolean }>({
     accum: 0,
-    lastTs: 0,
     locked: false,
   });
   /** Set true on a successful swipe (drag or wheel) commit and reset
@@ -172,34 +172,53 @@ export function DetailTabSwipe({ tabs, index, onIndexChange }: Props) {
 
   /** Trackpad two-finger horizontal swipe. Browser fires wheel events
    *  with deltaX (Mac trackpads, Windows precision touchpads). One
-   *  user gesture produces a long burst of wheel events (with inertia
-   *  tail). We commit AT MOST one tab change per burst:
+   *  user gesture produces a long burst of wheel events — typically
+   *  acceleration → peak → deceleration → inertia tail → near zero.
+   *  We commit AT MOST one tab change per gesture by reading the
+   *  signal shape:
    *
-   *  - Accumulate signed deltaX while idle gap < WHEEL_RESET_MS.
-   *  - On crossing ±WHEEL_COMMIT_PX, switch tabs and LOCK; further
-   *    wheel events are still swallowed (preventDefault) but ignored
-   *    for commit purposes until the burst goes idle.
-   *  - After WHEEL_RESET_MS of no wheel events, unlock + reset
-   *    accumulator so the next gesture starts fresh.
-   *
-   *  Vertical-dominant wheels (text scroll) are ignored. */
+   *  - Vertical-dominant wheels are ignored (text scroll).
+   *  - Direction reversal mid-stream = the user reversed the swipe,
+   *    so reset and start fresh (also clears any commit-lock).
+   *  - Once accumulated |deltaX| crosses WHEEL_COMMIT_PX, switch tabs
+   *    and LOCK. Subsequent events are still swallowed
+   *    (preventDefault) but don't trigger another commit.
+   *  - Lock releases when |deltaX| drops below WHEEL_TAPER_PX —
+   *    every real trackpad gesture's signal tapers to zero before
+   *    the next one begins, so this is gesture-end without any
+   *    wall-clock timer.
+   */
   const onWheel = (e: React.WheelEvent<HTMLDivElement>) => {
     if (Math.abs(e.deltaX) < Math.abs(e.deltaY)) return;
-    if (Math.abs(e.deltaX) < 1) return;
     e.preventDefault();
-    const now = Date.now();
     const state = wheelRef.current;
-    if (now - state.lastTs > WHEEL_RESET_MS) {
+    const absDx = Math.abs(e.deltaX);
+
+    // Tapering toward zero = current gesture is ending. Release the
+    // lock so the next gesture can begin immediately on its first
+    // significant event.
+    if (absDx < WHEEL_TAPER_PX) {
+      state.locked = false;
+      state.accum = 0;
+      return;
+    }
+
+    // Direction reversal mid-stream — new gesture; clear accumulator
+    // and lock so the reversed swipe can commit on its own threshold.
+    if (state.accum !== 0 && Math.sign(e.deltaX) !== Math.sign(state.accum)) {
       state.accum = 0;
       state.locked = false;
     }
-    state.lastTs = now;
+
     if (state.locked) return;
+
     state.accum += e.deltaX;
     if (Math.abs(state.accum) >= WHEEL_COMMIT_PX) {
       const dir: 1 | -1 = state.accum > 0 ? 1 : -1;
-      state.accum = 0;
       state.locked = true;
+      // Intentionally do NOT reset accum here — keeping its sign lets
+      // the direction-reversal check above fire if the user reverses
+      // before the gesture has had a chance to taper to zero.
       commitSwipe(dir);
     }
   };

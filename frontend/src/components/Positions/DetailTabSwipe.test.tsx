@@ -108,19 +108,66 @@ describe("DetailTabSwipe", () => {
   });
 
   it("a single trackpad gesture commits at most one tab change", () => {
-    // Without lock-on-commit, a long horizontal burst (e.g. one
-    // forceful two-finger swipe + macOS inertia) would re-accumulate
-    // past the threshold multiple times and chain-skip multiple tabs.
-    // The wheelRef lock + idle reset keeps it to one per gesture.
+    // Real trackpad gesture signal: acceleration → peak → deceleration
+    // → inertia tail. Without the lock, the long burst would re-cross
+    // the commit threshold and chain-skip tabs.
     const onIndex = vi.fn();
     render(<DetailTabSwipe tabs={tabs} index={0} onIndexChange={onIndex} />);
     const container = screen.getByTestId("detail-tab-swipe");
-    // 10 contiguous wheel ticks summing to 500px — way past 60px commit
-    // threshold, but the post-commit lock should swallow the rest.
-    for (let i = 0; i < 10; i++) {
-      fireEvent.wheel(container, { deltaX: 50, deltaY: 0 });
+    // 10 ticks summing well past WHEEL_COMMIT_PX (60): peak then taper.
+    const deltas = [20, 40, 60, 60, 60, 40, 30, 20, 15, 10];
+    for (const dx of deltas) {
+      fireEvent.wheel(container, { deltaX: dx, deltaY: 0 });
     }
     expect(onIndex).toHaveBeenCalledTimes(1);
     expect(onIndex).toHaveBeenCalledWith(1);
+  });
+
+  it("two trackpad gestures (with natural taper between) each commit once", () => {
+    // Once the wheel signal tapers below WHEEL_TAPER_PX (3), the lock
+    // releases — the next gesture's events accumulate immediately.
+    const onIndex = vi.fn();
+    const { rerender } = render(
+      <DetailTabSwipe tabs={tabs} index={0} onIndexChange={onIndex} />,
+    );
+    const container = screen.getByTestId("detail-tab-swipe");
+    // First gesture: peak then taper to ~zero.
+    for (const dx of [40, 60, 40, 20, 5, 1]) {
+      fireEvent.wheel(container, { deltaX: dx, deltaY: 0 });
+    }
+    expect(onIndex).toHaveBeenLastCalledWith(1);
+
+    // Caller advances index after the first commit.
+    rerender(<DetailTabSwipe tabs={tabs} index={1} onIndexChange={onIndex} />);
+
+    // Second gesture — no time delay needed, signal alone delimits.
+    for (const dx of [40, 60, 40, 20, 5]) {
+      fireEvent.wheel(container, { deltaX: dx, deltaY: 0 });
+    }
+    expect(onIndex).toHaveBeenCalledTimes(2);
+    expect(onIndex).toHaveBeenLastCalledWith(2);
+  });
+
+  it("mid-stream direction reversal starts a new gesture", () => {
+    const onIndex = vi.fn();
+    const { rerender } = render(
+      <DetailTabSwipe tabs={tabs} index={0} onIndexChange={onIndex} />,
+    );
+    const container = screen.getByTestId("detail-tab-swipe");
+    // Forward gesture (positive deltaX = scroll right = next tab).
+    for (const dx of [40, 60, 40]) {
+      fireEvent.wheel(container, { deltaX: dx, deltaY: 0 });
+    }
+    expect(onIndex).toHaveBeenLastCalledWith(1);
+
+    rerender(<DetailTabSwipe tabs={tabs} index={1} onIndexChange={onIndex} />);
+
+    // Reverse direction without tapering — the sign flip alone should
+    // unlock + restart accumulation in the new direction.
+    for (const dx of [-40, -60, -40]) {
+      fireEvent.wheel(container, { deltaX: dx, deltaY: 0 });
+    }
+    expect(onIndex).toHaveBeenCalledTimes(2);
+    expect(onIndex).toHaveBeenLastCalledWith(0);
   });
 });
