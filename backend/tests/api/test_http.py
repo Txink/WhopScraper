@@ -1008,9 +1008,12 @@ def test_today_executions_endpoint_aggregates_partial_fills(
     """today_executions now aggregates per-fill rows by order_id (qty sum,
     weighted-avg price, latest ts). Endpoint syncs to DB then reads back
     one row per order. Side-less rows get filtered at response time."""
-    from datetime import datetime, timezone
+    from datetime import datetime, timedelta, timezone
 
     client, broker = client_and_broker
+    # Anchor on "now" so the endpoint's 2-day since-filter keeps these rows
+    # regardless of when the suite runs.
+    now = datetime.now(timezone.utc)
     broker.history_executions_list = [  # type: ignore[attr-defined]
         # Two partial fills on the same order — should aggregate.
         {
@@ -1021,7 +1024,7 @@ def test_today_executions_endpoint_aggregates_partial_fills(
             "side": "SELL",
             "qty": 30,
             "price": 1.7,
-            "ts": datetime(2026, 5, 15, 16, 0, 0, tzinfo=timezone.utc),
+            "ts": now - timedelta(hours=2),
         },
         {
             "order_id": "o-1",
@@ -1031,7 +1034,7 @@ def test_today_executions_endpoint_aggregates_partial_fills(
             "side": "SELL",
             "qty": 10,
             "price": 1.7,
-            "ts": datetime(2026, 5, 15, 16, 1, 0, tzinfo=timezone.utc),
+            "ts": now - timedelta(hours=2) + timedelta(minutes=1),
         },
         # Separate order with empty side — kept in DB but filtered at
         # response (side not BUY/SELL).
@@ -1042,7 +1045,7 @@ def test_today_executions_endpoint_aggregates_partial_fills(
             "side": "",
             "qty": 20,
             "price": 1.5,
-            "ts": datetime(2026, 5, 15, 16, 30, 0, tzinfo=timezone.utc),
+            "ts": now - timedelta(hours=1, minutes=30),
         },
     ]
     resp = client.get("/api/broker/today_executions", params={"token": _TOKEN})
