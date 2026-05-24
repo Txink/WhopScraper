@@ -24,6 +24,8 @@ import { cancelOrder, submitOrder } from "../../api/orders";
 import { alertsApi } from "../../api/alerts";
 import { useOrdersStore } from "../../stores/orders";
 import { useAlertsStore } from "../../stores/alerts";
+import { notice } from "../../stores/notices";
+import { NoticeStack } from "../Notice/NoticeStack";
 import type { OrderOut, SubmitOrderRequest } from "../../api/orders";
 import type { AlertCreate, AlertOut } from "../../api/alerts";
 import { DetailTabSwipe, type TabDef } from "./DetailTabSwipe";
@@ -690,9 +692,10 @@ export function DetailPane({ position, onBack }: Props) {
     try {
       await cancelOrder(tradingCancel.order_id);
       useOrdersStore.getState().removeOrder(tradingCancel.ticker, tradingCancel.order_id);
+      notice.success("已撤单", "detail");
     } catch (e) {
       console.error("cancel failed", e);
-      alert(`撤单失败：${e instanceof Error ? e.message : String(e)}`);
+      notice.error(`撤单失败：${e instanceof Error ? e.message : String(e)}`, "detail");
     } finally {
       setTradingCancel(null);
     }
@@ -702,9 +705,10 @@ export function DetailPane({ position, onBack }: Props) {
     try {
       const o = await submitOrder(req);
       useOrdersStore.getState().upsertOrder(o.ticker, o);
+      notice.success(`已提交 ${req.side} ${req.qty} ${req.symbol}`, "detail");
     } catch (e) {
       console.error("submit failed", e);
-      alert(`下单失败：${e instanceof Error ? e.message : String(e)}`);
+      notice.error(`下单失败：${e instanceof Error ? e.message : String(e)}`, "detail");
     } finally {
       setTradingMoreFor(null);
     }
@@ -721,9 +725,10 @@ export function DetailPane({ position, onBack }: Props) {
     try {
       const a = await alertsApi.create(req);
       useAlertsStore.getState().upsertAlert(a);
+      notice.success("告警已保存", "detail");
     } catch (e) {
       console.error("create alert failed", e);
-      alert(`告警保存失败：${e instanceof Error ? e.message : String(e)}`);
+      notice.error(`告警保存失败：${e instanceof Error ? e.message : String(e)}`, "detail");
     } finally {
       setAlertModalFor(null);
     }
@@ -734,9 +739,10 @@ export function DetailPane({ position, onBack }: Props) {
     try {
       await alertsApi.remove(alertDeleteConfirm.id);
       useAlertsStore.getState().removeAlert(alertDeleteConfirm.id);
+      notice.success("告警已删除", "detail");
     } catch (e) {
       console.error("delete alert failed", e);
-      alert(`告警删除失败：${e instanceof Error ? e.message : String(e)}`);
+      notice.error(`告警删除失败：${e instanceof Error ? e.message : String(e)}`, "detail");
     } finally {
       setAlertDeleteConfirm(null);
     }
@@ -1134,6 +1140,10 @@ export function DetailPane({ position, onBack }: Props) {
           onConfirm={onAlertDeleteConfirm}
         />
       )}
+
+      {/* Detail-scoped notice stack — feedback for trading / alert
+         actions appears centered over the detail-pane working area. */}
+      <NoticeStack anchor="detail" />
     </div>
   );
 }

@@ -30,6 +30,7 @@ import { EmptyState } from "./components/Dashboard/EmptyState";
 import { LongportSettingsModal } from "./components/Dashboard/LongportSettingsModal";
 import { SimPanel } from "./components/Sim/SimPanel";
 import { AlertToastStack } from "./components/AlertNotifications/AlertToastStack";
+import { NoticeStack } from "./components/Notice/NoticeStack";
 import { useStickyTop } from "./hooks/useStickyTop";
 import "./App.css";
 import "./components/Dashboard/Dashboard.css";
@@ -487,6 +488,7 @@ export default function App() {
       )}
       <SimPanel open={simPanelOpen} onClose={() => setSimPanelOpen(false)} />
       <AlertToastStack />
+      <NoticeStack anchor="page" />
     </div>
   );
 }

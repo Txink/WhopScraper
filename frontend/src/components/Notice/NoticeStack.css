@@ -1,0 +1,100 @@
+/* Shared toast / notice stack. Two anchors:
+ *   .notice-stack-page  — fixed top-right of viewport (app-level).
+ *   .notice-stack-detail — absolute, centered horizontally in the
+ *     nearest positioned ancestor (.detail-pane). Vertically centered
+ *     over the working area between the chart and the bottom tabs. */
+.notice-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.notice-stack-page {
+  position: fixed;
+  top: 64px;
+  right: 16px;
+  z-index: 200;
+}
+
+.notice-stack-detail {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 90;
+  align-items: center;
+}
+
+.notice {
+  pointer-events: auto;
+  min-width: 280px;
+  max-width: 480px;
+  background: var(--bg-2);
+  border: 1px solid var(--line-strong);
+  border-left: 3px solid var(--fg-3);
+  border-radius: var(--radius-card);
+  padding: 10px 12px 10px 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--fg-1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  animation: notice-in 200ms cubic-bezier(.2, .6, .2, 1);
+}
+
+.notice-success { border-left-color: var(--ok); }
+.notice-error   { border-left-color: var(--err); }
+.notice-warning { border-left-color: var(--warn); }
+.notice-info    { border-left-color: var(--info); }
+
+.notice-icon {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--bg-0);
+  margin-top: 1px;
+}
+.notice-success .notice-icon { background: var(--ok); }
+.notice-error   .notice-icon { background: var(--err); }
+.notice-warning .notice-icon { background: var(--warn); }
+.notice-info    .notice-icon { background: var(--info); }
+
+.notice-message {
+  flex: 1 1 auto;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.notice-close {
+  flex-shrink: 0;
+  background: transparent;
+  border: 0;
+  color: var(--fg-3);
+  font-size: 16px;
+  line-height: 1;
+  padding: 0 4px;
+  cursor: pointer;
+  margin-top: -2px;
+  transition: color var(--dur) var(--ease);
+}
+.notice-close:hover { color: var(--fg-1); }
+
+@keyframes notice-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.notice-stack-detail .notice { animation-name: notice-in-scale; }
+@keyframes notice-in-scale {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}

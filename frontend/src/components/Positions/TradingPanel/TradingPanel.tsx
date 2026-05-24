@@ -3,6 +3,7 @@ import { listOrders, submitOrder, replaceOrder, cancelOrder } from "../../../api
 import { useOrdersStore } from "../../../stores/orders";
 import { useQuotesStore } from "../../../stores/quotes";
 import { ConfirmModal } from "../ConfirmModal";
+import { notice } from "../../../stores/notices";
 import { ActiveOrdersTable } from "./ActiveOrdersTable";
 import { QuickOrderRow } from "./QuickOrderRow";
 import { ReplaceOrderPopover } from "./ReplaceOrderPopover";
@@ -46,9 +47,10 @@ export function TradingPanel({ ticker, symbol, onRequestCancel, onRequestMore }:
     try {
       const o = await submitOrder(req);
       useOrdersStore.getState().upsertOrder(o.ticker, o);
+      notice.success(`已提交 ${req.side} ${req.qty} ${req.symbol} @ $${req.price?.toFixed(2) ?? "市价"}`, "detail");
     } catch (e) {
       console.error("submit failed", e);
-      alert(`下单失败：${e instanceof Error ? e.message : String(e)}`);
+      notice.error(`下单失败：${e instanceof Error ? e.message : String(e)}`, "detail");
     }
   };
 
@@ -59,9 +61,10 @@ export function TradingPanel({ ticker, symbol, onRequestCancel, onRequestMore }:
     try {
       await replaceOrder(replaceFor.order_id, req);
       setReplaceFor(null);
+      notice.success("改单已提交", "detail");
     } catch (e) {
       console.error("replace failed", e);
-      alert(`改单失败：${e instanceof Error ? e.message : String(e)}`);
+      notice.error(`改单失败：${e instanceof Error ? e.message : String(e)}`, "detail");
     }
   };
 
@@ -74,9 +77,10 @@ export function TradingPanel({ ticker, symbol, onRequestCancel, onRequestMore }:
     try {
       await cancelOrder(fallbackCancel.order_id);
       removeOrder(ticker, fallbackCancel.order_id);
+      notice.success("已撤单", "detail");
     } catch (e) {
       console.error("cancel failed", e);
-      alert(`撤单失败：${e instanceof Error ? e.message : String(e)}`);
+      notice.error(`撤单失败：${e instanceof Error ? e.message : String(e)}`, "detail");
     } finally {
       setFallbackCancel(null);
     }
