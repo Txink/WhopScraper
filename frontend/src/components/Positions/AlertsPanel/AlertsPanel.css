@@ -1,0 +1,144 @@
+/* ─── Alerts panel shell ─── */
+.alerts-panel {
+  padding: 12px;
+}
+
+/* ─── Alerts list header ─── */
+.alerts-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.alert-add-btn {
+  background: var(--brand);
+  color: #061b1f;
+  border: 0;
+  padding: 4px 12px;
+  border-radius: var(--radius-chip);
+  font-size: 11px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+.alert-add-btn:hover { filter: brightness(1.1); }
+
+/* ─── Alert row ─── */
+.alert-row {
+  display: grid;
+  grid-template-columns: 22px 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--bg-1);
+  margin-bottom: 6px;
+  transition: border-color var(--dur);
+}
+.alert-row:hover { border-color: var(--line-strong); }
+.alert-row.disabled { opacity: 0.5; }
+
+.alert-cond {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.alert-meta {
+  font-size: 10px;
+  color: var(--fg-3);
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.alert-mode {
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  border-radius: var(--radius-chip);
+  color: var(--fg-2);
+  background: var(--bg-3);
+}
+.alert-mode.recurring { color: var(--warn); background: rgba(231, 167, 61, 0.12); }
+
+.alert-state.triggered { color: var(--warn); }
+.alert-state.never { color: var(--fg-3); }
+
+.alert-actions { display: inline-flex; gap: 4px; }
+
+/* ─── Segmented control ─── */
+.seg {
+  display: inline-flex;
+  background: var(--bg-1);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-chip);
+  padding: 2px;
+}
+
+.seg-btn {
+  background: transparent;
+  border: 0;
+  color: var(--fg-2);
+  padding: 4px 12px;
+  font-size: 11px;
+  border-radius: 2px;
+  cursor: pointer;
+}
+.seg-btn.active { color: var(--fg-1); background: var(--bg-hover); }
+
+/* ─── Text input ─── */
+.text-input {
+  background: var(--bg-1);
+  border: 1px solid var(--line-strong);
+  color: var(--fg-1);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 5px 8px;
+  border-radius: var(--radius-chip);
+  width: 100%;
+}
+.text-input:focus { outline: 1px solid var(--brand); border-color: var(--brand); }
+
+/* ─── Modal field label ─── */
+.modal-field-label {
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+
+/* ─── Modal row (side-by-side fields) ─── */
+.modal-row {
+  display: flex;
+  gap: 12px;
+}
+.modal-row .modal-field { flex: 1; }
+
+/* ─── Buttons ─── */
+.btn-secondary {
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  color: var(--fg-2);
+  padding: 5px 14px;
+  border-radius: var(--radius-chip);
+  font-size: 12px;
+  cursor: pointer;
+}
+.btn-secondary:hover { color: var(--fg-1); border-color: var(--brand); }
+
+.btn-primary {
+  background: var(--brand);
+  color: #061b1f;
+  border: 0;
+  padding: 5px 16px;
+  border-radius: var(--radius-chip);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-primary:hover { filter: brightness(1.1); }

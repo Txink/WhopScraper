@@ -50,3 +50,11 @@ export async function listAlertEvents(
   if (ticker) qs.set("ticker", ticker);
   return request<AlertEventListOut>(`/api/alerts/events?${qs.toString()}`);
 }
+
+/** Convenience object for component-level usage. */
+export const alertsApi = {
+  list: (ticker?: string) => listAlerts(ticker),
+  create: (body: AlertCreate) => createAlert(body),
+  update: (alertId: number, body: AlertUpdate) => updateAlert(alertId, body),
+  remove: (alertId: number) => deleteAlert(alertId),
+};
