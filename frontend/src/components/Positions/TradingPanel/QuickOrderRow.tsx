@@ -119,9 +119,18 @@ export function QuickOrderRow({ symbol, presets, lastDone, onSubmit, onMore }: P
           </button>
           {presetsOpen && (
             <div className="qo-qty-menu" role="menu">
-              <button type="button" onClick={() => { setQty(String(presets.regular)); setPresetsOpen(false); }}>常规 {presets.regular}</button>
-              <button type="button" onClick={() => { setQty(String(presets.half)); setPresetsOpen(false); }}>半仓 {presets.half}</button>
-              <button type="button" onClick={() => { setQty(String(presets.third)); setPresetsOpen(false); }}>1/3 {presets.third}</button>
+              <button type="button" onClick={() => { setQty(String(presets.regular)); setPresetsOpen(false); }}>
+                <span className="qo-qty-menu-k">常规</span>
+                <span className="qo-qty-menu-v">{presets.regular}</span>
+              </button>
+              <button type="button" onClick={() => { setQty(String(presets.half)); setPresetsOpen(false); }}>
+                <span className="qo-qty-menu-k">半仓</span>
+                <span className="qo-qty-menu-v">{presets.half}</span>
+              </button>
+              <button type="button" onClick={() => { setQty(String(presets.third)); setPresetsOpen(false); }}>
+                <span className="qo-qty-menu-k">1/3仓</span>
+                <span className="qo-qty-menu-v">{presets.third}</span>
+              </button>
             </div>
           )}
         </div>

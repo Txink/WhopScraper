@@ -208,11 +208,25 @@ table.tbl .num { text-align: right; }
   color: var(--fg-2);
   padding: 6px 12px;
   font-size: 11px;
-  text-align: left;
   cursor: pointer;
   font-family: var(--font-sans);
+  display: flex;
+  align-items: baseline;
+  /* Label on the left, value on the right — gap pushes them apart so
+   * the menu reads like a labeled value table. */
+  justify-content: space-between;
+  gap: 16px;
 }
 .qo-qty-menu button:hover { background: var(--bg-hover); color: var(--fg-1); }
+.qo-qty-menu-k {
+  color: var(--fg-3);
+}
+.qo-qty-menu-v {
+  font-family: var(--font-mono);
+  color: var(--fg-1);
+  font-weight: 500;
+}
+.qo-qty-menu button:hover .qo-qty-menu-k { color: var(--fg-2); }
 
 /* Action group floats to the right edge via margin-left:auto. */
 .qo-actions {
