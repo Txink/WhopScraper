@@ -81,6 +81,128 @@ async def test_replace_calls_broker_and_updates_task(
 
 
 @pytest.mark.asyncio
+async def test_replace_rebinds_task_to_new_broker_order_id(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """After LongPort-style replace, the broker shows BOTH the old id
+    (status=OrderStatus.Replaced) and a new id (ReplacedNotReported) at
+    the post-replace price/qty. OrdersService must rebind TaskRow.order_id
+    to the new id so the manual_task tracks the live successor.
+    """
+    bus = EventBus()
+    broker = FakeBroker()
+    broker.next_order_id = "ord-old"
+    svc = OrdersService(broker=broker, event_bus=bus, session_factory=session_factory)
+    await svc.submit(SubmitOrderRequest(
+        symbol="AAPL.US", side="BUY", qty=200, order_type="LIMIT", price=199.0,
+    ))
+
+    # Broker now reports old as Replaced, new as ReplacedNotReported.
+    def fake_today_orders(*, ticker=None):  # type: ignore[no-untyped-def]
+        return [
+            {
+                "order_id": "ord-old", "symbol": "AAPL.US", "ticker": "AAPL",
+                "side": "Buy", "order_type": "LO", "price": 199.0,
+                "quantity": 200, "executed_quantity": 0,
+                "status": "OrderStatus.Replaced", "submitted_at": "2026-05-25T10:00:00",
+            },
+            {
+                "order_id": "ord-new", "symbol": "AAPL.US", "ticker": "AAPL",
+                "side": "Buy", "order_type": "LO", "price": 199.5,
+                "quantity": 200, "executed_quantity": 0,
+                "status": "OrderStatus.ReplacedNotReported",
+                "submitted_at": "2026-05-25T10:00:05",
+            },
+        ]
+    broker.today_orders = fake_today_orders  # type: ignore[method-assign]
+
+    await svc.replace("ord-old", ReplaceOrderRequest(price=199.5))
+
+    # Task should now point at the new id.
+    async with session_factory() as session:
+        task = (await session.execute(
+            select(TaskRow).where(TaskRow.source == "manual")
+        )).scalar_one()
+        assert task.order_id == "ord-new"
+        assert task.submit_price == 199.5
+
+
+@pytest.mark.asyncio
+async def test_replace_invokes_push_listener_replay_for_new_id(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """Pushes for the new id can arrive before our rebind commits; the
+    service must drain the buffer via PushListener.replay_for_order so
+    the early ReplacedNotReported push gets surfaced as a normal event.
+    """
+    bus = EventBus()
+    broker = FakeBroker()
+    broker.next_order_id = "ord-old"
+
+    replayed: list[str] = []
+
+    class FakeListener:
+        async def replay_for_order(self, oid: str) -> int:
+            replayed.append(oid)
+            return 0
+
+    listener = FakeListener()
+    svc = OrdersService(
+        broker=broker, event_bus=bus, session_factory=session_factory,
+        push_listener_getter=lambda: listener,
+    )
+    await svc.submit(SubmitOrderRequest(
+        symbol="AAPL.US", side="BUY", qty=200, order_type="LIMIT", price=199.0,
+    ))
+
+    def fake_today_orders(*, ticker=None):  # type: ignore[no-untyped-def]
+        return [
+            {"order_id": "ord-old", "symbol": "AAPL.US", "ticker": "AAPL",
+             "side": "Buy", "order_type": "LO", "price": 199.0,
+             "quantity": 200, "executed_quantity": 0,
+             "status": "OrderStatus.Replaced", "submitted_at": None},
+            {"order_id": "ord-new", "symbol": "AAPL.US", "ticker": "AAPL",
+             "side": "Buy", "order_type": "LO", "price": 199.5,
+             "quantity": 200, "executed_quantity": 0,
+             "status": "OrderStatus.ReplacedNotReported", "submitted_at": None},
+        ]
+    broker.today_orders = fake_today_orders  # type: ignore[method-assign]
+
+    await svc.replace("ord-old", ReplaceOrderRequest(price=199.5))
+    assert replayed == ["ord-new"]
+
+
+@pytest.mark.asyncio
+async def test_list_today_filters_superseded_replaced_rows(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """Old id of a replaced order (status=OrderStatus.Replaced) must NOT
+    appear in list_today — it's terminal and superseded. Only the live
+    successor row is visible."""
+    bus = EventBus()
+    broker = FakeBroker()
+
+    def fake_today_orders(*, ticker=None):  # type: ignore[no-untyped-def]
+        return [
+            {"order_id": "ord-old", "symbol": "AAPL.US", "ticker": "AAPL",
+             "side": "Buy", "order_type": "LO", "price": 199.0,
+             "quantity": 200, "executed_quantity": 0,
+             "status": "OrderStatus.Replaced", "submitted_at": None},
+            {"order_id": "ord-new", "symbol": "AAPL.US", "ticker": "AAPL",
+             "side": "Buy", "order_type": "LO", "price": 199.5,
+             "quantity": 200, "executed_quantity": 0,
+             "status": "OrderStatus.ReplacedNotReported", "submitted_at": None},
+        ]
+    broker.today_orders = fake_today_orders  # type: ignore[method-assign]
+
+    svc = OrdersService(broker=broker, event_bus=bus, session_factory=session_factory)
+    rows = await svc.list_today("AAPL")
+    ids = [r.order_id for r in rows]
+    assert "ord-old" not in ids
+    assert "ord-new" in ids
+
+
+@pytest.mark.asyncio
 async def test_replace_requires_at_least_one_field(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:

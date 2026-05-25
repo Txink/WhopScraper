@@ -17,7 +17,7 @@
  */
 
 import type { WsEvent } from "./ws";
-import type { OrderOut } from "./orders";
+import { listOrders, type OrderOut } from "./orders";
 import type { AlertOut, AlertEventOut } from "./alerts";
 import { useOrdersStore } from "../stores/orders";
 import { useAlertsStore } from "../stores/alerts";
@@ -35,6 +35,42 @@ export function handleOrderChanged(evt: WsEvent): void {
   } else {
     useOrdersStore.getState().upsertOrder(ticker, order);
   }
+}
+
+/** Handler for `task.push_event` — when a broker push lands for an
+ *  order we currently display, refetch that ticker's orders so the
+ *  trading panel reflects the new broker status (e.g. NotReported →
+ *  Canceled, Filled, etc). We refetch rather than mutate in place
+ *  because the broker-side OrderStatus string and Task domain status
+ *  use different vocabularies; `OrdersService.list_today` is the
+ *  single source of truth that already reconciles them.
+ *
+ *  LongPort's `replace_order` mints a NEW order_id (old → Replaced,
+ *  new → ReplacedNotReported). The new id won't be in the store yet,
+ *  so when we can't match by id we refetch every ticker the user is
+ *  currently viewing — the next list_today response will carry the
+ *  replacement order (source="external" since no manual_task points
+ *  at the new id) and the panel resyncs. */
+export function handleTaskPushEvent(evt: WsEvent): void {
+  const payload = evt.payload as { task?: { order_id?: string | null } };
+  const oid = payload.task?.order_id;
+  if (!oid) return;
+  const byTicker = useOrdersStore.getState().byTicker;
+  const refetch = (ticker: string) =>
+    listOrders(ticker)
+      .then((r) => useOrdersStore.getState().setOrders(ticker, r.orders))
+      .catch((e) => console.warn("orders refetch after push failed", e));
+  for (const ticker of Object.keys(byTicker)) {
+    const list = byTicker[ticker];
+    if (list?.some((o) => o.order_id === oid)) {
+      void refetch(ticker);
+      return;
+    }
+  }
+  // Unknown order_id — likely a replace-spawned new id. Refetch every
+  // ticker we currently have orders for so whichever pane is in view
+  // picks it up.
+  for (const ticker of Object.keys(byTicker)) void refetch(ticker);
 }
 
 /** Handler for `alert.changed` — upserts or removes the alert in alertsStore. */

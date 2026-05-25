@@ -382,12 +382,24 @@ class LongPortClient:
             return
         if self._trade_ctx is None:
             raise RuntimeError("LongPortClient has been closed")
-        kwargs: dict[str, Any] = {"order_id": order_id}
-        if quantity is not None:
-            kwargs["quantity"] = quantity
-        if price is not None:
-            kwargs["price"] = price
-        self._trade_ctx.replace_order(**kwargs)
+        # LongPort SDK's TradeContext.replace_order requires BOTH quantity
+        # and price on every call. When the caller only supplied one (e.g.
+        # the user is modifying price only), fall back to the order's
+        # current value for the other field.
+        if quantity is None or price is None:
+            existing = next(
+                (o for o in self.today_orders() if o["order_id"] == order_id),
+                None,
+            )
+            if existing is None:
+                raise ValueError(f"order not found: {order_id}")
+            if quantity is None:
+                quantity = existing["quantity"]
+            if price is None:
+                price = existing["price"]
+        self._trade_ctx.replace_order(
+            order_id=order_id, quantity=quantity, price=price,
+        )
 
     def today_orders(
         self, *, ticker: str | None = None

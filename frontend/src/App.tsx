@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { configureHttp, api, HttpError } from "./api/http";
 import { configureRequest } from "./api/_request";
 import { createWsClient } from "./api/ws";
-import { handleOrderChanged, handleAlertChanged, handleAlertTriggered } from "./api/wsHandlers";
+import { handleOrderChanged, handleAlertChanged, handleAlertTriggered, handleTaskPushEvent } from "./api/wsHandlers";
 import { useConnStore } from "./stores/conn";
 import { useTasksStore, selectTasksByUrl } from "./stores/tasks";
 import { useStatsStore } from "./stores/stats";
@@ -236,6 +236,10 @@ function Dashboard({ token }: { token: string }) {
           handleAlertTriggered(evt);
         } else {
           applyWs(evt);
+          // task.push_event is broadcast as the catch-all task store
+          // applies it (status, push history). Also mirror into the
+          // orders store so the trading panel reflects broker status.
+          if (evt.type === "task.push_event") handleTaskPushEvent(evt);
         }
         useConnStore.getState().setLastEventId(evt.event_id);
       },

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useNoticesStore, type NoticeAnchor } from "../../stores/notices";
 import "./NoticeStack.css";
 
@@ -12,8 +12,16 @@ interface Props {
 /** Renders a stack of in-flight notices for one anchor. Notices
  *  auto-dismiss via per-item ttlMs; clicking the × dismisses early. */
 export function NoticeStack({ anchor }: Props) {
-  const items = useNoticesStore((s) => s.items.filter((n) => n.anchor === anchor));
+  // Subscribe to the raw items array (stable reference until the store
+  // mutates it) and derive the per-anchor slice with useMemo. Filtering
+  // inside the selector would return a fresh array on every snapshot
+  // poll, tripping useSyncExternalStore's infinite-loop guard.
+  const allItems = useNoticesStore((s) => s.items);
   const dismiss = useNoticesStore((s) => s.dismiss);
+  const items = useMemo(
+    () => allItems.filter((n) => n.anchor === anchor),
+    [allItems, anchor],
+  );
 
   // Schedule auto-dismiss for each in-flight item. The effect's array
   // dependency on items ensures fresh timers track new arrivals.

@@ -44,7 +44,48 @@ def test_replace_order_propagates_sdk_exception() -> None:
     client, trade_ctx = _make_client()
     trade_ctx.replace_order.side_effect = RuntimeError("order finished")
     with pytest.raises(RuntimeError, match="order finished"):
-        client.replace_order("ord-1", price=199.0)
+        client.replace_order("ord-1", quantity=100, price=199.0)
+
+
+def test_replace_order_with_price_only_fills_quantity_from_current_order(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """LongPort SDK requires quantity on every replace_order. When the
+    caller only supplied a new price, look up the current order's quantity
+    so the SDK call doesn't fail with `missing positional argument`."""
+    client, trade_ctx = _make_client()
+    monkeypatch.setattr(
+        client, "today_orders",
+        lambda **_kw: [{"order_id": "ord-1", "quantity": 100, "price": 200.0}],
+    )
+    client.replace_order("ord-1", price=199.50)
+    trade_ctx.replace_order.assert_called_once_with(
+        order_id="ord-1", quantity=100, price=199.50,
+    )
+
+
+def test_replace_order_with_quantity_only_fills_price_from_current_order(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, trade_ctx = _make_client()
+    monkeypatch.setattr(
+        client, "today_orders",
+        lambda **_kw: [{"order_id": "ord-1", "quantity": 100, "price": 200.0}],
+    )
+    client.replace_order("ord-1", quantity=150)
+    trade_ctx.replace_order.assert_called_once_with(
+        order_id="ord-1", quantity=150, price=200.0,
+    )
+
+
+def test_replace_order_raises_when_order_not_found(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, trade_ctx = _make_client()
+    monkeypatch.setattr(client, "today_orders", lambda **_kw: [])
+    with pytest.raises(ValueError, match="order not found"):
+        client.replace_order("missing-ord", price=199.50)
+    trade_ctx.replace_order.assert_not_called()
 
 
 def test_noop_replace_order_is_silent() -> None:

@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.api.http import build_http_router
@@ -13,6 +14,7 @@ from app.broker.noop_client import NoopBrokerClient
 from app.broker.runtime_settings import LongPortRuntimeStore
 from app.core.config import Settings, get_settings
 from app.core.event_bus import EventBus
+from app.storage.schema import TaskRow
 
 _TOKEN = "test-token-orders"
 
@@ -151,6 +153,52 @@ def test_replace_order_requires_field(client: TestClient) -> None:
     })
     r = client.patch("/api/orders/ord-1", json={})
     assert r.status_code == 422
+
+
+@pytest.mark.parametrize("terminal_status", ["CANCELLED", "FILLED", "REJECTED"])
+async def test_replace_order_rejected_when_terminal(
+    client: TestClient,
+    session_factory: async_sessionmaker[AsyncSession],
+    terminal_status: str,
+) -> None:
+    """Modify must fail-fast on terminal orders (cancelled/filled/rejected)
+    rather than letting the request reach the broker SDK."""
+    client.post("/api/orders", json={
+        "symbol": "AAPL.US", "side": "BUY", "qty": 200,
+        "order_type": "LIMIT", "price": 199.0,
+    })
+    async with session_factory() as session:
+        await session.execute(
+            update(TaskRow).where(TaskRow.order_id == "ord-1")
+            .values(status=terminal_status)
+        )
+        await session.commit()
+    r = client.patch("/api/orders/ord-1", json={"price": 200.0})
+    assert r.status_code == 422
+    assert terminal_status in r.text
+
+
+@pytest.mark.parametrize("terminal_status", ["CANCELLED", "FILLED", "REJECTED"])
+async def test_cancel_order_rejected_when_terminal(
+    client: TestClient,
+    session_factory: async_sessionmaker[AsyncSession],
+    terminal_status: str,
+) -> None:
+    """Cancel must fail-fast on terminal orders too — a repeat-cancel
+    against a cancelled order is meaningless and should not reach the SDK."""
+    client.post("/api/orders", json={
+        "symbol": "AAPL.US", "side": "BUY", "qty": 200,
+        "order_type": "LIMIT", "price": 199.0,
+    })
+    async with session_factory() as session:
+        await session.execute(
+            update(TaskRow).where(TaskRow.order_id == "ord-1")
+            .values(status=terminal_status)
+        )
+        await session.commit()
+    r = client.delete("/api/orders/ord-1")
+    assert r.status_code == 422
+    assert terminal_status in r.text
 
 
 def test_get_orders_returns_list(client: TestClient) -> None:

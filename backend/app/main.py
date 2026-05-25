@@ -485,6 +485,7 @@ def create_app(
                 broker_reload_fn=_broker_reload,
                 subscription_manager_getter=lambda: state.subscription_manager,
                 alerts_engine_getter=lambda: app.state.alerts_engine,
+                push_listener_getter=lambda: state.push_listener,
             )
         )
         app.include_router(build_ws_router(state.hub, state.settings))

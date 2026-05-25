@@ -85,6 +85,30 @@ table.tbl .num { text-align: right; }
 .side-pill.buy { color: var(--up-color); background: var(--up-soft); }
 .side-pill.sell { color: var(--down-color); background: var(--down-soft); }
 
+/* Inline-editable numeric cell. Lives inside .num cells; right-aligned
+ * monospace, transparent until hover/focus so the table reads as plain
+ * text until you reach in to change a value. */
+.tbl-edit {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--fg-1);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  width: 56px;
+  text-align: right;
+  transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+/* Integer-only (qty) cells need less room than fractional (price). */
+.tbl-edit.tbl-edit-int { width: 44px; }
+.tbl-edit:hover { border-color: var(--line-strong); }
+.tbl-edit:focus {
+  outline: none;
+  border-color: var(--brand);
+  background: var(--bg-1);
+}
+
 .row-actions { display: inline-flex; gap: 4px; }
 .row-btn {
   background: transparent;

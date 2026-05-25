@@ -1,14 +1,13 @@
 import { useEffect, useState } from "react";
-import { listOrders, submitOrder, replaceOrder, cancelOrder } from "../../../api/orders";
+import { listOrders, submitOrder, replaceOrder, cancelOrder, isOrderTerminal } from "../../../api/orders";
 import { useOrdersStore } from "../../../stores/orders";
 import { useQuotesStore } from "../../../stores/quotes";
 import { ConfirmModal } from "../ConfirmModal";
 import { notice } from "../../../stores/notices";
 import { ActiveOrdersTable } from "./ActiveOrdersTable";
 import { QuickOrderRow } from "./QuickOrderRow";
-import { ReplaceOrderPopover } from "./ReplaceOrderPopover";
 import { FullOrderModal } from "./FullOrderModal";
-import type { OrderOut, SubmitOrderRequest, ReplaceOrderRequest } from "../../../api/orders";
+import type { OrderOut, SubmitOrderRequest } from "../../../api/orders";
 import "./TradingPanel.css";
 
 interface Props {
@@ -31,7 +30,6 @@ export function TradingPanel({ ticker, symbol, onRequestCancel, onRequestMore }:
   const quote = useQuotesStore((s) => s.quotesBySymbol[symbol]);
   const lastDone = quote?.last_done ?? null;
   const [activeOnly, setActiveOnly] = useState(false);
-  const [replaceFor, setReplaceFor] = useState<OrderOut | null>(null);
   const [fallbackMoreOpen, setFallbackMoreOpen] = useState(false);
   const [fallbackCancel, setFallbackCancel] = useState<OrderOut | null>(null);
 
@@ -54,14 +52,23 @@ export function TradingPanel({ ticker, symbol, onRequestCancel, onRequestMore }:
     }
   };
 
-  const onReplace = (o: OrderOut) => setReplaceFor(o);
-
-  const submitReplace = async (req: ReplaceOrderRequest) => {
-    if (!replaceFor) return;
+  // Inline edit commit: at most one of {price, qty} changed per event.
+  // We forward only the changed field as `null` for the other — the
+  // service treats null as "leave unchanged".
+  const onReplaceField = async (
+    o: OrderOut,
+    change: { price?: number | null; qty?: number | null },
+  ) => {
     try {
-      await replaceOrder(replaceFor.order_id, req);
-      setReplaceFor(null);
+      await replaceOrder(o.order_id, {
+        price: change.price ?? null,
+        qty: change.qty ?? null,
+      });
       notice.success("改单已提交", "detail");
+      // Refetch to pick up authoritative price/qty (and any broker echo).
+      listOrders(ticker)
+        .then((r) => setOrders(ticker, r.orders))
+        .catch(() => {});
     } catch (e) {
       console.error("replace failed", e);
       notice.error(`改单失败：${e instanceof Error ? e.message : String(e)}`, "detail");
@@ -91,9 +98,7 @@ export function TradingPanel({ ticker, symbol, onRequestCancel, onRequestMore }:
     else setFallbackMoreOpen(true);
   };
 
-  const activeCount = orders.filter(
-    (o) => !["FilledStatus", "Filled", "CancelledStatus", "Cancelled", "RejectedStatus", "Rejected"].includes(o.status),
-  ).length;
+  const activeCount = orders.filter((o) => !isOrderTerminal(o)).length;
 
   return (
     <div className="panel trading-panel">
@@ -104,7 +109,7 @@ export function TradingPanel({ ticker, symbol, onRequestCancel, onRequestMore }:
         </button>
       </div>
       <div className="trading-panel-body">
-        <ActiveOrdersTable orders={orders} activeOnly={activeOnly} onReplace={onReplace} onCancel={onCancel} />
+        <ActiveOrdersTable orders={orders} activeOnly={activeOnly} onReplace={onReplaceField} onCancel={onCancel} />
       </div>
       <QuickOrderRow
         symbol={symbol}
@@ -125,9 +130,6 @@ export function TradingPanel({ ticker, symbol, onRequestCancel, onRequestMore }:
           <span>交易面板 · 活跃 {activeCount} / 共 {orders.length}</span>
         </span>
       </div>
-      {replaceFor && (
-        <ReplaceOrderPopover order={replaceFor} onSubmit={submitReplace} onClose={() => setReplaceFor(null)} />
-      )}
       {/* Fallback in-pane modals used only when caller doesn't host them.
        *  These render inside the swipe-track's transformed subtree, which
        *  will mis-position fixed/absolute children — only safe when

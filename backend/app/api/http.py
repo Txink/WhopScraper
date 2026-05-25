@@ -233,6 +233,7 @@ def build_http_router(
     broker_reload_fn: Callable[[], Awaitable[dict[str, Any]]] | None = None,
     subscription_manager_getter: Callable[[], Any] | None = None,
     alerts_engine_getter: Callable[[], Any] | None = None,
+    push_listener_getter: Callable[[], Any] | None = None,
 ) -> APIRouter:
     """Factory — injects session_factory, broker, and settings at app assembly.
 
@@ -1848,7 +1849,12 @@ def build_http_router(
     # /api/orders — manual order submission (trading panel)               #
     # ------------------------------------------------------------------ #
 
-    orders_svc = OrdersService(broker=broker, event_bus=bus, session_factory=session_factory)
+    orders_svc = OrdersService(
+        broker=broker,
+        event_bus=bus,
+        session_factory=session_factory,
+        push_listener_getter=push_listener_getter,
+    )
 
     @router.post("/api/orders", response_model=OrderOut, status_code=201)
     async def post_order(req: SubmitOrderRequest) -> OrderOut:
@@ -1859,7 +1865,8 @@ def build_http_router(
         except ValueError as e:
             raise HTTPException(422, str(e)) from e
         except Exception as e:
-            raise HTTPException(502, f"broker error: {e}") from e
+            logger.exception("submit_order failed: %s %s %s @ %s", req.side, req.qty, req.symbol, req.price)
+            raise HTTPException(502, f"broker error: {type(e).__name__}: {e}") from e
 
     @router.patch("/api/orders/{order_id}", status_code=204)
     async def patch_order(order_id: str, req: ReplaceOrderRequest) -> Response:
@@ -1871,7 +1878,8 @@ def build_http_router(
         except ValueError as e:
             raise HTTPException(422, str(e)) from e
         except Exception as e:
-            raise HTTPException(502, f"broker error: {e}") from e
+            logger.exception("replace_order failed: order_id=%s", order_id)
+            raise HTTPException(502, f"broker error: {type(e).__name__}: {e}") from e
 
     @router.delete("/api/orders/{order_id}", status_code=204)
     async def delete_order(order_id: str) -> Response:
@@ -1880,8 +1888,11 @@ def build_http_router(
         try:
             await orders_svc.cancel(order_id)
             return Response(status_code=204)
+        except ValueError as e:
+            raise HTTPException(422, str(e)) from e
         except Exception as e:
-            raise HTTPException(502, f"broker error: {e}") from e
+            logger.exception("cancel_order failed: order_id=%s", order_id)
+            raise HTTPException(502, f"broker error: {type(e).__name__}: {e}") from e
 
     @router.get("/api/orders", response_model=OrderListOut)
     async def get_orders(ticker: str) -> OrderListOut:

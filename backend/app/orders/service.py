@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.broker.broker_client import BrokerClient
 from app.core.event_bus import Event, EventBus
 from app.core.events import Topics
+from app.domain.status import TERMINAL, Status
 from app.orders.schemas import OrderOut, ReplaceOrderRequest, SubmitOrderRequest
 from app.storage.schema import TaskRow
 
@@ -26,14 +27,24 @@ logger = logging.getLogger(__name__)
 
 SessionFactory = Callable[[], AsyncSession]
 
-
-def _start_of_today_utc() -> datetime:
-    return datetime.combine(datetime.now(UTC).date(), time.min, tzinfo=UTC)
+# LongPort `replace_order` does NOT amend in place — it marks the old
+# order_id as "Replaced" (terminal, superseded) and mints a NEW order_id
+# with status "ReplacedNotReported". To preserve a single-row UX, we:
+#   1. After replace, scan today_orders to find the new id and rebind
+#      the TaskRow.order_id to it (see _find_replacement_order_id).
+#   2. Filter the SUPERSEDED status out of list_today.
+# Anything else containing "Replaced" (ReplacedNotReported, etc.) is the
+# new live order and stays visible.
+_SUPERSEDED_STATUSES = frozenset(("OrderStatus.Replaced", "Replaced"))
 
 
 class OrderImmutable(RuntimeError):
     """Raised when an order cannot be replaced/cancelled because it is
     already in a terminal state."""
+
+
+def _start_of_today_utc() -> datetime:
+    return datetime.combine(datetime.now(UTC).date(), time.min, tzinfo=UTC)
 
 
 class OrdersService:
@@ -42,10 +53,16 @@ class OrdersService:
         broker: BrokerClient,
         event_bus: EventBus,
         session_factory: SessionFactory,
+        push_listener_getter: Callable[[], Any] | None = None,
     ) -> None:
         self._broker = broker
         self._bus = event_bus
         self._sessions = session_factory
+        # Resolved lazily on each replace so we pick up post-broker-reload
+        # PushListener instances. None means "no listener" (tests, early
+        # startup) — replace still rebinds the TaskRow, just doesn't try
+        # to drain the buffer.
+        self._push_listener_getter = push_listener_getter
 
     async def submit(self, req: SubmitOrderRequest) -> OrderOut:
         if req.order_type == "LIMIT" and req.price is None:
@@ -94,12 +111,37 @@ class OrdersService:
     async def replace(self, order_id: str, req: ReplaceOrderRequest) -> None:
         if req.price is None and req.qty is None:
             raise ValueError("replace requires price or qty")
+        # Reject modify on terminal orders (CANCELLED / FILLED / REJECTED / ...).
+        # Skip when no TaskRow exists — the order was placed outside our DB
+        # (e.g. directly via the broker app); let the SDK be the source of truth.
+        async with self._sessions() as session:
+            existing = (await session.execute(
+                select(TaskRow).where(TaskRow.order_id == order_id)
+            )).scalar_one_or_none()
+            if existing is not None and Status(existing.status) in TERMINAL:
+                raise ValueError(
+                    f"order is {existing.status}; cannot modify"
+                )
         self._broker.replace_order(order_id, quantity=req.qty, price=req.price)
         now = datetime.now(UTC)
+        new_order_id: str | None = None
         async with self._sessions() as session:
             stmt = select(TaskRow).where(TaskRow.order_id == order_id)
             task = (await session.execute(stmt)).scalar_one_or_none()
             if task is not None:
+                # Compute the expected post-replace values for the broker scan.
+                post_price = req.price if req.price is not None else task.submit_price
+                post_qty = req.qty if req.qty is not None else task.quantity
+                new_order_id = self._find_replacement_order_id(
+                    ticker=task.ticker or "",
+                    symbol=task.symbol or "",
+                    side=task.side or "",
+                    price=post_price,
+                    qty=post_qty,
+                    old_id=order_id,
+                )
+                if new_order_id:
+                    task.order_id = new_order_id
                 if req.price is not None:
                     task.submit_price = req.price
                     task.price = req.price
@@ -108,16 +150,88 @@ class OrdersService:
                 task.last_replaced_at = now
                 task.updated_at = now
                 await session.commit()
+        # Drain any buffered pushes that arrived for the new id between
+        # broker.replace_order returning and us committing the rebind.
+        if new_order_id and self._push_listener_getter is not None:
+            listener = self._push_listener_getter()
+            if listener is not None:
+                try:
+                    await listener.replay_for_order(new_order_id)
+                except Exception:
+                    logger.exception(
+                        "replace: replay_for_order(%s) failed", new_order_id
+                    )
         await self._bus.publish(
             Event(
                 Topics.ORDER_CHANGED,
-                {"action": "updated", "order_id": order_id,
+                {"action": "updated",
+                 "order_id": new_order_id or order_id,
+                 "old_order_id": order_id if new_order_id else None,
                  "price": req.price, "qty": req.qty,
                  "last_replaced_at": now.isoformat()},
             )
         )
 
+    def _find_replacement_order_id(
+        self,
+        *,
+        ticker: str,
+        symbol: str,
+        side: str,
+        price: float | None,
+        qty: int | None,
+        old_id: str,
+    ) -> str | None:
+        """Scan broker today_orders for the new order_id minted by replace_order.
+
+        LongPort doesn't return the new id from replace_order — it shows up
+        in today_orders with a status containing ``Replaced`` but not the
+        literal terminal ``OrderStatus.Replaced`` (which is the OLD id's
+        post-replace state). We match by ticker/side and the post-replace
+        price/qty, then pick the newest. Returns None if no plausible match
+        is found (e.g. broker hasn't yet propagated the new order, or this
+        wasn't really a LongPort-style replace).
+        """
+        try:
+            rows = self._broker.today_orders(ticker=ticker)
+        except Exception:
+            logger.exception("replace: today_orders scan failed")
+            return None
+        side_token = "Buy" if side == "BUY" else "Sell"
+        candidates: list[dict[str, Any]] = []
+        for r in rows:
+            if r["order_id"] == old_id:
+                continue
+            if symbol and r["symbol"] != symbol:
+                continue
+            if side_token not in r["side"]:
+                continue
+            status = r["status"]
+            if "Replaced" not in status or status in _SUPERSEDED_STATUSES:
+                continue
+            if price is not None and abs(r["price"] - price) > 1e-4:
+                continue
+            if qty is not None and r["quantity"] != qty:
+                continue
+            candidates.append(r)
+        if not candidates:
+            return None
+        candidates.sort(key=lambda r: str(r.get("submitted_at") or ""), reverse=True)
+        return str(candidates[0]["order_id"])
+
     async def cancel(self, order_id: str) -> None:
+        # Mirror the replace() gate: refuse to cancel an order that is
+        # already terminal (cancelled / filled / rejected / ...). The
+        # broker SDK would reject it too, but a clean 422 reads better
+        # than the broker's stack-traced 502.
+        async with self._sessions() as session:
+            existing = (await session.execute(
+                select(TaskRow).where(TaskRow.order_id == order_id)
+            )).scalar_one_or_none()
+            if existing is not None and Status(existing.status) in TERMINAL:
+                raise ValueError(
+                    f"order is {existing.status}; cannot cancel"
+                )
         self._broker.cancel_order(order_id)
         await self._bus.publish(
             Event(Topics.ORDER_CHANGED, {"action": "cancelled", "order_id": order_id})
@@ -125,6 +239,10 @@ class OrdersService:
 
     async def list_today(self, ticker: str) -> list[OrderOut]:
         broker_rows = self._broker.today_orders(ticker=ticker)
+        # Drop the superseded "OrderStatus.Replaced" rows — they're the
+        # OLD ids of replace_order events and aren't actionable. Mirrors
+        # the LongPort app, which only shows the live successor.
+        broker_rows = [r for r in broker_rows if r.get("status") not in _SUPERSEDED_STATUSES]
         broker_by_id: dict[str, Any] = {r["order_id"]: r for r in broker_rows}
 
         async with self._sessions() as session:

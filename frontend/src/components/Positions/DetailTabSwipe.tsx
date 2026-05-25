@@ -41,6 +41,7 @@ function isTextInput(el: EventTarget | null): boolean {
 export function DetailTabSwipe({ tabs, index, onIndexChange }: Props) {
   const max = tabs.length - 1;
   const [dragDx, setDragDx] = useState(0);
+  const containerRef = useRef<HTMLDivElement | null>(null);
   /** Latest props captured into refs so document-level listeners installed
    *  on mousedown stay accurate without re-attaching every render. */
   const indexRef = useRef(index);
@@ -187,41 +188,43 @@ export function DetailTabSwipe({ tabs, index, onIndexChange }: Props) {
    *    every real trackpad gesture's signal tapers to zero before
    *    the next one begins, so this is gesture-end without any
    *    wall-clock timer.
+   *
+   *  Attached natively with passive: false so preventDefault works;
+   *  React's JSX onWheel attaches as passive, which silently drops
+   *  preventDefault() and lets the page scroll under the gesture.
    */
-  const onWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-    if (Math.abs(e.deltaX) < Math.abs(e.deltaY)) return;
-    e.preventDefault();
-    const state = wheelRef.current;
-    const absDx = Math.abs(e.deltaX);
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaX) < Math.abs(e.deltaY)) return;
+      e.preventDefault();
+      const state = wheelRef.current;
+      const absDx = Math.abs(e.deltaX);
 
-    // Tapering toward zero = current gesture is ending. Release the
-    // lock so the next gesture can begin immediately on its first
-    // significant event.
-    if (absDx < WHEEL_TAPER_PX) {
-      state.locked = false;
-      state.accum = 0;
-      return;
-    }
+      if (absDx < WHEEL_TAPER_PX) {
+        state.locked = false;
+        state.accum = 0;
+        return;
+      }
 
-    // Direction reversal mid-stream — new gesture; clear accumulator
-    // and lock so the reversed swipe can commit on its own threshold.
-    if (state.accum !== 0 && Math.sign(e.deltaX) !== Math.sign(state.accum)) {
-      state.accum = 0;
-      state.locked = false;
-    }
+      if (state.accum !== 0 && Math.sign(e.deltaX) !== Math.sign(state.accum)) {
+        state.accum = 0;
+        state.locked = false;
+      }
 
-    if (state.locked) return;
+      if (state.locked) return;
 
-    state.accum += e.deltaX;
-    if (Math.abs(state.accum) >= WHEEL_COMMIT_PX) {
-      const dir: 1 | -1 = state.accum > 0 ? 1 : -1;
-      state.locked = true;
-      // Intentionally do NOT reset accum here — keeping its sign lets
-      // the direction-reversal check above fire if the user reverses
-      // before the gesture has had a chance to taper to zero.
-      commitSwipe(dir);
-    }
-  };
+      state.accum += e.deltaX;
+      if (Math.abs(state.accum) >= WHEEL_COMMIT_PX) {
+        const dir: 1 | -1 = state.accum > 0 ? 1 : -1;
+        state.locked = true;
+        commitSwipe(dir);
+      }
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [commitSwipe]);
 
   // Suppress click events that follow a committed swipe — prevents
   // swiping across a clickable row from also firing its onClick.
@@ -237,6 +240,7 @@ export function DetailTabSwipe({ tabs, index, onIndexChange }: Props) {
 
   return (
     <div
+      ref={containerRef}
       className="detail-tab-swipe"
       data-testid="detail-tab-swipe"
       tabIndex={0}
@@ -245,7 +249,6 @@ export function DetailTabSwipe({ tabs, index, onIndexChange }: Props) {
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
-      onWheel={onWheel}
       onClickCapture={onClickCapture}
     >
       <div className="detail-tab-track" style={{ transform }}>
