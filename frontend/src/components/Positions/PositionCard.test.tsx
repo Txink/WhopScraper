@@ -217,3 +217,85 @@ describe("PositionCard — IntradaySpark wiring", () => {
     expect(container.querySelector(".ispark.is-closed")).not.toBeNull();
   });
 });
+
+describe("PositionCard — Day P/L uses quote.trading_day on holidays", () => {
+  it("counts Friday fills as today's trades when quote.trading_day = Friday on a holiday Monday", () => {
+    // 2026-05-25 = Memorial Day (US market closed). Broker reports
+    // last_done = 7.240 (Friday's close), trade_session = "regular"
+    // (state-machine bug, separate issue), trading_day = "2026-05-22"
+    // (the actual session this quote belongs to). The dayPl reducer
+    // must filter Friday's executions in, not skip them as "not today".
+    vi.setSystemTime(Date.parse("2026-05-25T14:30:00Z")); // Mon 10:30 ET
+
+    const conlPosition: Position = {
+      symbol: "CONL.US",
+      type: "stock",
+      ticker: "CONL",
+      quantity: 7002,
+      avg_cost: 6.941,
+      option_strike: null,
+      option_expiry: null,
+      option_type: null,
+    };
+    const conlQuote: Quote = {
+      symbol: "CONL.US",
+      last_done: 7.240,
+      prev_close: 7.96,
+      open: 7.80,
+      high: 7.95,
+      low: 7.20,
+      volume: 0,
+      turnover: 0,
+      change: -0.72,
+      change_pct: -9.05,
+      trade_session: "regular",
+      trading_day: "2026-05-22",
+    } as Quote;
+    // Friday fills: 6001 shares total, avg ~$7.50.
+    // Pre-Friday position: 1001 shares (held overnight, baseline = $7.96).
+    const executions = [
+      { ts: "2026-05-22T11:01:05Z", symbol: "CONL.US", side: "BUY", qty: 1, price: 7.87 },
+      { ts: "2026-05-22T14:20:41Z", symbol: "CONL.US", side: "BUY", qty: 2000, price: 7.60 },
+      { ts: "2026-05-22T14:21:28Z", symbol: "CONL.US", side: "BUY", qty: 2000, price: 7.50 },
+      { ts: "2026-05-22T18:45:30Z", symbol: "CONL.US", side: "BUY", qty: 2000, price: 7.38 },
+    ];
+
+    render(
+      <PositionCard
+        position={conlPosition}
+        quote={conlQuote}
+        intraday={undefined}
+        executions={executions as never}
+        onClick={() => {}}
+      />,
+    );
+
+    // Expected: -2241 (1001×(7.24-7.96) + 2000×(7.24-7.60) + 2000×(7.24-7.50) + 2000×(7.24-7.38) + 1×(7.24-7.87))
+    expect(screen.getByText(/-\$2,241/)).toBeInTheDocument();
+  });
+
+  it("falls back to wall-clock today when quote.trading_day is null", () => {
+    // No trading_day on the quote → behaviour matches the pre-fix
+    // path (currentOrLastTradingDay), so this is the regression guard.
+    vi.setSystemTime(Date.parse("2026-05-14T14:30:00Z")); // Thu 10:30 ET
+
+    const quoteNoTradingDay: Quote = { ...quote, trading_day: null } as Quote;
+    const executions = [
+      { ts: "2026-05-14T14:25:00Z", symbol: "TSLA.US", side: "BUY", qty: 40, price: 244 },
+    ];
+    const positionAfter = { ...position, quantity: 240 + 40 };
+
+    render(
+      <PositionCard
+        position={positionAfter}
+        quote={quoteNoTradingDay}
+        intraday={undefined}
+        executions={executions as never}
+        onClick={() => {}}
+      />,
+    );
+    // qtyStart = 240, last = 245.5, prev = 240, buys = 40 * 244 = 9760
+    // Day P/L = 245.5 * 280 + 0 - 9760 - 240 * 240 = 68740 - 9760 - 57600 = 1380
+    expect(screen.getByText(/\+\$1,380/)).toBeInTheDocument();
+  });
+});
