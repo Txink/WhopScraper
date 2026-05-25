@@ -220,6 +220,58 @@ _IMAGE_MEDIA_TYPES = {
 }
 
 
+_VALID_TRADE_SESSIONS = ("regular", "pre", "post", "overnight", "closed")
+
+
+def _broker_dict_to_quote_out(symbol: str, q: dict[str, Any]) -> QuoteOut:
+    """Materialise a ``QuoteOut`` from a broker adapter dict.
+
+    Why this helper exists: ``QuoteOut`` and the broker dict are
+    intentionally the same shape — ``_quote_to_dict`` in the broker
+    layer builds the dict to match the schema. Going through
+    ``model_validate`` means a new ``QuoteOut`` field flows through
+    the endpoint automatically without code changes here. (The
+    earlier hand-marshalled version once silently dropped a newly
+    added ``trading_day`` field on holidays; ``test_quote_endpoint
+    _forwards_every_quote_out_field`` locks the contract in.)
+
+    The ``backfill`` defaults below are only consulted when the
+    broker adapter omits a key — sparse adapters like
+    ``NoopBrokerClient`` or ``FakeBrokerClient`` (tests) return only
+    ``last_done``. Real adapters (``LongPortClient``) populate every
+    field already; ``**q`` overrides the backfill.
+    """
+    last = float(q.get("last_done") or 0.0)
+    prev = float(q.get("prev_close") or 0.0)
+    # Preserve the pre-Pydantic clamp behaviour: an unknown session
+    # string degrades to "regular" rather than raising — matches what
+    # the manual marshaller did before this refactor.
+    session = q.get("trade_session") or "regular"
+    if session not in _VALID_TRADE_SESSIONS:
+        session = "regular"
+    backfill = {
+        # Every QuoteOut field that has no schema-level default must
+        # appear here so a sparse adapter dict (e.g. NoopBroker,
+        # FakeBrokerClient) still validates. The list is short — add
+        # to it whenever a new required field is added to QuoteOut.
+        "last_done": last,
+        "prev_close": prev,
+        "open": 0.0,
+        "high": 0.0,
+        "low": 0.0,
+        "volume": 0,
+        "turnover": 0.0,
+        "change": last - prev,
+        "change_pct": (last - prev) / prev * 100.0 if prev > 0 else 0.0,
+    }
+    return QuoteOut.model_validate({
+        **backfill,
+        **q,
+        "symbol": symbol,
+        "trade_session": session,
+    })
+
+
 def build_http_router(
     *,
     session_factory: async_sessionmaker[AsyncSession],
@@ -791,46 +843,11 @@ def build_http_router(
         except Exception as exc:  # pragma: no cover — broker SDK errors
             raise HTTPException(502, detail=f"broker quote failed: {exc}") from exc
 
-        quotes: list[QuoteOut] = []
-        for sym in symbol_list:
-            q = raw.get(sym)
-            if q is None:
-                continue
-            # ``broker.get_quote`` returns dicts pre-shaped by
-            # ``_quote_to_dict`` — session-aware change% + today_close
-            # already computed. Fallback (last - prev_close) kept for
-            # alternate broker implementations that don't pre-compute.
-            last = float(q.get("last_done", 0.0))
-            prev = float(q.get("prev_close", 0.0))
-            today_close_val = q.get("today_close")
-            today_close = float(today_close_val) if today_close_val is not None else None
-            if "change" in q and "change_pct" in q:
-                change = float(q.get("change", 0.0))
-                change_pct = float(q.get("change_pct", 0.0))
-            else:
-                change = last - prev
-                change_pct = (change / prev * 100.0) if prev > 0 else 0.0
-            session = str(q.get("trade_session") or "regular")
-            if session not in ("regular", "pre", "post", "overnight", "closed"):
-                session = "regular"
-            trading_day = q.get("trading_day")
-            quotes.append(
-                QuoteOut(
-                    symbol=sym,
-                    last_done=last,
-                    prev_close=prev,
-                    today_close=today_close,
-                    open=float(q.get("open", 0.0)),
-                    high=float(q.get("high", 0.0)),
-                    low=float(q.get("low", 0.0)),
-                    volume=int(q.get("volume", 0)),
-                    turnover=float(q.get("turnover", 0.0)),
-                    change=change,
-                    change_pct=change_pct,
-                    trade_session=session,  # type: ignore[arg-type]
-                    trading_day=trading_day if isinstance(trading_day, str) else None,
-                )
-            )
+        quotes = [
+            _broker_dict_to_quote_out(sym, raw[sym])
+            for sym in symbol_list
+            if sym in raw
+        ]
         return QuotesOut(quotes=quotes)
 
     # ------------------------------------------------------------------ #

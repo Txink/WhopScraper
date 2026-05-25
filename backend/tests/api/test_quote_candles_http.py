@@ -123,6 +123,63 @@ def test_quote_change_pct_calculation(
     assert data["prev_close"] == 100.0
 
 
+def test_quote_endpoint_forwards_every_quote_out_field(
+    client_and_broker: tuple[TestClient, FakeBrokerClient],
+) -> None:
+    """Lock in that the broker dict → /api/quote response path doesn't
+    silently drop fields.
+
+    When a new field is added to ``QuoteOut`` (in
+    ``app/api/schemas.py``), the assertion below will fail until the
+    new field is also added to the ``exhaustive`` dict — at which
+    point the loop verifies every field reaches the JSON response.
+
+    Regression guard for the bug fixed in 5dfcd02 where
+    ``quote_endpoint`` hand-marshalled fields one-by-one and silently
+    dropped a newly added ``trading_day`` field, producing wrong
+    Day P/L on holidays.
+    """
+    from app.api.schemas import QuoteOut
+
+    client, broker = client_and_broker
+    exhaustive: dict[str, object] = {
+        "last_done": 1.0,
+        "prev_close": 2.0,
+        "today_close": 3.0,
+        "open": 4.0,
+        "high": 5.0,
+        "low": 6.0,
+        "volume": 7,
+        "turnover": 8.0,
+        "change": 9.0,
+        "change_pct": 10.0,
+        "trade_session": "post",
+        "trading_day": "2026-05-22",
+    }
+
+    # If this fails, ``QuoteOut`` has new fields not covered here —
+    # add them to ``exhaustive`` with distinct test values, then the
+    # for-loop below will assert they are forwarded end-to-end.
+    expected_fields = set(QuoteOut.model_fields) - {"symbol"}
+    missing = expected_fields - set(exhaustive)
+    assert not missing, (
+        f"QuoteOut has new fields not covered by this test: {missing}. "
+        f"Add them to the ``exhaustive`` dict with distinct values."
+    )
+
+    def fake_quote(symbols: list[str]) -> dict[str, dict[str, object]]:
+        return {"TSLA.US": exhaustive.copy()}
+
+    broker.get_quote = fake_quote  # type: ignore[assignment]
+
+    resp = client.get("/api/quote", params={"token": _TOKEN, "symbols": "TSLA.US"})
+    assert resp.status_code == 200
+    data = resp.json()["quotes"][0]
+    assert data["symbol"] == "TSLA.US"
+    for field, value in exhaustive.items():
+        assert data[field] == value, f"field {field!r} dropped or mangled by endpoint"
+
+
 # ---------------------------------------------------------------------------
 # /api/candlesticks
 # ---------------------------------------------------------------------------
