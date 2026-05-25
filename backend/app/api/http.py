@@ -1139,11 +1139,17 @@ def build_http_router(
         account_id = getattr(broker, "account_id", "")
         async with session_scope(session_factory) as session:
             if account_id:
-                # 2-day window comfortably spans an ET trading session
-                # (BJ 16:00 → BJ 08:00 next day = ~16h). DB upsert
-                # dedupes by order_id so it's idempotent.
-                await sync_broker_executions(session, broker, days=2)
-                since = datetime.now(_tz.utc) - timedelta(days=2)
+                # 7-day window: comfortably spans the worst-case
+                # Thanksgiving (Thu close + Fri half-day + Sat + Sun)
+                # or Memorial Day (Fri + Sat + Sun + Mon holiday) so
+                # the most recent trading day's fills are always in
+                # the DB read. Frontend filters precisely by
+                # ``quote.trading_day``; backend just needs to not
+                # drop fills before they reach the client. DB upsert
+                # in sync_broker_executions dedupes by order_id so
+                # the widened sync is idempotent.
+                await sync_broker_executions(session, broker, days=7)
+                since = datetime.now(_tz.utc) - timedelta(days=7)
                 rows = await repo.list_broker_executions(
                     session,
                     account_id=account_id,
