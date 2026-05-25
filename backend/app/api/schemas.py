@@ -816,7 +816,13 @@ def _last_push_summary(events: list[PushEvent]) -> dict[str, Any]:
 
 
 def task_to_out(task: Task) -> TaskOut:
-    """Convert a domain Task (with push events) to TaskOut."""
+    """Convert a domain Task (with push events) to TaskOut.
+
+    Field-drift guard: ``test_task_to_out_forwards_every_field`` walks
+    ``TaskOut.model_fields`` and asserts every field round-trips —
+    when adding a field here, also extend that test's exhaustive
+    fixture so the contract stays locked.
+    """
     return TaskOut(
         id=task.id,
         type=task.type,

@@ -183,30 +183,34 @@ def _row_to_chat_out(row: ChatMessageRow) -> ChatMessageOut:
     returns it naive on read. Without this, Pydantic emits ISO without a
     ``+00:00`` suffix and the frontend's ``new Date(...)`` parses it as the
     browser's local timezone, mis-binning messages by up to 8 hours.
+
+    Built via ``model_validate`` rather than ``ChatMessageOut(...)`` so
+    new schema fields flow through without an explicit forward here;
+    ``test_chat_message_row_to_out_forwards_every_field`` locks it in.
     """
     posted_at = row.posted_at
     if posted_at.tzinfo is None:
         posted_at = posted_at.replace(tzinfo=UTC)
-    quoted: QuotedRefOut | None = None
+    quoted_payload: dict[str, Any] | None = None
     if row.quoted_author is not None:
         q_posted = row.quoted_posted_at
         if q_posted is not None and q_posted.tzinfo is None:
             q_posted = q_posted.replace(tzinfo=UTC)
-        quoted = QuotedRefOut(
-            message_id=row.quoted_message_id,
-            author=row.quoted_author,
-            content=row.quoted_content or "",
-            posted_at=q_posted,
-        )
-    return ChatMessageOut(
-        id=row.id,
-        page_id=row.page_id,
-        author=row.author,
-        content=row.content,
-        posted_at=posted_at,
-        quoted=quoted,
-        image_url=f"/api/chat-images/{row.id}" if row.image_filename else None,
-    )
+        quoted_payload = {
+            "message_id": row.quoted_message_id,
+            "author": row.quoted_author,
+            "content": row.quoted_content or "",
+            "posted_at": q_posted,
+        }
+    return ChatMessageOut.model_validate({
+        "id": row.id,
+        "page_id": row.page_id,
+        "author": row.author,
+        "content": row.content,
+        "posted_at": posted_at,
+        "quoted": quoted_payload,
+        "image_url": f"/api/chat-images/{row.id}" if row.image_filename else None,
+    })
 
 
 _IMAGE_MEDIA_TYPES = {
@@ -221,6 +225,95 @@ _IMAGE_MEDIA_TYPES = {
 
 
 _VALID_TRADE_SESSIONS = ("regular", "pre", "post", "overnight", "closed")
+
+
+def _broker_dict_to_position_out(p: dict[str, Any]) -> PositionOut:
+    """Materialise a ``PositionOut`` from a broker position dict.
+
+    Routes to the option / stock branch based on whether the symbol
+    parses as an OCC option contract. Going through
+    ``model_validate`` means new fields on ``PositionOut`` flow
+    through automatically — the prior hand-marshalled version had
+    two near-identical 9-field copy blocks (stock vs option) that
+    would have silently dropped any newly added field. See
+    ``test_position_dict_to_out_forwards_every_field``.
+    """
+    from app.broker.symbol_classify import parse_option_symbol
+
+    symbol = str(p.get("symbol", ""))
+    option_leg = parse_option_symbol(symbol)
+    base = {
+        "symbol": symbol,
+        "quantity": int(p.get("quantity", 0) or 0),
+        "avg_cost": p.get("avg_cost"),
+        "name": p.get("name"),
+    }
+    if option_leg is not None:
+        return PositionOut.model_validate({
+            **base,
+            "type": "option",
+            "ticker": option_leg.ticker,
+            "option_strike": option_leg.strike,
+            "option_expiry": option_leg.expiry,
+            "option_type": option_leg.cp,
+        })
+    return PositionOut.model_validate({
+        **base,
+        "type": "stock",
+        "ticker": str(p.get("ticker", "")),
+        "option_strike": None,
+        "option_expiry": None,
+        "option_type": None,
+    })
+
+
+def _execution_row_to_out(r: Any) -> ExecutionOut:
+    """Materialise an ``ExecutionOut`` from a ``BrokerExecutionRow``.
+
+    The two endpoints that surface fills (``/api/broker/executions``
+    and ``/api/broker/today_executions``) used to hand-marshal the
+    same nine fields side-by-side — guaranteed to drift if anyone
+    added a column. This helper centralises the conversion;
+    ``test_execution_row_to_out_forwards_every_field`` walks
+    ``ExecutionOut.model_fields`` to lock the contract.
+
+    ``ts`` may come back naive from SQLite (the column is
+    ``DateTime(timezone=True)`` but SQLite stores it as a plain
+    string and SQLAlchemy returns naive on read); re-attach UTC so
+    the wire format carries the ``+00:00`` suffix the frontend needs
+    for correct day-bucketing.
+    """
+    from datetime import timezone as _tz
+
+    ts = r.ts
+    if ts is not None and ts.tzinfo is None:
+        ts = ts.replace(tzinfo=_tz.utc)
+    return ExecutionOut.model_validate({
+        "order_id": r.order_id,
+        "task_id": r.task_id,
+        "symbol": r.symbol,
+        "ticker": r.ticker,
+        "side": r.side,
+        "qty": r.qty,
+        "price": r.price,
+        "ts": ts,
+        "t_pair_tags": [
+            (int(pid), int(qty)) for pid, qty in (r.t_pair_tags or [])
+        ],
+    })
+
+
+def _broker_status_dict_to_out(snap: dict[str, Any]) -> BrokerStatusOut:
+    """Materialise a ``BrokerStatusOut`` from the broker_status_fn dict.
+
+    Used by both ``/api/longport/broker/status`` (GET) and
+    ``/api/longport/broker/reload`` (POST). Going through
+    ``model_validate`` instead of hand-listing fields keeps the two
+    endpoints from drifting apart when ``BrokerStatusOut`` gains a
+    field — see ``test_broker_status_endpoint_forwards_every_field``
+    for the regression guard.
+    """
+    return BrokerStatusOut.model_validate(snap)
 
 
 def _broker_dict_to_quote_out(symbol: str, q: dict[str, Any]) -> QuoteOut:
@@ -474,11 +567,10 @@ def build_http_router(
 
         Longbridge's ``stock_positions`` endpoint actually returns BOTH
         stocks and option contracts the user holds (the option contracts
-        carry an OCC-format symbol). We classify each row via
-        ``parse_option_symbol`` and route to the appropriate bucket.
+        carry an OCC-format symbol). ``_broker_dict_to_position_out``
+        routes each row to the appropriate branch via
+        ``parse_option_symbol``.
         """
-        from app.broker.symbol_classify import parse_option_symbol
-
         broker = _get_broker()
         account_id = getattr(broker, "account_id", "") or None
         stocks: list[PositionOut] = []
@@ -502,39 +594,8 @@ def build_http_router(
                 logger.warning("upsert_positions failed: %s", exc)
 
         for p in raw:
-            symbol = str(p.get("symbol", ""))
-            option_leg = parse_option_symbol(symbol)
-            qty = int(p.get("quantity", 0) or 0)
-            avg = p.get("avg_cost")
-            name = p.get("name")
-            if option_leg is not None:
-                options.append(
-                    PositionOut(
-                        symbol=symbol,
-                        type="option",
-                        ticker=option_leg.ticker,
-                        quantity=qty,
-                        avg_cost=avg,
-                        name=name,
-                        option_strike=option_leg.strike,
-                        option_expiry=option_leg.expiry,
-                        option_type=option_leg.cp,
-                    )
-                )
-            else:
-                stocks.append(
-                    PositionOut(
-                        symbol=symbol,
-                        type="stock",
-                        ticker=str(p.get("ticker", "")),
-                        quantity=qty,
-                        avg_cost=avg,
-                        name=name,
-                        option_strike=None,
-                        option_expiry=None,
-                        option_type=None,
-                    )
-                )
+            out = _broker_dict_to_position_out(p)
+            (options if out.type == "option" else stocks).append(out)
         return PositionsOut(stocks=stocks, options=options)
 
     # ------------------------------------------------------------------ #
@@ -1097,24 +1158,7 @@ def build_http_router(
         for r in rows:
             if r.side not in ("BUY", "SELL"):
                 continue
-            ts = r.ts
-            if ts is not None and ts.tzinfo is None:
-                ts = ts.replace(tzinfo=_tz.utc)
-            executions.append(
-                ExecutionOut(
-                    order_id=r.order_id,
-                    task_id=r.task_id,
-                    symbol=r.symbol,
-                    ticker=r.ticker,
-                    side=r.side,  # type: ignore[arg-type]
-                    qty=r.qty,
-                    price=r.price,
-                    ts=ts,
-                    t_pair_tags=[
-                        (int(pid), int(qty)) for pid, qty in (r.t_pair_tags or [])
-                    ],
-                )
-            )
+            executions.append(_execution_row_to_out(r))
         if last_synced is not None and last_synced.tzinfo is None:
             last_synced = last_synced.replace(tzinfo=_tz.utc)
         return ExecutionsOut(
@@ -1209,24 +1253,7 @@ def build_http_router(
         for r in rows:
             if r.side not in ("BUY", "SELL"):
                 continue
-            ts = r.ts
-            if ts is not None and ts.tzinfo is None:
-                ts = ts.replace(tzinfo=_tz.utc)
-            executions.append(
-                ExecutionOut(
-                    order_id=r.order_id,
-                    task_id=r.task_id,
-                    symbol=r.symbol,
-                    ticker=r.ticker,
-                    side=r.side,  # type: ignore[arg-type]
-                    qty=r.qty,
-                    price=r.price,
-                    ts=ts,
-                    t_pair_tags=[
-                        (int(pid), int(qty)) for pid, qty in (r.t_pair_tags or [])
-                    ],
-                )
-            )
+            executions.append(_execution_row_to_out(r))
         return ExecutionsOut(executions=executions)
 
     @router.get("/api/trades", response_model=TradesOut)
@@ -1454,13 +1481,7 @@ def build_http_router(
 
         @router.get("/api/longport/broker/status", response_model=BrokerStatusOut)
         async def get_broker_status() -> BrokerStatusOut:  # noqa: RUF029
-            snap = broker_status_fn()
-            return BrokerStatusOut(
-                is_real=bool(snap.get("is_real")),
-                account_label=str(snap.get("account_label", "")),
-                dry_run=bool(snap.get("dry_run")),
-                last_init_error=snap.get("last_init_error"),
-            )
+            return _broker_status_dict_to_out(broker_status_fn())
 
     if broker_reload_fn is not None:
 
@@ -1470,13 +1491,7 @@ def build_http_router(
             new one from the latest credentials in runtime store, and
             return the resulting status. Used by the UI's refresh button.
             """
-            snap = await broker_reload_fn()
-            return BrokerStatusOut(
-                is_real=bool(snap.get("is_real")),
-                account_label=str(snap.get("account_label", "")),
-                dry_run=bool(snap.get("dry_run")),
-                last_init_error=snap.get("last_init_error"),
-            )
+            return _broker_status_dict_to_out(await broker_reload_fn())
 
     @router.post("/api/tasks/{task_id}/confirm", response_model=TaskOut)
     async def confirm_task_endpoint(task_id: str) -> TaskOut:
