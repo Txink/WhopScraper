@@ -325,6 +325,13 @@ class QuoteOut(BaseModel):
     # window (weekend, lunch break, post-close) and the surfaced
     # ``last_done`` is yesterday's close.
     trade_session: Literal["regular", "pre", "post", "overnight", "closed"] = "regular"
+    # ET (or HKT / CST) calendar date that ``last_done`` belongs to,
+    # as ISO ``YYYY-MM-DD``. Resolved server-side from the broker's
+    # trading-days calendar so weekends + holidays are handled. The
+    # frontend uses this to filter "today's executions" for Day P/L
+    # without needing its own holiday calendar. ``None`` when the
+    # broker calendar cache is cold (frontend falls back to wall clock).
+    trading_day: str | None = None
 
 
 class QuotesOut(BaseModel):
