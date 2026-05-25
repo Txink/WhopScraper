@@ -380,3 +380,15 @@ async def test_current_or_last_trading_day_cold_cache_returns_local_date() -> No
     now = datetime(2026, 5, 25, 14, 30, tzinfo=timezone.utc)
     # 10:30 EDT → 2026-05-25
     assert sch.current_or_last_trading_day("US", now) == date(2026, 5, 25)
+
+
+@pytest.mark.asyncio
+async def test_current_or_last_trading_day_hk_lunch_break_returns_today() -> None:
+    """HK 12:30 HKT is the inter-day lunch break — ``state_for`` returns
+    ``"closed"`` even though 2030-01-02 is a real trading day. The method
+    must return today (not yesterday) by walking back from
+    ``local_date + 1`` so today itself is a candidate."""
+    sch = MarketSchedule(_seed_sessions_via_fake())
+    await sch.force_refresh()
+    now = datetime(2030, 1, 2, 4, 30, tzinfo=timezone.utc)  # 12:30 HKT
+    assert sch.current_or_last_trading_day("HK", now) == date(2030, 1, 2)
