@@ -22,6 +22,7 @@ from app.broker.push_listener import PushListener, register_push_listener
 from app.broker.trader import register_trader
 from app.core.config import Settings, get_settings
 from app.core.event_bus import EventBus
+from app.core.task_scheduler import TaskScheduler
 from app.parser.service import register_parser_service
 from app.storage.db import Base, create_engine, make_session_factory
 from app.storage.listeners import register_storage_listeners
@@ -46,6 +47,7 @@ class AppState:
     whop_registry: WhopRegistry
     longport_runtime: LongPortRuntimeStore
     last_init_error: str | None
+    task_scheduler: TaskScheduler
 
 
 def create_app(
@@ -119,6 +121,12 @@ def create_app(
 
         bus = EventBus()
         state.bus = bus
+
+        # Central scheduler for all long-running periodic jobs (market
+        # schedule refresh, future heartbeats, etc.). Started up-front so
+        # later ``add_job`` calls spawn their tasks immediately.
+        state.task_scheduler = TaskScheduler()
+        await state.task_scheduler.start()
         # When a test passes broker_override OR an explicit runtime override,
         # do NOT read/write the real settings file. Use the override (or an
         # in-memory store derived from Settings) so test runs stay hermetic.
@@ -276,11 +284,18 @@ def create_app(
             # instead of issuing per-quote SDK calls.
             if hasattr(state.broker, "bind_market_schedule"):
                 state.broker.bind_market_schedule(schedule)
-            # Default task: kick off the initial refresh in the
-            # background so the cache is warm by the time the first
-            # push arrives. Failure is logged but not fatal — the
-            # state_for fallback uses the static clock heuristic.
-            asyncio.ensure_future(schedule.maybe_refresh())
+            # Hand the schedule's refresh to the central TaskScheduler:
+            # fires once immediately (initial_delay=0) to warm the cache,
+            # then ticks hourly. The 6h fatigue inside MarketSchedule
+            # throttles the actual SDK round-trip — the hourly tick is
+            # cheap when within the fatigue window.
+            scheduler = state.task_scheduler
+            scheduler.add_job(
+                "market_schedule_refresh",
+                schedule.maybe_refresh,
+                interval_seconds=3600,
+                initial_delay=0,
+            )
 
             def _publish_quote(symbol: str, quote: dict[str, Any]) -> None:
                 # SDK thread → marshal onto loop. Closure captures ``bus``
@@ -542,6 +557,12 @@ def create_app(
         # Shutdown                                                             #
         # ------------------------------------------------------------------ #
         logger.info("shutting down signal-station backend...")
+
+        if hasattr(state, "task_scheduler"):
+            try:
+                await state.task_scheduler.stop()
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("task_scheduler stop error: %s", exc)
 
         if hasattr(app.state, "alerts_engine"):
             try:

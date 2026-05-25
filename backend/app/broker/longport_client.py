@@ -479,24 +479,28 @@ class LongPortClient:
             out[market_str] = windows
         return out
 
-    def fetch_trading_days(self, *, days_back: int = 3) -> dict[str, list[date]]:
+    def fetch_trading_days(
+        self,
+        *,
+        days_back: int = 14,
+        days_forward: int = 14,
+    ) -> dict[str, list[date]]:
         """BrokerClient implementation — pulls ``trading_days`` per
-        market for a look-back window and returns the newest-first list.
+        market for a window that brackets today and returns the
+        newest-first list.
 
         The SDK requires explicit ``Market`` enums; we iterate the three
-        markets we actually surface (US / HK / CN) so callers don't have
-        to enumerate them. Failure for one market leaves it out of the
-        result; other markets still load.
+        markets we actually surface (US / HK / CN). Failure for one
+        market leaves it out of the result; other markets still load.
         """
         if self._quote_ctx is None:
             return {}
+        from datetime import timedelta
         from longbridge.openapi import Market as LPMarket
 
-        end = date.today()
-        # Pull a wider calendar window than ``days_back`` to absorb
-        # weekends and holidays — 14 days back gives us at least 3 trading
-        # days in every reasonable holiday pattern.
-        begin = end - __import__("datetime").timedelta(days=14)
+        today = date.today()
+        begin = today - timedelta(days=days_back)
+        end = today + timedelta(days=days_forward)
         markets = (("US", LPMarket.US), ("HK", LPMarket.HK), ("CN", LPMarket.CN))
         out: dict[str, list[date]] = {}
         for code, market_enum in markets:
@@ -508,11 +512,10 @@ class LongPortClient:
                 )
                 continue
             trading: list[date] = list(getattr(resp, "trading_days", []) or [])
-            # Newest-first, capped to ``days_back``. half_trading_days
-            # (HK 半日) are also trading days for our purposes — include them.
+            # half_trading_days (HK 半日) count as trading days here.
             trading.extend(getattr(resp, "half_trading_days", []) or [])
             trading.sort(reverse=True)
-            out[code] = trading[:days_back]
+            out[code] = trading
         return out
 
     def get_quote(self, symbols: list[str]) -> dict[str, dict[str, Any]]:

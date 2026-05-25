@@ -189,7 +189,12 @@ class FakeBrokerClient:
         back to its clock heuristic)."""
         return dict(getattr(self, "trading_sessions_map", {}))
 
-    def fetch_trading_days(self, *, days_back: int = 3) -> dict[str, list[Any]]:
+    def fetch_trading_days(
+        self,
+        *,
+        days_back: int = 14,
+        days_forward: int = 14,
+    ) -> dict[str, list[Any]]:
         return dict(getattr(self, "trading_days_map", {}))
 
     def is_noop(self) -> bool:

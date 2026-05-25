@@ -51,9 +51,10 @@ class MarketSchedule:
       holiday). State strings match the wire schema: ``regular`` /
       ``pre`` / ``post`` / ``overnight``.
 
-    - ``_trading_days``: per-market list of recent trading dates,
-      newest-first. Default 3 days back — enough to resolve "yesterday's
-      RTH close" across long-weekend holiday gaps.
+    - ``_trading_days``: per-market list of trading dates inside a
+      [today-14d, today+14d] window, newest-first. The forward portion
+      is what lets us identify today itself as a holiday (today falls
+      between the cache's oldest past date and newest future date).
 
     Thread model: the refresh lock is an asyncio Lock — refresh runs
     inside the event loop. Pure-read methods (``state_for``,
@@ -122,7 +123,9 @@ class MarketSchedule:
 
         try:
             days_raw = await asyncio.to_thread(
-                self._broker.fetch_trading_days, days_back=3,
+                self._broker.fetch_trading_days,
+                days_back=14,
+                days_forward=14,
             )
         except Exception as exc:  # noqa: BLE001
             logger.warning("MarketSchedule: trading_days refresh failed: %s", exc)
@@ -181,10 +184,11 @@ class MarketSchedule:
         def is_trading(d: date) -> bool:
             """Holiday-aware trading-day check.
 
-            The cache holds the last few trading dates (days_back=3) so
-            we can't blanket-say "not in cache = not trading" — future
-            dates (e.g. tomorrow, needed for overnight validation) won't
-            be cached but may very well be trading days. Three-way logic:
+            The cache holds trading dates in a [today-14, today+14]
+            window so today is always bracketed (even if today itself
+            is a holiday — the cache will contain the prior and next
+            trading days, and today's date falls inside that range).
+            Three-way logic:
 
             1. ``d in cached`` → definitively a trading day.
             2. Weekend → definitively closed.
@@ -192,7 +196,8 @@ class MarketSchedule:
                holiday (the broker returned the surrounding days but
                omitted ``d``).
             4. Weekday outside cached range OR cold cache → fall back to
-               the weekday heuristic (assume trading).
+               the weekday heuristic (assume trading). This only kicks
+               in for dates far from today (>14 days either side).
             """
             cached = self._trading_days.get(market_key, []) or []
             if d in cached:

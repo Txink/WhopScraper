@@ -166,6 +166,56 @@ async def test_us_friday_evening_is_closed_not_overnight() -> None:
 
 
 @pytest.mark.asyncio
+async def test_us_holiday_today_with_forward_window_is_closed() -> None:
+    """Memorial Day 2026-05-25 (the originally-reported bug): today
+    is itself the holiday Monday. The broker cache must include
+    *upcoming* trading days (e.g. Tue 5/26) so today's date falls
+    inside [oldest_past, newest_future] — then is_trading() spots
+    the gap and state_for returns 'closed' instead of falling back
+    to the weekday heuristic.
+
+    This is the realistic, end-to-end shape the user encountered: a
+    cache that brackets today is what makes holiday detection work
+    for the current day."""
+    broker = _seed_sessions_via_fake()
+    broker.trading_days_map["US"] = [  # type: ignore[attr-defined]
+        date(2026, 5, 26),  # Tue — next trading day after Memorial Day
+        date(2026, 5, 22),  # Fri — last trading day before
+        date(2026, 5, 21),  # Thu
+        date(2026, 5, 20),  # Wed
+    ]
+    sch = MarketSchedule(broker)
+    await sch.force_refresh()
+    # Mon May 25, 2026 13:30 UTC = 09:30 ET (start of regular session
+    # on any normal weekday).
+    now = datetime(2026, 5, 25, 13, 30, tzinfo=timezone.utc)
+    assert sch.state_for("US", now) == "closed"
+
+
+@pytest.mark.asyncio
+async def test_refresh_requests_forward_window_from_broker() -> None:
+    """The cache must include upcoming trading days, not just history.
+    Without forward dates today (when it's a holiday) is always past
+    the cache's newest entry → is_trading() falls back to weekday
+    heuristic and misclassifies the holiday as a trading day."""
+    broker = _seed_sessions_via_fake()
+    captured: dict = {}
+
+    def capturing(**kwargs):  # type: ignore[no-untyped-def]
+        captured.update(kwargs)
+        return dict(broker.trading_days_map)  # type: ignore[attr-defined]
+
+    broker.fetch_trading_days = capturing  # type: ignore[method-assign]
+    sch = MarketSchedule(broker)
+    await sch.force_refresh()
+
+    assert captured.get("days_forward", 0) >= 7, (
+        "MarketSchedule must request a forward window so today (which "
+        "may be a holiday) is bracketed in the cached date range"
+    )
+
+
+@pytest.mark.asyncio
 async def test_us_holiday_inside_cached_range_is_closed() -> None:
     """If the broker omits a weekday from the trading-days cache (e.g.
     a holiday), state_for should treat that date as non-trading."""

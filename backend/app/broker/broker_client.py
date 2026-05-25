@@ -186,12 +186,20 @@ class BrokerClient(Protocol):
     def fetch_trading_days(
         self,
         *,
-        days_back: int = 3,
+        days_back: int = 14,
+        days_forward: int = 14,
     ) -> dict[str, list[Any]]:
-        """Return the most recent ``days_back`` trading days per market
-        (calendar-aware — skips weekends + holidays). Output: ``{market:
-        [date, ...]}`` newest-first. Used to resolve "yesterday's close
-        of record" when the calendar has a holiday."""
+        """Return all trading days in ``[today - days_back, today +
+        days_forward]`` per market (calendar-aware — skips weekends +
+        holidays). Output: ``{market: [date, ...]}`` newest-first.
+
+        The forward window is what lets holiday-detection identify
+        *today* as non-trading: on a holiday Monday the returned list
+        includes the prior Friday AND the following Tuesday, so today
+        falls inside the cached range and ``MarketSchedule.is_trading``
+        spots the gap. Without forward dates, today is always at or
+        past the newest cached entry → cache-range check fails → the
+        weekday heuristic mislabels the holiday."""
 
     def cancel_order(self, order_id: str) -> None:
         """Cancel an open order by broker-assigned order_id.
