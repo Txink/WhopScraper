@@ -18,6 +18,10 @@ export interface paths {
          *     Pagination is cursor-based: pass ``cursor=<ISO-datetime>`` from
          *     ``next_cursor`` in the previous page to advance.  ``next_cursor`` is
          *     ``null`` when no further pages exist.
+         *
+         *     Multi-value URL filter: pass ``?urls=u1&urls=u2``. Time window:
+         *     ``week_start`` / ``week_end`` apply a half-open [start, end) filter on
+         *     ``message.posted_at``.
          */
         get: operations["list_tasks_endpoint_api_tasks_get"];
         put?: never;
@@ -428,6 +432,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/broker/executions/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sync Executions Endpoint
+         * @description Force-pull the last ``days`` of broker fills for ``ticker`` and
+         *     upsert into ``broker_executions``. Distinct from the GET path's
+         *     incremental sync (which anchors on ``MAX(ts)``) — this
+         *     unconditionally walks back ``days`` so mid-window gaps in the
+         *     local cache are filled. Idempotent: PK is order_id.
+         *
+         *     ``days`` capped at 90 because LongBridge's history_executions
+         *     rejects wider single calls (see knowledge/longbridge-api-limits.md).
+         */
+        post: operations["sync_executions_endpoint_api_broker_executions_sync_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/broker/today_executions": {
         parameters: {
             query?: never;
@@ -707,7 +738,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Whop Pages */
+        /**
+         * List Whop Pages
+         * @description List monitored pages.
+         *
+         *     Default (no query param): only top-level pages (parent_chat_id IS NULL).
+         *     With ``?parent_chat_id=<id>``: only that parent's sub-monitors.
+         */
         get: operations["list_whop_pages_api_whop_pages_get"];
         put?: never;
         /** Create Whop Page */
@@ -753,6 +790,32 @@ export interface paths {
          *     regardless of the active filter selection.
          */
         get: operations["get_chat_messages_api_whop_pages__page_id__chat_messages_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/chat-images/{message_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Chat Image
+         * @description Serve a cached chat image from ``<data_dir>/chat-images/``.
+         *
+         *     The chat_writer downloads images at scrape time (see
+         *     ``app.whop.chat_writer._download_image``). This endpoint returns
+         *     the bytes with a media type inferred from the file extension.
+         *     404 if the row is missing, the row has no image, or the file is
+         *     missing on disk.
+         */
+        get: operations["get_chat_image_api_chat_images__message_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1014,6 +1077,8 @@ export interface components {
              */
             posted_at: string;
             quoted?: components["schemas"]["QuotedRefOut"] | null;
+            /** Image Url */
+            image_url?: string | null;
         };
         /** ChatMessagesOut */
         ChatMessagesOut: {
@@ -1101,6 +1166,18 @@ export interface components {
              * @default false
              */
             has_more: boolean;
+        };
+        /**
+         * ExecutionsSyncOut
+         * @description Response payload for ``POST /api/broker/executions/sync``.
+         *
+         *     ``persisted`` is the upsert count returned by
+         *     ``sync_broker_executions`` (new rows + updated rows). The frontend
+         *     doesn't display it; the field exists for logging and test assertions.
+         */
+        ExecutionsSyncOut: {
+            /** Persisted */
+            persisted: number;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -1437,6 +1514,8 @@ export interface components {
              * @enum {string}
              */
             trade_session: "regular" | "pre" | "post" | "overnight" | "closed";
+            /** Trading Day */
+            trading_day?: string | null;
         };
         /**
          * QuoteWatchIn
@@ -1809,6 +1888,8 @@ export interface components {
             source: "stock" | "option" | "chat";
             /** Name */
             name?: string | null;
+            /** Parent Chat Id */
+            parent_chat_id?: string | null;
         };
         /** WhopPageOut */
         WhopPageOut: {
@@ -1836,6 +1917,8 @@ export interface components {
             messages_published: number;
             /** Last Error */
             last_error: string | null;
+            /** Parent Chat Id */
+            parent_chat_id?: string | null;
         };
         /** WhopPageSettingsOut */
         WhopPageSettingsOut: {
@@ -1927,6 +2010,9 @@ export interface operations {
                 status?: string | null;
                 type?: string | null;
                 symbol?: string | null;
+                urls?: string[] | null;
+                week_start?: string | null;
+                week_end?: string | null;
                 token?: string | null;
             };
             header?: never;
@@ -2559,6 +2645,39 @@ export interface operations {
             };
         };
     };
+    sync_executions_endpoint_api_broker_executions_sync_post: {
+        parameters: {
+            query: {
+                ticker: string;
+                days?: number;
+                token?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExecutionsSyncOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     today_executions_endpoint_api_broker_today_executions_get: {
         parameters: {
             query?: {
@@ -3020,6 +3139,7 @@ export interface operations {
     list_whop_pages_api_whop_pages_get: {
         parameters: {
             query?: {
+                parent_chat_id?: string | null;
                 token?: string | null;
             };
             header?: never;
@@ -3136,6 +3256,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ChatMessagesOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_chat_image_api_chat_images__message_id__get: {
+        parameters: {
+            query?: {
+                token?: string | null;
+            };
+            header?: never;
+            path: {
+                message_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
