@@ -61,7 +61,11 @@ from app.broker.order_id_norm import normalize_broker_order_id
 logger = logging.getLogger(__name__)
 
 
-def _quote_to_dict(q: Any, state: str | None = None) -> dict[str, Any]:
+def _quote_to_dict(
+    q: Any,
+    state: str | None = None,
+    trading_day: str | None = None,
+) -> dict[str, Any]:
     """Normalize an SDK SecurityQuote / OptionQuote into our wire shape.
 
     Session-aware change% reference (the bit users care about):
@@ -147,6 +151,7 @@ def _quote_to_dict(q: Any, state: str | None = None) -> dict[str, Any]:
         "change": change,
         "change_pct": change_pct,
         "trade_session": state,
+        "trading_day": trading_day,
     }
 
 
@@ -379,6 +384,28 @@ class LongPortClient:
         from app.broker.market_hours import market_state_for
         return market_state_for(symbol)
 
+    def _trading_day_iso_for(self, symbol: str) -> str | None:
+        """ISO date string for the trading day this symbol's quote
+        belongs to. ``None`` when the schedule isn't bound yet — the
+        frontend falls back to its wall-clock heuristic in that case.
+
+        Lookup goes through the bound :class:`MarketSchedule` so
+        holidays are respected (the schedule consults the broker's
+        trading-days calendar)."""
+        if self._market_schedule is None:
+            return None
+        market = symbol.rsplit(".", 1)[-1].upper() if "." in symbol else ""
+        if market not in {"US", "HK", "SH", "SZ"}:
+            return None
+        try:
+            day = self._market_schedule.current_or_last_trading_day(market)
+        except Exception:
+            logger.exception(
+                "LongPortClient: trading_day lookup failed for %s", symbol,
+            )
+            return None
+        return day.isoformat()
+
     def bind_market_schedule(self, schedule: Any) -> None:
         """Inject the global :class:`MarketSchedule` so quote/state
         lookups delegate to it. Called by main.py after the schedule
@@ -464,7 +491,8 @@ class LongPortClient:
         if stock_syms:
             for q in self._quote_ctx.quote(stock_syms):
                 state = self._market_state_for(q.symbol)
-                row = _quote_to_dict(q, state)
+                td = self._trading_day_iso_for(q.symbol)
+                row = _quote_to_dict(q, state, trading_day=td)
                 self._apply_closed_state_baseline(q.symbol, state, row)
                 result[q.symbol] = row
         if option_syms:
@@ -472,7 +500,9 @@ class LongPortClient:
             # prev_close / open / high / low / volume / turnover fields, so
             # the same converter handles both.
             for q in self._quote_ctx.option_quote(option_syms):
-                result[q.symbol] = _quote_to_dict(q, self._market_state_for(q.symbol))
+                state = self._market_state_for(q.symbol)
+                td = self._trading_day_iso_for(q.symbol)
+                result[q.symbol] = _quote_to_dict(q, state, trading_day=td)
         return result
 
     def _prev_session_close(self, symbol: str) -> float | None:
@@ -1049,6 +1079,7 @@ class LongPortClient:
                 "change": change,
                 "change_pct": change_pct,
                 "trade_session": state,
+                "trading_day": self._trading_day_iso_for(symbol),
             }
             handler(symbol, quote_dict)
         except Exception:
