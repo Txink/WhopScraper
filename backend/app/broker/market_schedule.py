@@ -266,6 +266,44 @@ class MarketSchedule:
                 return d
         return None
 
+    def current_or_last_trading_day(
+        self, market: str, now: datetime | None = None
+    ) -> date:
+        """Trading day this ``now`` belongs to, as a local-market date.
+
+        - Live session (regular / pre / post): today's local date.
+        - Overnight 00:00-04:00 tail: the prior local date (the trading
+          day that opened with yesterday's pre-market — ``state_for``
+          guarantees the prior date is a real trading day before
+          returning "overnight" here).
+        - Closed (weekend / holiday): the most recent past trading day
+          from the broker's calendar.
+        - Cold cache: today's local date (best effort).
+
+        Used by ``_quote_to_dict`` to stamp each quote with the trading
+        day it belongs to, so the frontend can filter today's executions
+        without trying to recompute holiday-aware calendar math
+        client-side.
+        """
+        if now is None:
+            now = datetime.now(timezone.utc)
+        if market in ("SH", "SZ"):
+            market_key = "CN"
+        else:
+            market_key = market
+        local = now.astimezone(_market_tz(market_key))
+        local_date = local.date()
+
+        state = self.state_for(market, now)
+        if state == "overnight" and local.time() < dtime(4, 0):
+            return local_date - timedelta(days=1)
+        if state in ("regular", "pre", "post", "overnight"):
+            return local_date
+
+        # state == "closed" — walk back through the calendar.
+        prior = self.last_trading_day(market, before=local_date + timedelta(days=1))
+        return prior if prior is not None else local_date
+
     @property
     def last_refreshed_at(self) -> float | None:
         """Monotonic timestamp of the last successful refresh. ``None``

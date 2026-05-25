@@ -5487,6 +5487,17 @@
             ],
             "title": "Trade Session",
             "default": "regular"
+          },
+          "trading_day": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trading Day"
           }
         },
         "type": "object",

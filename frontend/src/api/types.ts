@@ -1821,6 +1821,8 @@ export interface components {
              * @enum {string}
              */
             trade_session: "regular" | "pre" | "post" | "overnight" | "closed";
+            /** Trading Day */
+            trading_day?: string | null;
         };
         /**
          * QuoteWatchIn

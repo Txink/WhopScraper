@@ -101,10 +101,10 @@ export function OptionCard({ position, quote, history, executions, onClick }: Pr
   // pollute the calc.
   const dayPl = useMemo(() => {
     if (last == null || prev == null) return null;
-    // Use last-trading-day fallback so weekend views still attribute the
-    // most recent session's fills as "today's trades" (see PositionCard
-    // for the same fix on stocks).
-    const todayKey = currentOrLastTradingDay();
+    // Trading-day key: prefer the server-stamped value on the quote
+    // (broker calendar, holiday-aware). Wall-clock fallback for older
+    // backends — see PositionCard.tsx for the same fix on stocks.
+    const todayKey = quote?.trading_day ?? currentOrLastTradingDay();
     let buysCost = 0;
     let sellsProceeds = 0;
     let buysQty = 0;
@@ -127,7 +127,7 @@ export function OptionCard({ position, quote, history, executions, onClick }: Pr
     return (
       (last * qty + sellsProceeds - buysCost - prev * qtyStart) * OPTION_MULT
     );
-  }, [last, prev, qty, executions, sym]);
+  }, [last, prev, qty, executions, sym, quote?.trading_day]);
 
   const dayPos = (dayPl ?? 0) >= 0;
   const changePct = quote?.change_pct ?? 0;
@@ -188,7 +188,7 @@ export function OptionCard({ position, quote, history, executions, onClick }: Pr
         {dayPl != null && (
           <span className={`ocard-day-pl ${privacy ? "" : dayPos ? "pos" : "neg"}`}>
             {privacy ? "***" : (
-              <>{dayPos ? "+" : ""}${fmt(Math.abs(dayPl), 0)}</>
+              <>{dayPos ? "+" : "-"}${fmt(Math.abs(dayPl), 0)}</>
             )}
           </span>
         )}

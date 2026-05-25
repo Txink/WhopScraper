@@ -188,3 +188,21 @@ def test_zero_reference_avoids_divide_by_zero() -> None:
     d = _quote_to_dict(q, state="regular")
     assert d["change"] == 0.0
     assert d["change_pct"] == 0.0
+
+
+def test_trading_day_field_is_threaded_through() -> None:
+    """`_quote_to_dict` accepts a `trading_day` kwarg and surfaces it
+    verbatim in the output dict. Callers (HTTP + push handler) compute
+    the value via `MarketSchedule.current_or_last_trading_day` and pass
+    it in — the converter itself does not call the schedule."""
+    q = _security_quote(symbol="TSLA.US", last_done=250.0, prev_close=240.0)
+    row = _quote_to_dict(q, state="regular", trading_day="2026-05-22")
+    assert row["trading_day"] == "2026-05-22"
+
+
+def test_trading_day_defaults_to_none_when_not_provided() -> None:
+    """Backwards-compat: callers that don't pass `trading_day` get
+    `None` (the frontend falls back to wall-clock in that case)."""
+    q = _security_quote(symbol="TSLA.US")
+    row = _quote_to_dict(q, state="regular")
+    assert row["trading_day"] is None

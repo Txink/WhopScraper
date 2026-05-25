@@ -343,3 +343,102 @@ async def test_refresh_failure_keeps_prior_cache() -> None:
     assert sch.state_for(
         "HK", datetime(2030, 1, 2, 2, 0, tzinfo=timezone.utc),
     ) == "regular"
+
+
+# --- current_or_last_trading_day -----------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_current_or_last_trading_day_during_regular_session() -> None:
+    """US 10:30 ET on a trading day → returns that date."""
+    sch = MarketSchedule(_seed_sessions_via_fake())
+    await sch.force_refresh()
+    # 2030-01-02 14:30 UTC = 09:30 ET, Wed, in cached trading days.
+    now = datetime(2030, 1, 2, 14, 30, tzinfo=timezone.utc)
+    assert sch.current_or_last_trading_day("US", now) == date(2030, 1, 2)
+
+
+@pytest.mark.asyncio
+async def test_current_or_last_trading_day_us_holiday_returns_prior_trading_day() -> None:
+    """US Memorial Day Monday (gap in cached calendar) → returns the
+    prior Friday from the cached trading days."""
+    broker = FakeBrokerClient()
+    broker.trading_sessions_map = {  # type: ignore[attr-defined]
+        "US": [
+            (time(4, 0), time(9, 30), "pre"),
+            (time(9, 30), time(16, 0), "regular"),
+            (time(16, 0), time(20, 0), "post"),
+        ],
+    }
+    # Cached: Fri 5/22, (skip Mon 5/25 holiday), Tue 5/26 - newest first.
+    broker.trading_days_map = {  # type: ignore[attr-defined]
+        "US": [date(2026, 5, 26), date(2026, 5, 22), date(2026, 5, 21)],
+    }
+    sch = MarketSchedule(broker)
+    await sch.force_refresh()
+    # 2026-05-25 14:30 UTC = 10:30 EDT, Memorial Day Monday.
+    now = datetime(2026, 5, 25, 14, 30, tzinfo=timezone.utc)
+    assert sch.current_or_last_trading_day("US", now) == date(2026, 5, 22)
+
+
+@pytest.mark.asyncio
+async def test_current_or_last_trading_day_us_saturday_returns_friday() -> None:
+    """US Saturday morning → returns the prior Friday."""
+    broker = FakeBrokerClient()
+    broker.trading_sessions_map = {  # type: ignore[attr-defined]
+        "US": [(time(9, 30), time(16, 0), "regular")],
+    }
+    broker.trading_days_map = {  # type: ignore[attr-defined]
+        "US": [date(2026, 5, 22), date(2026, 5, 21)],
+    }
+    sch = MarketSchedule(broker)
+    await sch.force_refresh()
+    # 2026-05-23 14:30 UTC = 10:30 EDT, Saturday.
+    now = datetime(2026, 5, 23, 14, 30, tzinfo=timezone.utc)
+    assert sch.current_or_last_trading_day("US", now) == date(2026, 5, 22)
+
+
+@pytest.mark.asyncio
+async def test_current_or_last_trading_day_overnight_tail_rolls_back() -> None:
+    """US 02:00 ET = tail of yesterday's overnight session → yesterday's
+    date (the trading day that started at yesterday's pre-market)."""
+    broker = FakeBrokerClient()
+    broker.trading_sessions_map = {  # type: ignore[attr-defined]
+        "US": [
+            (time(4, 0), time(9, 30), "pre"),
+            (time(9, 30), time(16, 0), "regular"),
+            (time(16, 0), time(20, 0), "post"),
+            (time(20, 0), time(23, 59, 59), "overnight"),
+            (time(0, 0), time(4, 0), "overnight"),
+        ],
+    }
+    broker.trading_days_map = {  # type: ignore[attr-defined]
+        "US": [date(2026, 5, 22), date(2026, 5, 21), date(2026, 5, 20)],
+    }
+    sch = MarketSchedule(broker)
+    await sch.force_refresh()
+    # Fri 2026-05-22 06:00 UTC = Fri 02:00 EDT — tail of Thursday's overnight.
+    now = datetime(2026, 5, 22, 6, 0, tzinfo=timezone.utc)
+    assert sch.current_or_last_trading_day("US", now) == date(2026, 5, 21)
+
+
+@pytest.mark.asyncio
+async def test_current_or_last_trading_day_cold_cache_returns_local_date() -> None:
+    """Before the first refresh (no sessions cached), fall back to the
+    local market date so callers get a sane non-None value."""
+    sch = MarketSchedule(FakeBrokerClient())  # no refresh
+    now = datetime(2026, 5, 25, 14, 30, tzinfo=timezone.utc)
+    # 10:30 EDT → 2026-05-25
+    assert sch.current_or_last_trading_day("US", now) == date(2026, 5, 25)
+
+
+@pytest.mark.asyncio
+async def test_current_or_last_trading_day_hk_lunch_break_returns_today() -> None:
+    """HK 12:30 HKT is the inter-day lunch break — ``state_for`` returns
+    ``"closed"`` even though 2030-01-02 is a real trading day. The method
+    must return today (not yesterday) by walking back from
+    ``local_date + 1`` so today itself is a candidate."""
+    sch = MarketSchedule(_seed_sessions_via_fake())
+    await sch.force_refresh()
+    now = datetime(2030, 1, 2, 4, 30, tzinfo=timezone.utc)  # 12:30 HKT
+    assert sch.current_or_last_trading_day("HK", now) == date(2030, 1, 2)

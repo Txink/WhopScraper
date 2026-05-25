@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chat · 系统提示气泡 设计变体</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-0: #0b0f14;
+  --bg-1: #121821;
+  --bg-2: #171f2a;
+  --bg-3: #1c2635;
+  --line: rgba(255, 255, 255, 0.06);
+  --line-strong: rgba(255, 255, 255, 0.10);
+  --fg-1: #e4e8ef;
+  --fg-2: #8a93a1;
+  --fg-3: #566071;
+  --brand: #3fb5c5;
+  --brand-rgb: 63, 181, 197;
+  --ok: #3dd68c;
+  --ok-rgb: 61, 214, 140;
+  --err: #ef5b5b;
+  --warn: #e7a73d;
+  --warn-rgb: 231, 167, 61;
+  --info: #5aa0ff;
+  --info-rgb: 90, 160, 255;
+  --font-sans: "IBM Plex Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg-0); color: var(--fg-1);
+  font-family: var(--font-sans); font-size: 13px; line-height: 1.5;
+  font-feature-settings: "tnum" on, "lnum" on;
+}
+
+.page {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 28px 24px 80px;
+}
+.page > header {
+  margin: 0 0 24px;
+}
+.page > header h1 {
+  margin: 0 0 4px;
+  font-size: 17px;
+  font-weight: 600;
+}
+.page > header p {
+  margin: 0;
+  color: var(--fg-2);
+  font-size: 12px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.variant {
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex; flex-direction: column;
+}
+.variant-head {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+  display: flex; align-items: baseline; gap: 10px;
+}
+.variant-head h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.variant-head .tag {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--fg-3);
+  letter-spacing: 0.04em;
+}
+.variant-head .note {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--fg-2);
+}
+
+.chat {
+  padding: 14px 14px 18px;
+  display: flex; flex-direction: column;
+  gap: 8px;
+}
+
+/* ── Chat group (real message) — simplified replica of ChatCard.tsx ── */
+.chat-group {
+  display: flex; flex-direction: column;
+  gap: 4px;
+  max-width: 78%;
+}
+.chat-group--right {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+.chat-group-head {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px;
+  color: var(--fg-3);
+}
+.chat-group--right .chat-group-head { flex-direction: row-reverse; }
+.chat-avatar {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #0b0f14;
+  font-family: var(--font-mono);
+}
+.chat-avatar-neutral { background: var(--bg-3); color: var(--fg-2); }
+.chat-group-bubble {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  color: var(--fg-1);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.chat-group--right .chat-group-bubble {
+  background: rgba(var(--brand-rgb), 0.16);
+  border-color: rgba(var(--brand-rgb), 0.30);
+}
+
+/* ── Variant 1: Minimal text — gray, small, no decoration ─────────── */
+.sys-min {
+  align-self: center;
+  font-size: 11px;
+  color: var(--fg-3);
+  padding: 4px 0;
+  letter-spacing: 0.02em;
+}
+.sys-min .ts {
+  color: var(--fg-3);
+  opacity: 0.6;
+  margin-right: 6px;
+  font-family: var(--font-mono);
+}
+
+/* ── Variant 2: Pill — soft background ─────────────────────────────── */
+.sys-pill {
+  align-self: center;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px 12px;
+  font-size: 11px;
+  color: var(--fg-2);
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.sys-pill .dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--fg-3);
+}
+
+/* ── Variant 3: Hairline — flanked by horizontal lines ─────────────── */
+.sys-rule {
+  align-self: stretch;
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 0;
+  font-size: 11px;
+  color: var(--fg-3);
+}
+.sys-rule::before,
+.sys-rule::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+.sys-rule span {
+  white-space: nowrap;
+}
+
+/* ── Variant 4: Color-tinted pill with kind glyph + timestamp ─────── */
+.sys-tinted {
+  align-self: center;
+  border-radius: 999px;
+  padding: 3px 12px;
+  font-size: 11px;
+  display: inline-flex; align-items: center; gap: 7px;
+  font-weight: 500;
+}
+.sys-tinted .ts {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  opacity: 0.7;
+  font-weight: 400;
+}
+.sys-tinted--joined {
+  background: rgba(var(--ok-rgb), 0.10);
+  border: 1px solid rgba(var(--ok-rgb), 0.28);
+  color: var(--ok);
+}
+.sys-tinted--reconnected {
+  background: rgba(var(--info-rgb), 0.10);
+  border: 1px solid rgba(var(--info-rgb), 0.28);
+  color: var(--info);
+}
+.sys-tinted--left {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--line);
+  color: var(--fg-3);
+}
+.sys-tinted .glyph {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 10.5px;
+  letter-spacing: 0;
+}
+
+/* ── Day separator (already exists in chat, shown here for context) ─ */
+.day-sep {
+  align-self: center;
+  font-size: 10.5px;
+  color: var(--fg-3);
+  font-family: var(--font-mono);
+  letter-spacing: 0.06em;
+  padding: 10px 0 4px;
+}
+
+footer {
+  margin-top: 28px;
+  padding: 14px 16px;
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--fg-2);
+  font-size: 12px;
+}
+footer strong { color: var(--fg-1); font-weight: 600; }
+footer code {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  background: var(--bg-2);
+  padding: 1px 6px;
+  border-radius: 3px;
+  color: var(--fg-1);
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <h1>Chat · 系统提示气泡 (chat.system_notice)</h1>
+    <p>四个候选样式 — 都在真实聊天上下文里展示三种 kind（joined / reconnected / left）。每条都是横向居中、无头像、字号小于普通 bubble。</p>
+  </header>
+
+  <div class="grid">
+
+    <!-- ━━━━━━━━━━━━━━━━━━━━ Variant 1 ━━━━━━━━━━━━━━━━━━━━ -->
+    <section class="variant">
+      <div class="variant-head">
+        <h2>Variant 1 · 极简文本</h2>
+        <span class="tag">minimal</span>
+        <span class="note">最低视觉噪音；和日期分割条同语种</span>
+      </div>
+      <div class="chat">
+        <div class="day-sep">2026-05-22 ·  WED</div>
+
+        <div class="chat-group">
+          <div class="chat-group-head">
+            <span class="chat-avatar chat-avatar-neutral">老</span>
+            <span>老张 · 09:58</span>
+          </div>
+          <div class="chat-group-bubble">早盘观察一下 NVDA，开盘前缩量。</div>
+        </div>
+
+        <div class="sys-min"><span class="ts">10:02</span>讨论区监听已开启</div>
+
+        <div class="chat-group chat-group--right">
+          <div class="chat-group-head">
+            <span class="chat-avatar" style="background:#c97a3f">A</span>
+            <span>10:04 · 目标A</span>
+          </div>
+          <div class="chat-group-bubble">买入 NVDA 0.5 仓位</div>
+        </div>
+
+        <div class="sys-min"><span class="ts">11:17</span>讨论区已重连</div>
+
+        <div class="chat-group">
+          <div class="chat-group-head">
+            <span class="chat-avatar chat-avatar-neutral">王</span>
+            <span>王老板 · 11:18</span>
+          </div>
+          <div class="chat-group-bubble">主力没拉</div>
+        </div>
+
+        <div class="sys-min"><span class="ts">15:00</span>讨论区监听已结束</div>
+      </div>
+    </section>
+
+    <!-- ━━━━━━━━━━━━━━━━━━━━ Variant 2 ━━━━━━━━━━━━━━━━━━━━ -->
+    <section class="variant">
+      <div class="variant-head">
+        <h2>Variant 2 · Pill 单色</h2>
+        <span class="tag">pill</span>
+        <span class="note">微信/Telegram 风格，灰底胶囊</span>
+      </div>
+      <div class="chat">
+        <div class="day-sep">2026-05-22 ·  WED</div>
+
+        <div class="chat-group">
+          <div class="chat-group-head">
+            <span class="chat-avatar chat-avatar-neutral">老</span>
+            <span>老张 · 09:58</span>
+          </div>
+          <div class="chat-group-bubble">早盘观察一下 NVDA，开盘前缩量。</div>
+        </div>
+
+        <div class="sys-pill"><span class="dot"></span>10:02 · 讨论区监听已开启</div>
+
+        <div class="chat-group chat-group--right">
+          <div class="chat-group-head">
+            <span class="chat-avatar" style="background:#c97a3f">A</span>
+            <span>10:04 · 目标A</span>
+          </div>
+          <div class="chat-group-bubble">买入 NVDA 0.5 仓位</div>
+        </div>
+
+        <div class="sys-pill"><span class="dot"></span>11:17 · 讨论区已重连</div>
+
+        <div class="chat-group">
+          <div class="chat-group-head">
+            <span class="chat-avatar chat-avatar-neutral">王</span>
+            <span>王老板 · 11:18</span>
+          </div>
+          <div class="chat-group-bubble">主力没拉</div>
+        </div>
+
+        <div class="sys-pill"><span class="dot"></span>15:00 · 讨论区监听已结束</div>
+      </div>
+    </section>
+
+    <!-- ━━━━━━━━━━━━━━━━━━━━ Variant 3 ━━━━━━━━━━━━━━━━━━━━ -->
+    <section class="variant">
+      <div class="variant-head">
+        <h2>Variant 3 · 细线分隔</h2>
+        <span class="tag">hairline</span>
+        <span class="note">类终端 log；强分章感</span>
+      </div>
+      <div class="chat">
+        <div class="day-sep">2026-05-22 ·  WED</div>
+
+        <div class="chat-group">
+          <div class="chat-group-head">
+            <span class="chat-avatar chat-avatar-neutral">老</span>
+            <span>老张 · 09:58</span>
+          </div>
+          <div class="chat-group-bubble">早盘观察一下 NVDA，开盘前缩量。</div>
+        </div>
+
+        <div class="sys-rule"><span>讨论区监听已开启 · 10:02</span></div>
+
+        <div class="chat-group chat-group--right">
+          <div class="chat-group-head">
+            <span class="chat-avatar" style="background:#c97a3f">A</span>
+            <span>10:04 · 目标A</span>
+          </div>
+          <div class="chat-group-bubble">买入 NVDA 0.5 仓位</div>
+        </div>
+
+        <div class="sys-rule"><span>讨论区已重连 · 11:17</span></div>
+
+        <div class="chat-group">
+          <div class="chat-group-head">
+            <span class="chat-avatar chat-avatar-neutral">王</span>
+            <span>王老板 · 11:18</span>
+          </div>
+          <div class="chat-group-bubble">主力没拉</div>
+        </div>
+
+        <div class="sys-rule"><span>讨论区监听已结束 · 15:00</span></div>
+      </div>
+    </section>
+
+    <!-- ━━━━━━━━━━━━━━━━━━━━ Variant 4 ━━━━━━━━━━━━━━━━━━━━ -->
+    <section class="variant">
+      <div class="variant-head">
+        <h2>Variant 4 · 色调状态胶囊</h2>
+        <span class="tag">tinted</span>
+        <span class="note">三种 kind 用 ok/info/灰 区分，可快速扫描</span>
+      </div>
+      <div class="chat">
+        <div class="day-sep">2026-05-22 ·  WED</div>
+
+        <div class="chat-group">
+          <div class="chat-group-head">
+            <span class="chat-avatar chat-avatar-neutral">老</span>
+            <span>老张 · 09:58</span>
+          </div>
+          <div class="chat-group-bubble">早盘观察一下 NVDA，开盘前缩量。</div>
+        </div>
+
+        <div class="sys-tinted sys-tinted--joined">
+          <span class="glyph">▶</span>讨论区监听已开启<span class="ts">10:02</span>
+        </div>
+
+        <div class="chat-group chat-group--right">
+          <div class="chat-group-head">
+            <span class="chat-avatar" style="background:#c97a3f">A</span>
+            <span>10:04 · 目标A</span>
+          </div>
+          <div class="chat-group-bubble">买入 NVDA 0.5 仓位</div>
+        </div>
+
+        <div class="sys-tinted sys-tinted--reconnected">
+          <span class="glyph">↻</span>讨论区已重连<span class="ts">11:17</span>
+        </div>
+
+        <div class="chat-group">
+          <div class="chat-group-head">
+            <span class="chat-avatar chat-avatar-neutral">王</span>
+            <span>王老板 · 11:18</span>
+          </div>
+          <div class="chat-group-bubble">主力没拉</div>
+        </div>
+
+        <div class="sys-tinted sys-tinted--left">
+          <span class="glyph">■</span>讨论区监听已结束<span class="ts">15:00</span>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <footer>
+    <strong>三种 source 的措辞对照：</strong>
+    <code>source=chat</code> 用 "讨论区监听已开启 / 已重连 / 已结束"；
+    <code>source=stock</code> 用 "正股监听 …"；
+    <code>source=option</code> 用 "期权监听 …"。
+    时间戳：joined / reconnected 用首条消息的 <code>posted_at</code>，left 用 stop 时刻。
+  </footer>
+</div>
+</body>
+</html>

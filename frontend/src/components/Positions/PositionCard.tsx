@@ -112,11 +112,12 @@ export function PositionCard({ position, quote, intraday, executions, onClick }:
     if (last == null || dayBaseline == null) {
       return change != null ? change * qty : null;
     }
-    // Use last-trading-day fallback so Friday's executions count toward
-    // Day P/L on a Saturday view (vanilla currentTradingDay returns the
-    // calendar date, which would filter Friday's trades out and leave
-    // qtyStart over-stated).
-    const todayKey = currentOrLastTradingDay();
+    // Trading-day key: prefer the server-stamped value on the quote
+    // (broker calendar, holiday-aware). Fall back to the wall-clock
+    // heuristic only when the field is missing (cold broker, very old
+    // backend) — the heuristic mishandles holidays but is correct on
+    // regular trading days.
+    const todayKey = quote?.trading_day ?? currentOrLastTradingDay();
     let buysCost = 0;
     let sellsProceeds = 0;
     let buysQty = 0;
@@ -137,7 +138,7 @@ export function PositionCard({ position, quote, intraday, executions, onClick }:
     }
     const qtyStart = qty - buysQty + sellsQty;
     return last * qty + sellsProceeds - buysCost - dayBaseline * qtyStart;
-  }, [last, dayBaseline, change, qty, executions, sym]);
+  }, [last, dayBaseline, change, qty, executions, sym, quote?.trading_day]);
 
   const marketValue = last != null ? last * qty : null;
 
@@ -192,7 +193,7 @@ export function PositionCard({ position, quote, intraday, executions, onClick }:
         {dayPl != null && (
           <span className={`pcard-day-pl ${privacy ? "" : dayPl >= 0 ? "pos" : "neg"}`}>
             {privacy ? "***" : (
-              <>{dayPl >= 0 ? "+" : ""}${fmt(dayPl, 0)}</>
+              <>{dayPl >= 0 ? "+" : "-"}${fmt(Math.abs(dayPl), 0)}</>
             )}
           </span>
         )}
