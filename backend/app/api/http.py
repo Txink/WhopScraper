@@ -813,6 +813,7 @@ def build_http_router(
             session = str(q.get("trade_session") or "regular")
             if session not in ("regular", "pre", "post", "overnight", "closed"):
                 session = "regular"
+            trading_day = q.get("trading_day")
             quotes.append(
                 QuoteOut(
                     symbol=sym,
@@ -827,6 +828,7 @@ def build_http_router(
                     change=change,
                     change_pct=change_pct,
                     trade_session=session,  # type: ignore[arg-type]
+                    trading_day=trading_day if isinstance(trading_day, str) else None,
                 )
             )
         return QuotesOut(quotes=quotes)
