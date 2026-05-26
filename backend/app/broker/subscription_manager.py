@@ -107,7 +107,11 @@ class SubscriptionManager:
         self._loop = loop
         self._quote_listeners: list[QuoteListener] = []
         self._execution_listeners: list[ExecutionListener] = []
-        self._watched_symbols: set[str] = set()
+        # Per-owner symbol sets — the actual SDK subscription is the
+        # union across owners. Lets independent consumers (frontend
+        # positions watch, AlertEngine, future probes) declare their
+        # own symbol needs without clobbering each other.
+        self._owner_symbols: dict[str, set[str]] = {}
         self._attached = False
 
     # ------------------------------------------------------------------ #
@@ -127,7 +131,7 @@ class SubscriptionManager:
         """Unsubscribe everything currently watched. Called by the lifespan
         reload path before broker.close(); the next manager (on the new
         broker) starts with an empty watch list — clients re-issue
-        watch_quotes after they fetch fresh positions.
+        watch_quotes / set_symbols_for_owner after they fetch fresh state.
 
         Listener lists are NOT cleared here — main.py re-registers its
         bus-publishing listeners against the freshly-built manager
@@ -137,12 +141,13 @@ class SubscriptionManager:
         """
         if not self._attached:
             return
-        if self._watched_symbols:
+        union = self._union_symbols()
+        if union:
             try:
-                self._broker.unsubscribe_quotes(sorted(self._watched_symbols))
+                self._broker.unsubscribe_quotes(sorted(union))
             except Exception:
                 logger.exception("SubscriptionManager: unsubscribe_quotes failed")
-            self._watched_symbols.clear()
+            self._owner_symbols.clear()
         self._attached = False
         logger.info("SubscriptionManager: detached")
 
@@ -184,12 +189,37 @@ class SubscriptionManager:
     # ------------------------------------------------------------------ #
 
     async def watch_quotes(self, symbols: list[str]) -> dict[str, int]:
-        """Replace the watch list with ``symbols``. Backend diffs and
-        emits subscribe/unsubscribe to the broker; returns counters for
-        observability."""
+        """Replace the *positions* watch list with ``symbols``. Used by
+        the frontend's ``POST /api/quotes/watch`` endpoint. The actual
+        SDK subscription is the union across all owners — other owners
+        (e.g. AlertEngine) are unaffected.
+
+        Returns the diff counters relative to the *union* before/after
+        this call, which is what callers observe at the SDK level.
+        """
+        return await self.set_symbols_for_owner("positions", symbols)
+
+    async def set_symbols_for_owner(
+        self, owner: str, symbols: list[str]
+    ) -> dict[str, int]:
+        """Replace ``owner``'s symbol set with ``symbols`` and reconcile
+        the SDK subscription against the new union.
+
+        Owners are independent: replacing one owner's set never removes
+        a symbol that another owner still wants. The SDK only sees
+        subscribe/unsubscribe for symbols that crossed the union
+        boundary (newly added or no longer wanted by anyone).
+
+        Returns counters of net SDK-level changes for observability:
+        ``added`` / ``removed`` count symbols that crossed the union
+        boundary; ``total`` is the post-call union size.
+        """
         wanted = {s for s in symbols if s}
-        to_add = sorted(wanted - self._watched_symbols)
-        to_remove = sorted(self._watched_symbols - wanted)
+        before = self._union_symbols()
+        self._owner_symbols[owner] = wanted
+        after = self._union_symbols()
+        to_add = sorted(after - before)
+        to_remove = sorted(before - after)
         if to_remove:
             try:
                 self._broker.unsubscribe_quotes(to_remove)
@@ -200,17 +230,23 @@ class SubscriptionManager:
                 self._broker.subscribe_quotes(to_add)
             except Exception:
                 logger.exception("SubscriptionManager: subscribe failed %s", to_add)
-        self._watched_symbols = wanted
         return {
             "added": len(to_add),
             "removed": len(to_remove),
-            "total": len(self._watched_symbols),
+            "total": len(after),
         }
+
+    def _union_symbols(self) -> set[str]:
+        union: set[str] = set()
+        for syms in self._owner_symbols.values():
+            union |= syms
+        return union
 
     @property
     def watched_symbols(self) -> set[str]:
-        """Snapshot of currently-watched symbols (immutable copy)."""
-        return set(self._watched_symbols)
+        """Snapshot of the union across owners — i.e. every symbol the
+        SDK is currently subscribed to."""
+        return self._union_symbols()
 
     @property
     def loop(self) -> asyncio.AbstractEventLoop:
@@ -225,7 +261,7 @@ class SubscriptionManager:
     def _dispatch_quote(self, symbol: str, quote: dict[str, Any]) -> None:
         """Drop pushes for symbols the manager no longer watches (in-flight
         ticks after a shrinkage). Fan out to all registered listeners."""
-        if symbol not in self._watched_symbols:
+        if symbol not in self._union_symbols():
             return
         for fn in list(self._quote_listeners):
             try:

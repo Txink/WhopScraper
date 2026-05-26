@@ -1,15 +1,24 @@
 """AlertEngine — continuously evaluates enabled alerts against LongPort
 quote pushes; fires via EventBus + AlertRepo.record_trigger.
 
-Threading model: broker pushes arrive on an SDK background thread. The
-engine's ``_on_quote`` callback marshals into the asyncio event loop
-via ``loop.call_soon_threadsafe(asyncio.create_task, ...)``.
+Wiring: pushes come from the project-wide :class:`SubscriptionManager`
+(``add_quote_listener`` + ``set_symbols_for_owner("alerts", ...)``), NOT
+directly from the broker. The manager owns the broker's single
+``set_on_quote`` slot; routing alerts through it lets the WS-publishing
+listener and the alert-evaluation listener coexist on the same
+underlying push stream.
+
+Threading model: broker pushes arrive on an SDK background thread, and
+the SubscriptionManager dispatches synchronously on that thread. The
+engine's ``_on_quote_threadsafe`` callback marshals into the asyncio
+event loop via ``loop.call_soon_threadsafe(asyncio.create_task, ...)``.
 """
 from __future__ import annotations
 
 import asyncio
 import logging
 from collections import defaultdict
+from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any, Protocol
 
@@ -28,11 +37,19 @@ from app.core.events import Topics
 logger = logging.getLogger(__name__)
 
 
-class QuoteBroker(Protocol):
-    def subscribe_quotes(self, symbols: list[str]) -> None: ...
-    def unsubscribe_quotes(self, symbols: list[str]) -> None: ...
-    def set_on_quote(self, cb: Any) -> None: ...
-    def is_noop(self) -> bool: ...
+class SubscriptionManagerLike(Protocol):
+    def add_quote_listener(
+        self, fn: Callable[[str, dict[str, Any]], None],
+    ) -> Callable[[], None]: ...
+    async def set_symbols_for_owner(
+        self, owner: str, symbols: list[str],
+    ) -> dict[str, int]: ...
+
+
+# Owner key used when telling the SubscriptionManager which symbols
+# AlertEngine wants subscribed. Independent from the "positions" owner
+# the frontend's /api/quotes/watch endpoint uses.
+_OWNER = "alerts"
 
 
 class AlertEngine:
@@ -40,33 +57,70 @@ class AlertEngine:
         self,
         *,
         repo: AlertRepo,
-        broker: QuoteBroker,
         event_bus: EventBus,
+        subscription_manager_getter: Callable[[], SubscriptionManagerLike | None],
     ) -> None:
         self._repo = repo
-        self._broker = broker
         self._bus = event_bus
+        self._mgr_getter = subscription_manager_getter
         self._alerts_by_symbol: dict[str, dict[int, AlertOut]] = defaultdict(dict)
         self._volume_state: dict[tuple[str, str], VolumeWindowState] = {}
         self._loop: asyncio.AbstractEventLoop | None = None
+        # Unsubscribe handle for the quote listener registered on the
+        # current SubscriptionManager. Re-issued on every (re)bind.
+        self._listener_unsub: Callable[[], None] | None = None
 
     async def start(self) -> None:
         self._loop = asyncio.get_running_loop()
-        if self._broker.is_noop():
-            logger.info("AlertEngine: broker is NoopBroker — skipping quote subscription")
-            return
-        self._broker.set_on_quote(self._on_quote_threadsafe)
         enabled = await self._repo.list_enabled()
         for a in enabled:
             self._alerts_by_symbol[a.symbol][a.id] = a
-        symbols = list(self._alerts_by_symbol.keys())
-        if symbols:
-            self._broker.subscribe_quotes(symbols)
-        logger.info("AlertEngine started: %d alerts, %d symbols", len(enabled), len(symbols))
+        await self._bind_to_current_manager()
+        logger.info(
+            "AlertEngine started: %d alerts, %d symbols",
+            len(enabled), len(self._alerts_by_symbol),
+        )
+
+    async def rebind(self) -> None:
+        """Re-register the quote listener + symbol set against the
+        currently-bound SubscriptionManager. Called after a broker
+        reload (which tears down the prior manager and builds a fresh
+        one) so alerts keep firing on the new broker."""
+        await self._bind_to_current_manager()
+
+    async def _bind_to_current_manager(self) -> None:
+        # Drop any prior listener handle before re-binding so a stale
+        # manager doesn't keep dispatching to a dead engine.
+        if self._listener_unsub is not None:
+            try:
+                self._listener_unsub()
+            except Exception:
+                logger.exception("AlertEngine: prior listener unsub failed")
+            self._listener_unsub = None
+        mgr = self._mgr_getter()
+        if mgr is None:
+            logger.info(
+                "AlertEngine: no SubscriptionManager bound — skipping quote wiring",
+            )
+            return
+        self._listener_unsub = mgr.add_quote_listener(self._on_quote_threadsafe)
+        await mgr.set_symbols_for_owner(_OWNER, list(self._alerts_by_symbol.keys()))
 
     async def stop(self) -> None:
-        for sym in list(self._alerts_by_symbol.keys()):
-            self._broker.unsubscribe_quotes([sym])
+        if self._listener_unsub is not None:
+            try:
+                self._listener_unsub()
+            except Exception:
+                logger.exception("AlertEngine: listener unsub on stop failed")
+            self._listener_unsub = None
+        mgr = self._mgr_getter()
+        if mgr is not None:
+            try:
+                await mgr.set_symbols_for_owner(_OWNER, [])
+            except Exception:
+                logger.exception(
+                    "AlertEngine: clearing manager symbols on stop failed",
+                )
         self._alerts_by_symbol.clear()
         self._volume_state.clear()
 
@@ -82,15 +136,19 @@ class AlertEngine:
             else:
                 self._alerts_by_symbol[sym].pop(alert.id, None)
         now_has = bool(self._alerts_by_symbol.get(sym))
-        if not had_symbol and now_has:
-            if not self._broker.is_noop():
-                self._broker.subscribe_quotes([sym])
-        elif had_symbol and not now_has:
-            if not self._broker.is_noop():
-                self._broker.unsubscribe_quotes([sym])
-            for key in list(self._volume_state.keys()):
-                if key[0] == sym:
-                    self._volume_state.pop(key, None)
+        if had_symbol != now_has:
+            mgr = self._mgr_getter()
+            if mgr is not None:
+                # Re-declare the full alerts symbol set. Cheap: this
+                # only fires on alert CRUD, and SubscriptionManager
+                # diffs against the union so unchanged symbols don't
+                # round-trip through the SDK.
+                wanted = [s for s, ids in self._alerts_by_symbol.items() if ids]
+                await mgr.set_symbols_for_owner(_OWNER, wanted)
+            if had_symbol and not now_has:
+                for key in list(self._volume_state.keys()):
+                    if key[0] == sym:
+                        self._volume_state.pop(key, None)
 
     def _on_quote_threadsafe(self, symbol: str, payload: dict[str, Any]) -> None:
         loop = self._loop

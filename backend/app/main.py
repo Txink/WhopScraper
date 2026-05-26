@@ -336,11 +336,18 @@ def create_app(
         _build_subscription_manager()
 
         # AlertEngine — evaluates enabled alerts against live quote pushes.
+        # Wires through state.subscription_manager so the alert listener
+        # and the WS bus publisher coexist on the broker's single
+        # ``set_on_quote`` slot (which SubscriptionManager owns).
         from app.alerts.engine import AlertEngine
         from app.alerts.repo import AlertRepo as _AlertRepo
 
         _alerts_repo = _AlertRepo(session_factory)
-        alerts_engine = AlertEngine(repo=_alerts_repo, broker=state.broker, event_bus=bus)
+        alerts_engine = AlertEngine(
+            repo=_alerts_repo,
+            event_bus=bus,
+            subscription_manager_getter=lambda: state.subscription_manager,
+        )
         await alerts_engine.start()
         app.state.alerts_engine = alerts_engine
 
@@ -431,6 +438,19 @@ def create_app(
                 #    the new broker.
                 _register_trader_and_push()
                 _build_subscription_manager()
+
+                # 5a. Re-bind AlertEngine to the freshly-built
+                # SubscriptionManager so it picks up the new broker's
+                # push stream. Without this, alerts go silent after a
+                # broker reload.
+                _engine = getattr(app.state, "alerts_engine", None)
+                if _engine is not None:
+                    try:
+                        await _engine.rebind()
+                    except Exception as exc:  # noqa: BLE001
+                        logger.warning(
+                            "alerts_engine rebind during reload failed: %s", exc,
+                        )
 
                 from app.broker.longport_client import LongPortClient
                 is_real = isinstance(state.broker, LongPortClient)

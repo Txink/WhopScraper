@@ -211,3 +211,65 @@ async def test_detach_unsubscribes_all_watched(broker: FakeBrokerClient) -> None
     mgr.detach()
     assert broker.subscribed_quote_symbols == set()
     assert mgr.watched_symbols == set()
+
+
+async def test_set_symbols_per_owner_unions_across_owners(
+    broker: FakeBrokerClient,
+) -> None:
+    """Two owners can declare independent symbol sets; the SDK sees
+    the union. Replacing one owner's set never strips a symbol another
+    owner still wants."""
+    loop = asyncio.get_running_loop()
+    mgr = SubscriptionManager(broker, loop)
+    mgr.attach()
+
+    # Positions wants TSLA + AAPL.
+    r = await mgr.set_symbols_for_owner("positions", ["TSLA.US", "AAPL.US"])
+    assert r == {"added": 2, "removed": 0, "total": 2}
+    assert broker.subscribed_quote_symbols == {"TSLA.US", "AAPL.US"}
+
+    # Alerts wants AAPL (already subscribed) + NVDA (new). Only NVDA
+    # actually hits the SDK; AAPL is reused via the union.
+    r = await mgr.set_symbols_for_owner("alerts", ["AAPL.US", "NVDA.US"])
+    assert r == {"added": 1, "removed": 0, "total": 3}
+    assert broker.subscribed_quote_symbols == {"TSLA.US", "AAPL.US", "NVDA.US"}
+
+    # Positions narrows to just TSLA. AAPL stays subscribed (alerts
+    # still wants it); only the positions-only symbols leave.
+    r = await mgr.set_symbols_for_owner("positions", ["TSLA.US"])
+    assert r == {"added": 0, "removed": 0, "total": 3}
+    assert broker.subscribed_quote_symbols == {"TSLA.US", "AAPL.US", "NVDA.US"}
+
+    # Alerts drops AAPL — now nothing wants it; it unsubscribes.
+    r = await mgr.set_symbols_for_owner("alerts", ["NVDA.US"])
+    assert r == {"added": 0, "removed": 1, "total": 2}
+    assert broker.subscribed_quote_symbols == {"TSLA.US", "NVDA.US"}
+
+
+async def test_dispatch_quote_unions_across_owners(broker: FakeBrokerClient) -> None:
+    """The dispatch filter uses the union — a symbol any owner watches
+    gets pushed to all listeners.
+
+    Regression guard for the bug where the broker's single ``set_on_quote``
+    slot was being clobbered by a second registrar (AlertEngine), making
+    SubscriptionManager's bus publisher invisible. Listeners registered
+    via ``add_quote_listener`` must always see pushes for any union-watched
+    symbol, regardless of which owner contributed it.
+    """
+    loop = asyncio.get_running_loop()
+    mgr = SubscriptionManager(broker, loop)
+    mgr.attach()
+    await mgr.set_symbols_for_owner("positions", ["TSLA.US"])
+    await mgr.set_symbols_for_owner("alerts", ["AAPL.US"])
+
+    a: list[str] = []
+    b: list[str] = []
+    mgr.add_quote_listener(lambda s, _q: a.append(s))
+    mgr.add_quote_listener(lambda s, _q: b.append(s))
+
+    broker.emit_quote("TSLA.US", {"last_done": 250.0})
+    broker.emit_quote("AAPL.US", {"last_done": 180.0})
+    broker.emit_quote("ZZZZ.US", {"last_done": 1.0})  # unwatched — dropped
+
+    assert a == ["TSLA.US", "AAPL.US"]
+    assert b == ["TSLA.US", "AAPL.US"]
