@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from app.domain.instruction import Instruction
     from app.domain.message import Message
     from app.domain.push_event import PushEvent
-    from app.domain.task import Task
+    from app.domain.task import InstructionLabel, Task
     from app.storage.schema import TPairRow
     from app.whop.listener import WhopListener
     from app.whop.registry import WhopPageEntry
@@ -68,6 +68,29 @@ class InstructionOut(BaseModel):
     expiry: date | None = None
 
 
+class CorrectedInstruction(BaseModel):
+    """人工校正后的指令字段集合（纯标注，不参与交易）。"""
+    type: Literal["stock", "option"]
+    action: Literal["BUY", "SELL", "CLOSE", "MODIFY"]
+    ticker: str | None = None
+    price: float | None = None
+    quantity: int | None = None
+    strike: float | None = None
+    expiry: str | None = None
+    option_type: Literal["CALL", "PUT"] | None = None
+
+
+class InstructionLabelOut(BaseModel):
+    verdict: str  # "correct" | "corrected"
+    corrected_payload: CorrectedInstruction | None = None
+    updated_at: datetime
+
+
+class InstructionLabelIn(BaseModel):
+    verdict: Literal["correct", "corrected"]
+    corrected_payload: CorrectedInstruction | None = None
+
+
 # ---------------------------------------------------------------------------
 # PushEvent
 # ---------------------------------------------------------------------------
@@ -117,6 +140,7 @@ class TaskOut(BaseModel):
     last_cum_avg_price: float | None = None
     last_submitted_price: float | None = None
     last_submitted_qty: int | None = None
+    label: InstructionLabelOut | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -146,6 +170,7 @@ class TaskSummaryOut(BaseModel):
     last_cum_avg_price: float | None = None
     last_submitted_price: float | None = None
     last_submitted_qty: int | None = None
+    label: InstructionLabelOut | None = None
     # push_events intentionally NOT included — call /api/tasks/{id} for full detail
 
 
@@ -819,6 +844,18 @@ def _last_push_summary(events: list[PushEvent]) -> dict[str, Any]:
     }
 
 
+def label_to_out(label: InstructionLabel) -> InstructionLabelOut:
+    return InstructionLabelOut(
+        verdict=label.verdict,
+        corrected_payload=(
+            CorrectedInstruction(**label.corrected_payload)
+            if label.corrected_payload is not None
+            else None
+        ),
+        updated_at=label.updated_at,
+    )
+
+
 def task_to_out(task: Task) -> TaskOut:
     """Convert a domain Task (with push events) to TaskOut.
 
@@ -844,6 +881,7 @@ def task_to_out(task: Task) -> TaskOut:
         instruction=instruction_to_out(task.instruction) if task.instruction is not None else None,
         push_events=[push_event_to_out(e) for e in task.push_events],
         **_last_push_summary(task.push_events),
+        label=label_to_out(task.label) if task.label is not None else None,
     )
 
 
@@ -872,6 +910,7 @@ def task_to_summary(task: Task) -> TaskSummaryOut:
         message=message_to_out(task.message),
         instruction=instruction_to_out(task.instruction) if task.instruction is not None else None,
         **_last_push_summary(task.push_events),
+        label=label_to_out(task.label) if task.label is not None else None,
     )
 
 

@@ -332,6 +332,7 @@ def test_task_to_out_forwards_every_field() -> None:
     # PushEvent.submitted_* which aren't always populated.
     optional_fields = {
         "reject_reason", "last_submitted_price", "last_submitted_qty",
+        "label",
     }
 
     # Every field on TaskOut is either sourced or optional — catch new
@@ -369,6 +370,7 @@ def test_task_to_summary_forwards_every_field() -> None:
     }
     optional_fields = {
         "reject_reason", "last_submitted_price", "last_submitted_qty",
+        "label",
     }
     coverage = fields_with_known_source | optional_fields
     missing = set(TaskSummaryOut.model_fields) - coverage
