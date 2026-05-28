@@ -439,7 +439,7 @@
     "/api/positions": {
       "get": {
         "summary": "List Positions Endpoint",
-        "description": "Return current positions split into stocks and options.\n\nPulls live from the broker on every call so the dashboard cards\nreflect the latest holdings without a periodic sync job, and\nupserts the result into the ``positions`` table (account-scoped)\nas a side-effect. The DB row is the anchor for\n``history_synced`` — the per-(account, ticker) \"broker_executions\nis fully backfilled\" flag the detail-pane sync path consults.\n\nSymbols no longer reported by the broker are zeroed out\n(``quantity = 0``) rather than deleted so ``history_synced``\nsurvives close/re-open cycles. The dashboard read filters qty>0.\n\nLongbridge's ``stock_positions`` endpoint actually returns BOTH\nstocks and option contracts the user holds (the option contracts\ncarry an OCC-format symbol). We classify each row via\n``parse_option_symbol`` and route to the appropriate bucket.",
+        "description": "Return current positions split into stocks and options.\n\nPulls live from the broker on every call so the dashboard cards\nreflect the latest holdings without a periodic sync job, and\nupserts the result into the ``positions`` table (account-scoped)\nas a side-effect. The DB row is the anchor for\n``history_synced`` — the per-(account, ticker) \"broker_executions\nis fully backfilled\" flag the detail-pane sync path consults.\n\nSymbols no longer reported by the broker are zeroed out\n(``quantity = 0``) rather than deleted so ``history_synced``\nsurvives close/re-open cycles. The dashboard read filters qty>0.\n\nLongbridge's ``stock_positions`` endpoint actually returns BOTH\nstocks and option contracts the user holds (the option contracts\ncarry an OCC-format symbol). ``_broker_dict_to_position_out``\nroutes each row to the appropriate branch via\n``parse_option_symbol``.",
         "operationId": "list_positions_endpoint_api_positions_get",
         "parameters": [
           {
@@ -2503,6 +2503,60 @@
         "summary": "Get Chat Image",
         "description": "Serve a cached chat image from ``<data_dir>/chat-images/``.\n\nThe chat_writer downloads images at scrape time (see\n``app.whop.chat_writer._download_image``). This endpoint returns\nthe bytes with a media type inferred from the file extension.\n404 if the row is missing, the row has no image, or the file is\nmissing on disk.",
         "operationId": "get_chat_image_api_chat_images__message_id__get",
+        "parameters": [
+          {
+            "name": "message_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Message Id"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/messages/{message_id}/image": {
+      "get": {
+        "summary": "Get Message Image",
+        "description": "Serve a cached stock/option message image.\n\nImages are downloaded by ``app.parser.service`` (via\n``image_store.download_image``) into ``<data_dir>/chat-images/``,\nthe same directory chat images use. 404 if the row is missing,\nhas no image, or the file is gone.",
+        "operationId": "get_message_image_api_messages__message_id__image_get",
         "parameters": [
           {
             "name": "message_id",
@@ -4910,6 +4964,17 @@
               }
             ],
             "title": "Quoted Message Id"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
           }
         },
         "type": "object",

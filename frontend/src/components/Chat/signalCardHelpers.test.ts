@@ -158,4 +158,19 @@ describe("layersForTask", () => {
     const layers = layersForTask(task({}));
     expect(layers.sig?.contract).toBeNull();
   });
+
+  it("image message → kind 'image' with imageUrl, no sig/ord", () => {
+    const base = task({});
+    const t: TaskSummary = {
+      ...base,
+      status: "SKIPPED",
+      instruction: null,
+      message: { ...base.message, content: "", image_url: "/api/messages/x/image" },
+    };
+    const layers = layersForTask(t);
+    expect(layers.kind).toBe("image");
+    expect(layers.imageUrl).toBe("/api/messages/x/image");
+    expect(layers.sig).toBeNull();
+    expect(layers.ord).toBeNull();
+  });
 });

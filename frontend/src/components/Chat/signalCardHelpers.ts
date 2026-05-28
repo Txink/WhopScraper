@@ -1,7 +1,7 @@
 import type { TaskSummary, Instruction } from "../../api/domain-types";
 
 export type DotColor = "ok" | "warn" | "err" | "muted";
-export type LayerKind = "normal" | "parse_error" | "neutral";
+export type LayerKind = "normal" | "parse_error" | "neutral" | "image";
 
 export interface SigLayer {
   side: "BUY" | "SELL" | null;
@@ -28,6 +28,7 @@ export interface CardLayers {
   msg: string;
   sig: SigLayer | null;
   ord: OrdLayer | null;
+  imageUrl: string | null;
 }
 
 function formatExpiryMMDD(iso: string): string {
@@ -59,6 +60,10 @@ export function layersForTask(
   const msg = task.message.content ?? "";
   const inst = task.instruction;
 
+  if (task.message.image_url) {
+    return { kind: "image", msg, sig: null, ord: null, imageUrl: task.message.image_url };
+  }
+
   if (task.status === "PARSE_ERROR") {
     return {
       kind: "parse_error",
@@ -70,6 +75,7 @@ export function layersForTask(
         ctx: null, parseDeltaMs: null,
       },
       ord: null,
+      imageUrl: null,
     };
   }
 
@@ -147,5 +153,5 @@ export function layersForTask(
       ord = null;
   }
 
-  return { kind: "normal", msg, sig, ord };
+  return { kind: "normal", msg, sig, ord, imageUrl: null };
 }

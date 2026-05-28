@@ -139,8 +139,9 @@ export interface paths {
          *
          *     Longbridge's ``stock_positions`` endpoint actually returns BOTH
          *     stocks and option contracts the user holds (the option contracts
-         *     carry an OCC-format symbol). We classify each row via
-         *     ``parse_option_symbol`` and route to the appropriate bucket.
+         *     carry an OCC-format symbol). ``_broker_dict_to_position_out``
+         *     routes each row to the appropriate branch via
+         *     ``parse_option_symbol``.
          */
         get: operations["list_positions_endpoint_api_positions_get"];
         put?: never;
@@ -842,6 +843,31 @@ export interface paths {
          *     missing on disk.
          */
         get: operations["get_chat_image_api_chat_images__message_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/messages/{message_id}/image": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Message Image
+         * @description Serve a cached stock/option message image.
+         *
+         *     Images are downloaded by ``app.parser.service`` (via
+         *     ``image_store.download_image``) into ``<data_dir>/chat-images/``,
+         *     the same directory chat images use. 404 if the row is missing,
+         *     has no image, or the file is gone.
+         */
+        get: operations["get_message_image_api_messages__message_id__image_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1620,6 +1646,8 @@ export interface components {
             url?: string | null;
             /** Quoted Message Id */
             quoted_message_id: string | null;
+            /** Image Url */
+            image_url?: string | null;
         };
         /** OrderListOut */
         OrderListOut: {
@@ -3645,6 +3673,39 @@ export interface operations {
         };
     };
     get_chat_image_api_chat_images__message_id__get: {
+        parameters: {
+            query?: {
+                token?: string | null;
+            };
+            header?: never;
+            path: {
+                message_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_message_image_api_messages__message_id__image_get: {
         parameters: {
             query?: {
                 token?: string | null;
