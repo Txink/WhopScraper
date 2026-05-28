@@ -39,10 +39,11 @@ from app.broker.order_id_norm import normalize_broker_order_id
 from app.domain.message import Message
 from app.domain.push_event import PushEvent, PushState
 from app.domain.status import TERMINAL, Status
-from app.domain.task import Task
+from app.domain.task import InstructionLabel, Task
 from app.storage.schema import (
     BrokerExecutionRow,
     ChatMessageRow,
+    InstructionLabelRow,
     InstructionRow,
     MessageRow,
     PositionRow,
@@ -294,6 +295,55 @@ def _ensure_utc(dt: datetime) -> datetime:
     return dt
 
 
+def _row_to_label(row: InstructionLabelRow) -> InstructionLabel:
+    return InstructionLabel(
+        verdict=row.verdict,
+        corrected_payload=dict(row.corrected_payload) if row.corrected_payload else None,
+        updated_at=_ensure_utc(row.updated_at),
+    )
+
+
+async def set_label(
+    session: AsyncSession,
+    task_id: str,
+    verdict: str,
+    corrected_payload: dict[str, Any] | None,
+) -> InstructionLabel:
+    """Upsert the human parse-quality label for a task."""
+    now = datetime.now(UTC)
+    row = await session.get(InstructionLabelRow, task_id)
+    if row is None:
+        session.add(InstructionLabelRow(
+            task_id=task_id, verdict=verdict,
+            corrected_payload=corrected_payload, updated_at=now,
+        ))
+    else:
+        row.verdict = verdict
+        row.corrected_payload = corrected_payload
+        row.updated_at = now
+    await session.flush()
+    return InstructionLabel(verdict=verdict, corrected_payload=corrected_payload, updated_at=now)
+
+
+async def clear_label(session: AsyncSession, task_id: str) -> None:
+    """Remove a task's label row (back to unlabeled)."""
+    await session.execute(
+        sa_delete(InstructionLabelRow).where(InstructionLabelRow.task_id == task_id)
+    )
+
+
+async def labels_for_tasks(
+    session: AsyncSession, task_ids: list[str]
+) -> dict[str, InstructionLabel]:
+    """Batched ``{task_id: InstructionLabel}`` for the given ids."""
+    if not task_ids:
+        return {}
+    result = await session.execute(
+        select(InstructionLabelRow).where(InstructionLabelRow.task_id.in_(task_ids))
+    )
+    return {r.task_id: _row_to_label(r) for r in result.scalars().all()}
+
+
 # ---------------------------------------------------------------------------
 # Public repo functions
 # ---------------------------------------------------------------------------
@@ -476,7 +526,11 @@ async def load_task(session: AsyncSession, task_id: str) -> Task | None:
     )
     push_rows = list(result.scalars().all())
 
-    return _rows_to_task(task_row, msg_row, inst_row, push_rows)
+    task = _rows_to_task(task_row, msg_row, inst_row, push_rows)
+    label_row = await session.get(InstructionLabelRow, task_id)
+    if label_row is not None:
+        task.label = _row_to_label(label_row)
+    return task
 
 
 async def load_task_by_order_id(session: AsyncSession, order_id: str) -> Task | None:
@@ -638,6 +692,11 @@ async def list_tasks(
             evt = latest.get(t.id)
             if evt is not None:
                 t.push_events = [evt]
+
+    if tasks:
+        labels = await labels_for_tasks(session, [t.id for t in tasks])
+        for t in tasks:
+            t.label = labels.get(t.id)
 
     return tasks
 
