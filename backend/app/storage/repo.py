@@ -412,8 +412,13 @@ async def save_task(session: AsyncSession, task: Task) -> None:
     msg_stmt = sqlite_insert(MessageRow).values(**msg_values)
     msg_stmt = msg_stmt.on_conflict_do_update(
         index_elements=["id"],
-        set_={"url": msg_stmt.excluded.url},
-        where=MessageRow.url.is_(None),
+        set_={
+            "url": func.coalesce(MessageRow.url, msg_stmt.excluded.url),
+            "image_filename": func.coalesce(
+                MessageRow.image_filename, msg_stmt.excluded.image_filename
+            ),
+        },
+        where=MessageRow.url.is_(None) | MessageRow.image_filename.is_(None),
     )
     await session.execute(msg_stmt)
 
