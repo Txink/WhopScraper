@@ -20,6 +20,7 @@ class Message:
     source: Source
     url: str | None = None  # 新增：来源页 url；None 表示孤儿（migration 前数据）
     image_url: str | None = None  # 新增：聊天消息中的图片链接（临时，不持久化）
+    image_filename: str | None = None  # 下载后的本地文件名（持久化，用于代理 URL）
     quoted: Message | None = None
     history_hint: list[Message] = field(default_factory=list)
 

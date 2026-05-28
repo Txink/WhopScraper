@@ -118,6 +118,7 @@ class MessageRow(Base):
     received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     url: Mapped[str | None] = mapped_column(String, nullable=True)
     quoted_message_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    image_filename: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
 
 
 # ---------------------------------------------------------------------------

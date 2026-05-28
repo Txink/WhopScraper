@@ -226,6 +226,7 @@ def _row_to_message(row: MessageRow) -> Message:
         received_at=_ensure_utc(row.received_at),
         source=row.source,  # type: ignore[arg-type]
         url=row.url,
+        image_filename=row.image_filename,
         quoted=None,
         history_hint=[],
     )
@@ -401,6 +402,7 @@ async def save_task(session: AsyncSession, task: Task) -> None:
         "received_at": msg.received_at,
         "url": msg.url,
         "quoted_message_id": msg.quoted.id if msg.quoted is not None else None,
+        "image_filename": msg.image_filename,
     }
     # Messages are immutable except for `url`, which we backfill when the existing
     # row had no url. This handles the case where messages were persisted before the
