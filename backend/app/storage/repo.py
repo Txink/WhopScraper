@@ -189,6 +189,7 @@ def _message_to_row(msg: Message) -> MessageRow:
         received_at=msg.received_at,
         url=msg.url,
         quoted_message_id=msg.quoted.id if msg.quoted is not None else None,
+        image_filename=msg.image_filename,
     )
 
 
