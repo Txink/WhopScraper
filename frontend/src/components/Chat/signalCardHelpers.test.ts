@@ -173,4 +173,18 @@ describe("layersForTask", () => {
     expect(layers.sig).toBeNull();
     expect(layers.ord).toBeNull();
   });
+
+  it("backfilled image message (PARSE_ERROR + image_url) → kind 'image', not parse_error", () => {
+    const base = task({});
+    const t: TaskSummary = {
+      ...base,
+      status: "PARSE_ERROR",
+      instruction: null,
+      message: { ...base.message, content: "", image_url: "/api/messages/y/image" },
+    };
+    const layers = layersForTask(t);
+    expect(layers.kind).toBe("image");
+    expect(layers.imageUrl).toBe("/api/messages/y/image");
+    expect(layers.sig).toBeNull();
+  });
 });
