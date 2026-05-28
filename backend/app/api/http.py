@@ -60,6 +60,7 @@ from app.api.schemas import (
     ExecutionOut,
     ExecutionsOut,
     ExecutionsSyncOut,
+    InstructionLabelIn,
     QuotedRefOut,
     QuoteWatchIn,
     QuoteWatchOut,
@@ -1553,6 +1554,39 @@ def build_http_router(
             refreshed = await repo.load_task(session, task_id)
         if refreshed is None:
             raise HTTPException(500, detail="task missing after skip")
+        return task_to_out(refreshed)
+
+    @router.put("/api/tasks/{task_id}/label", response_model=TaskOut)
+    async def set_task_label_endpoint(task_id: str, body: InstructionLabelIn) -> TaskOut:
+        """Upsert 人工解析标注（correct / corrected）。纯评测数据。"""
+        if body.verdict == "corrected" and body.corrected_payload is None:
+            raise HTTPException(400, detail="corrected verdict requires corrected_payload")
+        payload = (
+            body.corrected_payload.model_dump()
+            if body.verdict == "corrected" and body.corrected_payload is not None
+            else None
+        )
+        async with session_scope(session_factory) as session:
+            task = await repo.load_task(session, task_id)
+            if task is None:
+                raise HTTPException(404, detail="task not found")
+            await repo.set_label(session, task_id, body.verdict, payload)
+            refreshed = await repo.load_task(session, task_id)
+        if refreshed is None:
+            raise HTTPException(500, detail="task missing after label set")
+        return task_to_out(refreshed)
+
+    @router.delete("/api/tasks/{task_id}/label", response_model=TaskOut)
+    async def clear_task_label_endpoint(task_id: str) -> TaskOut:
+        """清除任务标注（回到未标注）。"""
+        async with session_scope(session_factory) as session:
+            task = await repo.load_task(session, task_id)
+            if task is None:
+                raise HTTPException(404, detail="task not found")
+            await repo.clear_label(session, task_id)
+            refreshed = await repo.load_task(session, task_id)
+        if refreshed is None:
+            raise HTTPException(500, detail="task missing after label clear")
         return task_to_out(refreshed)
 
     # ------------------------------------------------------------------ #
