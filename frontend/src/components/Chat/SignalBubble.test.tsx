@@ -1,6 +1,16 @@
 import { render, fireEvent } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import type { TaskSummary } from "../../api/domain-types";
+import { configureHttp, __resetForTests } from "../../api/http";
 import { SignalBubble } from "./SignalBubble";
+
+// authedAssetUrl (called when rendering image bubbles) requires HTTP config.
+beforeAll(() => {
+  configureHttp({ baseUrl: "http://localhost:8000", token: "test-token" });
+});
+afterAll(() => {
+  __resetForTests();
+});
 import {
   makeStockTask,
   makeOptionTask,
@@ -108,5 +118,22 @@ describe("SignalBubble", () => {
     expect(confirmEl).not.toBeNull();
     fireEvent.click(confirmEl as Element);
     expect(onToggle).not.toHaveBeenCalled();
+  });
+
+  it("renders an image bubble for image messages", () => {
+    const base = makeStockTask();
+    const task: TaskSummary = {
+      ...base,
+      status: "SKIPPED",
+      message: { ...base.message, content: "", image_url: "/api/messages/x/image" },
+    };
+    const { container } = render(
+      <SignalBubble task={task} pushEvents={[]} expanded={false}
+        onToggle={() => {}} autoTrade={true} variant="stock" />,
+    );
+    const img = container.querySelector("img.signal-bubble-image");
+    expect(img).not.toBeNull();
+    // 不应出现解析报错文案
+    expect(container.textContent).not.toContain("未解析");
   });
 });
