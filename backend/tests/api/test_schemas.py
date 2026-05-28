@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 from datetime import UTC, date, datetime
 
 import pytest
@@ -230,3 +231,15 @@ def test_push_event_to_out_fields() -> None:
     assert out.delta_qty == 100
     assert out.cumulative_avg_price == 195.5
     assert out.note == "filled"
+
+
+def test_message_to_out_image_url_from_filename() -> None:
+    msg = _make_message(msg_id="img-9")
+    msg = dataclasses.replace(msg, image_filename="img-9.png")
+    out = message_to_out(msg)
+    assert out.image_url == "/api/messages/img-9/image"
+
+
+def test_message_to_out_image_url_none_without_filename() -> None:
+    out = message_to_out(_make_message())
+    assert out.image_url is None

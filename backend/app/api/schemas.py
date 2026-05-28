@@ -36,6 +36,7 @@ class MessageOut(BaseModel):
     received_at: datetime
     url: str | None = None
     quoted_message_id: str | None
+    image_url: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -705,6 +706,9 @@ def message_to_out(msg: Message) -> MessageOut:
         received_at=msg.received_at,
         url=msg.url,
         quoted_message_id=msg.quoted.id if msg.quoted is not None else None,
+        image_url=(
+            f"/api/messages/{msg.id}/image" if msg.image_filename else None
+        ),
     )
 
 
