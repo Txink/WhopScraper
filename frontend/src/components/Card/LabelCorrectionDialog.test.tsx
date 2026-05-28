@@ -1,14 +1,14 @@
 import { render, fireEvent, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { LabelCorrectionDialog } from "./LabelCorrectionDialog";
-import type { InstructionOut } from "../../api/domain-types";
+import type { Instruction } from "../../api/domain-types";
 
 const stockInst = {
   type: "stock", instruction_type: "BUY", ticker: "AAPL",
   price: 188, quantity: 50, price_range: null, position_size: null,
   stop_loss_price: null, take_profit_price: null, context_source: null,
   parser_notes: [], symbol: "AAPL.US",
-} as unknown as InstructionOut;
+} as unknown as Instruction;
 
 describe("LabelCorrectionDialog", () => {
   it("prefills from instruction", () => {

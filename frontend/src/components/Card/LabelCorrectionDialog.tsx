@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { SyntheticEvent } from "react";
-import type { InstructionOut, CorrectedInstruction } from "../../api/domain-types";
+import type { Instruction, CorrectedInstruction } from "../../api/domain-types";
 import "./LabelActions.css";
 
 type Action = "BUY" | "SELL" | "CLOSE" | "MODIFY";
@@ -9,7 +9,7 @@ type OptType = "CALL" | "PUT";
 
 interface Props {
   variant: "stock" | "option";
-  instruction: InstructionOut | null;
+  instruction: Instruction | null;
   existing: CorrectedInstruction | null;
   onSubmit(payload: CorrectedInstruction): void;
   onClose(): void;
