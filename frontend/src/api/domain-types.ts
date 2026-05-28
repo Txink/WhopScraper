@@ -8,6 +8,8 @@ export type TaskSummary = components["schemas"]["TaskSummaryOut"];
 export type TaskList = components["schemas"]["TaskListOut"];
 export type Message = components["schemas"]["MessageOut"];
 export type Instruction = components["schemas"]["InstructionOut"];
+export type InstructionLabel = components["schemas"]["InstructionLabelOut"];
+export type CorrectedInstruction = components["schemas"]["CorrectedInstruction"];
 export type PushEvent = components["schemas"]["PushEventOut"];
 // Position extended with ``name`` until next ``npm run gen:types``. The
 // backend already returns ``name`` (symbol display name from the broker)

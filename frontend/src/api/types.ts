@@ -732,6 +732,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/tasks/{task_id}/label": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set Task Label Endpoint
+         * @description Upsert 人工解析标注（correct / corrected）。纯评测数据。
+         */
+        put: operations["set_task_label_endpoint_api_tasks__task_id__label_put"];
+        post?: never;
+        /**
+         * Clear Task Label Endpoint
+         * @description 清除任务标注（回到未标注）。
+         */
+        delete: operations["clear_task_label_endpoint_api_tasks__task_id__label_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/whop/pages": {
         parameters: {
             query?: never;
@@ -1392,6 +1416,34 @@ export interface components {
             day: components["schemas"]["ChatDayWindowOut"];
         };
         /**
+         * CorrectedInstruction
+         * @description 人工校正后的指令字段集合（纯标注，不参与交易）。
+         */
+        CorrectedInstruction: {
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "stock" | "option";
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "BUY" | "SELL" | "CLOSE" | "MODIFY";
+            /** Ticker */
+            ticker?: string | null;
+            /** Price */
+            price?: number | null;
+            /** Quantity */
+            quantity?: number | null;
+            /** Strike */
+            strike?: number | null;
+            /** Expiry */
+            expiry?: string | null;
+            /** Option Type */
+            option_type?: ("CALL" | "PUT") | null;
+        };
+        /**
          * ExecutionOut
          * @description One broker-side ORDER (with partial fills aggregated). The unit
          *     of做T binding + day-PL accounting.
@@ -1487,6 +1539,26 @@ export interface components {
             account_label: string;
             /** Dry Run */
             dry_run: boolean;
+        };
+        /** InstructionLabelIn */
+        InstructionLabelIn: {
+            /**
+             * Verdict
+             * @enum {string}
+             */
+            verdict: "correct" | "corrected";
+            corrected_payload?: components["schemas"]["CorrectedInstruction"] | null;
+        };
+        /** InstructionLabelOut */
+        InstructionLabelOut: {
+            /** Verdict */
+            verdict: string;
+            corrected_payload?: components["schemas"]["CorrectedInstruction"] | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
         };
         /**
          * InstructionOut
@@ -2136,6 +2208,7 @@ export interface components {
             last_submitted_price?: number | null;
             /** Last Submitted Qty */
             last_submitted_qty?: number | null;
+            label?: components["schemas"]["InstructionLabelOut"] | null;
         };
         /** TaskSummaryOut */
         TaskSummaryOut: {
@@ -2181,6 +2254,7 @@ export interface components {
             last_submitted_price?: number | null;
             /** Last Submitted Qty */
             last_submitted_qty?: number | null;
+            label?: components["schemas"]["InstructionLabelOut"] | null;
         };
         /** TickerConfigOut */
         TickerConfigOut: {
@@ -3473,6 +3547,76 @@ export interface operations {
         };
     };
     skip_task_endpoint_api_tasks__task_id__skip_post: {
+        parameters: {
+            query?: {
+                token?: string | null;
+            };
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_task_label_endpoint_api_tasks__task_id__label_put: {
+        parameters: {
+            query?: {
+                token?: string | null;
+            };
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InstructionLabelIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    clear_task_label_endpoint_api_tasks__task_id__label_delete: {
         parameters: {
             query?: {
                 token?: string | null;

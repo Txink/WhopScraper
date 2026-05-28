@@ -7,6 +7,7 @@ import type {
   Quotes, Candlesticks, Trades, Executions,
   TPairs, TPair, TPairCreate, TPairExtendIn,
   PairAggregate, PendingExecutions,
+  CorrectedInstruction,
 } from "./domain-types";
 
 
@@ -156,6 +157,22 @@ export const api = {
 
   async skipTask(id: string): Promise<Task> {
     return request<Task>(`/api/tasks/${encodeURIComponent(id)}/skip`, { method: "POST" });
+  },
+
+  async setTaskLabel(
+    id: string,
+    body:
+      | { verdict: "correct" }
+      | { verdict: "corrected"; corrected_payload: CorrectedInstruction },
+  ): Promise<Task> {
+    return request<Task>(`/api/tasks/${encodeURIComponent(id)}/label`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+  },
+
+  async clearTaskLabel(id: string): Promise<Task> {
+    return request<Task>(`/api/tasks/${encodeURIComponent(id)}/label`, { method: "DELETE" });
   },
 
   async stats(): Promise<StatsToday> {

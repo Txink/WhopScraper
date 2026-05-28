@@ -2187,6 +2187,126 @@
         }
       }
     },
+    "/api/tasks/{task_id}/label": {
+      "put": {
+        "summary": "Set Task Label Endpoint",
+        "description": "Upsert 人工解析标注（correct / corrected）。纯评测数据。",
+        "operationId": "set_task_label_endpoint_api_tasks__task_id__label_put",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Task Id"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InstructionLabelIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Clear Task Label Endpoint",
+        "description": "清除任务标注（回到未标注）。",
+        "operationId": "clear_task_label_endpoint_api_tasks__task_id__label_delete",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Task Id"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/whop/pages": {
       "get": {
         "summary": "List Whop Pages",
@@ -4316,6 +4436,105 @@
         ],
         "title": "ChatMessagesOut"
       },
+      "CorrectedInstruction": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "stock",
+              "option"
+            ],
+            "title": "Type"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "BUY",
+              "SELL",
+              "CLOSE",
+              "MODIFY"
+            ],
+            "title": "Action"
+          },
+          "ticker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ticker"
+          },
+          "price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quantity"
+          },
+          "strike": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strike"
+          },
+          "expiry": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiry"
+          },
+          "option_type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "CALL",
+                  "PUT"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Option Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "action"
+        ],
+        "title": "CorrectedInstruction",
+        "description": "人工校正后的指令字段集合（纯标注，不参与交易）。"
+      },
       "ExecutionOut": {
         "properties": {
           "order_id": {
@@ -4486,6 +4705,62 @@
           "dry_run"
         ],
         "title": "HealthOut"
+      },
+      "InstructionLabelIn": {
+        "properties": {
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "correct",
+              "corrected"
+            ],
+            "title": "Verdict"
+          },
+          "corrected_payload": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CorrectedInstruction"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "verdict"
+        ],
+        "title": "InstructionLabelIn"
+      },
+      "InstructionLabelOut": {
+        "properties": {
+          "verdict": {
+            "type": "string",
+            "title": "Verdict"
+          },
+          "corrected_payload": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CorrectedInstruction"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "verdict",
+          "updated_at"
+        ],
+        "title": "InstructionLabelOut"
       },
       "InstructionOut": {
         "properties": {
@@ -6272,6 +6547,16 @@
               }
             ],
             "title": "Last Submitted Qty"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InstructionLabelOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -6443,6 +6728,16 @@
               }
             ],
             "title": "Last Submitted Qty"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InstructionLabelOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",

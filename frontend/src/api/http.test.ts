@@ -101,4 +101,27 @@ describe("http", () => {
     expect(url).toContain("/api/tasks/msg-1/skip");
     expect(init.method).toBe("POST");
   });
+
+  it("uses PUT method + body for setTaskLabel", async () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: async () => ({ id: "msg-1", label: { verdict: "correct", corrected_payload: null } }),
+    });
+    await api.setTaskLabel("msg-1", { verdict: "correct" });
+    const [url, init] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toContain("/api/tasks/msg-1/label");
+    expect(init.method).toBe("PUT");
+    expect(JSON.parse(init.body)).toEqual({ verdict: "correct" });
+  });
+
+  it("uses DELETE method for clearTaskLabel", async () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: async () => ({ id: "msg-1", label: null }),
+    });
+    await api.clearTaskLabel("msg-1");
+    const [url, init] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toContain("/api/tasks/msg-1/label");
+    expect(init.method).toBe("DELETE");
+  });
 });
