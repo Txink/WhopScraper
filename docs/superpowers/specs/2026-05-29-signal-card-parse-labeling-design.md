@@ -99,7 +99,9 @@
   - 未标注 / corrected → `setTaskLabel(id, { verdict: "correct" })`
   - 已是 correct → `clearTaskLabel(id)`（取消）
 - **✎ 校正**：打开 `LabelCorrectionDialog`；`verdict === "corrected"` 时高亮提示已有校正。
-- 调用后用 `useTasksStore.getState().upsertTask(updated)` 更新 store；按钮排自身的点击需 `stopPropagation`，避免触发卡片折叠（参照 `ConfirmActions` 的 `confirm-pair` 处理）。
+- 按钮排自身的点击需 `stopPropagation`，避免触发卡片折叠（参照 `ConfirmActions` 的 `confirm-pair` 处理）。
+
+> **实现决策（plan 阶段补充）**：label 显示状态放进 tasks store 的 `labelsByTask: Record<task_id, InstructionLabel>` map（与现有 `pushEventsByTask` 同构），`LabelActions` 从该 map 读取，**不直接读 task 对象上的 `label`**。原因：WS 广播走 `task_to_out(内存 task)`，其 `label` 恒为 `null`，而前端 `upsertTask` 是整条替换——若直接读 task.label，一次 WS 推送就会清掉已显示的标注。`labelsByTask` 由 REST（列表/详情/标注接口）填充，WS 永不写入（`upsertTask` 仅在 `task.label != null` 时合并、绝不删除；`setInitialTasks` 全量重建；标注接口成功后用显式 `setLabel` 写/删）。
 
 ### `LabelCorrectionDialog.tsx`
 
