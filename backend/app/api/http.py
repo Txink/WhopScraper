@@ -122,7 +122,7 @@ from app.orders.schemas import OrderListOut, OrderOut, ReplaceOrderRequest, Subm
 from app.orders.service import OrdersService
 from app.storage import repo
 from app.storage.db import Base, session_scope
-from app.storage.schema import ChatMessageRow, TPairRow
+from app.storage.schema import ChatMessageRow, MessageRow, TPairRow
 
 if TYPE_CHECKING:
     from app.core.event_bus import EventBus
@@ -1718,6 +1718,30 @@ def build_http_router(
             # safe basename. Re-confirming the resolved path lives under
             # the chat-images dir guards against any future code path (or
             # manual DB edit) that stores an un-sanitized filename.
+            images_root = (settings.data_dir / "chat-images").resolve()
+            path = (images_root / row.image_filename).resolve()
+            if not path.is_relative_to(images_root):
+                raise HTTPException(404, detail="image not found")
+            if not path.exists():
+                raise HTTPException(404, detail="image file missing")
+            media_type = _IMAGE_MEDIA_TYPES.get(
+                path.suffix.lower(), "application/octet-stream"
+            )
+            return FileResponse(path, media_type=media_type)
+
+        @router.get("/api/messages/{message_id}/image")
+        async def get_message_image(message_id: str) -> FileResponse:
+            """Serve a cached stock/option message image.
+
+            Images are downloaded by ``app.parser.service`` (via
+            ``image_store.download_image``) into ``<data_dir>/chat-images/``,
+            the same directory chat images use. 404 if the row is missing,
+            has no image, or the file is gone.
+            """
+            async with session_scope(session_factory) as session:
+                row = await session.get(MessageRow, message_id)
+            if row is None or not row.image_filename:
+                raise HTTPException(404, detail="image not found")
             images_root = (settings.data_dir / "chat-images").resolve()
             path = (images_root / row.image_filename).resolve()
             if not path.is_relative_to(images_root):
