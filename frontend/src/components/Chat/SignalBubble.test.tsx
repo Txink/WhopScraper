@@ -3,6 +3,11 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import type { TaskSummary } from "../../api/domain-types";
 import { configureHttp, __resetForTests } from "../../api/http";
 import { SignalBubble } from "./SignalBubble";
+import {
+  makeStockTask,
+  makeOptionTask,
+  makeFailedParseTask,
+} from "../../test/fixtures";
 
 // authedAssetUrl (called when rendering image bubbles) requires HTTP config.
 beforeAll(() => {
@@ -11,11 +16,6 @@ beforeAll(() => {
 afterAll(() => {
   __resetForTests();
 });
-import {
-  makeStockTask,
-  makeOptionTask,
-  makeFailedParseTask,
-} from "../../test/fixtures";
 
 describe("SignalBubble", () => {
   it("stock-folded · filled order", () => {
