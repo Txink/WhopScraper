@@ -59,7 +59,7 @@ export interface PushDetailProps {
   events: PushEvent[];
   taskStatus: string;
   totalQty?: number | null;
-  /** Order id returned by broker after submit. Renders a "已提交" row before broker pushes. */
+  /** Order id returned by broker after submit. Renders a "Push" row before broker pushes. */
   submitOrderId?: string | null;
   /** ISO instant of the submit-completion moment; drives the row's timestamp. */
   submitEndIso?: string | null;
@@ -74,7 +74,7 @@ export function PushDetail({ events, taskStatus, totalQty, submitOrderId, submit
       {showSubmitRow && (
         <div className="push-row info" key="__submit__">
           <span className="spacer" />
-          <span className="row-state">已提交</span>
+          <span className="row-state">Push</span>
           <span className="row-detail">
             <span className="k">ord</span>{" "}
             <span className="v">{submitOrderId}</span>

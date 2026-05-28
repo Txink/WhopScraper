@@ -2,7 +2,8 @@ import type { TaskSummary, PushEvent } from "../../api/domain-types";
 import { layersForTask } from "./signalCardHelpers";
 import { ConfirmActions } from "../Card/ConfirmActions";
 import { PushChain } from "../Card/PushChain";
-import { fmtBeijingFull } from "../Card/cardHelpers";
+import { fmtBeijingFull, submitEndIso } from "../Card/cardHelpers";
+import { useLazyPushEvents } from "../../hooks/useLazyPushEvents";
 import "./SignalCard.css";
 
 export interface SignalBubbleProps {
@@ -22,6 +23,15 @@ export function SignalBubble({
 }: SignalBubbleProps): JSX.Element {
   const layers = layersForTask(task, { autoTrade });
   const sourceClass = layers.kind === "parse_error" ? "neutral" : variant;
+  const submitEnd = submitEndIso(
+    task.message.received_at ?? task.message.posted_at,
+    task.stage_timings?.parse ?? null,
+    task.stage_timings?.submit ?? null,
+  );
+  // Rehydrate the persisted push chain when expanded — after a page reload the
+  // store has no live WS events and the list endpoint omits push_events, so the
+  // chain would otherwise show only the synthetic "已提交" node.
+  useLazyPushEvents(task.id, task.status, pushEvents.length, expanded);
 
   return (
     <div
@@ -114,7 +124,7 @@ export function SignalBubble({
                 taskStatus={task.status}
                 totalQty={task.instruction?.quantity}
                 submitOrderId={task.order_id ?? null}
-                submitEndIso={null}
+                submitEndIso={submitEnd}
               />
             </div>
           )}

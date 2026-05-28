@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { TaskSummary, PushEvent } from "../../api/domain-types";
-import { api } from "../../api/http";
-import { useTasksStore } from "../../stores/tasks";
+import { useLazyPushEvents } from "../../hooks/useLazyPushEvents";
 import { TypeBadge } from "../common/TypeBadge";
 import { StatusPill } from "../common/StatusPill";
 import { OrderSubmit } from "./OrderSubmit";
@@ -14,6 +13,8 @@ import {
   elapsedMs,
   fmtBeijingTimeWithMsFromOffset,
   fmtBeijingFull,
+  submitEndOffsetMs,
+  submitEndIso as computeSubmitEndIso,
 } from "./cardHelpers";
 import "./Card.css";
 
@@ -25,38 +26,12 @@ export interface CardExpandedProps {
 }
 
 // Statuses that imply broker-side activity has occurred — anything past
-// INSTRUCTION_READY plausibly carries push events. We use this to decide
-// whether to lazy-fetch full task detail on expand (TaskSummary feeds
-// don't include push_events; live WS pushes are kept in the store, but
-// after a page reload they're gone — fetch fills the gap).
-const STATUSES_WITH_PUSHES: ReadonlySet<string> = new Set([
-  "PENDING", "PARTIAL", "FILLED", "CANCELLED", "REJECTED", "SUBMIT_FAILED",
-]);
-
 export function CardExpanded({ task, pushEvents, autoTrade, onCollapse }: CardExpandedProps) {
   const [pushExpanded, setPushExpanded] = useState(false);
 
-  // Lazy-fetch push events on first expand when the store has none for this
-  // task but the task is in a state that should have produced pushes. Without
-  // this the chain renders empty after a page reload (TaskSummary, the source
-  // for the list endpoint, intentionally omits push_events for performance).
-  useEffect(() => {
-    if (pushEvents.length > 0) return;
-    if (!STATUSES_WITH_PUSHES.has(task.status)) return;
-    let cancelled = false;
-    api.getTask(task.id)
-      .then((full) => {
-        if (cancelled) return;
-        const append = useTasksStore.getState().appendPushEvent;
-        for (const evt of full.push_events) {
-          append(task.id, evt);
-        }
-      })
-      .catch((e) => {
-        console.warn("CardExpanded: failed to lazy-load push events:", e);
-      });
-    return () => { cancelled = true; };
-  }, [task.id, task.status, pushEvents.length]);
+  // Rehydrate the push chain from persisted detail when the store has none
+  // (e.g. after a page reload) — the list endpoint omits push_events.
+  useLazyPushEvents(task.id, task.status, pushEvents.length);
 
   const {
     type,
@@ -115,20 +90,12 @@ export function CardExpanded({ task, pushEvents, autoTrade, onCollapse }: CardEx
   const anchorIso = message.received_at ?? message.posted_at;
   const parseEndClock =
     parseMs != null ? fmtBeijingTimeWithMsFromOffset(anchorIso, parseMs) : "—";
-  const submitEndOffsetMs =
-    parseMs != null && submitMs != null
-      ? parseMs + submitMs
-      : submitMs != null
-        ? submitMs
-        : null;
+  const submitOffsetMs = submitEndOffsetMs(parseMs, submitMs);
   const submitEndClock =
-    submitEndOffsetMs != null
-      ? fmtBeijingTimeWithMsFromOffset(anchorIso, submitEndOffsetMs)
+    submitOffsetMs != null
+      ? fmtBeijingTimeWithMsFromOffset(anchorIso, submitOffsetMs)
       : "—";
-  const submitEndIso =
-    submitEndOffsetMs != null
-      ? new Date(new Date(anchorIso).getTime() + submitEndOffsetMs).toISOString()
-      : null;
+  const submitEndIso = computeSubmitEndIso(anchorIso, parseMs, submitMs);
 
   return (
     <article className="card expanded">

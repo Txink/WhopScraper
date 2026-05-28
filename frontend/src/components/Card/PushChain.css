@@ -1,0 +1,143 @@
+/* ===== Push chain (compact mode) =====
+   Two-row layout per item: status pill on top, info label below. The chain
+   itself anchors items at flex-start so the label can hang under the node;
+   delta connectors align with the node row via top padding.
+   Co-located with PushChain.tsx so every consumer (CardExpanded, SignalBubble)
+   gets these styles regardless of which card stylesheet it imports. */
+.push-chain {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  row-gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 8px;
+}
+
+.chain-item {
+  display: inline-flex;
+  align-items: flex-start;
+}
+
+/* Node + its sub-label stacked vertically; delta connectors sit beside the
+   stack at node-row height via the .delta padding-top below. */
+.node-stack {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* Sub-label rendered under each node — surfaces the most relevant context
+   for that state (e.g. "$7.32 ×1" under New, "$7.31 → $7.32" under Replaced).
+   Values get fg-1 weight; keys/connectors stay dim. The "→" arrow on
+   Replaced events is tinted info-blue to draw the eye to the change. */
+.node-label {
+  font-size: 7px;
+  color: var(--fg-2);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  line-height: 1.3;
+  /* Reserve a row even when there's no label so connectors stay aligned
+     across items with mixed label/no-label. */
+  min-height: 10px;
+}
+.node-label .k    { color: var(--fg-3); }
+.node-label .v    { color: var(--fg-1); font-weight: 500; }
+.node-label .arrow { color: var(--info); margin: 0 2px; font-weight: 600; }
+.node-label .x     { color: var(--fg-3); margin-right: 1px; }
+.node-label .pos   { color: var(--ok); font-weight: 500; }
+
+.node {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid var(--line-strong);
+  background: var(--bg-1);
+  position: relative;
+  white-space: nowrap;
+  cursor: default;
+  line-height: 1.4;
+}
+.node .dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--fg-3);
+  flex-shrink: 0;
+}
+.node .name { font-weight: 500; letter-spacing: 0.03em; color: var(--fg-1); }
+.node .inline { color: var(--fg-2); }
+.node .inline .v { color: var(--fg-1); }
+.node .inline .k { color: var(--fg-3); }
+.node .inline .diff-pos { color: var(--ok); }
+.node .inline .diff-neg { color: var(--err); }
+.node .inline .arrow { color: var(--fg-3); margin: 0 3px; }
+
+.node.ok     { border-color: rgba(61, 214, 140, 0.30);  background: rgba(61, 214, 140, 0.06); }
+.node.ok     .dot  { background: var(--ok); }
+.node.ok     .name { color: var(--ok); }
+.node.info   { border-color: rgba(90, 160, 255, 0.30);  background: rgba(90, 160, 255, 0.06); }
+.node.info   .dot  { background: var(--info); }
+.node.info   .name { color: var(--info); }
+.node.warn   { border-color: rgba(231, 167, 61, 0.32);  background: rgba(231, 167, 61, 0.06); }
+.node.warn   .dot  { background: var(--warn); box-shadow: 0 0 0 3px rgba(231, 167, 61, 0.18); }
+.node.warn   .name { color: var(--warn); }
+.node.err    { border-color: rgba(239, 91, 91, 0.34);   background: rgba(239, 91, 91, 0.06); }
+.node.err    .dot  { background: var(--err); }
+.node.err    .name { color: var(--err); }
+.node.cancel { border-color: var(--line-strong); background: var(--bg-1); }
+.node.cancel .dot  { background: var(--neutral); }
+.node.cancel .name { color: var(--neutral); }
+.node.waiting {
+  border-style: dashed;
+  border-color: rgba(231, 167, 61, 0.32);
+  background: transparent;
+}
+.node.waiting .dot  {
+  background: var(--warn);
+  animation: pulse-dot 1.2s ease-in-out infinite;
+}
+.node.waiting .name { color: var(--warn); font-style: italic; }
+
+/* Delta connector between nodes. The chain anchors items at flex-start so
+   labels can hang under nodes; padding-top here pushes the connector down
+   to align horizontally with the node row (not the (node+label) midpoint). */
+.delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 4px 0;
+  font-size: 7.5px;
+  color: var(--fg-3);
+  white-space: nowrap;
+}
+.delta::before,
+.delta::after {
+  content: "";
+  width: 8px;
+  height: 1px;
+  background: var(--line-strong);
+}
+.delta.slow { color: var(--warn); }
+
+/* Node tooltip on hover (pure CSS) */
+.node[data-ts] { cursor: help; }
+.node[data-ts]:hover::after {
+  content: attr(data-ts);
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-0);
+  color: var(--fg-1);
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  padding: 3px 6px;
+  font-size: 10px;
+  white-space: nowrap;
+  z-index: 5;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+}

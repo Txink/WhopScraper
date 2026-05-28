@@ -85,6 +85,36 @@ export function elapsedMs(from: string, to: string): number {
 }
 
 /**
+ * Offset in ms from the message anchor (received_at) to the submit-completion
+ * moment: parse + submit when both stage timings are present, submit alone if
+ * only submit is known, null if neither. Shared by the card and chat views so
+ * the synthetic "已提交" push node carries the same timestamp in both.
+ */
+export function submitEndOffsetMs(
+  parseMs: number | null,
+  submitMs: number | null,
+): number | null {
+  if (parseMs != null && submitMs != null) return parseMs + submitMs;
+  if (submitMs != null) return submitMs;
+  return null;
+}
+
+/**
+ * Real-UTC ISO instant of the submit-completion moment, or null when stage
+ * timings are missing. Drives the "已提交" node's tooltip timestamp.
+ */
+export function submitEndIso(
+  anchorIso: string,
+  parseMs: number | null,
+  submitMs: number | null,
+): string | null {
+  const offset = submitEndOffsetMs(parseMs, submitMs);
+  return offset != null
+    ? new Date(new Date(anchorIso).getTime() + offset).toISOString()
+    : null;
+}
+
+/**
  * Dollar price shown for compact card / totals.
  *
  * Priority:

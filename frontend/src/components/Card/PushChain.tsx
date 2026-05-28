@@ -1,5 +1,6 @@
 import type { PushEvent } from "../../api/domain-types";
 import { fmtBeijingHmsMs } from "./cardHelpers";
+import "./PushChain.css";
 
 // PushState (broker-faithful labels) → node color class.
 // "info" = pre-exchange / pending modify; "ok" = live / filled;
@@ -205,7 +206,7 @@ export interface PushChainProps {
   events: PushEvent[];
   taskStatus: string;
   totalQty?: number | null;
-  /** Order id returned by the broker after submit; renders a "已提交" node before the broker push events. */
+  /** Order id returned by the broker after submit; renders a "Push" node before the broker push events. */
   submitOrderId?: string | null;
   /** ISO instant of the submit-completion moment (received_at + parseMs + submitMs); drives the synthetic node's timestamp. */
   submitEndIso?: string | null;
@@ -222,7 +223,7 @@ export function PushChain({ events, taskStatus, totalQty, submitOrderId, submitE
           <span className="node-stack">
             <span className="node info" data-ts={submitEndIso ? fmtBeijingHmsMs(submitEndIso) : "?"}>
               <span className="dot" />
-              <span className="name">已提交</span>
+              <span className="name">Push</span>
             </span>
             <span className="node-label" />
           </span>
