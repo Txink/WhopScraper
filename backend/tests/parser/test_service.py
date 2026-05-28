@@ -579,6 +579,7 @@ async def test_option_image_message_skips_parsing(
     ):
         observed = await _run_status(bus, msg)
 
+    assert not [e for e in observed if e.topic == Topics.TASK_INSTRUCTION_READY]
     assert not [e for e in observed if e.topic == Topics.TASK_PARSE_FAILED]
     skipped = [
         e for e in observed
@@ -586,4 +587,25 @@ async def test_option_image_message_skips_parsing(
         and e.payload.task.status == Status.SKIPPED
     ]
     assert len(skipped) == 1
+    assert skipped[0].payload.task.reject_reason == "图片消息"
     assert skipped[0].payload.task.message.image_filename == "img2.png"
+
+
+@pytest.mark.asyncio
+async def test_image_message_skips_parsing_without_data_dir(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """No data_dir → still SKIPPED, image_filename stays None, no download."""
+    bus = EventBus()
+    register_parser_service(bus, session_factory, registry=None, data_dir=None)
+
+    observed = await _run_status(bus, _stock_image_msg("img3"))
+
+    assert not [e for e in observed if e.topic == Topics.TASK_PARSE_FAILED]
+    skipped = [
+        e for e in observed
+        if e.topic == Topics.TASK_STATUS_CHANGED
+        and e.payload.task.status == Status.SKIPPED
+    ]
+    assert len(skipped) == 1
+    assert skipped[0].payload.task.message.image_filename is None

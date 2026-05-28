@@ -64,6 +64,10 @@ def register_parser_service(
     context resolver fallback. When ``None`` (or when the message is an orphan
     / option), the fallback receives an empty set and is therefore skipped.
 
+    ``data_dir`` (optional) is the root data directory for image downloads.
+    When ``None``, image messages are still marked SKIPPED but no file is
+    downloaded (``image_filename`` stays None on the resulting Message).
+
     Returns an unsubscribe callable so the caller can tear down the listener
     (useful in tests and application lifecycle management).
     """
