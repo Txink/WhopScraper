@@ -1,6 +1,6 @@
-"""Tests for _download_image and the image-aware chat_writer handler.
+"""Tests for download_image (app.whop.image_store) and the image-aware chat_writer handler.
 
-Unit tests for _download_image cover:
+Unit tests for download_image cover:
 - Happy path: file written, correct filename returned
 - Content-type → extension mapping
 - HTTP error → None returned, no file written
