@@ -1,6 +1,7 @@
 import type { TaskSummary, PushEvent } from "../../api/domain-types";
 import { layersForTask } from "./signalCardHelpers";
 import { ConfirmActions } from "../Card/ConfirmActions";
+import { LabelActions } from "../Card/LabelActions";
 import { PushChain } from "../Card/PushChain";
 import { fmtBeijingFull, submitEndIso } from "../Card/cardHelpers";
 import { useLazyPushEvents } from "../../hooks/useLazyPushEvents";
@@ -145,6 +146,11 @@ export function SignalBubble({
                   />
                 </div>
               )}
+              <LabelActions
+                taskId={task.id}
+                instruction={task.instruction}
+                variant={variant}
+              />
             </div>
           )}
         </>

@@ -136,4 +136,37 @@ describe("SignalBubble", () => {
     // 不应出现解析报错文案
     expect(container.textContent).not.toContain("未解析");
   });
+
+  it("renders LabelActions only when expanded (stock)", () => {
+    const folded = render(
+      <SignalBubble task={makeStockTask()} pushEvents={[]} expanded={false}
+        onToggle={() => {}} autoTrade={true} variant="stock" />,
+    );
+    expect(folded.container.querySelector(".label-actions")).toBeNull();
+
+    const expanded = render(
+      <SignalBubble task={makeStockTask()} pushEvents={[]} expanded={true}
+        onToggle={() => {}} autoTrade={true} variant="stock" />,
+    );
+    expect(expanded.container.querySelector(".label-actions")).not.toBeNull();
+  });
+
+  it("renders LabelActions for parse-error when expanded", () => {
+    const { container } = render(
+      <SignalBubble task={makeFailedParseTask()} pushEvents={[]} expanded={true}
+        onToggle={() => {}} autoTrade={true} variant="stock" />,
+    );
+    expect(container.querySelector(".label-actions")).not.toBeNull();
+  });
+
+  it("does NOT render LabelActions on image bubbles", () => {
+    const base = makeStockTask();
+    const task = { ...base, status: "SKIPPED" as const,
+      message: { ...base.message, content: "", image_url: "/api/messages/x/image" } };
+    const { container } = render(
+      <SignalBubble task={task} pushEvents={[]} expanded={true}
+        onToggle={() => {}} autoTrade={true} variant="stock" />,
+    );
+    expect(container.querySelector(".label-actions")).toBeNull();
+  });
 });
