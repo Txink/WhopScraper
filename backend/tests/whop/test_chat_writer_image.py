@@ -22,7 +22,8 @@ from app.core.events import ChatMessagePayload, Topics
 from app.domain.message import Message
 from app.storage.db import session_scope
 from app.storage.schema import ChatMessageRow
-from app.whop.chat_writer import _download_image, register_chat_writer
+from app.whop.chat_writer import register_chat_writer
+from app.whop.image_store import download_image
 
 
 async def test_download_image_happy_path(tmp_path: Path) -> None:
@@ -37,8 +38,8 @@ async def test_download_image_happy_path(tmp_path: Path) -> None:
     fake_client.__aenter__.return_value = fake_client
     fake_client.__aexit__.return_value = None
 
-    with patch("app.whop.chat_writer.httpx.AsyncClient", return_value=fake_client):
-        filename = await _download_image(
+    with patch("app.whop.image_store.httpx.AsyncClient", return_value=fake_client):
+        filename = await download_image(
             "msg_1", "https://example.com/x.avif", tmp_path
         )
 
@@ -64,8 +65,8 @@ async def test_download_image_maps_content_types(tmp_path: Path) -> None:
         fake_client.__aenter__.return_value = fake_client
         fake_client.__aexit__.return_value = None
 
-        with patch("app.whop.chat_writer.httpx.AsyncClient", return_value=fake_client):
-            filename = await _download_image(msg_id, "https://example.com/x", tmp_path)
+        with patch("app.whop.image_store.httpx.AsyncClient", return_value=fake_client):
+            filename = await download_image(msg_id, "https://example.com/x", tmp_path)
 
         assert filename == expected_name
 
@@ -80,8 +81,8 @@ async def test_download_image_returns_none_on_http_error(tmp_path: Path) -> None
     fake_client.__aenter__.return_value = fake_client
     fake_client.__aexit__.return_value = None
 
-    with patch("app.whop.chat_writer.httpx.AsyncClient", return_value=fake_client):
-        filename = await _download_image("msg_x", "https://example.com/x", tmp_path)
+    with patch("app.whop.image_store.httpx.AsyncClient", return_value=fake_client):
+        filename = await download_image("msg_x", "https://example.com/x", tmp_path)
 
     assert filename is None
     assert not (tmp_path / "chat-images").exists() or not any(
@@ -95,8 +96,8 @@ async def test_download_image_returns_none_on_timeout(tmp_path: Path) -> None:
     fake_client.__aenter__.return_value = fake_client
     fake_client.__aexit__.return_value = None
 
-    with patch("app.whop.chat_writer.httpx.AsyncClient", return_value=fake_client):
-        filename = await _download_image("msg_y", "https://example.com/x", tmp_path)
+    with patch("app.whop.image_store.httpx.AsyncClient", return_value=fake_client):
+        filename = await download_image("msg_y", "https://example.com/x", tmp_path)
 
     assert filename is None
 
@@ -136,7 +137,7 @@ async def test_handler_downloads_image_and_writes_row(
         page_id="page_1", message=msg, is_historical=False
     )
 
-    with patch("app.whop.chat_writer.httpx.AsyncClient", return_value=fake_client):
+    with patch("app.whop.image_store.httpx.AsyncClient", return_value=fake_client):
         await bus.publish(Event(topic=Topics.CHAT_MESSAGE_RECEIVED, payload=payload))
         await bus.wait_idle(timeout=2)
 
@@ -181,7 +182,7 @@ async def test_handler_skips_row_when_image_only_and_download_fails(
         page_id="page_1", message=msg, is_historical=False
     )
 
-    with patch("app.whop.chat_writer.httpx.AsyncClient", return_value=fake_client):
+    with patch("app.whop.image_store.httpx.AsyncClient", return_value=fake_client):
         await bus.publish(Event(topic=Topics.CHAT_MESSAGE_RECEIVED, payload=payload))
         await bus.wait_idle(timeout=2)
 
@@ -227,7 +228,7 @@ async def test_handler_writes_row_with_text_when_image_download_fails(
         page_id="page_1", message=msg, is_historical=False
     )
 
-    with patch("app.whop.chat_writer.httpx.AsyncClient", return_value=fake_client):
+    with patch("app.whop.image_store.httpx.AsyncClient", return_value=fake_client):
         await bus.publish(Event(topic=Topics.CHAT_MESSAGE_RECEIVED, payload=payload))
         await bus.wait_idle(timeout=2)
 
