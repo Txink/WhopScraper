@@ -405,10 +405,11 @@ async def save_task(session: AsyncSession, task: Task) -> None:
         "quoted_message_id": msg.quoted.id if msg.quoted is not None else None,
         "image_filename": msg.image_filename,
     }
-    # Messages are immutable except for `url`, which we backfill when the existing
-    # row had no url. This handles the case where messages were persisted before the
-    # `messages.url` column was wired up by the listener — when the listener
-    # republishes the same domID with a proper url, we want that url to land.
+    # Messages are immutable except for the nullable `url` and `image_filename`,
+    # which we backfill (via coalesce) only when the existing row left them NULL —
+    # an existing non-null value is never overwritten. This lets a re-published
+    # domID land a url that wasn't captured before, and lets a re-scrape attach the
+    # downloaded image filename to an old image message stored before this feature.
     msg_stmt = sqlite_insert(MessageRow).values(**msg_values)
     msg_stmt = msg_stmt.on_conflict_do_update(
         index_elements=["id"],
