@@ -190,6 +190,30 @@ class InstructionRow(Base):
 
 
 # ---------------------------------------------------------------------------
+# instruction_labels  (1:1 with tasks — task_id PK + FK, CASCADE on delete)
+#   人工解析质量标注。与 instructions 分表的原因：PARSE_ERROR 任务没有
+#   instructions 行，但仍需标注，故以 task_id 独立建表覆盖所有任务。
+# ---------------------------------------------------------------------------
+
+
+class InstructionLabelRow(Base):
+    """ORM mapping for the ``instruction_labels`` table."""
+
+    __tablename__ = "instruction_labels"
+
+    task_id: Mapped[str] = mapped_column(
+        String,
+        ForeignKey("tasks.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    # "correct" | "corrected"
+    verdict: Mapped[str] = mapped_column(String, nullable=False)
+    # CorrectedInstruction serialised as JSON; NULL when verdict == "correct".
+    corrected_payload: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+# ---------------------------------------------------------------------------
 # push_events  (many per task, append-only)
 # ---------------------------------------------------------------------------
 

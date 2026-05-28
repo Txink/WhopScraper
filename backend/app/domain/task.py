@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Literal
+from typing import Any, Literal
 
 from .instruction import Instruction, OptionInstruction, StockInstruction
 from .message import Message
@@ -49,6 +49,18 @@ _PUSH_TO_STATUS: dict[PushState, Status] = {
 
 
 @dataclass
+class InstructionLabel:
+    """人工解析质量标注。纯评测数据，不影响交易。
+
+    verdict: "correct"（解析正确）| "corrected"（已校正）。
+    corrected_payload: 仅 corrected 时有，键见 schemas.CorrectedInstruction。
+    """
+    verdict: str
+    corrected_payload: dict[str, Any] | None
+    updated_at: datetime
+
+
+@dataclass
 class Task:
     id: str
     type: Literal["stock", "option", "unknown"]
@@ -73,6 +85,9 @@ class Task:
     #: than signal, this is the snapped (floor/ceil to cents) quote; otherwise
     #: it equals ``signal_price``. Frontend uses this for PRICE/TOTAL display.
     submit_price: float | None = None
+    #: 人工解析标注（None = 未标注）。仅由 repo 从 instruction_labels 表填充；
+    #: 内存中新建的 Task（如 WS 广播路径）恒为 None。
+    label: InstructionLabel | None = None
 
     @classmethod
     def new_from_message(cls, msg: Message, *, is_historical: bool = False) -> Task:
