@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { TaskSummary, PushEvent } from "../api/domain-types";
+import type { TaskSummary, PushEvent, InstructionLabel } from "../api/domain-types";
 import type { WsEvent } from "../api/ws";
 
 // Mirrors backend app.domain.status.TERMINAL — once a task lands in any of
@@ -19,19 +19,26 @@ const TERMINAL_STATUSES: ReadonlySet<string> = new Set([
 interface TaskState {
   tasks: TaskSummary[];
   pushEventsByTask: Record<string, PushEvent[]>;
+  labelsByTask: Record<string, InstructionLabel>;
   upsertTask(task: TaskSummary): void;
   appendPushEvent(taskId: string, event: PushEvent): void;
   setInitialTasks(tasks: TaskSummary[]): void;
   applyWsEvent(evt: WsEvent): void;
   removeTasksByUrl(url: string | null): void;
+  setLabel(taskId: string, label: InstructionLabel | null): void;
 }
 
 export const useTasksStore = create<TaskState>((set, get) => ({
   tasks: [],
   pushEventsByTask: {},
+  labelsByTask: {},
 
   setInitialTasks(tasks) {
-    set({ tasks });
+    const labelsByTask: Record<string, InstructionLabel> = {};
+    for (const t of tasks) {
+      if (t.label != null) labelsByTask[t.id] = t.label;
+    }
+    set({ tasks, labelsByTask });
   },
 
   upsertTask(task) {
@@ -59,7 +66,19 @@ export const useTasksStore = create<TaskState>((set, get) => ({
       const newList = [...filtered, incoming].sort(
         (a, b) => b.created_at.localeCompare(a.created_at),
       );
-      return { tasks: newList };
+      const labelsByTask = task.label != null
+        ? { ...state.labelsByTask, [task.id]: task.label }
+        : state.labelsByTask;
+      return { tasks: newList, labelsByTask };
+    });
+  },
+
+  setLabel(taskId, label) {
+    set((state) => {
+      const next = { ...state.labelsByTask };
+      if (label == null) delete next[taskId];
+      else next[taskId] = label;
+      return { labelsByTask: next };
     });
   },
 

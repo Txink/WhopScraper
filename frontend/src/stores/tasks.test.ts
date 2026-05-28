@@ -131,6 +131,39 @@ const makeTask = (id: string, url: string | null): TaskSummary => ({
   instruction: null,
 });
 
+describe("labelsByTask", () => {
+  beforeEach(() => {
+    useTasksStore.setState({ tasks: [], pushEventsByTask: {}, labelsByTask: {} });
+  });
+
+  function _mkLabeled(id: string, verdict: "correct" | "corrected") {
+    return { ..._mkTask(id, "2026-04-25T10:00:00Z"), label: { verdict, corrected_payload: null } };
+  }
+
+  it("setInitialTasks seeds labelsByTask from task.label", () => {
+    useTasksStore.getState().setInitialTasks([_mkLabeled("t1", "correct")]);
+    expect(useTasksStore.getState().labelsByTask["t1"].verdict).toBe("correct");
+  });
+
+  it("setInitialTasks rebuilds (drops stale labels)", () => {
+    useTasksStore.setState({ labelsByTask: { told: { verdict: "correct", corrected_payload: null } } });
+    useTasksStore.getState().setInitialTasks([_mkTask("t1", "2026-04-25T10:00:00Z")]);
+    expect(useTasksStore.getState().labelsByTask).toEqual({});
+  });
+
+  it("upsertTask with null label does NOT clobber existing label", () => {
+    useTasksStore.getState().setLabel("t1", { verdict: "correct", corrected_payload: null });
+    useTasksStore.getState().upsertTask(_mkTask("t1", "2026-04-25T10:00:00Z"));
+    expect(useTasksStore.getState().labelsByTask["t1"].verdict).toBe("correct");
+  });
+
+  it("setLabel(null) clears", () => {
+    useTasksStore.getState().setLabel("t1", { verdict: "correct", corrected_payload: null });
+    useTasksStore.getState().setLabel("t1", null);
+    expect(useTasksStore.getState().labelsByTask["t1"]).toBeUndefined();
+  });
+});
+
 describe("selectTasksByUrl", () => {
   const tasks: TaskSummary[] = [
     makeTask("a", "u1"),
