@@ -4737,6 +4737,10 @@
         "properties": {
           "verdict": {
             "type": "string",
+            "enum": [
+              "correct",
+              "corrected"
+            ],
             "title": "Verdict"
           },
           "corrected_payload": {

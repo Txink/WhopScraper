@@ -118,9 +118,14 @@ export const useTasksStore = create<TaskState>((set, get) => ({
       for (const [taskId, events] of Object.entries(state.pushEventsByTask)) {
         if (!removedIds.has(taskId)) remainingPush[taskId] = events;
       }
+      const remainingLabels: Record<string, InstructionLabel> = {};
+      for (const [taskId, label] of Object.entries(state.labelsByTask)) {
+        if (!removedIds.has(taskId)) remainingLabels[taskId] = label;
+      }
       return {
         tasks: state.tasks.filter((t) => !removedIds.has(t.id)),
         pushEventsByTask: remainingPush,
+        labelsByTask: remainingLabels,
       };
     });
   },

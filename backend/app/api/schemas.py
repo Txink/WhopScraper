@@ -81,7 +81,7 @@ class CorrectedInstruction(BaseModel):
 
 
 class InstructionLabelOut(BaseModel):
-    verdict: str  # "correct" | "corrected"
+    verdict: Literal["correct", "corrected"]
     corrected_payload: CorrectedInstruction | None = None
     updated_at: datetime
 

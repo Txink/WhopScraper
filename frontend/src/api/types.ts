@@ -1551,8 +1551,11 @@ export interface components {
         };
         /** InstructionLabelOut */
         InstructionLabelOut: {
-            /** Verdict */
-            verdict: string;
+            /**
+             * Verdict
+             * @enum {string}
+             */
+            verdict: "correct" | "corrected";
             corrected_payload?: components["schemas"]["CorrectedInstruction"] | null;
             /**
              * Updated At

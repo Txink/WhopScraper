@@ -4,7 +4,6 @@ import type { Instruction, CorrectedInstruction } from "../../api/domain-types";
 import "./LabelActions.css";
 
 type Action = "BUY" | "SELL" | "CLOSE" | "MODIFY";
-type CType = "stock" | "option";
 type OptType = "CALL" | "PUT";
 
 interface Props {
@@ -28,8 +27,8 @@ function numOrNull(s: string): number | null {
 }
 
 export function LabelCorrectionDialog({ variant, instruction, existing, onSubmit, onClose }: Props) {
-  const seedType: CType = (existing?.type ?? (variant === "option" ? "option" : "stock"));
-  const [type, setType] = useState<CType>(seedType);
+  const seedType = (existing?.type ?? variant) as Props["variant"];
+  const [type, setType] = useState<Props["variant"]>(seedType);
   const [ticker, setTicker] = useState(existing?.ticker ?? instruction?.ticker ?? "");
   const [price, setPrice] = useState(str(existing?.price ?? instruction?.price));
   const [quantity, setQuantity] = useState(str(existing?.quantity ?? instruction?.quantity));
@@ -68,7 +67,7 @@ export function LabelCorrectionDialog({ variant, instruction, existing, onSubmit
         <label className="label-field">
           <span>type</span>
           <select aria-label="type" value={type}
-                  onChange={(e) => setType(e.target.value as CType)}>
+                  onChange={(e) => setType(e.target.value as Props["variant"])}>
             <option value="stock">stock</option>
             <option value="option">option</option>
           </select>
