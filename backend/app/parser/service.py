@@ -21,9 +21,11 @@ TASK_PARSE_FAILED so the Task is never left stuck in PARSING.
 
 from __future__ import annotations
 
+import dataclasses
 import logging
 import time
 from collections.abc import Callable
+from pathlib import Path
 from typing import TYPE_CHECKING, Protocol
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -35,6 +37,7 @@ from app.domain.instruction import Instruction
 from app.domain.task import Task
 from app.parser import option_parser, stock_parser
 from app.parser.context_resolver import resolve_context
+from app.whop.image_store import download_image
 
 if TYPE_CHECKING:
     from app.whop.page_settings import PageSettings
@@ -53,6 +56,7 @@ def register_parser_service(
     session_factory: async_sessionmaker[AsyncSession],
     *,
     registry: _RegistryLike | None = None,
+    data_dir: Path | None = None,
 ) -> Callable[[], None]:
     """Subscribe the parser handler to ``message.received``.
 
@@ -71,6 +75,22 @@ def register_parser_service(
             return
 
         msg = payload.message
+
+        # Image message: skip instruction parsing entirely, render as image.
+        # Download before creating the Task so image_filename lands on the
+        # first persisted row (messages are immutable on conflict).
+        if msg.image_url is not None:
+            image_filename: str | None = None
+            if data_dir is not None:
+                image_filename = await download_image(msg.id, msg.image_url, data_dir)
+            msg = dataclasses.replace(msg, image_filename=image_filename)
+            task = Task.new_from_message(msg, is_historical=payload.is_historical)
+            task.mark_parsing()
+            await bus.publish(Event(Topics.TASK_CREATED, TaskPayload(task)))
+            task.mark_skipped("图片消息")
+            await bus.publish(Event(Topics.TASK_STATUS_CHANGED, TaskPayload(task)))
+            return
+
         task = Task.new_from_message(msg, is_historical=payload.is_historical)
         task.mark_parsing()
 

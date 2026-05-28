@@ -197,7 +197,12 @@ def create_app(
 
         # 1. Parser service: MESSAGE_RECEIVED → task pipeline
         state.unsubs.append(
-            register_parser_service(bus, session_factory, registry=state.whop_registry)
+            register_parser_service(
+                bus,
+                session_factory,
+                registry=state.whop_registry,
+                data_dir=settings.data_dir,
+            )
         )
 
         # Storage listeners (broker-independent) — register once.

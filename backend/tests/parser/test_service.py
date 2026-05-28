@@ -11,7 +11,8 @@ Five test cases covering the parser event-bus service:
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from unittest.mock import MagicMock
+from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -481,3 +482,108 @@ async def test_stock_parser_v1_called_when_no_registry(
 
     assert v1_calls == ["no-reg"]
     assert v2_calls == []
+
+
+# ---------------------------------------------------------------------------
+# Image message tests
+# ---------------------------------------------------------------------------
+
+
+def _stock_image_msg(id_: str, content: str = "") -> Message:
+    return Message(
+        id=id_,
+        content=content,
+        raw_content=content,
+        author="trader",
+        posted_at=_NOW,
+        received_at=_NOW,
+        source="stock",
+        image_url="https://whop.com/pic.png",
+    )
+
+
+async def _run_status(bus: EventBus, msg: Message) -> list[Event]:
+    """Like _run but also captures TASK_STATUS_CHANGED (used for skips)."""
+    observed: list[Event] = []
+
+    async def _capture(evt: Event) -> None:
+        observed.append(evt)
+
+    for topic in (
+        Topics.TASK_CREATED,
+        Topics.TASK_INSTRUCTION_READY,
+        Topics.TASK_PARSE_FAILED,
+        Topics.TASK_STATUS_CHANGED,
+    ):
+        bus.subscribe(topic, _capture)
+
+    await bus.publish(Event(Topics.MESSAGE_RECEIVED, MessagePayload(msg)))
+    await bus.wait_idle(timeout=5)
+    await bus.wait_idle(timeout=5)
+    return observed
+
+
+@pytest.mark.asyncio
+async def test_image_message_skips_parsing(
+    session_factory: async_sessionmaker[AsyncSession],
+    tmp_path: Path,
+) -> None:
+    """Stock message with image_url → SKIPPED (reason=图片消息), no parse,
+    image downloaded → image_filename set on the persisted message."""
+    bus = EventBus()
+    register_parser_service(bus, session_factory, registry=None, data_dir=tmp_path)
+
+    msg = _stock_image_msg("img1")
+    with patch(
+        "app.parser.service.download_image",
+        AsyncMock(return_value="img1.png"),
+    ):
+        observed = await _run_status(bus, msg)
+
+    assert not [e for e in observed if e.topic == Topics.TASK_INSTRUCTION_READY]
+    assert not [e for e in observed if e.topic == Topics.TASK_PARSE_FAILED]
+
+    skipped = [
+        e for e in observed
+        if e.topic == Topics.TASK_STATUS_CHANGED
+        and e.payload.task.status == Status.SKIPPED
+    ]
+    assert len(skipped) == 1
+    task = skipped[0].payload.task
+    assert task.reject_reason == "图片消息"
+    assert task.message.image_filename == "img1.png"
+
+
+@pytest.mark.asyncio
+async def test_option_image_message_skips_parsing(
+    session_factory: async_sessionmaker[AsyncSession],
+    tmp_path: Path,
+) -> None:
+    """Same behavior for option-source image messages."""
+    bus = EventBus()
+    register_parser_service(bus, session_factory, registry=None, data_dir=tmp_path)
+
+    msg = Message(
+        id="img2",
+        content="",
+        raw_content="",
+        author="trader",
+        posted_at=_NOW,
+        received_at=_NOW,
+        source="option",
+        image_url="https://whop.com/opt.png",
+    )
+    with patch(
+        "app.parser.service.download_image",
+        AsyncMock(return_value="img2.png"),
+    ):
+        observed = await _run_status(bus, msg)
+
+    assert not [e for e in observed if e.topic == Topics.TASK_PARSE_FAILED]
+    skipped = [
+        e for e in observed
+        if e.topic == Topics.TASK_STATUS_CHANGED
+        and e.payload.task.status == Status.SKIPPED
+    ]
+    assert len(skipped) == 1
+    assert skipped[0].payload.task.message.image_filename == "img2.png"
