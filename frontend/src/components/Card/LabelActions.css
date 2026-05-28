@@ -1,0 +1,39 @@
+.label-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #21262d;
+}
+.label-action-btn {
+  background: transparent;
+  border: 1px solid #444c56;
+  color: #8b949e;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.label-action-btn.active-correct { border-color: #2ea043; background: #2ea043; color: #fff; }
+.label-action-btn.active-corrected { border-color: #1f6feb; color: #58a6ff; }
+.label-err { color: #f85149; font-size: 12px; align-self: center; }
+
+.label-dialog-backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+  display: flex; align-items: center; justify-content: center; z-index: 1000;
+}
+.label-dialog {
+  background: #161b22; border: 1px solid #2a3441; border-radius: 10px;
+  padding: 16px; min-width: 300px; color: #e6edf3;
+}
+.label-dialog-title { font-weight: 600; margin-bottom: 12px; }
+.label-field { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 13px; }
+.label-field > span { width: 80px; color: #8b949e; }
+.label-field input, .label-field select {
+  flex: 1; background: #0d1117; border: 1px solid #30363d; color: #e6edf3;
+  border-radius: 4px; padding: 4px 6px;
+}
+.label-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+.label-btn-ghost { background: transparent; border: 1px solid #444c56; color: #8b949e; padding: 4px 12px; border-radius: 6px; cursor: pointer; }
+.label-btn-primary { background: #1f6feb; border: 1px solid #1f6feb; color: #fff; padding: 4px 12px; border-radius: 6px; cursor: pointer; }
