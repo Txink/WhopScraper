@@ -32,6 +32,7 @@
 - **展示**:复用现有图片气泡样式。
 - **图片加载**:复用服务端下载/代理(与聊天图片一致),不直连 whop URL。
 - **任务状态**:复用 **SKIPPED**(`reason="图片消息"`)。前端靠 `image_url` 识别图片气泡,状态仅用于后端记账。
+- **存量旧数据**:要回填(用户确认)。通过「重抓 whop 历史」实现——但用轻量方式:扩展 `messages` 的 UPSERT,使 `image_filename` 在为空时可被回填(类比现有 `url` 回填),然后调用已有的 `POST /api/whop/pages/{id}/restart` 重新发布当前可见的历史消息,走新解析路径下载图片并回填。前端 `layersForTask` 把图片判断放在 `PARSE_ERROR` 之前,所以旧任务即便状态仍是 PARSE_ERROR,只要补上 `image_filename` 就会显示图片(无需改状态)。**限制**:只能恢复 whop DOM 里仍加载得到的历史(较新的消息);已滚出/过期、URL 已不可得的消息无法恢复(超出范围)。
 
 ## 架构 / 数据流
 
@@ -56,7 +57,7 @@
 4. **`parser/service._handle_message_received`**:在创建 task、`mark_parsing` 之后、按 source 解析之前插入:
    - `if msg.image_url is not None:` → `filename = await download_image(...)`;`msg = dataclasses.replace(msg, image_filename=filename)`;`task.mark_skipped("图片消息")`;发 skip 事件;**return**(不跑解析)。
    - stock 与 option 同一处理(检测与 source 无关)。
-5. **`storage/repo`**(`_message_to_row` / `save_task`):持久化 `image_filename`(messages 行除 url 外原本不可变,需允许写入 image_filename)。
+5. **`storage/repo`**(`save_task` / `_row_to_message`):持久化 `image_filename`。新消息因「先下载再建 Task」在首次 INSERT 即带上;另**扩展 messages 的 UPSERT**,使 `image_filename`(连同现有 `url`)在为空时可被回填(`coalesce(existing, excluded)`),供旧数据通过 restart 重抓回填。
 6. **`MessageOut`**(`app/api/schemas.py`):新增 `image_url: str | None`,值 = `/api/messages/{id}/image`(有 image_filename 时,否则 None),与 `ChatMessageOut` 对称。
    - **必须**在所有 `MessageOut(...)` 构造点补字段:领域转换器 `message_to_out`、REST 列表端点的 row→out 路径、以及测试夹具。实现前先 `grep "MessageOut("` 与 `message_to_out` 全部用例。
    - 领域转换需要 image_filename → 由步骤 2 的 `Message.image_filename` 提供;row→out 路径由步骤 3 的列提供。
@@ -73,7 +74,7 @@
 - **下载失败**(网络/超时):`image_filename` 为空 → 仍 `mark_skipped("图片消息")`;前端 `image_url` 为 null,退化为轻量「图片消息」占位或仅显示 caption,**绝不再显示解析报错**。
 - **图文混合**:图片 + 文字都显示,不解析。
 - **历史消息**(`is_historical`):走同一路径。
-- **存量旧数据**:本次改动前已 PARSE_ERROR 的图片消息无 image_filename、状态 PARSE_ERROR,仍显示「未解析」。**不做回填**(YAGNI)。
+- **存量旧数据**:做回填。`messages` UPSERT 允许 `image_filename` 在为空时回填;部署后对相关页面调 `POST /api/whop/pages/{id}/restart` 重新发布可见历史,旧图片消息补上 `image_filename` 后即显示图片(状态留 PARSE_ERROR 无妨,前端按 image_url 优先渲染)。仅能恢复 whop 仍加载得到的历史;更早/过期消息 URL 已不可得,无法恢复。
 - **真实 SKIPPED**(人工/规则跳过):无 `image_url`,前端照旧显示「已跳过」,不受影响。
 
 ## 测试
