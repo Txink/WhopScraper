@@ -73,7 +73,7 @@ export function LabelActions({ taskId, instruction, variant }: Props) {
         disabled={busy}
         onClick={toggleCorrect}
       >
-        {verdict === "correct" ? "已确认正确" : "解析正确"}
+        正确
       </button>
       <button
         type="button"

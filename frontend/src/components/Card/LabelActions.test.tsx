@@ -15,18 +15,18 @@ describe("LabelActions", () => {
       id: "t1", label: { verdict: "correct", corrected_payload: null },
     } as never);
     render(<LabelActions taskId="t1" instruction={null} variant="stock" />);
-    fireEvent.click(screen.getByText("解析正确"));
+    fireEvent.click(screen.getByText("正确"));
     await waitFor(() => {
       expect(api.setTaskLabel).toHaveBeenCalledWith("t1", { verdict: "correct" });
       expect(useTasksStore.getState().labelsByTask["t1"].verdict).toBe("correct");
     });
   });
 
-  it("clicking 解析正确 while already correct clears it", async () => {
+  it("clicking 正确 while already correct clears it", async () => {
     useTasksStore.getState().setLabel("t1", { verdict: "correct", corrected_payload: null, updated_at: "" });
     vi.spyOn(api, "clearTaskLabel").mockResolvedValue({ id: "t1", label: null } as never);
     render(<LabelActions taskId="t1" instruction={null} variant="stock" />);
-    fireEvent.click(screen.getByText("已确认正确"));
+    fireEvent.click(screen.getByText("正确"));
     await waitFor(() => {
       expect(api.clearTaskLabel).toHaveBeenCalledWith("t1");
       expect(useTasksStore.getState().labelsByTask["t1"]).toBeUndefined();

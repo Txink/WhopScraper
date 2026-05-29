@@ -12,9 +12,10 @@
   background: transparent;
   border: 1px solid var(--line-strong);
   color: var(--fg-2);
-  padding: 5px var(--space-3);
+  padding: 2px var(--space-2);
   border-radius: var(--radius-chip);
-  font-size: 12px;
+  font-size: 11px;
+  line-height: 1.4;
   cursor: pointer;
   transition: color var(--dur) var(--ease),
               border-color var(--dur) var(--ease),
